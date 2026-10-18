@@ -4,6 +4,13 @@ fastapi>=0.111
 uvicorn[standard]>=0.29
 langgraph>=0.2
 langchain-core>=0.3
+# A-87F-05, 2026-10-09: `contracts/events.py` leaves a token's `placement` out
+# through `Field(exclude_if=...)`, which pydantic added at the field level in
+# 2.12.0 (its changelog, v2.12.0b1, #12141). On an older release the keyword
+# is only a warning and `placement: null` would reach every older client. The
+# floor is the first release with it. `mcp>=2.0` already requires
+# pydantic>=2.12.0, so no install changes: it states the need here.
+pydantic>=2.12.0
 
 # LLM providers
 anthropic>=0.34
@@ -13,7 +20,12 @@ langsmith>=0.10
 # Database
 psycopg2-binary>=2.9
 redis>=5.0
-sqlalchemy>=2.0
+# D5, 2026-09-24: capped below 2.1. SQLAlchemy 2.1.0 loads the newer
+# `psycopg` driver for a postgresql:// address that names no driver, and this
+# image installs psycopg2-binary only, so the first build to resolve 2.1.0
+# failed its health check at `alembic upgrade head`. Lift the cap only
+# together with a driver decision and a test run on 2.1.
+sqlalchemy>=2.0,<2.1
 alembic>=1.13
 
 # Auth and security
@@ -59,7 +71,24 @@ httpx2>=2.0
 # widening rather than let it pass unremarked, even though it is not
 # itself pinned in this file (no direct import in this codebase requires
 # a specific version).
-strawberry-graphql==0.324.0
+# 2026-10-15: moved from 0.324.0 to 0.327.7, chosen by the product owner, to
+# clear two advisories pip-audit (CI gate 6) reports against 0.324.0:
+# PYSEC-2026-4302 (fixed in 0.327.2) and PYSEC-2026-4303 (fixed in 0.326.1).
+# Checked first under the same rule: no compromise report for 0.327.7 (the
+# one malware record, MAL-2026-4771, names 0.315.6 and is withdrawn); wheel
+# uploaded 2026-09-07; required dependencies identical to 0.324.0 (cross-web
+# was already required), only the libcst requirement of the unused cli and debug
+# extras changed, from no floor to `libcst>=1.9.0` (a narrowing, per PyPI's
+# metadata); pip-audit clean; the GraphQL unit tests pass unchanged.
+strawberry-graphql==0.327.7
+# graphql-core, the engine under strawberry, which allows anything from 3.2.0
+# up to 3.4.0. Pinned on 2026-09-27: version 3.3.0 was published at 14:50 UTC
+# that day, changed the wording of GraphQL's own error messages, and turned 21
+# unit tests red, since the error mask passes those messages through by their
+# exact text. 3.2.11, published 2026-06-05, is the version every earlier run
+# used; pip-audit finds no known vulnerability in it. Moving to 3.3.0 is a
+# reviewed change of its own.
+graphql-core==3.2.11
 
 # Config
 python-dotenv>=1.0

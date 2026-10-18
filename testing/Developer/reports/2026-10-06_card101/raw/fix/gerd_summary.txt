@@ -1,0 +1,25 @@
+{"label": "gp1", "shown": 3, "risk_factor": 1, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 32.5, "cost_usd": 0.0164, "outcome": "answer"}
+   [reworded] GERD, or gastroesophageal reflux disease, happens when stomach contents flow back up into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] The typical symptoms are heartburn and regurgitation, which means stomach contents come back up into the throat [1].
+   [reworded, risk factor] Several factors can contribute to GERD developing, including weakness in the esophagus's natural defenses, problems with how the esophagus and stomach move and clear food, and physical defects in the barrier between the esophagus and stomach such as a hiatal hernia [2].
+{"label": "gp2", "shown": 4, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 28.1, "cost_usd": 0.019, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat [1].
+   [reworded] GERD happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] The symptoms of GERD in young children are varied and nonspecific, so careful evaluation is needed [2].
+   [reworded] GERD is most effectively treated with proton-pump inhibitors, though long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection [1].
+{"label": "gp3", "shown": 2, "risk_factor": 1, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 30.9, "cost_usd": 0.0135, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat [1].
+   [reworded, risk factor] Factors that contribute to GERD include weak defense of the esophageal lining, poor movement and clearing of the esophagus and stomach, and anatomical problems such as hiatal hernia [2].
+{"label": "gp4", "shown": 3, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 16.6, "cost_usd": 0.0191, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat or mouth [1].
+   [reworded] GERD is a condition where stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] In children, ordinary reflux of stomach contents into the esophagus is very common and usually normal, while GERD is a less common disease process that causes troublesome symptoms and may require medical treatment [2].
+{"label": "gp5", "shown": 0, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 0.0, "cost_usd": 0, "outcome": null}
+{"label": "gp6", "shown": 3, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 21.6, "cost_usd": 0.0172, "outcome": "answer"}
+   [reworded] GERD is a condition where stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [reworded] The typical symptoms are heartburn and regurgitation, meaning stomach contents come back up into the throat [1].
+   [reworded] GERD can affect quality of life and may lead to more serious problems, including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophageal cancer [1].
+{"label": "gp7", "shown": 3, "risk_factor": 0, "transient_kept": 0, "young_dropped": 0, "hedge_dropped": 0, "seconds": 17.7, "cost_usd": 0.0162, "outcome": "answer"}
+   [reworded] The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat, and the condition can also lead to inflammation of the esophagus, narrowing of the esophagus, and a precancerous change called Barrett esophagus [1].
+   [reworded] GERD happens when stomach contents flow back into the esophagus or mouth, causing symptoms or complications [1].
+   [copied] Gastroesophageal reflux (GERD) [2], and Gastroesophageal Reflux [3].

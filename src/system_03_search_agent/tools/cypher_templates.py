@@ -67,6 +67,24 @@ cited as their own records.
   associated with MODY", where the MODY subtypes have few gene edges but
   thousands of variant links).
 
+The removed Disease-to-PhenotypicFeature shape (2026-09-23, `testing/
+Developer/reports/2026-09-23_zero_row_templates/`). Until this date `_HOPS`
+carried `("Disease", "phenotypes"): _Hop("has_phenotype", "PhenotypicFeature",
+"out")`, chosen for a question like "What phenotypic features are associated
+with Marfan syndrome?". It could never return a row, for two independent
+reasons a read-only probe against the live graph confirmed: no `Disease`
+vertex anywhere has an outgoing `has_phenotype` edge, and every
+`PhenotypicFeature` vertex sampled is an unpopulated `[stub]` placeholder.
+`graph_schema_constants.EDGE_ENDPOINTS["has_phenotype"]` documented the same
+wrong pair, which meant the model-generation path was misled the same way the
+template was. Both are now corrected: `EDGE_ENDPOINTS["has_phenotype"]` reads
+its real, measured pair (SequenceVariant to Disease, already used by the fold
+templates above), and the `("Disease", "phenotypes")` hop and its
+`"phenotypes"` shape keyword are gone. A phenotype question about a Disease
+now falls through `select_template` to the model path (`None`), the same path
+that already reaches Layer 2 for the graph's other genuinely absent shapes,
+rather than being routed to a template guaranteed to return nothing.
+
 Depends on:
     - system_03_search_agent.tools.cypher_schemas (CypherQueryInput,
       QueryClass)
@@ -116,6 +134,10 @@ MAX_FOLD_ITEMS: Final[int] = 12
 # CURIEs come from so a reader of the row knows what it asserts.
 FOLD_FIELD_VARIANT_CONDITIONS: Final[str] = "clinvar_condition_ids"
 FOLD_FIELD_GENE_CONDITIONS: Final[str] = "medgen_condition_ids"
+# Card 38 slice B: the row field a value fold writes, the organism names of
+# the taxa an ortholog gene is `in_taxon` of. The Researcher and Plain
+# language lists read this literal from the row (synthesis/answer_layout).
+FOLD_FIELD_ORGANISM: Final[str] = "organism"
 
 
 @dataclass(frozen=True)
@@ -145,6 +167,12 @@ class CypherTemplate:
     #: on every other template, so no GO vertex reached any other way is
     #: ever attributed.
     go_attribution_param: str | None = None
+    #: Card 38 slice B: True when the fold's list column holds STRINGS (taxon
+    #: names), not vertices. `cypher_query` then writes the cleaned, sorted,
+    #: deduplicated names joined by ", " onto the anchor row, and the list
+    #: adds no row of its own, so the count query still runs and the total
+    #: keeps its unit. False on every other template.
+    value_fold: bool = False
 
 
 # --------------------------------------------------------------------------
@@ -198,7 +226,6 @@ _SHAPE_KEYWORDS: Final[dict[str, str]] = {
     "taxon": r"\b(organism|organisms|taxon|taxonomy)\b",
     "articles": r"\b(paper|papers|article|articles|publication|publications|literature|pubmed|mention|mentions|mentioned)\b",
     "genes": r"\b(gene|genes)\b",
-    "phenotypes": r"\b(phenotype|phenotypes|phenotypic|symptom|symptoms|clinical\s+features?)\b",
     "mesh": r"\bmesh\b",
 }
 _SHAPE_PATTERNS: Final[dict[str, re.Pattern[str]]] = {
@@ -250,7 +277,6 @@ _HOPS: Final[dict[tuple[str, str], _Hop]] = {
     ("Gene", "taxon"): _Hop("in_taxon", "OrganismTaxon", "out"),
     ("Gene", "articles"): _Hop("mentioned_in", "Article", "out"),
     ("Disease", "genes"): _Hop("gene_associated_with_condition", "Gene", "in"),
-    ("Disease", "phenotypes"): _Hop("has_phenotype", "PhenotypicFeature", "out"),
     ("Article", "mesh"): _Hop("has_mesh_annotation", "OntologyClass", "out"),
 }
 
@@ -385,7 +411,7 @@ def _mixed_gene_disease_template(
 ) -> CypherTemplate | None:
     """A question binding gene AND disease CURIEs together, the shape
     "Variants in GCK causing MODY" or "Is BRCA1 linked to breast cancer?"
-    resolves to. Two forms only, both narrow:
+    resolves to. Four forms, each narrow:
 
     - The variants shape, with exactly one gene: the gene's variants whose
       ClinVar record asserts one of the bound diseases
@@ -398,8 +424,27 @@ def _mixed_gene_disease_template(
       anchored at both ends. One row or none, and "none" is the honest
       answer to "is this gene linked to that disease" when the graph has
       no such edge.
+    - No shape, or the diseases shape, with SEVERAL genes (2026-09-22,
+      fix-plan item 1): each gene's disease edges, side by side, the
+      `gene_diseases_many` hop over every bound gene. "Compare what is
+      known about MLH1 and MSH2 in colorectal cancer risk" (golden G-033)
+      landed here as None, so its own graph search was a generated query
+      the validator rejected on every pass, and the reader was told a
+      search did not finish. The hop returns six rows in 0.8 s for that
+      question, measured live; the link narrowed to the bound disease
+      returns zero, because MedGen has dozens of concepts for "colorectal
+      cancer" and the one Think resolved is on neither gene's edges.
+    - No shape, or the diseases shape, with ONE gene beside several
+      disease concepts (same date): the gene record, which is what the
+      one-gene no-shape path returns, so the same question shows the same
+      source however Think listed the concepts. In practice this is Think
+      resolving a common noun ("tumour", "diseases") to a list of MedGen
+      concepts beside a real gene (golden G-037, third pass).
 
-    Anything else is None.
+    Anything else is None: the variants shape with several genes, a count
+    over several anchors (no single record to cite it to, the refusal
+    `select_template` step 4 makes), or a label mix outside Gene and
+    Disease.
     """
     labels = _labels_by_param(entity_bindings)
     if set(labels.values()) != {"Gene", "Disease"}:
@@ -414,7 +459,9 @@ def _mixed_gene_disease_template(
         if _wants_count(tool_input) or len(gene_params) != 1:
             return None
         return _gene_variant_disease_link_template(gene_params[0], disease_params)
-    if shape in (None, "diseases") and len(gene_params) == 1 and len(disease_params) == 1:
+    if shape not in (None, "diseases"):
+        return None
+    if len(gene_params) == 1 and len(disease_params) == 1:
         return CypherTemplate(
             name="gene_disease_link",
             cypher=(
@@ -425,7 +472,22 @@ def _mixed_gene_disease_template(
             ),
             edge_label="gene_associated_with_condition",
         )
-    return None
+    if _wants_count(tool_input):
+        return None
+    if len(gene_params) >= 2:
+        # Decided from the user's chair, 2026-09-22. What a person comparing
+        # two genes wants from the graph is each gene's disease associations
+        # beside each other, not a generated query that fails validation
+        # (G-033, every pass of the consistency run) and not the link
+        # narrowed to the one concept Think happened to resolve (zero rows
+        # live where the open hop returned six). G-011's junk-resolution
+        # pass, "diseases" resolved to eight MedGen concepts beside BRCA1
+        # and BRCA2, lands here too and now returns the same rows as its
+        # clean passes, so the same question shows the same sources.
+        return _hop_template(
+            "diseases", _HOPS[("Gene", "diseases")], "Gene", gene_params, count=False
+        )
+    return _record_template("Gene", gene_params)
 
 
 def _id_clause(param_names: list[str], var: str) -> tuple[str, str]:
@@ -558,6 +620,22 @@ def _hop_template(
             cypher=f"{match}{where} RETURN count(DISTINCT {_OTHER_VAR}) AS {shape}_count",
             edge_label=hop.edge_label,
         )
+    if len(param_names) == 1 and (anchor_label, shape) == ("Gene", "orthologs"):
+        # Card 38 slice B: each ortholog carries its organism. OPTIONAL
+        # MATCH keeps an ortholog with no taxon edge; the taxon names fold
+        # onto the ortholog's row, so no taxon becomes a row (phase 8.9
+        # probe 1: 591 of 591 orthologs have an `in_taxon` edge).
+        return CypherTemplate(
+            name=name,
+            cypher=(
+                f"{match} OPTIONAL MATCH ({_OTHER_VAR})-[:in_taxon]->(t:OrganismTaxon) "
+                f"WITH {_OTHER_VAR}, collect(DISTINCT t.name) AS {_FOLD_ALIAS} "
+                f"RETURN {_OTHER_VAR}, {_FOLD_ALIAS} ORDER BY {_OTHER_VAR}.id"
+            ),
+            edge_label=hop.edge_label,
+            fold=(_OTHER_VAR, _FOLD_ALIAS, FOLD_FIELD_ORGANISM),
+            value_fold=True,
+        )
     if len(param_names) == 1:
         returns = f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
     else:
@@ -622,20 +700,86 @@ def gene_go_terms_template(gene_param: str) -> CypherTemplate:
 
 
 def _record_template(anchor_label: str, param_names: list[str]) -> CypherTemplate:
-    """The record itself: `MATCH (a:Gene {id: $e}) RETURN a`, or the IN-list
-    form ordered by id when several are bound."""
+    """The record itself: `MATCH (a:Gene {id: $e}) RETURN a`, or, when
+    several are bound, one such match per record joined by UNION ALL, each
+    branch ordered by id and the branches in parameter-name order.
+
+    The several-record form was `MATCH (a:Gene) WHERE a.id IN [...]` until
+    2026-09-22, and on the live graph that form never finished: only the
+    inline property match uses the id index, and any WHERE on `a.id` over
+    the Gene label walks the whole vertex table and dies at the reader
+    role's 30-second statement timeout. Measured through the repository's
+    own `execute_cypher`: 30.5 s for ONE id in an IN list, 30.5 s for two,
+    30.5 s for `a.id = $g1 OR a.id = $g2`, against 0.68 s for the inline
+    match; the UNION ALL of two inline Gene matches 0.42 s, of eight
+    Disease matches 0.44 s (`testing/Developer/reports/
+    2026-09-22_item1_lost_search/`). Branch order is fixed by sorting the
+    parameter names, which are derived from the CURIEs, so the same set of
+    entities produces the same query and the same row order however Think
+    listed them. The validator normalizes each branch with its own LIMIT,
+    which is what makes the form legal here (F-2.1-A8).
+    """
     if len(param_names) == 1:
         cypher = f"MATCH ({_ANCHOR_VAR}:{anchor_label} {{id: ${param_names[0]}}}) RETURN {_ANCHOR_VAR}"
         suffix = "one"
     else:
-        cypher = (
-            f"MATCH ({_ANCHOR_VAR}:{anchor_label}) WHERE {_ANCHOR_VAR}.id IN ["
-            + ", ".join(f"${n}" for n in param_names)
-            + f"] RETURN {_ANCHOR_VAR} ORDER BY {_ANCHOR_VAR}.id"
+        cypher = " UNION ALL ".join(
+            f"MATCH ({_ANCHOR_VAR}:{anchor_label} {{id: ${name}}}) "
+            f"RETURN {_ANCHOR_VAR} ORDER BY {_ANCHOR_VAR}.id"
+            for name in sorted(param_names)
         )
         suffix = "many"
     return CypherTemplate(
         name=f"{anchor_label.lower()}_record_{suffix}", cypher=cypher, edge_label=None
+    )
+
+
+# The edges the graph carries onto or off a PubMed Article that point at
+# other records: the MeSH terms assigned to it (`has_mesh_annotation`,
+# Article to OntologyClass) and the papers it cites and is cited by
+# (`cited_in`, Article to Article). Asserted documented at import like every
+# hop in `_HOPS`. The genes that mention the paper (`mentioned_in`, Gene to
+# Article) are NOT walked: matching that edge from its Article end timed out
+# at the 30-second statement limit on the live graph for PMID 11237011
+# (2026-10-05), the same timeout the model-written draft hit, while the three
+# branches below each finished in about two seconds or less.
+_ARTICLE_MESH_EDGE: Final[str] = "has_mesh_annotation"
+_ARTICLE_CITED_EDGE: Final[str] = "cited_in"
+_assert_hop_documented(_ARTICLE_MESH_EDGE, "Article", "OntologyClass")
+_assert_hop_documented(_ARTICLE_CITED_EDGE, "Article", "Article")
+
+
+def _article_links_template(article_param: str) -> CypherTemplate:
+    """The records one PubMed Article is linked to in the graph: the MeSH
+    terms assigned to it, the papers it cites and the papers that cite it,
+    one row each, cited to the linked record's own page.
+
+    The anchor of a question about one paper's linked data with no hop word
+    in it ("sequence data for PMID ...", golden G-006) used to reach the
+    model-written path, which found nothing on every pass of the 2026-09-29
+    run. Three single-edge matches joined by UNION ALL, each an inline id
+    match so each uses the id index (the form `_record_template` measured;
+    a WHERE on `a.id` walks the whole vertex table). Each branch carries its
+    own ORDER BY, the validator gives each its own LIMIT, and the branches
+    run in a fixed order: MeSH terms, cited papers, citing papers.
+    """
+    anchor = f"({_ANCHOR_VAR}:Article {{id: ${article_param}}})"
+    mesh = (
+        f"MATCH {anchor}-[:{_ARTICLE_MESH_EDGE}]->({_OTHER_VAR}:OntologyClass) "
+        f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+    )
+    cites = (
+        f"MATCH {anchor}-[:{_ARTICLE_CITED_EDGE}]->({_OTHER_VAR}:Article) "
+        f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+    )
+    cited_by = (
+        f"MATCH ({_OTHER_VAR}:Article)-[:{_ARTICLE_CITED_EDGE}]->{anchor} "
+        f"RETURN {_OTHER_VAR} ORDER BY {_OTHER_VAR}.id"
+    )
+    return CypherTemplate(
+        name="article_links_one",
+        cypher=f"{mesh} UNION ALL {cites} UNION ALL {cited_by}",
+        edge_label=None,
     )
 
 
@@ -657,8 +801,15 @@ def select_template(
        one label with two matches resolve to the first on a lookup,
        single-hop or aggregate question; otherwise ambiguous: None. Zero
        falls through to step 3.
-    3. With no shape matched, a `lookup` question about the entity is the
-       record itself. Any other class with no shape is None.
+    3. With no shape matched, a `lookup` or an `exploratory` question about
+       the entity is the record itself, and so is a `single_hop` or
+       `multi_hop` question whose anchor is a Gene (2026-09-22, the
+       measured reasons are in the code below). So is an `aggregate`
+       question about a Gene that asks for no count (2026-10-05). ONE
+       Article on a hop class or a no-count `aggregate` takes the paper's
+       linked-records template (2026-10-05, card 15). An `aggregate`
+       question that asks for a count, or a Disease anchor on the two hop
+       classes, is None, the model path.
     4. A matched hop on a question asking "how many" (any class), or on an
        `aggregate` question saying "count" or "number of", becomes the
        count form, for a single anchor only (a count over several anchors
@@ -675,8 +826,67 @@ def select_template(
 
     shapes = matched_shapes(tool_input.query_intent, anchor_label)
     if not shapes:
-        if tool_input.query_class is QueryClass.LOOKUP:
+        # Decided from the user's chair, 2026-09-22, in two steps. First,
+        # an `exploratory` question with no shape used to take the model
+        # path, and on the golden question of that kind (G-039) the
+        # generated query never finished: the planner expects 67,521 Gene
+        # rows for an id match that returns one, drives the join from the
+        # edge table under the LIMIT, and the graph's 30-second statement
+        # timeout kills it after 85 seconds of wall time on every pass
+        # (`testing/Developer/reports/2026-09-22_slow_second_search/`).
+        # The record template answers the same question in under a
+        # second with the row those runs never got.
+        #
+        # Second, the same evening (fix-plan item 1), a GENE question with
+        # no shape on the `single_hop` and `multi_hop` classes joined it,
+        # measured offline over all 150 runs of the consistency run
+        # (`testing/Developer/reports/2026-09-22_item1_lost_search/`): on
+        # those classes the model path never produced a rich result for
+        # any golden question. G-037 lost its own search on every pass to
+        # a generated query the validator rejected, and the reason this
+        # comment gave for keeping `multi_hop` on the model path, that
+        # G-011's generated search found rows a record would lose, was
+        # wrong: G-011's rows came from the `gene_diseases_many` template
+        # on the passes it answered, and its one lost pass was the mixed
+        # path, fixed the same evening in `_mixed_gene_disease_template`.
+        #
+        # What still takes the model path with no shape, each for a
+        # measured reason: an `aggregate` question, which computes a count
+        # the record cannot (G-034); and a Disease or Article anchor on
+        # the two hop classes, because a disease list Think resolved from
+        # a common noun ("diseases", "tumour") would turn a correct
+        # refusal into a page of unrelated records (G-014, pass 3), where
+        # a gene symbol is live-confirmed before it is ever bound.
+        if tool_input.query_class in (QueryClass.LOOKUP, QueryClass.EXPLORATORY):
             return _record_template(anchor_label, param_names)
+        if anchor_label == "Gene" and tool_input.query_class in (
+            QueryClass.SINGLE_HOP, QueryClass.MULTI_HOP
+        ):
+            return _record_template(anchor_label, param_names)
+        # 2026-10-05 (card 91): the `aggregate` class is a model's guess and
+        # varies run to run for one question. A Gene question with no shape
+        # that asks for no count is not a count question, so it takes the
+        # record like the other classes; the generated query for it was
+        # rejected by the validator and no graph search ran. A count request
+        # (`_wants_count`) and a Disease or Article anchor keep the model path.
+        if (
+            anchor_label == "Gene"
+            and tool_input.query_class is QueryClass.AGGREGATE
+            and not _wants_count(tool_input)
+        ):
+            return _record_template(anchor_label, param_names)
+        # 2026-10-05 (card 15, decision D5): ONE Article with no shape word
+        # on a hop class, or on an `aggregate` question that asks for no
+        # count, is a question about the paper's linked data. It walks the
+        # paper's own edges instead of reaching the model-written path.
+        if (
+            anchor_label == "Article"
+            and len(param_names) == 1
+            and not _wants_count(tool_input)
+            and tool_input.query_class
+            in (QueryClass.SINGLE_HOP, QueryClass.MULTI_HOP, QueryClass.AGGREGATE)
+        ):
+            return _article_links_template(param_names[0])
         return None
     wants_count = _wants_count(tool_input)
     # The variant-to-disease shape (2026-09-14, decision D1): ONE gene with
@@ -714,6 +924,7 @@ def all_template_examples() -> list[CypherTemplate]:
         examples.append(_hop_template(shape, hop, anchor, one, count=False))
         examples.append(_hop_template(shape, hop, anchor, many, count=False))
         examples.append(_hop_template(shape, hop, anchor, one, count=True))
+    examples.append(_article_links_template("e_one"))
     for anchor in _SHAPES_BY_ANCHOR:
         examples.append(_record_template(anchor, one))
         examples.append(_record_template(anchor, many))

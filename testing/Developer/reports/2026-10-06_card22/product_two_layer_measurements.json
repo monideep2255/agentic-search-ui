@@ -1,0 +1,48 @@
+[
+  {
+    "testAccount": "card22-review+1791348013346@example.com"
+  },
+  {
+    "answeredSecs": 30.135
+  },
+  {
+    "shot": "product_390_gene_sources_expanded.png",
+    "overflow": 0,
+    "meta": "✓ Answered18.6s · 13 tool calls · 17 sources cited from 3 layers",
+    "count": "17",
+    "trust": "Based on 17 sources cited",
+    "groupCounts": [
+      "sources-group-1-count=1",
+      "sources-group-2-count=12",
+      "sources-group-3-count=5"
+    ],
+    "also": "[1][3]NCBIGene 672: one card for this page, listed under Knowledge graph",
+    "layers": "L1 · graph, L2 · live",
+    "markers": "[1][2][3]",
+    "source1Box": [
+      35,
+      355
+    ],
+    "wide": []
+  },
+  {
+    "shot": "product_1280_gene_sources_expanded.png",
+    "overflow": 0,
+    "meta": "✓ Answered18.6s · 13 tool calls · 17 sources cited from 3 layers",
+    "count": "17",
+    "trust": "Based on 17 sources cited",
+    "groupCounts": [
+      "sources-group-1-count=1",
+      "sources-group-2-count=12",
+      "sources-group-3-count=5"
+    ],
+    "also": "[1][3]NCBIGene 672: one card for this page, listed under Knowledge graph",
+    "layers": "L1 · graph, L2 · live",
+    "markers": "[1][2][3]",
+    "source1Box": [
+      270,
+      1056
+    ],
+    "wide": []
+  }
+]

@@ -1,0 +1,71 @@
+No search limit in effect yet
+is there a trial recruiting for melanoma
+New search
+
+✓ Answered12.6s · 8 tools · 64 sources from 3 layers
+
+Show work ▾
+
+Found 5 clinical trial records, 1 disease record, 1 sequence variant record, 1 gene record and 49 article records for melanoma[21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54][55][56][57].⁠1–20
+
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Modified Vaccine for High Risk or Low Residual Melanoma Patients	NCT01898039	RECRUITING	⁠1
+Follow-up of a National Cohort of Melanoma Resectable Stage II, Stage III or IV Patients or Unresectable Primary	NCT02828202	RECRUITING	⁠2
+A Randomized Trial to Assess the Role of Imaging During Follow Up After Radical Surgery of High Risk Melanoma	NCT03116412	RECRUITING	⁠3
+Melanoma Metastasized to the Brain and Steroids	NCT03563729	RECRUITING	⁠4
+Neoadjuvant Combination Immunotherapy for Stage III Melanoma	NCT03842943	RECRUITING	⁠5
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Melanoma	MedGen:C0025202	⁠6
+SEQUENCE VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000285.4(PEPD):c.551G>A (p.Arg184Gln)	ClinVar:211	⁠7
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+peptidase D	NCBIGene:5184	⁠8
+ARTICLE RECORDS FOUND
+PAPER	IDENTIFIER	
+PMID:1972707	PMID:1972707	⁠9
+PMID:2365824	PMID:2365824	⁠10
+PMID:2705457	PMID:2705457	⁠11
+PMID:2881880	PMID:2881880	⁠12
+PMID:2925654	PMID:2925654	⁠13
+PMID:8125298	PMID:8125298	⁠14
+PMID:8198124	PMID:8198124	⁠15
+PMID:8900231	PMID:8900231	⁠16
+PMID:9020526	PMID:9020526	⁠17
+PMID:9328822	PMID:9328822	⁠18
+Showing 1–10 of 49
+‹ Previous
+Page 1 of 5
+Next ›
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Braf(V600E) cooperates with Pten loss to induce metastatic melanoma.	PMID:19282848	⁠58
+Biology of Melanoma.	PMID:33759772	⁠61
+Extracutaneous Melanoma.	PMID:33759775	⁠62
+Comparative Genomics Provides Etiologic and Biological Insight into Melanoma Subtypes.	PMID:36098958	⁠63
+Anorectal melanoma.	PMID:37395165	⁠64
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Melanoma	medgen 9944	⁠59
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Melanoma	@DISEASE_Melanoma	⁠60
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+▶
+SOURCES
+64
+Based on 64 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

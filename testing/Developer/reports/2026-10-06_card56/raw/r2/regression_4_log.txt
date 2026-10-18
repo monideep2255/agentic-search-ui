@@ -1,0 +1,15 @@
+model call point=guardrail.injection trace=probe56-fdc56230 kind=jev elapsed_ms=273 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-fdc56230 kind=guard elapsed_ms=1418 outcome=ok attempt=1 provider=StreamLake
+model call point=think.asks_features trace=probe56-fdc56230 kind=jev elapsed_ms=448 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-fdc56230 kind=jev elapsed_ms=449 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-fdc56230 kind=jev elapsed_ms=600 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-d18b8b22 kind=jev elapsed_ms=290 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-d18b8b22 kind=guard elapsed_ms=2673 outcome=ok attempt=1 provider=StreamLake
+model call point=think.asks_features trace=probe56-d18b8b22 kind=jev elapsed_ms=322 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-d18b8b22 kind=jev elapsed_ms=357 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-d18b8b22 kind=jev elapsed_ms=406 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-de212ac4 kind=jev elapsed_ms=256 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-de212ac4 kind=guard elapsed_ms=1373 outcome=ok attempt=1 provider=Parasail
+model call point=plan.literature trace=probe56-de212ac4 kind=jev elapsed_ms=269 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-de212ac4 kind=jev elapsed_ms=306 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-de212ac4 kind=jev elapsed_ms=307 outcome=ok attempt=1 provider=unknown

@@ -22,7 +22,7 @@
  * twice.
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -163,13 +163,43 @@ const precedes = (first: Element, second: Element): boolean =>
 const FIRST_Q = "What gene is BRCA1?";
 const SECOND_Q = "What diseases are associated with it?";
 
+/**
+ * D4 defect 12: `useAnswerReveal`/`usePacedEvents` hold the landed answer
+ * behind REAL `setTimeout` waits (`minBannerMs` 1500, `perItemMs` 110, a
+ * per-helper dwell), so a `findByTestId(..., { timeout: 10000 })` right
+ * after asking measured 6100-7700ms unloaded, 61-77% of its own ceiling
+ * with zero contention from anything else. That margin is what "identical
+ * code gave 5 failed at 139 seconds and 245 passed at 50 seconds" is: an
+ * arm already sitting at three quarters of its ceiling crosses it once
+ * anything else is competing for the machine.
+ *
+ * Fake timers remove the race instead of widening the window. Advance in
+ * small steps, each inside its own `act`, because the reveal schedules its
+ * NEXT timer in an effect that runs only after `act` returns; a single big
+ * jump would only fire the timer that was already scheduled at the moment
+ * of the jump, the same reason `hooks/useAnswerReveal.test.ts`'s own
+ * `advance` helper steps rather than jumping. Only ever called between two
+ * real-timer stretches of a test, never around a `userEvent` call, so no
+ * `userEvent.setup()` in this file needs `delay: null`.
+ */
+async function revealNow(ms = 8_000, step = 110) {
+  vi.useFakeTimers();
+  for (let elapsed = 0; elapsed < ms; elapsed += step) {
+    await act(async () => {
+      vi.advanceTimersByTime(Math.min(step, ms - elapsed));
+    });
+  }
+  vi.useRealTimers();
+}
+
 async function askFirst(user: ReturnType<typeof userEvent.setup>) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), FIRST_Q);
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
   // The landed answer, not merely a screen change: `source-1` is written
   // from the run's own citation event and cannot render before it arrives.
-  await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+  await revealNow();
+  screen.getByTestId("source-1");
 }
 
 async function askFollowUp(user: ReturnType<typeof userEvent.setup>) {
@@ -273,7 +303,8 @@ describe("R22: a follow-up continues on the same screen", () => {
 
     // The second answer's own prose, which exists nowhere in the frontend
     // and can only come from the second run's token event.
-    await screen.findByText(/It is linked to HBOC/, undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByText(/It is linked to HBOC/);
 
     expect(
       document.querySelector('[data-tour="answer"]'),

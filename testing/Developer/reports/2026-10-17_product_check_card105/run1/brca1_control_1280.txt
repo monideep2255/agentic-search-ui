@@ -1,0 +1,411 @@
+Which diseases are associated with BRCA1?
+New search
+
+? Answered10.6s · 13 tool calls · 21 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+BRCA1 is associated with familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 I found 4 conditions related to BRCA1.⁠1–4
+
+These diseases are linked to the gene named BRCA1.⁠5
+
+WHERE THIS ANSWER COMES FROM
+Familial cancer of breast	⁠1
+Familial breast-ovarian cancer susceptibility 1	⁠2
+Pancreatic cancer susceptibility 4	⁠3
+Fanconi anemia complementation group S	⁠4
+BRCA1	⁠5, 9
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.	⁠6
+NM_007294.4(BRCA1):c.5243_5277+2788del	⁠7
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	⁠8
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	⁠10
+BRCA1: An Endocrine and Metabolic Regulator.	⁠11
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+▶
+LIVE NCBI APIS
+16
+▶
+[1]
+
+ncbi_efetch MedGen:C0346153
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C0346153
+▶
+[2]
+
+ncbi_efetch MedGen:C2676676
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C2676676
+▶
+[3]
+
+ncbi_efetch MedGen:C3280442
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C3280442
+▶
+[4]
+
+ncbi_efetch MedGen:C4554406
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C4554406
+▶
+[5][9]
+
+gene 672
+
+L2 · live
+Flag: does not support
+TOOL
+symbol, name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/672/
+▶
+[6]
+
+pubmed 28976962
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/28976962/
+▶
+[7]
+
+clinvar 267740
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+▶
+[8]
+
+omim 113705
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/113705
+Not linked: this URL is not on a recognised NCBI host.
+▶
+[11]
+
+pubmed 35432218
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/35432218/
+▶
+[12]
+
+clinvar 267741
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+▶
+[14]
+
+pubmed 36914836
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36914836/
+▶
+[15]
+
+clinvar 373892
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+▶
+[17]
+
+pubmed 39261728
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39261728/
+▶
+[18]
+
+clinvar 4823850
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/
+▶
+[20]
+
+pubmed 39265497
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39265497/
+▶
+[21]
+
+clinvar 4848411
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+▶
+ENRICHMENT
+5
+▶
+[10]
+
+clinicaltrials.gov NCT00590109
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00590109
+▶
+[13]
+
+clinicaltrials.gov NCT00597987
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00597987
+▶
+[16]
+
+clinicaltrials.gov NCT00617656
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00617656
+▶
+[19]
+
+clinicaltrials.gov NCT00673335
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00673335
+▶
+[22]
+
+clinicaltrials.gov NCT00700778
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00700778
+Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

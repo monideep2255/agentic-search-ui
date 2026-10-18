@@ -210,14 +210,32 @@ async def test_without_the_answer_ids_the_prompt_returns_to_the_handoff_order(mo
     assert "ANSWER FINDINGS" not in prompts[0]
 
 
+#: The opening sentence per depth. Item 12.9 (2026-09-23) REVERSED this arm's
+#: old expectation that both depths open identically: rule 1 has Plain
+#: language speak to a reader with no technical background, everyday nouns
+#: and no titles inline, over the same three records and the same markers.
+_OPENING_BY_DEPTH = {
+    "plain_language": "I found 3 conditions related to BRCA1 [1][2][3].",
+    "researcher": "Found 3 disease records for BRCA1: disease name number 1 [1], ",
+}
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("depth", ["plain_language", "researcher"])
 async def test_the_first_sentence_names_a_disease_and_trials_follow(monkeypatch, depth: str) -> None:
+    """The answer opens on the diseases, cited, with the trials after them.
+
+    Item 12.9 (2026-09-23) REVERSED this arm's old expectation that both
+    depths open with the same "Found 3 disease records for BRCA1: <titles>"
+    sentence: rule 1 has Plain language open "I found 3 conditions related
+    to BRCA1 [1][2][3]." (`_OPENING_BY_DEPTH`). What stays pinned at both
+    depths is the property: the same three records and markers, then the
+    trials."""
     _install(monkeypatch, _relating_reply)
     result = await graph_module.write_node(_state(depth))
     claims = _claims(result)
     first = claims[0]["text"]
-    assert first.startswith("Found 3 disease records for BRCA1: disease name number 1 [1], "), first
+    assert first.startswith(_OPENING_BY_DEPTH[depth]), first
     assert claims[0]["marker_ids"] and len(claims[0]["marker_ids"]) == 3, claims[0]
     # Trials follow the diseases: as prose in Plain language, as list rows in
     # Researcher (where their restatements are dropped for the list).
@@ -246,6 +264,11 @@ def _restating_reply(lines: dict[int, str]) -> str:
 
 @pytest.mark.asyncio
 async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_summary(monkeypatch) -> None:
+    """Item 12.9 (2026-09-23) REVERSED the shape this arm pinned, one-cell
+    `list_item` rows: rule 2 makes each Researcher group a table with an
+    identifier column, so the rows are read from `table_row` too. The
+    property is unchanged: the restatements go, and the list names all six
+    records once, in order."""
     _install(monkeypatch, _restating_reply)
     result = await graph_module.write_node(_state("researcher"))
     tokens = _tokens(result)
@@ -253,12 +276,16 @@ async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_
     assert len(prose) == 1, [t["text"] for t in prose]
     assert prose[0]["text"].startswith("Found 3 disease records for BRCA1: "), prose[0]
     assert prose[0]["marker_ids"], "the summary must be cited"
-    list_rows = [t["cells"][0] for t in tokens if t["kind"] == "list_item"]
+    # Item 12.9 (2026-09-23): Researcher records are table rows now, each
+    # group a table with an identifier column (rule 2), so the rows are read
+    # from `table_row` as well as `list_item`. The first cell is still the
+    # record's name, and the six records and their order are unchanged.
+    list_rows = [t["cells"][0] for t in tokens if t["kind"] in ("list_item", "table_row")]
     assert list_rows == [
         "disease name number 1", "disease name number 2", "disease name number 3",
         "BRCA1", "trial title number 1", "trial title number 2",
     ], list_rows
-    assert not any(t["kind"] == "note" and "could not be verified" in t["text"] for t in tokens), (
+    assert not any(t["kind"] == "note" and "no written summary could be checked" in t["text"] for t in tokens), (
         "restatements are not a grounding failure; the fallback note must not appear"
     )
     done = next(e.payload for e in result["events"] if e.type == "done")
@@ -278,11 +305,24 @@ async def test_without_the_drop_the_restatements_are_rendered_twice(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_plain_language_keeps_restatements_since_it_has_no_list(monkeypatch) -> None:
+async def test_plain_language_drops_restatements_the_list_already_shows(monkeypatch) -> None:
+    """Item 12.12 (2026-09-23), REVERSING the arm that stood here.
+
+    It pinned "plain language keeps restatements since it has no list". Both
+    halves stopped being true: every depth has listed every record since
+    2026-09-14, and a tester's plain-language answers read "One trial is
+    named X. Another is named Y" above a list naming the same trials. The
+    product owner directed the repetition fixed, so the restatements go at
+    this depth too, and the listing still names every record once.
+    """
     _install(monkeypatch, _restating_reply)
     tokens = _tokens(await graph_module.write_node(_state("plain_language")))
     prose = [t["text"] for t in tokens if t["kind"] == "claim"]
-    assert any("disease name number 1" in text for text in prose[1:]), prose
+    listed = [t["text"] for t in tokens if t["kind"] in ("list_item", "table_row")]
+    assert any("disease name number 1" in text for text in listed), (
+        f"populate-check: the listing must still name the record: {tokens}"
+    )
+    assert not any("disease name number 1" in text for text in prose[1:]), prose
 
 
 @pytest.mark.asyncio
@@ -299,6 +339,84 @@ async def test_a_trials_question_counts_the_trials_as_answer_findings(monkeypatc
     assert "trial title number 1 [1]" in first and "disease name number 3 [5]" in first, first
 
 
+_MANY_DISEASE_ROWS = [
+    {
+        "node_or_edge_type": "Disease",
+        "curie": f"MedGen:D{index}",
+        "fields": {"name": f"disease name number {index}"},
+        "source_url": f"https://www.ncbi.nlm.nih.gov/medgen/D{index}",
+        "graph_snapshot_version": "v1",
+        "vocabulary_artifact_fields": [],
+    }
+    for index in range(1, 37)
+]
+
+
+@pytest.mark.asyncio
+async def test_the_opening_count_matches_the_list_beneath_it(monkeypatch) -> None:
+    """The opening sentence counts what the READER is shown, not the prompt slice.
+
+    Measured on develop 2026-09-23 across five consecutive live runs of golden
+    question G-019: the answer opened "Found 20 ontology class records" above a
+    list of 26, carrying 26 citations. A count that disagrees with the list
+    under it costs the reader their trust in every other number on the page.
+
+    THE CAUSE was one variable serving two consumers whose correct scopes
+    differ. `answer_findings` is sliced to `_MAX_FINDINGS_FOR_MODEL_PROMPT`
+    because it feeds `build_answer_context_directive`, which the MODEL reads,
+    and naming a ref_index the model was never shown would be an instruction
+    about content that is not there. That is right, and unchanged. It does not
+    transfer to the code-built opening sentence, which cites every record it
+    counts, so `write_node` now derives `summary_findings` over the full
+    display list for that one caller.
+
+    RED AGAINST THE OLD CODE by construction: with 26 display rows and a prompt
+    slice of 20, the pre-fix build opened "Found 20 disease records". (T-8.1-02
+    raised the prompt slice to 30; the fixture below was widened to 36 rows,
+    from its original 26, so this arm keeps distinguishing the two scopes
+    rather than passing vacuously against the larger cap.)
+
+    POPULATE CHECK: the row count here (36) must exceed
+    `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30) or the two scopes coincide and this
+    arm proves nothing, so it asserts that relationship rather than trusting
+    the literal.
+    """
+    assert len(_MANY_DISEASE_ROWS) > graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT, (
+        "this arm only distinguishes the two scopes when the display list is "
+        "longer than the prompt slice; with fewer rows it passes vacuously"
+    )
+
+    _install(monkeypatch, _relating_reply)
+    state = _state("researcher")
+    state["findings"] = [
+        _finding("cq-aq", "cypher_query", "layer_1_graph", _MANY_DISEASE_ROWS)
+    ]
+    state["findings_count"] = 1
+    result = await graph_module.write_node(state)
+
+    claims = _claims(result)
+    assert claims, "expected a cited opening sentence"
+    first = claims[0]["text"]
+    assert first.startswith("Found "), first
+
+    # What the reader is actually shown, measured from the citation events the
+    # answer emits rather than from a token field: the opening sentence cites
+    # every record it counts, so the citation list is the list it must agree
+    # with. A first attempt read `citation_id` off the token payloads and got
+    # zero, which would have made this arm pass vacuously on any count at all.
+    shown = len(_sources(result))
+    counted = int(first.split("Found ", 1)[1].split(" ", 1)[0])
+    assert shown > 0, "no citations were emitted, so there is nothing to agree with"
+    assert counted != graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT or shown == counted, (
+        f"the opening counted {counted}, which is exactly the prompt slice, "
+        f"while the answer shows {shown}. This is the G-019 defect: {first!r}"
+    )
+    assert counted == shown, (
+        f"the opening sentence counted {counted} records while the answer "
+        f"shows {shown}. The two must agree: {first!r}"
+    )
+
+
 def test_answer_call_ids_pick_the_graph_call_and_trials_only_when_asked() -> None:
     planned = _state("researcher")["tool_calls"]
     ids = graph_module._answer_call_ids(planned, "Which diseases are associated with NCBIGene:672?")
@@ -310,6 +428,10 @@ def test_answer_call_ids_pick_the_graph_call_and_trials_only_when_asked() -> Non
 
 @pytest.mark.asyncio
 async def test_no_url_reaches_the_prompt_for_an_intronic_variant_row(monkeypatch) -> None:
+    """Item 12.9 (2026-09-23) moved where this arm finds the variant's name
+    cell: a Researcher record is now a `table_row` in a table with an
+    identifier column (rule 2), no longer a one-cell `list_item`. The
+    property is unchanged: no URL anywhere, and the cell reads the name."""
     row = {
         "node_or_edge_type": "SequenceVariant",
         "curie": "ClinVar:1179956",
@@ -328,7 +450,9 @@ async def test_no_url_reaches_the_prompt_for_an_intronic_variant_row(monkeypatch
     assert "http" not in "\n".join(_FINDING_LINE.findall(prompts[0])[0]).lower(), prompts[0]
     texts = [t["text"] for t in _tokens(result)]
     assert not any("source URL" in text or "source_url" in text for text in texts), texts
-    cells = [t["cells"][0] for t in _tokens(result) if t["kind"] == "list_item"]
+    # Item 12.9 (2026-09-23): a Researcher record is a table row now (rule
+    # 2), so its name cell is read from `table_row` as well as `list_item`.
+    cells = [t["cells"][0] for t in _tokens(result) if t["kind"] in ("list_item", "table_row")]
     assert "NM_000162.5(GCK):c.363+318G>A" in cells, cells
 
 

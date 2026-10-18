@@ -1,0 +1,969 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86c@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-27ec4b55cf28",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:42:35+00:00",
+  "run_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 13 sources, not yet confirmed",
+  "citations": 27,
+  "distinct_sources": 13,
+  "citations_by_layer": {
+   "layer_2_api": 20,
+   "layer_1_graph": 1,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 14,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   2
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 233,
+  "answer_start": "Found 1 gene record for Huntington disease: huntingtin [2]. \n\nHuntington disease is a monogenic neurodegenerative disorder showing autosomal-dominant inheritanc",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 14.021,
+  "seconds": 14.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 48,
+   "citation": 27,
+   "trust_signal": 28,
+   "done": 1
+  },
+  "first_word_s": 14.244,
+  "first_token_ts": "2026-09-26T20:41:10.345059Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 0,
+   "ts": "2026-09-26T20:40:57.669297Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 2,
+   "ts": "2026-09-26T20:41:00.181978Z",
+   "payload": {
+    "narrative": "Asks for available genetic tests for a named disease, a direct lookup in a test registry. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 4,
+   "ts": "2026-09-26T20:41:00.578628Z",
+   "payload": {
+    "narrative": "searching 3 layers for huntington disease. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-7490a2dea4e8",
+      "layer": "layer_1_graph",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-35c200bb6aab",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-abb29ec4f002",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-782e4d17c219",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ffc59481af0a",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-bfbb789a553c",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-723ee2a3dc5d",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6149a7ad9e71",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 6,
+   "ts": "2026-09-26T20:41:00.579902Z",
+   "payload": {
+    "call_id": "cq-7490a2dea4e8",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 7,
+   "ts": "2026-09-26T20:41:00.579932Z",
+   "payload": {
+    "call_id": "pa-35c200bb6aab",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 8,
+   "ts": "2026-09-26T20:41:00.579942Z",
+   "payload": {
+    "call_id": "ct-abb29ec4f002",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 9,
+   "ts": "2026-09-26T20:41:00.579951Z",
+   "payload": {
+    "call_id": "ne-782e4d17c219",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 10,
+   "ts": "2026-09-26T20:41:00.579960Z",
+   "payload": {
+    "call_id": "ne-ffc59481af0a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 11,
+   "ts": "2026-09-26T20:41:00.579968Z",
+   "payload": {
+    "call_id": "ne-bfbb789a553c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 12,
+   "ts": "2026-09-26T20:41:00.579977Z",
+   "payload": {
+    "call_id": "pa-723ee2a3dc5d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 13,
+   "ts": "2026-09-26T20:41:00.579985Z",
+   "payload": {
+    "call_id": "ne-6149a7ad9e71",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 14,
+   "ts": "2026-09-26T20:41:00.727334Z",
+   "payload": {
+    "call_id": "ne-782e4d17c219",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 15,
+   "ts": "2026-09-26T20:41:00.868185Z",
+   "payload": {
+    "call_id": "pa-35c200bb6aab",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 16,
+   "ts": "2026-09-26T20:41:00.985161Z",
+   "payload": {
+    "call_id": "ct-abb29ec4f002",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 17,
+   "ts": "2026-09-26T20:41:01.089138Z",
+   "payload": {
+    "call_id": "ne-ffc59481af0a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 18,
+   "ts": "2026-09-26T20:41:03.197767Z",
+   "payload": {
+    "call_id": "cq-7490a2dea4e8",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "2 row(s) of 2",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 19,
+   "ts": "2026-09-26T20:41:03.393248Z",
+   "payload": {
+    "call_id": "pa-723ee2a3dc5d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 20,
+   "ts": "2026-09-26T20:41:03.430951Z",
+   "payload": {
+    "call_id": "ne-6149a7ad9e71",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 14 record(s)",
+    "result_count": 14,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 21,
+   "ts": "2026-09-26T20:41:03.469808Z",
+   "payload": {
+    "call_id": "ne-bfbb789a553c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 22,
+   "ts": "2026-09-26T20:41:03.471285Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 23,
+   "ts": "2026-09-26T20:41:10.345059Z",
+   "payload": {
+    "text": "Found 1 gene record for Huntington disease: huntingtin [2]. ",
+    "marker_ids": [
+     "cq-7490a2dea4e8-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Huntington disease",
+     "huntingtin"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:3064",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/3064",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "huntingtin",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27228260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27228260/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Huntington_Disease",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D006816",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00052143",
+    "source_url": "https://clinicaltrials.gov/study/NCT00052143",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28221321",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28221321/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00075140",
+    "source_url": "https://clinicaltrials.gov/study/NCT00075140",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00980694",
+    "source_url": "https://clinicaltrials.gov/study/NCT00980694",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31371566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31371566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01554033",
+    "source_url": "https://clinicaltrials.gov/study/NCT01554033",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37603337",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37603337/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02336633",
+    "source_url": "https://clinicaltrials.gov/study/NCT02336633",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "0c4978bb-9ccf-43d4-b897-e510b406be1a",
+   "seq": 127,
+   "ts": "2026-09-26T20:41:10.347734Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 14021,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 13 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 128
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 116
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 146
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 175
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for Huntington disease: huntingtin [2]. \n\nHuntington disease is a monogenic neurodegenerative disorder showing autosomal-dominant inheritance, and the causative genetic mutation was identified in 1993 [1]. The principles of genetic testing are explained in published reviews of the disease [1]. \n\nGene records found\n\nGene NCBIGene:3064, name: huntingtin [2]. \n\nPubmed records found\n\nPubmed title: Huntington disease [3]. Pubmed title: Huntington disease [20]. Pubmed title: Huntington disease [22]. Pubmed title: Huntington disease: When does it begin [24]. Pubmed title: What Is Huntington Disease [26]. \n\nMedgen records found\n\nMedgen title: Huntington disease [4]. \n\nClinical features MedGen lists for Huntington disease\n\nMedgen clinical_features: Chorea [5]. Medgen clinical_features: Depression [6]. Medgen clinical_features: Gliosis [7]. Medgen clinical_features: Rigidity [8]. Medgen clinical_features: Seizure [9]. Medgen clinical_features: Hyperreflexia [10]. Medgen clinical_features: Bradykinesia [11]. Medgen clinical_features: Personality changes [12]. Medgen clinical_features: Abnormality of eye movement [13]. Medgen clinical_features: Dementia [14]. Medgen clinical_features: Cerebellar atrophy [15]. Medgen clinical_features: Gait ataxia [16]. Medgen clinical_features: Neuronal loss in central nervous system [17]. \n\nLiterature entity records found\n\nLiterature entity name: Huntington Disease [18]. \n\nClinical trial records found\n\nClinical trial name: Prospective Huntington At Risk Observational Study [19]. Clinical trial name: Family Health After Predictive Huntington Disease (HD) Testing [21]. Clinical trial name: Bioavailability of Ubiquinol in Huntington Disease [23]. Clinical trial name: Study of Huntington Patients in Connection With European Huntington's Disease Network (EHDN) [25]. Clinical trial name: Resveratrol and Huntington Disease [27]. "
+}

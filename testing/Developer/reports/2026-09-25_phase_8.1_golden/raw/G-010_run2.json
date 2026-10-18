@@ -1,0 +1,1514 @@
+{
+ "record": {
+  "id": "G-010",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kiss",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "My patient carries a BRCA1 variant of uncertain significance. What does the evidence say?",
+  "session_id": "c103-66ffab3c43a5",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T09:57:31+00:00",
+  "run_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:672"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 58 sources, not yet confirmed",
+  "citations": 58,
+  "distinct_sources": 57,
+  "citations_by_layer": {
+   "layer_1_graph": 40,
+   "layer_2_api": 13,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 40,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   40,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 491,
+  "answer_start": "Found 40 sequence variant records for BRCA1, of 15350 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 6.783,
+  "seconds": 21.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 82,
+   "citation": 58,
+   "trust_signal": 59,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 0,
+   "ts": "2026-09-25T09:55:57.120433Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 2,
+   "ts": "2026-09-25T09:55:58.474774Z",
+   "payload": {
+    "narrative": "Broad, open-ended question asking for evidence about a specific variant in a clinical context, requiring assembly of information from multiple sources.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 4,
+   "ts": "2026-09-25T09:55:58.478332Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-789bf9a25db2",
+      "layer": "layer_1_graph",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-02db8b54fb08",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-d5f6c516850d",
+      "layer": "layer_3_enrichment",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-2658efe3819d",
+      "layer": "layer_3_enrichment",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b375463e6046",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5708053b26f1",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1eae56cb4070",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8c54e7f0679a",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-f3f10e4328ba",
+      "layer": "layer_3_enrichment",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f881caf3288e",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ce6467904fad",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d26510dab8ff",
+      "layer": "layer_2_api",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-1f77c1b62927",
+      "layer": "layer_1_graph",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 6,
+   "ts": "2026-09-25T09:55:58.480652Z",
+   "payload": {
+    "call_id": "cq-789bf9a25db2",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 7,
+   "ts": "2026-09-25T09:55:58.480734Z",
+   "payload": {
+    "call_id": "ne-02db8b54fb08",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 8,
+   "ts": "2026-09-25T09:55:58.480867Z",
+   "payload": {
+    "call_id": "pa-d5f6c516850d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 9,
+   "ts": "2026-09-25T09:55:58.480891Z",
+   "payload": {
+    "call_id": "ct-2658efe3819d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 10,
+   "ts": "2026-09-25T09:55:58.480913Z",
+   "payload": {
+    "call_id": "ne-b375463e6046",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 11,
+   "ts": "2026-09-25T09:55:58.480933Z",
+   "payload": {
+    "call_id": "ne-5708053b26f1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 12,
+   "ts": "2026-09-25T09:55:58.480951Z",
+   "payload": {
+    "call_id": "ne-1eae56cb4070",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 13,
+   "ts": "2026-09-25T09:55:58.480964Z",
+   "payload": {
+    "call_id": "ne-8c54e7f0679a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 14,
+   "ts": "2026-09-25T09:55:58.480977Z",
+   "payload": {
+    "call_id": "pa-f3f10e4328ba",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 15,
+   "ts": "2026-09-25T09:55:58.480990Z",
+   "payload": {
+    "call_id": "ne-f881caf3288e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 16,
+   "ts": "2026-09-25T09:55:58.481003Z",
+   "payload": {
+    "call_id": "ne-ce6467904fad",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 17,
+   "ts": "2026-09-25T09:55:58.481017Z",
+   "payload": {
+    "call_id": "ne-d26510dab8ff",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 18,
+   "ts": "2026-09-25T09:55:58.481032Z",
+   "payload": {
+    "call_id": "cq-1f77c1b62927",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 19,
+   "ts": "2026-09-25T09:55:58.692894Z",
+   "payload": {
+    "call_id": "pa-d5f6c516850d",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 20,
+   "ts": "2026-09-25T09:55:58.788872Z",
+   "payload": {
+    "call_id": "ne-5708053b26f1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 21,
+   "ts": "2026-09-25T09:55:58.791611Z",
+   "payload": {
+    "call_id": "ne-b375463e6046",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 22,
+   "ts": "2026-09-25T09:55:58.867184Z",
+   "payload": {
+    "call_id": "ne-02db8b54fb08",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 23,
+   "ts": "2026-09-25T09:55:58.899894Z",
+   "payload": {
+    "call_id": "ne-1eae56cb4070",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 24,
+   "ts": "2026-09-25T09:55:58.930028Z",
+   "payload": {
+    "call_id": "ct-2658efe3819d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 25,
+   "ts": "2026-09-25T09:55:59.139010Z",
+   "payload": {
+    "call_id": "ne-d26510dab8ff",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 26,
+   "ts": "2026-09-25T09:55:59.291154Z",
+   "payload": {
+    "call_id": "cq-1f77c1b62927",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "40 row(s) of 40",
+    "result_count": 40,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 27,
+   "ts": "2026-09-25T09:56:01.940403Z",
+   "payload": {
+    "call_id": "cq-789bf9a25db2",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "100 row(s) of 15310",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 28,
+   "ts": "2026-09-25T09:56:02.211646Z",
+   "payload": {
+    "call_id": "pa-f3f10e4328ba",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 29,
+   "ts": "2026-09-25T09:56:02.280664Z",
+   "payload": {
+    "call_id": "ne-f881caf3288e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 30,
+   "ts": "2026-09-25T09:56:02.348088Z",
+   "payload": {
+    "call_id": "ne-ce6467904fad",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 31,
+   "ts": "2026-09-25T09:56:02.462622Z",
+   "payload": {
+    "call_id": "ne-8c54e7f0679a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 32,
+   "ts": "2026-09-25T09:56:02.471443Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000183",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002154",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002750",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003150",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004428",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004775",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004786",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005082",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005528",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005598",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005841",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005942",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007698",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007721",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008789",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009121",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009204",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009272",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009310",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009406",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010063",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010509",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010603",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010734",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011036",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012155",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1728del (p.Glu577fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012156",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012905",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1013802",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014065",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014065",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014279",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014279",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014997",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014997",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1709C>T (p.Pro570Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1015821",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1015821",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.2907T>A (p.Asn969Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1015826",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1015826",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4581G>T (p.Glu1527Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27381626",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27381626/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267740",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "113705",
+    "source_url": "https://omim.org/entry/113705",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00590109",
+    "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267741",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00597987",
+    "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "373892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00617656",
+    "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39261728",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4823850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00673335",
+    "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4848411",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00700778",
+    "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "42669763-7e99-4499-8a2f-8224923ee5cf",
+   "seq": 233,
+   "ts": "2026-09-25T09:56:16.170177Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 6783,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 58 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 40 sequence variant records for BRCA1, of 15350 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [1]. SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [2]. SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [3]. SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [4]. SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [5]. SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [6]. SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [7]. SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [8]. SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [9]. SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [10]. SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [11]. SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [12]. SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [13]. SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [14]. SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [15]. SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [16]. SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [17]. SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [18]. SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [19]. SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [20]. SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [21]. SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [22]. SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [23]. SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [24]. SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [25]. SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [26]. SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [27]. SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [28]. SequenceVariant record ClinVar:1010631 [29]. SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [30]. SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [31]. SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [32]. SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [33]. SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [34]. SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [35]. SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr) [36]. SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu) [37]. SequenceVariant ClinVar:1014997, name: NM_007294.4(BRCA1):c.1709C>T (p.Pro570Leu) [38]. SequenceVariant ClinVar:1015821, name: NM_007294.4(BRCA1):c.2907T>A (p.Asn969Lys) [39]. SequenceVariant ClinVar:1015826, name: NM_007294.4(BRCA1):c.4581G>T (p.Glu1527Asp) [40]. \n\nGene records found\n\nGene symbol: BRCA1 [41]. Gene name: BRCA1 [45]. \n\nPubmed records found\n\nPubmed title: Mechanisms of Therapy Resistance in Patient-Derived Xenograft Models of BRCA1-Deficient Breast Cancer [42]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [47]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [50]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [53]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [56]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [43]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [48]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [51]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [54]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [57]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [44]. BRCA1 [44]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [46]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [49]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [52]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [55]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [58]. \n\nNote: this answer was truncated because only 140 of the 15350 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

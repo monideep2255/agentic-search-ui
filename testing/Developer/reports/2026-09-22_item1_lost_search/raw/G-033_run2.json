@@ -1,0 +1,1342 @@
+{
+ "record": {
+  "id": "G-033",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-item1-c-24fb67-20260922@example.com",
+  "category": "discovery",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+  "session_id": "c103-8072cd6bc226",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "b6cd025",
+  "started_at": "2026-09-22T21:48:48+00:00",
+  "run_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:4292",
+   "NCBIGene:4436",
+   "MedGen:C0346629"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 6 sources, not yet confirmed",
+  "citations": 42,
+  "distinct_sources": 30,
+  "citations_by_layer": {
+   "layer_1_graph": 8,
+   "layer_2_api": 24,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 3,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 7,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   7,
+   6
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1634,
+  "answer_start": "Found 2 gene records and 5 disease records for MLH1, MSH2 and colorectal cancer [1][2][3][4][5][6][7]. \n\nGene records found\n\nGene NCBIGene:4292, name: mutL homo",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 10.142,
+  "seconds": 18.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 107,
+   "citation": 42,
+   "trust_signal": 43,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 0,
+   "ts": "2026-09-22T21:47:16.413246Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 2,
+   "ts": "2026-09-22T21:47:24.006841Z",
+   "payload": {
+    "narrative": "Open-ended comparative question about two genes in a disease context, requiring synthesis across multiple sources. (colorectal cancer: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "MLH1",
+      "curie": "NCBIGene:4292",
+      "confidence": 1.0
+     },
+     {
+      "text": "MSH2",
+      "curie": "NCBIGene:4436",
+      "confidence": 1.0
+     },
+     {
+      "text": "colorectal cancer",
+      "curie": "MedGen:C0346629",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 4,
+   "ts": "2026-09-22T21:47:24.009090Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:4292. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-e192f1a2744e",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d0d16da48f8b",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-18d870ef4d2a",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-e023c489a031",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7cd17712edbb",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4f55609b0612",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-af439f8eb0e0",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-83fac70e25f8",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-ea9fd2fcbd55",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f4a4c0645212",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ff6e36295cc1",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d4673e092b9c",
+      "layer": "layer_2_api",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5566b37639f4",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "MLH1",
+      "curie": "NCBIGene:4292",
+      "confidence": 1.0
+     },
+     {
+      "text": "MSH2",
+      "curie": "NCBIGene:4436",
+      "confidence": 1.0
+     },
+     {
+      "text": "colorectal cancer",
+      "curie": "MedGen:C0346629",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 6,
+   "ts": "2026-09-22T21:47:24.010084Z",
+   "payload": {
+    "call_id": "cq-e192f1a2744e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 7,
+   "ts": "2026-09-22T21:47:24.010115Z",
+   "payload": {
+    "call_id": "ne-d0d16da48f8b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 8,
+   "ts": "2026-09-22T21:47:24.010126Z",
+   "payload": {
+    "call_id": "pa-18d870ef4d2a",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 9,
+   "ts": "2026-09-22T21:47:24.010135Z",
+   "payload": {
+    "call_id": "ct-e023c489a031",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 10,
+   "ts": "2026-09-22T21:47:24.010143Z",
+   "payload": {
+    "call_id": "ne-7cd17712edbb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 11,
+   "ts": "2026-09-22T21:47:24.010150Z",
+   "payload": {
+    "call_id": "ne-4f55609b0612",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 12,
+   "ts": "2026-09-22T21:47:24.010158Z",
+   "payload": {
+    "call_id": "ne-af439f8eb0e0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 13,
+   "ts": "2026-09-22T21:47:24.010165Z",
+   "payload": {
+    "call_id": "ne-83fac70e25f8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 14,
+   "ts": "2026-09-22T21:47:24.010173Z",
+   "payload": {
+    "call_id": "pa-ea9fd2fcbd55",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 15,
+   "ts": "2026-09-22T21:47:24.010180Z",
+   "payload": {
+    "call_id": "ne-f4a4c0645212",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 16,
+   "ts": "2026-09-22T21:47:24.010188Z",
+   "payload": {
+    "call_id": "ne-ff6e36295cc1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 17,
+   "ts": "2026-09-22T21:47:24.010195Z",
+   "payload": {
+    "call_id": "ne-d4673e092b9c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 18,
+   "ts": "2026-09-22T21:47:24.010203Z",
+   "payload": {
+    "call_id": "cq-5566b37639f4",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 19,
+   "ts": "2026-09-22T21:47:24.168205Z",
+   "payload": {
+    "call_id": "pa-18d870ef4d2a",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 20,
+   "ts": "2026-09-22T21:47:24.213844Z",
+   "payload": {
+    "call_id": "ct-e023c489a031",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 21,
+   "ts": "2026-09-22T21:47:24.262647Z",
+   "payload": {
+    "call_id": "ne-4f55609b0612",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 22,
+   "ts": "2026-09-22T21:47:24.300563Z",
+   "payload": {
+    "call_id": "ne-7cd17712edbb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 23,
+   "ts": "2026-09-22T21:47:24.447770Z",
+   "payload": {
+    "call_id": "ne-d4673e092b9c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 24,
+   "ts": "2026-09-22T21:47:24.509346Z",
+   "payload": {
+    "call_id": "ne-af439f8eb0e0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 25,
+   "ts": "2026-09-22T21:47:24.563426Z",
+   "payload": {
+    "call_id": "ne-d0d16da48f8b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 26,
+   "ts": "2026-09-22T21:47:24.667658Z",
+   "payload": {
+    "call_id": "cq-e192f1a2744e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "7 row(s) of 7",
+    "result_count": 7,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 27,
+   "ts": "2026-09-22T21:47:24.718278Z",
+   "payload": {
+    "call_id": "cq-5566b37639f4",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "6 row(s) of 6",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 28,
+   "ts": "2026-09-22T21:47:24.860826Z",
+   "payload": {
+    "call_id": "pa-ea9fd2fcbd55",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 29,
+   "ts": "2026-09-22T21:47:25.055256Z",
+   "payload": {
+    "call_id": "ne-83fac70e25f8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 30,
+   "ts": "2026-09-22T21:47:25.056881Z",
+   "payload": {
+    "call_id": "ne-ff6e36295cc1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 31,
+   "ts": "2026-09-22T21:47:25.310937Z",
+   "payload": {
+    "call_id": "ne-f4a4c0645212",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 32,
+   "ts": "2026-09-22T21:47:25.312724Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1321489",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1321489",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1333991",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1333991",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5399763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5399763",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C2936783",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2936783",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5436806",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5436806",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "242650",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "120436",
+    "source_url": "https://omim.org/entry/120436",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00261456",
+    "source_url": "https://clinicaltrials.gov/study/NCT00261456",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000710",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "meiotic mismatch repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "242651",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01876511",
+    "source_url": "https://clinicaltrials.gov/study/NCT01876511",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006298",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mismatch repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37196219",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37196219/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4686835",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02760849",
+    "source_url": "https://clinicaltrials.gov/study/NCT02760849",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37196219",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37196219/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006950",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4852684",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02993068",
+    "source_url": "https://clinicaltrials.gov/study/NCT02993068",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0016446",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "somatic hypermutation of immunoglobulin genes",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4856878",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856878/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03005002",
+    "source_url": "https://clinicaltrials.gov/study/NCT03005002",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048298",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of isotype switching to IgA isotypes",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17510385",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048304",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of isotype switching to IgG isotypes",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30998989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30998989/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37196219",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37196219/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40769155",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41480639",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41480639/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "640184b5-e691-40f6-8f9a-185192a375ac",
+   "seq": 226,
+   "ts": "2026-09-22T21:47:32.520443Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 10142,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 6 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 2 gene records and 5 disease records for MLH1, MSH2 and colorectal cancer [1][2][3][4][5][6][7]. \n\nGene records found\n\nGene NCBIGene:4292, name: mutL homolog 1 [1]. Gene NCBIGene:4436, name: mutS homolog 2 [5]. gene symbol: MLH1 [8]. gene name: MLH1 [12]. The protein encoded by this gene can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system [18]. When MutL alpha is bound by MutS beta and some accessory proteins, the PMS2 subunit of MutL alpha introduces a single-strand break near DNA mismatches, providing an entry point for exonuclease degradation [18]. The encoded protein is also involved in DNA damage signaling and can heterodimerize with DNA mismatch repair protein MLH3 to form MutL gamma, which is involved in meiosis [18]. This gene was identified as a locus frequently mutated in hereditary nonpolyposis colon cancer (HNPCC) [18]. [provided by RefSeq, Aug 2017] [18]. \n\nDisease records found\n\nDisease name: Muir-Torr\u00c3\u00a9 syndrome [2]. Disease name: Colorectal cancer, hereditary nonpolyposis, type 2 [3]. Disease name: Mismatch repair cancer syndrome 1 [4]. Disease name: Lynch syndrome 1 [6]. Disease name: Mismatch repair cancer syndrome 2 [7]. \n\nPubmed records found\n\npubmed title: Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays [9]. pubmed title: Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome [16]. pubmed title: MLH1 Loss in Primary Prostate Cancer [22]. pubmed title: AI-generated MLH1 small binder improves prime editing efficiency [27]. pubmed title: Disruption of protein-protein interaction hotspots in the C-terminal domain of MLH1 confers mismatch repair deficiency [32]. The functional characterization of nonsynonymous single nucleotide polymorphisms in human mismatch repair (MMR) genes has been critical to evaluate their pathogenicity for hereditary nonpolyposis colorectal cancer [37]. We previously established an assay for detecting loss-of-function mutations in the MLH1 gene using a dominant mutator effect of human MLH1 expressed in Saccharomyces cerevisiae [37]. The purpose of this study is to extend the functional analyses of nonsynonymous single nucleotide polymorphisms in the MLH1 gene both in quality and in quantity, and integrate the results to evaluate the variants for pathogenic significance [37]. The 101 MLH1 variants, which covered most of the reported MLH1 nonsynonymous single nucleotide polymorphisms and consisted of one 3-bp deletion, 1 nonsense and 99 missense variants, were examined for the dominant mutator effect by three yeast assays and for the ability of the variant to repair a heteroduplex DNA with mismatch bases by in vitro MMR assay [37]. There was diversity in the dominant mutator effects and the in vitro MMR activities among the variants [37]. The majority of functionally inactive variants were located around the putative ATP-binding pocket of the NH(2)-terminal domain or the whole region of the COOH-terminal domain [37]. Integrated functional evaluations contribute to a better prediction of the cancer risk in individuals or families carrying MLH1 variants and provide insights into the function-structure relationships in MLH1 [37]. Approximately 75% of patients with suspected Lynch syndrome carry variants in MLH1 or MSH2, proteins encoded by these genes are required for DNA mismatch repair (MMR) [39]. However, 30% of these are variants of unknown significance (VUS) [39]. A assay that measures cell response to the cytotoxic effects of a methylating agent can determine the effects of VUS in MMR genes and identify patients with constitutional MMR-deficiency syndrome [39]. We adapted this method to test the effects of VUS in MLH1 and MSH2 genes found in patients with suspected Lynch syndrome [39]. We transiently expressed MLH1 or MSH2 variants in MLH1- or MSH2-null human colorectal cancer cell lines (HCT116 or LoVo), respectively [39]. The MMR process causes death of cells with methylation-damaged DNA bases, so we measured proportions of cells that undergo death following exposure to the methylating agent [39]. cells that escaped its toxicity were considered to have variants that affect function of the gene product [39]. Using this assay, we analyzed 88 variants (mainly missense variants), comprising a validation set of 40 previously classified variants (19 in MLH1 and 21 in MSH2) and a prospective set of 48 VUS (25 in MLH1 and 23 in MSH2) [39]. Prediction scores were calculated for all VUS according to the recommendations of the American College of Medical Genetics and Genomics, based on clinical, somatic, in silico, population, and functional data [39]. The assay correctly classified 39 of 40 variants in the validation set [39]. The assay identified 12 VUS that did alter function of the gene product and 28 VUS that did not [39]. the remaining 8 VUS had intermediate effects on MMR capacity and could not be classified [39]. Comparison of assay results with prediction scores confirmed the ability of the assay to discriminate VUS that affected the function of the gene products from those that did not [39]. Using an assay that measures the ability of the cells to undergo death following DNA damage induction by a methylating agent, we were able to assess whether\u2026 [39]. Among mismatch repair-deficient (MMRd) prostate cancers, loss of MLH1 is relatively uncommon and few cases have been reported in detail [40]. Here, we describe the molecular features of two cases of primary prostate cancer with MLH1 loss detected by immunohistochemistry, and in one case, confirmed via transcriptomic profiling [40]. Both cases were microsatellite stable on standard polymerase chain reaction (PCR)-based microsatellite instability (MSI) testing, but showed evidence of MSI on a newer PCR-based long mononucleotide repeat (LMR) assay and by next-generation sequencing [40]. Germline testing was negative for Lynch syndrome-associated mutations in both cases [40]. Targeted or whole-exome tumor sequencing using multiple commercial/academic platforms (Foundation, Tempus, JHU, and UW-OncoPlex) showed modestly elevated, though variable, tumor mutation burden estimates (2.3-10 mutations/Mb) consistent with MMRd, but without identifiable pathogenic single-nucleotide or indel mutations in MLH1 [40]. Copy-number analysis confirmed biallelic MLH1 loss in one case and monoallelic MLH1 loss in the second case, without evidence of MLH1 promoter hypermethylation in either [40]. The second patient was treated with single-agent pembrolizumab and demonstrated a short-lived prostate-specific antigen response [40]. These cases highlight the challenges in identifying MLH1-deficient prostate cancers using standard MSI testing and commercial sequencing panels, and support the utility of immunohistochemical assays and LMR- or sequencing-based MSI testing for detection of MMRd prostate cancers [40]. The prime editing (PE) system consists of a Cas9 nickase fused to a reverse transcriptase, which introduces precise edits into the target genomic region guided by a PE guide RNA [41]. However, PE efficiency is limited by mismatch repair [41]. To overcome this limitation, transient expression of a dominant-negative MLH1 (MLH1dn) has been used to inhibit key components of mismatch repair [41]. Here, we designed a de novo MLH1 small binder (MLH1-SB) that binds to the dimeric interface of MLH1 and PMS2 using RFdiffusion and AlphaFold 3 [41]. The compact size of MLH1-SB enabled its integration into existing PE architectures via 2A systems, creating a PE-SB platform [41]. The PE7-SB2 system significantly improved PE efficiency, achieving an 18.8-fold increase over PEmax and a 2.5-fold increase over PE7 in HeLa cells, as well as a 3.4-fold increase over PE7 in mice [41]. This study highlights the potential of generative AI in advancing genome editing technology [41]. MutL\u03b1, a heterodimer of MLH1 and PMS2, plays a key role in DNA mismatch repair (MMR), which maintains genomic stability by correcting replication errors [42]. Loss of MLH1 function causes MMR deficiency (MMRd), leading to elevated mutation rates and increased cancer susceptibility [42]. However, MMRd can offer a therapeutic advantage, as high tumour mutational burden enhances the efficacy of immune checkpoint inhibition [42]. MMR also drives somatic expansion of CAG repeats linked to Huntington's disease (HD) pathogenesis [42]. The C-terminal domain (CTD) of MLH1 contains at least two distinct protein-protein interaction (PPI) sites [42]. The S1 site supports heterodimerization with the PMS2 endonuclease, whereas the S2 site interacts with MIP-boxes present in MMR-associated factors (EXO1, MSH3) and in the DNA repair nuclease FAN1 [42]. Here, using MLH1-S2 mutant cell models and synthetic FAN1-derived peptides containing two adjacent MLH1-binding motifs (MIP and MIM), we demonstrate that selective disruption of MLH1 PPIs impairs MMR in vitro [42]. We further reveal that the peptide is able to inhibit the latent endonuclease activity of recombinant MutL\u03b1, possibly via competing with a putative MIM within PMS2 [42]. Our findings define key PPI interfaces within the MLH1(CTD) that govern MMR activity and may offer novel therapeutic opportunities to exploit MMRd in cancer and HD [42]. \n\nClinvar records found\n\nclinvar title: NM_000249.4(MLH1):c.545+1271_677+737delinsCA [10]. clinvar title: NM_000249.4(MLH1):c.453+625_545+920delinsT [17]. clinvar title: NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [23]. clinvar title: NM_000249.4(MLH1):c.884+5T>A [28]. clinvar title: NM_000249.4(MLH1):c.1039-1013G>A [33]. \n\nOmim records found\n\nDNA MISMATCH REPAIR PROTEIN MLH1 [11]. MLH1 [11]. \n\nClinical trial records found\n\nClinical trial name: The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [13]. Clinical trial name: Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [19]. Clinical trial name: Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [24]. Clinical trial name: Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [29]. Clinical trial name: Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver [34]. \n\nPublication records found\n\nPublication pmid: 17510385 [14]. Publication pmid: 30998989 [20]. Publication pmid: 37196219 [25]. Publication pmid: 40769155 [30]. Publication pmid: 41480639 [35]. \n\nBiological process records found\n\nBiologicalProcess GO:0000710, name: meiotic mismatch repair [15]. BiologicalProcess GO:0006298, name: mismatch repair [21]. BiologicalProcess GO:0006950, name: response to stress [26]. BiologicalProcess GO:0016446, name: somatic hypermutation of immunoglobulin genes [31]. BiologicalProcess GO:0048298, name: positive regulation of isotype switching to IgA isotypes [36]. BiologicalProcess GO:0048304, name: positive regulation of isotype switching to IgG isotypes [38]. \n\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer."
+}

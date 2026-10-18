@@ -1,0 +1,53 @@
+No search limit in effect yet
+Which syndromes feature arachnodactyly?
+New search
+
+✓ Answered14.1s · 8 tools · 14 sources from 2 layers
+
+Show work ▾
+
+Found 1 disease record for arachnodactyly: Arachnodactyly.⁠2
+
+BEALS-HECHT SYNDROME
+
+Beals-Hecht syndrome, also known as congenital contractural arachnodactyly, is caused by a fibrillin defect shared with Marfan syndrome and is characterized by arachnodactyly alongside narrow body habitus, scoliosis, congenital contractures, and external ear deformities.⁠1
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Arachnodactyly	MedGen:C0003706	⁠2
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Beals-Hecht syndrome.	PMID:12144083	⁠3
+Marfan's syndrome.	PMID:18935060	⁠7
+Arachnodactyly.	PMID:21031765	⁠9
+Congenital contractural arachnodactyly (Beals syndrome).	PMID:7815423	⁠12
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Arachnodactyly	medgen 2047	⁠4
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Arachnodactyly	@DISEASE_Arachnodactyly	⁠5
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Studies of Heritable Disorders of Connective Tissue	NCT00270686	COMPLETED	⁠6
+Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome	NCT00429364	COMPLETED	⁠8
+Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome	NCT00485368	COMPLETED	⁠10
+Losartan Versus Atenolol for the Treatment of Marfan Syndrome	NCT00593710	COMPLETED	⁠13
+A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome	NCT00651235	UNKNOWN	⁠14
+PUBLICATION RECORDS FOUND
+PAPER	IDENTIFIER	
+20301560	PMID:20301560	⁠11
+▶
+SOURCES
+13
+Based on 13 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

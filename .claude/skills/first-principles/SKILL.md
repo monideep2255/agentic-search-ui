@@ -1,13 +1,13 @@
 ---
 name: first-principles
-description: Explains concepts using first-principles thinking, breaking complex topics into fundamental truths with simple language. TRIGGER when user asks "what is X", "explain Y", "how does X work", "teach me about", "I don't understand", or needs a technical concept clarified. Also trigger on "break this down" or "ELI5". DO NOT TRIGGER for planning tasks (use action-planner) or code review (use objective-review).
+description: Explains a concept from first principles in simple language. TRIGGER on 'what is X', 'explain Y', 'how does X work', 'teach me about', 'break this down', 'ELI5'. Not for planning (use action-planner) or code review (use objective-review).
 ---
 
 # First principles & simple explanations
 
 ## When to use this skill
 
-Activate when Monideep:
+Activate when the user:
 - Asks "what is X" or "how does Y work"
 - Needs a technical concept explained
 - Is learning something new
@@ -99,7 +99,7 @@ Six behavioral criteria (from Aristotle through Bezos):
 
 The underlying trait: A first principles thinker has a disposition toward knowledge, not a domain or a technique. They treat beliefs as things to be earned, not inherited.
 
-When explaining concepts, model these behaviors. When Monideep asks "what is X", your explanation should itself demonstrate first-principles reasoning, not just use simple language.
+When explaining concepts, model these behaviors. When the user asks "what is X", your explanation should itself demonstrate first-principles reasoning, not just use simple language.
 
 ## Limits to be honest about
 

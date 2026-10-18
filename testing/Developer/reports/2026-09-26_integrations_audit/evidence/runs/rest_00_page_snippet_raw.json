@@ -1,0 +1,12 @@
+{
+  "command": "curl -X POST https://search-agent-api-develop-43b3.up.railway.app/v1/query \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"text\": \"Which diseases are associated with BRCA1?\", \"session_id\": \"demo-1\"}'",
+  "exit": 0,
+  "stdout": {
+    "run_id": "20258855-e1aa-4f2a-8217-1f8015830947",
+    "persona_name": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+  },
+  "stderr_tail": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n100   363  100   286  100    77   1421    382 --:--:-- --:--:-- --:--:--  1797\n",
+  "wall_s": 0.4
+}

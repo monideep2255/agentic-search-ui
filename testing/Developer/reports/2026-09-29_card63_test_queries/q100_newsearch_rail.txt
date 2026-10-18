@@ -1,0 +1,37 @@
+NCBI Agentic Search
+Search
+Integrations
+About
+Working as Koch
+S3
+s3-queries-c-20260929@example.com
+▾
++ New search
+
+YOUR SEARCHES
+
+Which diseases are associated with BRCA1?
+13 tools · 23 sources from 2 layers
+s3-queries-c-20260929@example.com
+No search limit in effect yet
+Ask a biomedical question
+
+Answered from the NCBI knowledge graph and live NCBI APIs. Every claim carries its source.
+
+Answer mode
+Plain language
+Researcher
+Diseases linked to BRCA1
+Clinical significance of rs334
+Variants in GCK causing MODY
+Trials recruiting for ALS
+
+New here? Take the two-minute tour: every feature, then a real question with its answer.
+
+Start the tour
+Not now
+Take the tour
+Knowledge graph 115M nodes, 693M edges
+Live NCBI APIs queried per question
+Literature and trials layered on top
+NCBI Agentic Search

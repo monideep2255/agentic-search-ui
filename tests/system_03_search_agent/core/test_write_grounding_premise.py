@@ -8,7 +8,7 @@ the right rows, does the Write step produce a narrative a reader can trust?
 blocking, because 2.2's deliverable is model-generated output. The four
 properties that stage requires, and where each one lives here:
 
-    THE MODEL CALL IS NOT MOCKED. Every other Write-step test in this repo
+    THE MODEL CALL IS NOT MOCKED. Every other Write-step test in this repository
     feeds fixture `Finding` payloads and mocks synth. Those tests are correct
     for what they test and cannot see a synthesis defect, because a fixture
     narrative is one someone already knew was right.
@@ -346,7 +346,7 @@ def _is_environmental_failure(answer: Answer) -> bool:
     synthesis-call failure, so the claim was false and a Write-step failure
     would have been retried as environmental.
 
-    That is precisely the F-2.1-J5-01 pattern this repo already paid for: a
+    That is precisely the F-2.1-J5-01 pattern this repository already paid for: a
     confident comment asserting a property the code did not implement,
     surviving review because a reader stops checking exactly where the prose
     sounds most certain. The fix is to make the code enforce what the

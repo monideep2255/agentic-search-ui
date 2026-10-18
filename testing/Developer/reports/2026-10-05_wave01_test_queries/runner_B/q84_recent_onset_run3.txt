@@ -1,0 +1,63 @@
+QUESTION: recent-onset diabetes treatment
+LANDED=answer SECONDS=24.9
+
+recent-onset diabetes treatment
+New search
+
+✓ Answered23.2s · 3 tools · 10 sources from 1 layer
+
+Show work ▾
+
+I found 5 published papers on this topic.⁠6–10
+
+This study is registered as ClinicalTrials.gov number NCT01055093.⁠1 That trial is registered as ClinicalTrials.gov NCT02443155.⁠2 No serious adverse events were reported and none of the participants discontinued AG019 due to treatment-emergent adverse events.⁠3 After 48 weeks, patients taking baricitinib had higher stimulated C-peptide levels, a measure of remaining beta-cell function, than those on placebo.⁠4 That review noted that high blood sugar is the primary cause of this nerve damage in type 1 diabetes, while abnormal blood fats are the main cause in type 2 diabetes.⁠5
+
+WHERE THIS ANSWER COMES FROM
+Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study.	⁠6
+Anti-interleukin-21 antibody and liraglutide for the preservation of β-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial.	⁠7
+Diabetic peripheral neuropathy essentials: a narrative review.	⁠8
+A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab.	⁠9
+Baricitinib and β-Cell Function in Patients with New-Onset Type 1 Diabetes.	⁠10
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+5
+Based on 5 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+6–10
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://pubmed.ncbi.nlm.nih.gov/31345776/
+ -> https://pubmed.ncbi.nlm.nih.gov/33662334/
+ -> https://pubmed.ncbi.nlm.nih.gov/37782353/
+ -> https://pubmed.ncbi.nlm.nih.gov/38055252/
+ -> https://pubmed.ncbi.nlm.nih.gov/36786097/

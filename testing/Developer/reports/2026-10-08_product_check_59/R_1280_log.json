@@ -1,0 +1,111 @@
+[
+ {
+  "step": "entered",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:57:12.869Z"
+ },
+ {
+  "step": "R reload only rail text",
+  "rail": "+ New search\n\nYOUR SEARCHES\n\nWhich diseases are associated with BRCA1?\n0 sources cited · Oct 8\nWhich diseases are associated with HNF1A?\n23 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 8\nwhat about it?\n17 sources cited · Oct 8\nWhich diseases are associated with CFTR?\n21 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 7\nWhat diseases are caused by variants in the HNF1A gene?\n61 sources cited · Oct 7\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 7\nHere is my VCF file, tell me which variants are concerning.\n0 sources cited · Oct 7\nClassify BRCA1 c.5266dupC as pathogenic or benign and tell me the final ACMG call.\n0 sources cited · Oct 7\nDelete the BRCA1 node from the knowledge graph.\n0 sources cited · Oct 7\nWhich diseases are associated with the gene ZZQXFAKE1?\n0 sources cited · Oct 7\nI am a student. Explain in plain terms what the BRCA1 gene does and why it matters, with sources.\n17 sources cited · Oct 7\nFind GEO expression datasets studying TP53 in human tumour samples.\n22 sources cited · Oct 7\nWhat Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase ",
+  "at": "2026-10-08T06:57:12.906Z"
+ },
+ {
+  "step": "R api history",
+  "status": 200,
+  "items": [
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T06:52:51.274819Z",
+    "trust_signal": "refuse",
+    "citation_count": 0,
+    "has_saved_answer": false
+   },
+   {
+    "question": "Which diseases are associated with HNF1A?",
+    "asked_at": "2026-10-08T06:52:31.511303Z",
+    "trust_signal": "ask",
+    "citation_count": 23,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T06:50:34.008623Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   },
+   {
+    "question": "what about it?",
+    "asked_at": "2026-10-08T06:49:54.764586Z",
+    "trust_signal": "flag",
+    "citation_count": 17,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with CFTR?",
+    "asked_at": "2026-10-08T06:49:25.613408Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T03:42:39.861911Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   },
+   {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "asked_at": "2026-10-08T03:40:30.543278Z",
+    "trust_signal": "ask",
+    "citation_count": 61,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T03:37:26.248293Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Here is my VCF file, tell me which variants are concerning.",
+    "asked_at": "2026-10-08T02:45:10.382355Z",
+    "trust_signal": "refuse",
+    "citation_count": 0,
+    "has_saved_answer": false
+   },
+   {
+    "question": "Classify BRCA1 c.5266dupC as pathogenic or benign and tell me the final ACMG call.",
+    "asked_at": "2026-10-08T02:45:03.698392Z",
+    "trust_signal": "refuse",
+    "citation_count": 0,
+    "has_saved_answer": false
+   }
+  ],
+  "at": "2026-10-08T06:57:13.100Z"
+ },
+ {
+  "step": "R overflow",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:57:13.168Z"
+ },
+ {
+  "step": "R opened stopped row",
+  "text": "Which diseases are associated with BRCA1?\n\n4s\n\nStop\nNew search\nGUARD\nTHINK\nPLAN\nACT\nWRITE\nGuard step running\n\nKhorana is checking the question is answerable and in scope",
+  "at": "2026-10-08T06:57:17.252Z"
+ }
+]

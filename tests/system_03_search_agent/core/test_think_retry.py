@@ -188,6 +188,8 @@ def test_the_logged_excerpt_is_bounded_and_escaped() -> None:
 
     from system_03_search_agent.core import graph as graph_module
 
-    source = inspect.getsource(graph_module.think_node)
+    # The retry loop moved out of `think_node` verbatim in build phase 8.2,
+    # so it can run beside the `think.recent_years` decision.
+    source = inspect.getsource(graph_module._run_think_classification)
     assert "content[:200]" in source
     assert "starts %r" in source

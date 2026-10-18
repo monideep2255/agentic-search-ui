@@ -1,0 +1,13 @@
+{
+ "modes": [
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/medgen/C1320450 -> https://www.ncbi.nlm.nih.gov/medgen/C1320450",
+  "https://www.ncbi.nlm.nih.gov/medgen/729095 -> https://www.ncbi.nlm.nih.gov/medgen/729095"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

@@ -1,0 +1,6 @@
+# setuptools builds in place and leaves these beside the pyproject. The
+# repository root's `/build/` rule is anchored to the root, so it does not
+# reach this directory.
+build/
+dist/
+*.egg-info/

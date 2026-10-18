@@ -1,0 +1,344 @@
+{
+ "record": {
+  "id": "G-003",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-l01-local-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?",
+  "session_id": "c103-0db5f626750b",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "local-l01-summary",
+  "started_at": "2026-09-22T18:31:30+00:00",
+  "run_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C4552100"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 2 sources",
+  "citations": 12,
+  "distinct_sources": 12,
+  "citations_by_layer": {
+   "layer_1_graph": 11,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 4,
+  "must_cite_hits": 3,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 12,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   12
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 112,
+  "answer_start": "Found 11 gene records for Lynch syndrome [1][3][4][5][6][7][8][9][10][11][12], linked to 1 disease: Lynch syndrome [2]. \n\nDisease records found\n\nDisease name: L",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 3.727,
+  "seconds": 10.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 18,
+   "citation": 12,
+   "trust_signal": 13,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 0,
+   "ts": "2026-09-22T18:31:31.558660Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 2,
+   "ts": "2026-09-22T18:31:32.203194Z",
+   "payload": {
+    "narrative": "Broad, open-ended, multi-source question asking for diverse information types (genes, condition record, variants, trials) across databases with no single obvious path (Lynch syndrome: 1 of 10 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 4,
+   "ts": "2026-09-22T18:31:32.213595Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-dfed7f91f566",
+      "layer": "layer_1_graph",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 6,
+   "ts": "2026-09-22T18:31:32.218139Z",
+   "payload": {
+    "call_id": "cq-dfed7f91f566",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 7,
+   "ts": "2026-09-22T18:31:34.091278Z",
+   "payload": {
+    "call_id": "cq-dfed7f91f566",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "12 row(s) of 12",
+    "result_count": 12,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 8,
+   "ts": "2026-09-22T18:31:34.095889Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:27030",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/27030",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 3",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4552100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4552100",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2956",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 6",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4072",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "epithelial cell adhesion molecule",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4763",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "neurofibromin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5378",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 1, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5395",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5395",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 2, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:6224",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/6224",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "ribosomal protein S20",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7048",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7048",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/999",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cadherin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "a680fb96-2321-4d2d-b5e4-11bea373d88c",
+   "seq": 53,
+   "ts": "2026-09-22T18:31:40.768939Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 3727,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 2 sources",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 11 gene records for Lynch syndrome [1][3][4][5][6][7][8][9][10][11][12], linked to 1 disease: Lynch syndrome [2]. \n\nDisease records found\n\nDisease name: Lynch syndrome [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:27030, name: mutL homolog 3 [1]. Gene NCBIGene:2956, name: mutS homolog 6 [3]. Gene NCBIGene:4072, name: epithelial cell adhesion molecule [4]. Gene NCBIGene:4292, name: mutL homolog 1 [5]. Gene NCBIGene:4436, name: mutS homolog 2 [6]. Gene NCBIGene:4763, name: neurofibromin 1 [7]. Gene NCBIGene:5378, name: PMS1 homolog 1, mismatch repair system component [8]. Gene NCBIGene:5395, name: PMS1 homolog 2, mismatch repair system component [9]. Gene NCBIGene:6224, name: ribosomal protein S20 [10]. Gene NCBIGene:7048, name: transforming growth factor beta receptor 2 [11]. Gene NCBIGene:999, name: cadherin 1 [12]. "
+}

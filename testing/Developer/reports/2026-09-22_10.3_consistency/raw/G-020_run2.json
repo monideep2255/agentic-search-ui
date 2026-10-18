@@ -1,0 +1,1266 @@
+{
+ "record": {
+  "id": "G-020",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Which organism does the gene CFTR belong to?",
+  "session_id": "c103-c321b66bea27",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:14:55+00:00",
+  "run_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 46,
+  "distinct_sources": 34,
+  "citations_by_layer": {
+   "layer_1_graph": 18,
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1,
+   17
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 792,
+  "answer_start": "Found 1 organism taxon record for CFTR: Homo sapiens [1]. \n\nOrganism taxon records found\n\nOrganismTaxon NCBITaxon:9606, name: Homo sapiens [1]. \n\nGene records f",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 9,
+  "server_elapsed_s": 4.073,
+  "seconds": 13.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 76,
+   "citation": 46,
+   "trust_signal": 47,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 0,
+   "ts": "2026-09-22T17:13:23.580033Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 2,
+   "ts": "2026-09-22T17:13:25.459567Z",
+   "payload": {
+    "narrative": "Asks for the organism associated with a single known gene, answerable with one or two direct API calls.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 4,
+   "ts": "2026-09-22T17:13:25.461983Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-e9f4c38c0a20",
+      "layer": "layer_1_graph",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-48654f44e13b",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-03c1804d2c58",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-487d7b627493",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d8c91f8cf33b",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a81eec542e0e",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2c743f381268",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-fc4b5e6e6f86",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4b9edfd5340f",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cc4437e3f96b",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-bd49e5ca8500",
+      "layer": "layer_1_graph",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 6,
+   "ts": "2026-09-22T17:13:25.463111Z",
+   "payload": {
+    "call_id": "cq-e9f4c38c0a20",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 7,
+   "ts": "2026-09-22T17:13:25.463146Z",
+   "payload": {
+    "call_id": "ne-48654f44e13b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 8,
+   "ts": "2026-09-22T17:13:25.463156Z",
+   "payload": {
+    "call_id": "pa-03c1804d2c58",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 9,
+   "ts": "2026-09-22T17:13:25.463165Z",
+   "payload": {
+    "call_id": "ct-487d7b627493",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 10,
+   "ts": "2026-09-22T17:13:25.463173Z",
+   "payload": {
+    "call_id": "ne-d8c91f8cf33b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 11,
+   "ts": "2026-09-22T17:13:25.463181Z",
+   "payload": {
+    "call_id": "ne-a81eec542e0e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 12,
+   "ts": "2026-09-22T17:13:25.463189Z",
+   "payload": {
+    "call_id": "ne-2c743f381268",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 13,
+   "ts": "2026-09-22T17:13:25.463197Z",
+   "payload": {
+    "call_id": "pa-fc4b5e6e6f86",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 14,
+   "ts": "2026-09-22T17:13:25.463205Z",
+   "payload": {
+    "call_id": "ne-4b9edfd5340f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 15,
+   "ts": "2026-09-22T17:13:25.463214Z",
+   "payload": {
+    "call_id": "ne-cc4437e3f96b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 16,
+   "ts": "2026-09-22T17:13:25.463223Z",
+   "payload": {
+    "call_id": "cq-bd49e5ca8500",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 17,
+   "ts": "2026-09-22T17:13:25.675843Z",
+   "payload": {
+    "call_id": "pa-03c1804d2c58",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 18,
+   "ts": "2026-09-22T17:13:25.781538Z",
+   "payload": {
+    "call_id": "ne-a81eec542e0e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 19,
+   "ts": "2026-09-22T17:13:25.831029Z",
+   "payload": {
+    "call_id": "ct-487d7b627493",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 20,
+   "ts": "2026-09-22T17:13:25.832873Z",
+   "payload": {
+    "call_id": "ne-d8c91f8cf33b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 21,
+   "ts": "2026-09-22T17:13:25.884135Z",
+   "payload": {
+    "call_id": "ne-48654f44e13b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 22,
+   "ts": "2026-09-22T17:13:25.916427Z",
+   "payload": {
+    "call_id": "ne-cc4437e3f96b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 23,
+   "ts": "2026-09-22T17:13:26.004413Z",
+   "payload": {
+    "call_id": "cq-e9f4c38c0a20",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 24,
+   "ts": "2026-09-22T17:13:26.016205Z",
+   "payload": {
+    "call_id": "cq-bd49e5ca8500",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 25,
+   "ts": "2026-09-22T17:13:26.235302Z",
+   "payload": {
+    "call_id": "pa-fc4b5e6e6f86",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 26,
+   "ts": "2026-09-22T17:13:26.322237Z",
+   "payload": {
+    "call_id": "ne-4b9edfd5340f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 27,
+   "ts": "2026-09-22T17:13:26.355595Z",
+   "payload": {
+    "call_id": "ne-2c743f381268",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 28,
+   "ts": "2026-09-22T17:13:26.357925Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBITaxon:9606",
+    "source_url": "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9606",
+    "layer": "layer_1_graph",
+    "source": "NCBITaxon",
+    "field": "name",
+    "entity_name": "Homo sapiens",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006811",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006821",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006833",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0015701",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "bicarbonate transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034220",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034976",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035377",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transepithelial water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048240",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "sperm capacitation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050891",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "multicellular organismal-level water homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051454",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intracellular pH elevation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0055085",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "membrane hyperpolarization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070175",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of enamel mineralization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071320",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to cAMP",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0097186",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "amelogenesis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1902476",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1904322",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to forskolin",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "374fbae1-01bf-4ecf-9f56-8e770afbe207",
+   "seq": 199,
+   "ts": "2026-09-22T17:13:35.030024Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 4073,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 organism taxon record for CFTR: Homo sapiens [1]. \n\nOrganism taxon records found\n\nOrganismTaxon NCBITaxon:9606, name: Homo sapiens [1]. \n\nGene records found\n\ngene symbol: CFTR [2]. gene name: CFTR [5]. This gene encodes a member of the ATP-binding cassette (ABC) transporter superfamily [11]. The encoded protein functions as a chloride channel, making it unique among members of this protein family, and controls ion and water secretion and absorption in epithelial tissues [11]. Channel activation is mediated by cycles of regulatory domain phosphorylation, ATP-binding by the nucleotide-binding domains, and ATP hydrolysis [11]. Mutations in this gene cause cystic fibrosis, the most common lethal genetic disorder [11]. \n\nPubmed records found\n\npubmed title: Molecular Structure of the Human CFTR Ion Channel [3]. pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [9]. pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [15]. pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [20]. pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [25]. The cystic fibrosis transmembrane conductance regulator (CFTR) is an ATP-binding cassette (ABC) transporter that uniquely functions as an ion channel [30]. Here, we present a 3.9\u00a0\u00c5 structure of dephosphorylated human CFTR without nucleotides, determined by electron cryomicroscopy (cryo-EM) [30]. Close resemblance of this human CFTR structure to zebrafish CFTR under identical conditions reinforces its relevance for understanding CFTR function [30]. The human CFTR structure reveals a previously unresolved helix [30]. The spectrum of disorders involving CFTR (cystic fibrosis transmembrane conductance regulator) dysfunction correlates with a continuous gradient of CFTR function defined by the combination of two allelic CFTR variants [32]. CFTR-related disorders are clinical entities with features of cystic fibrosis (CF) and evidence for presence of CFTR dysfunction but not meeting criteria for diagnosis of CF [32]. Individuals with CFTR-RDs demonstrate a wide range of CFTR activity and are still under-recognized or misc [32]. This paper is the first in a series providing updated guidance on the definition, evaluation and management of people with a Cystic Fibrosis Transmembrane conductance Regulator (CFTR)-Related Disorder (CFTR-RD) [34]. The need for this update relates to more precise characterisation of CFTR gene variants and improved assessment of CFTR protein dysfunction [34]. The exercise is co-ordinated by the European CF Society Standards of Care Committee and Diagnostic Network Working Group and involves stakeholder e [34]. The predominant mutation causing cystic fibrosis, a deletion of phenylalanine 508 (\u0394508) in the cystic fibrosis transmembrane conductance regulator (CFTR), leads to severe defects in CFTR biogenesis and function [36]. The advanced therapy Trikafta combines the folding corrector tezacaftor (VX-661), the channel potentiator ivacaftor (VX-770), and the dual-function modulator elexacaftor (VX-445) [36]. However, it is unclear how elexacaftor exerts its effects, in part because the structure of \u0394508 CFTR is un [36]. In 2017, the US Food and Drug Administration initiated expansion of drug labels for the treatment of cystic fibrosis (CF) to include CF transmembrane conductance regulator (CFTR) gene variants based on in vitro functional studies [38]. This study aims to identify CFTR variants that result in increased chloride (Cl-) transport function by the CFTR protein after treatment with the CFTR modulator combination elexacaftor/tezacaftor/ivacaftor (ELX/TEZ/IVA) [38]. These data may benefit people with CF (pwCF) who [38]. \n\nClinvar records found\n\nclinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [4]. clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [10]. clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [16]. clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [21]. clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [26]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [6]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [12]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [17]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [22]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [27]. \n\nPublication records found\n\nPublication pmid: 28340353 [7]. Publication pmid: 36207272 [13]. Publication pmid: 36220763 [18]. Publication pmid: 36264792 [23]. Publication pmid: 38388235 [28]. \n\nBiological process records found\n\nBiologicalProcess GO:0006811, name: monoatomic ion transport [8]. BiologicalProcess GO:0006821, name: chloride transport [14]. BiologicalProcess GO:0006833, name: water transport [19]. BiologicalProcess GO:0015701, name: bicarbonate transport [24]. BiologicalProcess GO:0034220, name: monoatomic ion transmembrane transport [29]. BiologicalProcess GO:0034976, name: response to endoplasmic reticulum stress [31]. BiologicalProcess GO:0035377, name: transepithelial water transport [33]. BiologicalProcess GO:0048240, name: sperm capacitation [35]. BiologicalProcess GO:0050891, name: multicellular organismal-level water homeostasis [37]. BiologicalProcess GO:0051454, name: intracellular pH elevation [39]. BiologicalProcess GO:0055085, name: transmembrane transport [40]. BiologicalProcess GO:0060081, name: membrane hyperpolarization [41]. BiologicalProcess GO:0070175, name: positive regulation of enamel mineralization [42]. BiologicalProcess GO:0071320, name: cellular response to cAMP [43]. BiologicalProcess GO:0097186, name: amelogenesis [44]. BiologicalProcess GO:1902476, name: chloride transmembrane transport [45]. BiologicalProcess GO:1904322, name: cellular response to forskolin [46]. "
+}

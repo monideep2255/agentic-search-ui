@@ -1,0 +1,76 @@
+{
+ "record": {
+  "id": "G-016",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-golden-b-20260929@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What are the known orthologs of TP53 in other species?",
+  "session_id": "c103-eb76f60475f6",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:26:45+00:00",
+  "run_id": "551dfd5e-4c54-4b57-b165-5d18fe0d1227",
+  "outcome": "error",
+  "timed_out": false,
+  "guard_passed": null,
+  "guard_category": null,
+  "guard_reason": null,
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": null,
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 1,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": {
+   "fatal": true,
+   "scope": "step",
+   "source": "guardrail",
+   "error_class": "transient",
+   "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+   "retry_after_s": 0
+  },
+  "total_cost_usd": null,
+  "total_tool_calls": null,
+  "server_elapsed_s": null,
+  "seconds": 15.6,
+  "event_types": {
+   "error": 1
+  },
+  "first_word_s": null,
+  "first_token_ts": null
+ },
+ "events": [
+  {
+   "type": "error",
+   "version": "v1",
+   "trace_id": "551dfd5e-4c54-4b57-b165-5d18fe0d1227",
+   "seq": 0,
+   "ts": "2026-09-29T16:25:12.506594Z",
+   "payload": {
+    "fatal": true,
+    "scope": "step",
+    "source": "guardrail",
+    "error_class": "transient",
+    "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+    "retry_after_s": 0
+   }
+  }
+ ],
+ "answer_text": ""
+}

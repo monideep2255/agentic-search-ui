@@ -1,0 +1,11 @@
+model call point=guardrail.injection trace=probe56-52dbd332 kind=jev elapsed_ms=225 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-52dbd332 kind=guard elapsed_ms=6318 outcome=ok attempt=1 provider=Venice
+model call point=think.recent_years trace=probe56-52dbd332 kind=jev elapsed_ms=235 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-52dbd332 kind=jev elapsed_ms=235 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-52dbd332 kind=jev elapsed_ms=262 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named no organism (trace probe56-52dbd332); asked once more, used the second reply, in 11720 ms
+model call point=guardrail.injection trace=probe56-05b5b99a kind=jev elapsed_ms=207 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-05b5b99a kind=guard elapsed_ms=564 outcome=ok attempt=1 provider=Relace
+model call point=plan.literature trace=probe56-05b5b99a kind=jev elapsed_ms=229 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-05b5b99a kind=jev elapsed_ms=236 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-05b5b99a kind=jev elapsed_ms=327 outcome=ok attempt=1 provider=unknown

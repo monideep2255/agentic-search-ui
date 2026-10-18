@@ -52,7 +52,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from system_03_search_agent.contracts.query import Query
+from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import in_reading_order, one_per_citation_id
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -80,8 +81,11 @@ def _fake_response(content: str):
 
 
 def _narrative_covering(prompt: str, ref_indices: set[int]) -> str:
+    # Item 12.12 (2026-09-23): prose that only restates a record the listing
+    # already shows is dropped at every depth, so the fake relates each
+    # record to the question's subject, as a real answer does.
     clauses = [
-        f"{body.strip()} [{index}]"
+        f"NCBIGene:672 is associated with {body.strip()} [{index}]"
         for index, body in _FINDING_LINE.findall(prompt)
         if int(index) in ref_indices
     ]
@@ -160,6 +164,9 @@ def _state(total_available: int | None = 3, truncated: bool = False) -> dict[str
     return {
         "query": query,
         "harness": harness_module.Harness(trace_id=query.trace_id),
+        # The web bundle built with build phase 8.7 asks for `placement`
+        # (fix round, F-8.7-A14), so the listing leaves first.
+        "context": RequestContext(surface="web_ui", reads_placement=True),
         "seq": 0,
         "start_monotonic": time.monotonic(),
         "findings": [finding],
@@ -169,11 +176,26 @@ def _state(total_available: int | None = 3, truncated: bool = False) -> dict[str
 
 
 def _events(result, event_type: str) -> list:
-    return [e for e in result["events"] if e.type == event_type]
+    events = [e for e in result["events"] if e.type == event_type]
+    if event_type != "citation":
+        return events
+    # As every surface reads them (F-8.7-A04, card 57): one per citation id,
+    # a listing citation sent again with its checked words in the first
+    # one's place.
+    event_by_payload = {id(e.payload): e for e in events}
+    return [event_by_payload[id(p)] for p in one_per_citation_id(e.payload for e in events)]
 
 
 def _tokens(result) -> list[tuple[str, list[str]]]:
     return [(e.payload["text"], list(e.payload["marker_ids"])) for e in _events(result, "token")]
+
+
+def _read_tokens(result) -> list[tuple[str, list[str]]]:
+    """`_tokens` in reading order: the summary above the listing, as every
+    surface lays the answer out (`contracts/token_order.py`). Build phase
+    8.7 sends the listing first, so arrival order and reading order differ."""
+    payloads = in_reading_order(e.payload for e in _events(result, "token"))
+    return [(payload["text"], list(payload["marker_ids"])) for payload in payloads]
 
 
 def _source_ids(result) -> list[str]:
@@ -203,7 +225,15 @@ async def test_the_tail_reports_what_the_model_left_out_so_sources_equal_prepare
 async def test_the_note_precedes_the_tail_and_carries_no_marker(model_reports) -> None:
     model_reports(first={1})
     result = await graph_module.write_node(_state())
-    tokens = _tokens(result)
+    # Build phase 8.7: the listing arrives first, under its heading; read
+    # in reading order the summary and the model's prose stand above it,
+    # which is what this arm's positions are about.
+    arrived = _tokens(result)
+    assert any(text.startswith("Disease records found") for text, _ in arrived[:2]), (
+        "populate-check failed: the listing did not arrive first, so the "
+        "reading order below is not doing any work."
+    )
+    tokens = _read_tokens(result)
     citation_id_by_source = {
         e.payload["source_id"]: e.payload["citation_id"] for e in _events(result, "citation")
     }

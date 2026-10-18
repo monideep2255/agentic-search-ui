@@ -1,0 +1,427 @@
+{
+  "tool": "verify capture",
+  "format": 1,
+  "date": "2026-10-17",
+  "topic": "2026-10-17_product_check_card38c",
+  "target": {
+    "name": "develop",
+    "web": "https://search-agent-web-develop-2aeb.up.railway.app",
+    "api": "https://search-agent-api-develop-43b3.up.railway.app",
+    "health": {
+      "status": 200,
+      "app_env": "develop"
+    }
+  },
+  "checkout_head": "b21cce25",
+  "deployed_commit": "cf9be15d",
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "widths_complete": true,
+  "seven_day_close": "eligible if every check passes",
+  "context": {
+    "reduced_motion": "reduce",
+    "axe_tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21a",
+      "wcag21aa"
+    ],
+    "settle_ms": 1500,
+    "browser": "chromium 151.0.7922.34"
+  },
+  "screens": [
+    {
+      "name": "cftr_papers_researcher",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_1280.png",
+          "reached": true,
+          "seconds_to_ready": 29.1,
+          "first_screen": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_cftr_papers_researcher_1280.png",
+          "prototype_overflow_px": 0
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_390.png",
+          "reached": true,
+          "seconds_to_ready": 24.7,
+          "first_screen": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_390.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_cftr_papers_researcher_390.png",
+          "prototype_overflow_px": 322
+        }
+      ]
+    },
+    {
+      "name": "cftr_papers_plain",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_1280.png",
+          "reached": true,
+          "seconds_to_ready": 20.8,
+          "first_screen": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_1280.txt",
+          "prototype_screenshot": null
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_390.png",
+          "reached": true,
+          "seconds_to_ready": 28.9,
+          "first_screen": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_390.txt",
+          "prototype_screenshot": null
+        }
+      ]
+    },
+    {
+      "name": "brca1_control_researcher",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "captures": [
+        {
+          "width": 1280,
+          "height": 900,
+          "screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_1280.png",
+          "reached": true,
+          "seconds_to_ready": 15.7,
+          "first_screen": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_1280_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 1280,
+          "client_width": 1280,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_1280.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_brca1_control_researcher_1280.png",
+          "prototype_overflow_px": 0
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_390.png",
+          "reached": true,
+          "seconds_to_ready": 15.6,
+          "first_screen": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_390_fold.png",
+          "overflow_px": 0,
+          "scroll_width": 390,
+          "client_width": 390,
+          "console_errors": [],
+          "axe": {
+            "serious_or_critical": [],
+            "moderate": 0,
+            "minor": 0
+          },
+          "text_file": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_390.txt",
+          "prototype_reached": true,
+          "prototype_screenshot": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_brca1_control_researcher_390.png",
+          "prototype_overflow_px": 4
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "29.1 s",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 390,
+      "check": "screen reached",
+      "value": "24.7 s",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_researcher",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "20.8 s",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 390,
+      "check": "screen reached",
+      "value": "28.9 s",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "cftr_papers_plain",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 1280,
+      "check": "screen reached",
+      "value": "15.7 s",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_1280.png"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 1280,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 1280,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 1280,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 390,
+      "check": "screen reached",
+      "value": "15.6 s",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_390.png"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 390,
+      "check": "horizontal overflow",
+      "value": "0 px",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 390,
+      "check": "console errors",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    },
+    {
+      "result": "pass",
+      "screen": "brca1_control_researcher",
+      "width": 390,
+      "check": "accessibility, serious or critical",
+      "value": "0",
+      "evidence": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/results.json"
+    }
+  ],
+  "awaiting_judgement": [
+    {
+      "screen": "cftr_papers_researcher",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_1280.png",
+      "prototype": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_cftr_papers_researcher_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "cftr_papers_researcher",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_researcher_390.png",
+      "prototype": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_cftr_papers_researcher_390.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "cftr_papers_plain",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_1280.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "cftr_papers_plain",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/cftr_papers_plain_390.png",
+      "prototype": null,
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "brca1_control_researcher",
+      "width": 1280,
+      "app": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_1280.png",
+      "prototype": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_brca1_control_researcher_1280.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    },
+    {
+      "screen": "brca1_control_researcher",
+      "width": 390,
+      "app": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/brca1_control_researcher_390.png",
+      "prototype": "testing/Developer/reports/2026-10-17_product_check_card38c/run1/prototype_brca1_control_researcher_390.png",
+      "design": "docs/build/design/design-system/screens/answer.html"
+    }
+  ],
+  "summary": {
+    "pass": 24,
+    "fail": 0
+  }
+}

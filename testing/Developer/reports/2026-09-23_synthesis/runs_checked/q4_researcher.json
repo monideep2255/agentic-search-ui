@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "papers on the effects of caffeine on exercise performance",
+  "outcome": "answer",
+  "words": 294,
+  "paragraphs": 4,
+  "headings": 2,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "11583104",
+    "25355191",
+    "32589582",
+    "33388079",
+    "36615805"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \n\n## Ergogenic Effects and Exercise Modalities\nAerobic endurance is the modality with the most consistent moderate-to-large benefits, although the magnitude differs between individuals [1]. Caffeine does not directly improve maximal oxygen capacity but permits training at greater power output and longer duration, with effects demonstrated in activities lasting from 60 seconds to 2 hours [2]. For strength, recent work suggests no effect on maximal ability but enhanced resistance to fatigue [2]. \nThe ISSN position stand reports that caffeine consistently improves exercise performance at doses of 3\u20136 mg/kg body mass, with minimal effective doses possibly as low as 2 mg/kg, while very high doses such as 9 mg/kg increase side-effect incidence without additional ergogenic benefit [1]. Low doses below 3 mg/kg (approximately 200 mg) are also ergogenic, but appear to act through central nervous system effects on vigilance, alertness, and mood rather than through alterations in peripheral whole-body exercise responses [3]. A recent systematic review and meta-analysis of endurance running included 21 randomized controlled trials with caffeine doses ranging from 3 to 9 mg/kg [4]. \nThe classical theory that caffeine enhances fat oxidation and spares muscle glycogen has very little support and is an incomplete explanation [2]. Peripheral mechanisms involving substrate utilization, fatigue delay, and antioxidant and anti-inflammatory actions have been proposed, but non-central-nervous-system mechanisms remain largely unknown or controversial [5]. Inter-individual differences in performance response and adverse effects such as sleep disturbance or anxiety may be attributed to genetic variation in caffeine metabolism, habitual intake, and physical and psychological factors [1]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- Exercise and sport performance with low doses of caffeine.\n- Caffeine effects on systemic metabolism, oxidative-inflammatory pathways, and exercise performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- Effects of Caffeine Intake on Endurance Running Performance and Time to Exhaustion: A Systematic Review and Meta-Analysis.\n",
+  "key": "q4"
+}

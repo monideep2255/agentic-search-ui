@@ -1,0 +1,6 @@
+{
+  "name": "mod-help",
+  "version": "1.0.0",
+  "description": "Lists the mods installed in this repository with /mods, warns when an unknown plugin auto-loads from .claude/skills, and reminds you once a day. Trigger: /mods",
+  "author": { "name": "Monideep Chakraborti" }
+}

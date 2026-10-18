@@ -1,3 +1,8 @@
+---
+paths:
+  - "frontend/**/*"
+---
+
 ## Design consistency
 
 Product-owner rule, 2026-09-05: the UI must be beautiful, and the system is ALREADY beautiful. The job is therefore consistency, never invention. Any new or rebuilt surface copies the established visual language rather than producing a second one alongside it.

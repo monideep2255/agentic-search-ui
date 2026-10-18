@@ -957,9 +957,10 @@ async def test_p12b_act_runs_on_the_timeout_the_routed_class_selects() -> None:
     ## What this arm does NOT claim (F-4.7-R2-08)
 
     That the per-class budget is what Act runs on. It very nearly is not.
-    `CYPHER_QUERY_TIMEOUT_SECONDS` is `90.0`, and four of the five class
-    budgets (lookup 15, single_hop 20, aggregate 30, multi_hop 30) sit
-    under it, so the `max()` resolves all four to 90.0 and only
+    `CYPHER_QUERY_TIMEOUT_SECONDS` is `30.0` (it was `90.0` from 2026-07-31
+    until phase 8.6's re-land follow-up, R-09), and four of the five class
+    budgets (lookup 15, single_hop 20, aggregate 30, multi_hop 30) sit at
+    or under it, so the `max()` resolves all four to 30.0 and only
     `exploratory` (120) selects anything different. T-4.7-08's "a real
     class finally selects a real budget" is true at `budget_for_step` and
     nearly inert at Act. That is stated here rather than papered over,

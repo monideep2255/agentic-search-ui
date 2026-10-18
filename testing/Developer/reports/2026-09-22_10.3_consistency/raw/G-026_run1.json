@@ -1,0 +1,248 @@
+{
+ "record": {
+  "id": "G-026",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with cystic fibrosis?",
+  "session_id": "c103-dcd61f6ceab8",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:52:53+00:00",
+  "run_id": "f316d233-097b-49f4-b652-9b889f94347a",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0010674"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 4,
+  "distinct_sources": 4,
+  "citations_by_layer": {
+   "layer_2_api": 1,
+   "layer_1_graph": 3
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 101,
+  "answer_start": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [2], Fc gamma receptor IIa [3] and transforming growth factor beta 1 [4], linke",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 3.904,
+  "seconds": 8.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 15,
+   "citation": 4,
+   "trust_signal": 5,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 0,
+   "ts": "2026-09-22T16:51:21.059829Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 2,
+   "ts": "2026-09-22T16:51:23.445429Z",
+   "payload": {
+    "narrative": "The question asks for a list of genes linked to a single disease; one API call to a disease-gene association resource suffices. (cystic fibrosis: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 4,
+   "ts": "2026-09-22T16:51:23.446682Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-a9901d50ba20",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 6,
+   "ts": "2026-09-22T16:51:23.447396Z",
+   "payload": {
+    "call_id": "cq-a9901d50ba20",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 7,
+   "ts": "2026-09-22T16:51:23.931250Z",
+   "payload": {
+    "call_id": "cq-a9901d50ba20",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 8,
+   "ts": "2026-09-22T16:51:23.932127Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0010674",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0010674",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "CF transmembrane conductance regulator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2212",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "Fc gamma receptor IIa",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7040",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7040",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "f316d233-097b-49f4-b652-9b889f94347a",
+   "seq": 34,
+   "ts": "2026-09-22T16:51:27.790429Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 3904,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [2], Fc gamma receptor IIa [3] and transforming growth factor beta 1 [4], linked to 1 disease: Cystic fibrosis [1]. \n\nAssociated Genes\n\nThe disease \"Cystic fibrosis\" [1] links to \"CF transmembrane conductance regulator\" (NCBIGene:1080) [2], \"Fc gamma receptor IIa\" (NCBIGene:2212) [3], and \"transforming growth factor beta 1\" (NCBIGene:7040) [4]. \n\nIts association with \"Cystic fibrosis\" [1]. \n\nDisease records found\n\nDisease name: Cystic fibrosis [1]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1080, name: CF transmembrane conductance regulator [2]. Gene NCBIGene:2212, name: Fc gamma receptor IIa [3]. Gene NCBIGene:7040, name: transforming growth factor beta 1 [4]. "
+}

@@ -1,0 +1,111 @@
+== hb1: shown 4, seconds 11.6, cost 0.0098, outcome answer, check candidates 2, approved 0
+  S1 [copied] Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers [1].
+      F1: Acute bronchiolitis
+  S2 [copied] High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure [1].
+      F1: Acute bronchiolitis
+  S3 [copied] Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration [1].
+      F1: Acute bronchiolitis
+  S4 [copied] A high-flow nasal cannula is becoming common for children with severe bronchiolitis [1].
+      F1: Acute bronchiolitis
+  C1 [held back] In healthy babies it usually goes away on its own, and care focuses on keeping the child comfortable
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C2 [held back] When breathing becomes severe, a device that delivers extra air and oxygen through the nose is commonly used
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+== hb2: shown 2, seconds 10.0, cost 0.0105, outcome answer, check candidates 4, approved 3
+  S1 [copied] High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure [1].
+      F1: Acute bronchiolitis
+  S2 [copied] The goal of therapy is to maintain adequate oxygenation and hydration [1].
+      F1: Acute bronchiolitis
+  C1 [held back] The infection is most serious in infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, and infants prone to apnea, severe respiratory distress, and respiratory failure
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+  C2 [approved] In healthy babies and children the illness goes away on its own
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  C3 [approved] Treatment focuses on relieving symptoms and keeping oxygen and fluid levels adequate
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C4 [approved] For severe cases, a high-flow nasal cannula is increasingly used
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+== hb3: shown 4, seconds 7.8, cost 0.0097, outcome answer, check candidates 3, approved 1
+  S1 [reworded] Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers [1].
+      Q: Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers.
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  S2 [copied] Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration [1].
+      F1: Acute bronchiolitis
+  S3 [copied] Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis [1].
+      F1: Acute bronchiolitis
+  S4 [copied] High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure [1].
+      F1: Acute bronchiolitis
+  C1 [held back] Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers, and in healthy babies it usually goes away on its own with treatment focused on keeping the child breathing comfortably and hydrated
+      Q: Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers.
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C2 [approved] Babies at higher risk include those younger than three months, those born prematurely, children with immune problems, and children with underlying heart, lung, or muscle conditions
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+  C3 [held back] When the illness is more severe, a high-flow nasal cannula is increasingly used to help deliver oxygen
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+== hb4: shown 3, seconds 10.0, cost 0.0122, outcome answer, check candidates 6, approved 3
+  S1 [copied] Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers [1].
+      F1: Acute bronchiolitis
+  S2 [copied] Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration [1].
+      F1: Acute bronchiolitis
+  S3 [copied] For babies with severe bronchiolitis, use of a high-flow nasal cannula is becoming common [1].
+      F1: Acute bronchiolitis
+  C1 [held back] In healthy babies and young children, bronchiolitis is a self-limited disease, meaning it goes away on its own
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  C2 [held back] Certain babies are at higher risk of serious illness, including infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+  C3 [approved] In otherwise healthy babies and children, the illness goes away on its own
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  C4 [held back] Treatment is aimed at relieving symptoms and keeping the child's oxygen and fluid levels safe
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C5 [approved] For severe cases, a high-flow nasal cannula is increasingly used
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+  C6 [approved] Babies under three months old, those born prematurely, and children with weak immune systems, heart or lung problems, or muscle and nerve conditions are at higher risk of serious illness
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+== hd1: shown 2, seconds 6.7, cost 0.0111, outcome answer, check candidates 4, approved 3
+  S1 [reworded] In healthy infants and children, bronchiolitis goes away on its own [1].
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  S2 [reworded] Treatment is usually aimed at easing symptoms, with the goal of keeping the child's oxygen levels and fluid intake adequate [1].
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C1 [approved] High-risk patients include babies younger than three months, premature infants, children with weakened immune systems, children with underlying heart, lung, or muscle conditions, and infants prone to breathing pauses, severe breathing difficulty, and respiratory failure
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+  C2 [approved] In healthy infants and children, bronchiolitis goes away on its own
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  C3 [approved] Treatment is usually aimed at easing symptoms, with the goal of keeping the child's oxygen levels and fluid intake adequate
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C4 [held back] For children with severe bronchiolitis, a high-flow nasal cannula—a device that delivers warmed, humidified oxygen at higher flow rates—is increasingly used
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+== hd2: shown 3, seconds 8.5, cost 0.0101, outcome answer, check candidates 2, approved 0
+  S1 [copied] Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers [1].
+      F1: Acute bronchiolitis
+  S2 [copied] Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration [1].
+      F1: Acute bronchiolitis
+  S3 [copied] High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure [1].
+      F1: Acute bronchiolitis
+  C1 [held back] In healthy infants and children, bronchiolitis is a self-limited disease, meaning it usually clears up on its own
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  C2 [held back] Treatment is usually symptomatic, meaning care focuses on easing symptoms rather than curing the infection itself, and the goal of therapy is to maintain adequate oxygenation and hydration
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+== hd3: shown 0, seconds 9.4, cost 0.0102, outcome ask, check candidates 3, approved 1
+  C1 [held back] Bronchiolitis is a common lower respiratory tract infection in babies and toddlers that usually clears up on its own, and treatment focuses on keeping the child comfortable with oxygen and fluids
+      Q: Bronchiolitis is the most common lower respiratory tract infection to affect infants and toddlers.
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C2 [approved] Babies under three months, premature infants, and children with immune or heart-lung problems are at higher risk of serious illness
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+  C3 [held back] When the illness is severe, extra oxygen delivered through a high-flow nasal cannula is a growing approach
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+== hd4: shown 0, seconds 9.7, cost 0.0115, outcome ask, check candidates 6, approved 3
+  C1 [approved] Babies at higher risk include those younger than three months, premature infants, and children with weakened immune systems or underlying heart, lung, or muscle conditions
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.
+  C2 [held back] In healthy infants it usually clears up on its own
+      Q: Bronchiolitis is a self-limited disease in healthy infants and children.
+  C3 [approved] Treatment is generally aimed at relieving symptoms and keeping the child's oxygen and fluid levels adequate
+      Q: Treatment is usually symptomatic, and the goal of therapy is to maintain adequate oxygenation and hydration.
+  C4 [held back] For severe cases, a high-flow nasal cannula — a device that delivers extra oxygen through the nose — is increasingly used
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+  C5 [held back] For severe cases, a high-flow nasal cannula is becoming common
+      Q: Use of a high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+  C6 [approved] Babies at higher risk include those younger than three months, premature infants, and children with weakened immune systems or underlying heart, lung, or muscle conditions
+      Q: High-risk patients include infants younger than 3 months, premature infants, children with immunodeficiency, children with underlying cardiopulmonary or neuromuscular disease, or infants prone to apnea, severe respiratory distress, and respiratory failure.

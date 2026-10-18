@@ -1,0 +1,23 @@
+sentence_check_raw gr1 items 5 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 2
+sentence_check_raw gr2 items 4 + moved 2 unasked before 0 moved first 0 moved last 0 pair calls 1
+sentence_check_raw gr4 items 6 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 2
+sentence_check_raw gr5 items 6 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 2
+sentence_check_raw gr5 items 6 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+sentence_check_raw md2 items 5 + moved 2 unasked before 0 moved first 0 moved last 0 pair calls 2
+sentence_check_raw md3 items 3 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+sentence_check_raw md5 items 2 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cm1 items 4 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cm4 items 9 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cr1 items 1 + moved 4 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cr3 items 6 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cr4 items 7 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cr5 items 7 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+develop_control cr5 items 5 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+live gp3 items 7 + moved 2 unasked before 0 moved first 0 moved last 0 pair calls 3
+live gr1 items 3 + moved 2 unasked before 0 moved first 0 moved last 0 pair calls 1
+live gr1 items 4 + moved 2 unasked before 0 moved first 0 moved last 0 pair calls 1
+live gr2 items 6 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 2
+out gp4 items 8 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 3
+out hb4 items 2 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 1
+out hd2 items 2 + moved 1 unasked before 0 moved first 0 moved last 0 pair calls 0
+checks 22, moved sentences 30, sentences unasked: before 0, moved first 0, moved last 0

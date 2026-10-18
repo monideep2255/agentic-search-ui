@@ -1,0 +1,43 @@
+What does BRCA1 do?
+New search
+
+✓ Answered5.0s · 13 tools · 19 sources from 3 layers
+
+Show work ▾
+
+I found 1 gene related to BRCA1.⁠4
+
+BRCA1 is a gene that helps keep genetic material stable and acts as a tumor suppressor.⁠1 The protein it produces joins with other tumor-suppressing proteins and DNA-damage sensors to form a large complex that watches over the genome.⁠1 This protein is involved in reading genetic instructions, fixing serious DNA damage, and guiding genetic recombination.⁠1 When this gene is altered, it accounts for roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠1 Research shows that BRCA1 works with a partner protein called BARD1 to help repair DNA by guiding a key pairing step and by protecting DNA ends during the repair process.⁠2, 3
+
+WHERE THIS ANSWER COMES FROM
+BRCA1 DNA repair associated	⁠4
+BRCA1	⁠5
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.	⁠2
+NM_007294.4(BRCA1):c.5243_5277+2788del	⁠6
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	⁠7
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	⁠7
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	⁠8
+BRCA1: An Endocrine and Metabolic Regulator.	⁠9
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	⁠10
+BRCA1 Haploinsufficiency and Gene Expression	⁠11
+Showing 1–10 of 19
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+18
+Based on 18 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

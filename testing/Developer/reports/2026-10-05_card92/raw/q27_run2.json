@@ -1,0 +1,4838 @@
+[
+ {
+  "type": "guard",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 0,
+  "ts": "2026-10-05T16:30:31.093935Z",
+  "payload": {
+   "passed": true,
+   "category": "ok",
+   "reason": null
+  }
+ },
+ {
+  "type": "think",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 2,
+  "ts": "2026-10-05T16:30:33.238528Z",
+  "payload": {
+   "narrative": "Asks to assemble evidence from multiple databases (dbVar, ClinVar) for a specific CNV region. (the window chr17:43,044,295-43,125,364 (GRCh38) overlaps 8 genes: BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215)",
+   "query_class": "aggregate",
+   "resolved_entities": [
+    {
+     "text": "BRCA1",
+     "curie": "NCBIGene:672",
+     "confidence": 1.0
+    },
+    {
+     "text": "RPL21P4",
+     "curie": "NCBIGene:140660",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC127886930",
+     "curie": "NCBIGene:127886930",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC129664047",
+     "curie": "NCBIGene:129664047",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC126862571",
+     "curie": "NCBIGene:126862571",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC110485084",
+     "curie": "NCBIGene:110485084",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111589216",
+     "curie": "NCBIGene:111589216",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111589215",
+     "curie": "NCBIGene:111589215",
+     "confidence": 1.0
+    }
+   ],
+   "clarifying_question": null,
+   "clarifying_options": null
+  }
+ },
+ {
+  "type": "plan",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 4,
+  "ts": "2026-10-05T16:30:33.241127Z",
+  "payload": {
+   "narrative": "searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+   "tool_calls": [
+    {
+     "tool": "cypher_query",
+     "call_id": "cq-5716fce1c208",
+     "layer": "layer_1_graph",
+     "persona": "Chargaff",
+     "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-3c9f1f2571a4",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-bfc2c7add05d",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-d17480b32833",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "pubtator_annotate",
+     "call_id": "pa-cc6ce650ec7b",
+     "layer": "layer_3_enrichment",
+     "persona": "de Duve",
+     "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+    },
+    {
+     "tool": "clinicaltrials_search",
+     "call_id": "ct-5d7c6e9df6b0",
+     "layer": "layer_3_enrichment",
+     "persona": "de Duve",
+     "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-aee8fb583f09",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-91af8afbcb91",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-47ba9230f944",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-6f9fea50e88e",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "pubtator_annotate",
+     "call_id": "pa-773063ca8ed8",
+     "layer": "layer_3_enrichment",
+     "persona": "de Duve",
+     "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-f1f395f6d932",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-c11c2e732696",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "ncbi_efetch",
+     "call_id": "ne-7fac820445d6",
+     "layer": "layer_2_api",
+     "persona": "Ochoa",
+     "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+    },
+    {
+     "tool": "cypher_query",
+     "call_id": "cq-9bbe1d739641",
+     "layer": "layer_1_graph",
+     "persona": "Chargaff",
+     "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+     "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+    }
+   ],
+   "resolved_entities": [
+    {
+     "text": "BRCA1",
+     "curie": "NCBIGene:672",
+     "confidence": 1.0
+    },
+    {
+     "text": "RPL21P4",
+     "curie": "NCBIGene:140660",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC127886930",
+     "curie": "NCBIGene:127886930",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC129664047",
+     "curie": "NCBIGene:129664047",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC126862571",
+     "curie": "NCBIGene:126862571",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC110485084",
+     "curie": "NCBIGene:110485084",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111589216",
+     "curie": "NCBIGene:111589216",
+     "confidence": 1.0
+    },
+    {
+     "text": "LOC111589215",
+     "curie": "NCBIGene:111589215",
+     "confidence": 1.0
+    }
+   ]
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 6,
+  "ts": "2026-10-05T16:30:33.242307Z",
+  "payload": {
+   "call_id": "cq-5716fce1c208",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "running",
+   "persona": "Chargaff",
+   "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 7,
+  "ts": "2026-10-05T16:30:33.242338Z",
+  "payload": {
+   "call_id": "ne-3c9f1f2571a4",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 8,
+  "ts": "2026-10-05T16:30:33.242348Z",
+  "payload": {
+   "call_id": "ne-bfc2c7add05d",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 9,
+  "ts": "2026-10-05T16:30:33.242360Z",
+  "payload": {
+   "call_id": "ne-d17480b32833",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 10,
+  "ts": "2026-10-05T16:30:33.242373Z",
+  "payload": {
+   "call_id": "pa-cc6ce650ec7b",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "running",
+   "persona": "de Duve",
+   "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 11,
+  "ts": "2026-10-05T16:30:33.242385Z",
+  "payload": {
+   "call_id": "ct-5d7c6e9df6b0",
+   "tool": "clinicaltrials_search",
+   "layer": "layer_3_enrichment",
+   "status": "running",
+   "persona": "de Duve",
+   "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 12,
+  "ts": "2026-10-05T16:30:33.242397Z",
+  "payload": {
+   "call_id": "ne-aee8fb583f09",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 13,
+  "ts": "2026-10-05T16:30:33.242409Z",
+  "payload": {
+   "call_id": "ne-91af8afbcb91",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 14,
+  "ts": "2026-10-05T16:30:33.242421Z",
+  "payload": {
+   "call_id": "ne-47ba9230f944",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 15,
+  "ts": "2026-10-05T16:30:33.242433Z",
+  "payload": {
+   "call_id": "ne-6f9fea50e88e",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 16,
+  "ts": "2026-10-05T16:30:33.242444Z",
+  "payload": {
+   "call_id": "pa-773063ca8ed8",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "running",
+   "persona": "de Duve",
+   "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 17,
+  "ts": "2026-10-05T16:30:33.242453Z",
+  "payload": {
+   "call_id": "ne-f1f395f6d932",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 18,
+  "ts": "2026-10-05T16:30:33.242461Z",
+  "payload": {
+   "call_id": "ne-c11c2e732696",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 19,
+  "ts": "2026-10-05T16:30:33.242470Z",
+  "payload": {
+   "call_id": "ne-7fac820445d6",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "running",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+  }
+ },
+ {
+  "type": "tool_start",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 20,
+  "ts": "2026-10-05T16:30:33.242478Z",
+  "payload": {
+   "call_id": "cq-9bbe1d739641",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "running",
+   "persona": "Chargaff",
+   "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 21,
+  "ts": "2026-10-05T16:30:33.425165Z",
+  "payload": {
+   "call_id": "pa-cc6ce650ec7b",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "ok",
+   "persona": "de Duve",
+   "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+   "summary": "ok: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 22,
+  "ts": "2026-10-05T16:30:33.617813Z",
+  "payload": {
+   "call_id": "ne-d17480b32833",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "dataset_report: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 23,
+  "ts": "2026-10-05T16:30:33.666169Z",
+  "payload": {
+   "call_id": "ct-5d7c6e9df6b0",
+   "tool": "clinicaltrials_search",
+   "layer": "layer_3_enrichment",
+   "status": "ok",
+   "persona": "de Duve",
+   "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+   "summary": "ok: 5 record(s)",
+   "result_count": 5,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 24,
+  "ts": "2026-10-05T16:30:33.704846Z",
+  "payload": {
+   "call_id": "ne-91af8afbcb91",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "search: 10 id(s)",
+   "result_count": 10,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 25,
+  "ts": "2026-10-05T16:30:33.718254Z",
+  "payload": {
+   "call_id": "ne-aee8fb583f09",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "search: 5 id(s)",
+   "result_count": 5,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 26,
+  "ts": "2026-10-05T16:30:33.806701Z",
+  "payload": {
+   "call_id": "ne-47ba9230f944",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "search: 10 id(s)",
+   "result_count": 10,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 27,
+  "ts": "2026-10-05T16:30:33.962092Z",
+  "payload": {
+   "call_id": "cq-9bbe1d739641",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "ok",
+   "persona": "Chargaff",
+   "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+   "summary": "40 row(s) of 40",
+   "result_count": 40,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 28,
+  "ts": "2026-10-05T16:30:34.008096Z",
+  "payload": {
+   "call_id": "ne-7fac820445d6",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "summary: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 29,
+  "ts": "2026-10-05T16:30:34.018921Z",
+  "payload": {
+   "call_id": "ne-3c9f1f2571a4",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "coordinate_overlap: 5 record(s)",
+   "result_count": 5,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 30,
+  "ts": "2026-10-05T16:30:34.177625Z",
+  "payload": {
+   "call_id": "ne-bfc2c7add05d",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "coordinate_overlap: 5 record(s)",
+   "result_count": 5,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 31,
+  "ts": "2026-10-05T16:30:35.502183Z",
+  "payload": {
+   "call_id": "cq-5716fce1c208",
+   "tool": "cypher_query",
+   "layer": "layer_1_graph",
+   "status": "ok",
+   "persona": "Chargaff",
+   "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+   "summary": "100 row(s) of 100",
+   "result_count": 100,
+   "truncated": true
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 32,
+  "ts": "2026-10-05T16:30:35.758373Z",
+  "payload": {
+   "call_id": "ne-f1f395f6d932",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "summary: 5 record(s)",
+   "result_count": 5,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 33,
+  "ts": "2026-10-05T16:30:35.793660Z",
+  "payload": {
+   "call_id": "pa-773063ca8ed8",
+   "tool": "pubtator_annotate",
+   "layer": "layer_3_enrichment",
+   "status": "ok",
+   "persona": "de Duve",
+   "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+   "summary": "ok: 5 record(s)",
+   "result_count": 5,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 34,
+  "ts": "2026-10-05T16:30:35.854034Z",
+  "payload": {
+   "call_id": "ne-c11c2e732696",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "summary: 1 record(s)",
+   "result_count": 1,
+   "truncated": false
+  }
+ },
+ {
+  "type": "tool_result",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 35,
+  "ts": "2026-10-05T16:30:35.861720Z",
+  "payload": {
+   "call_id": "ne-6f9fea50e88e",
+   "tool": "ncbi_efetch",
+   "layer": "layer_2_api",
+   "status": "ok",
+   "persona": "Ochoa",
+   "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+   "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+   "summary": "fetch: 10 record(s)",
+   "result_count": 10,
+   "truncated": false
+  }
+ },
+ {
+  "type": "step",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 36,
+  "ts": "2026-10-05T16:30:35.865919Z",
+  "payload": {
+   "step": "write",
+   "status": "started"
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 37,
+  "ts": "2026-10-05T16:30:43.251212Z",
+  "payload": {
+   "text": "Found 1 gene record and 37 sequence variant records for BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-1",
+    "cq-5716fce1c208-2",
+    "cq-5716fce1c208-3",
+    "cq-5716fce1c208-4",
+    "cq-5716fce1c208-5",
+    "cq-5716fce1c208-6",
+    "cq-5716fce1c208-7",
+    "cq-5716fce1c208-8",
+    "cq-5716fce1c208-9",
+    "cq-5716fce1c208-10",
+    "cq-5716fce1c208-11",
+    "cq-5716fce1c208-12",
+    "cq-5716fce1c208-13",
+    "cq-5716fce1c208-14",
+    "cq-5716fce1c208-15",
+    "cq-5716fce1c208-16",
+    "cq-5716fce1c208-17",
+    "cq-5716fce1c208-18",
+    "cq-5716fce1c208-19",
+    "cq-5716fce1c208-20"
+   ],
+   "kind": "claim",
+   "cells": null,
+   "emphasis": [
+    "LOC127886930",
+    "LOC129664047",
+    "LOC126862571",
+    "LOC110485084",
+    "LOC111589216",
+    "LOC111589215",
+    "RPL21P4",
+    "BRCA1"
+   ]
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 38,
+  "ts": "2026-10-05T16:30:43.251307Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 39,
+  "ts": "2026-10-05T16:30:43.251322Z",
+  "payload": {
+   "text": "Gene records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 40,
+  "ts": "2026-10-05T16:30:43.251332Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Gene",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 41,
+  "ts": "2026-10-05T16:30:43.251343Z",
+  "payload": {
+   "text": "Gene NCBIGene:672, name: BRCA1 DNA repair associated [1]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-1"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1 DNA repair associated",
+    "NCBIGene:672"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 42,
+  "ts": "2026-10-05T16:30:43.251353Z",
+  "payload": {
+   "text": "Gene symbol: BRCA1 [40]. ",
+   "marker_ids": [
+    "ne-d17480b32833-40"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1",
+    "NCBIGene:672"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 43,
+  "ts": "2026-10-05T16:30:43.251363Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 44,
+  "ts": "2026-10-05T16:30:43.251372Z",
+  "payload": {
+   "text": "Sequence variant records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 45,
+  "ts": "2026-10-05T16:30:43.251382Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Variant",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 46,
+  "ts": "2026-10-05T16:30:43.251392Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [2]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-2"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+    "ClinVar:1000183"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 47,
+  "ts": "2026-10-05T16:30:43.251402Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [3]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-3"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+    "ClinVar:1000551"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 48,
+  "ts": "2026-10-05T16:30:43.251413Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [4]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-4"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+    "ClinVar:1001081"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 49,
+  "ts": "2026-10-05T16:30:43.251423Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [5]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-5"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+    "ClinVar:1002154"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 50,
+  "ts": "2026-10-05T16:30:43.251434Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [6]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-6"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+    "ClinVar:1002750"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 51,
+  "ts": "2026-10-05T16:30:43.251444Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [7]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-7"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+    "ClinVar:1003072"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 52,
+  "ts": "2026-10-05T16:30:43.251455Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [8]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-8"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+    "ClinVar:1003150"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 53,
+  "ts": "2026-10-05T16:30:43.251465Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [9]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-9"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+    "ClinVar:1004428"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 54,
+  "ts": "2026-10-05T16:30:43.251475Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [10]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-10"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+    "ClinVar:1004775"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 55,
+  "ts": "2026-10-05T16:30:43.251486Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [11]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-11"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+    "ClinVar:1004786"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 56,
+  "ts": "2026-10-05T16:30:43.251496Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [12]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-12"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+    "ClinVar:1005082"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 57,
+  "ts": "2026-10-05T16:30:43.251506Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [13]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-13"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+    "ClinVar:1005528"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 58,
+  "ts": "2026-10-05T16:30:43.251517Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [14]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-14"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+    "ClinVar:1005598"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 59,
+  "ts": "2026-10-05T16:30:43.251528Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [15]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-15"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+    "ClinVar:1005841"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 60,
+  "ts": "2026-10-05T16:30:43.251538Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [16]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-16"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+    "ClinVar:1005942"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 61,
+  "ts": "2026-10-05T16:30:43.251548Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [17]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-17"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+    "ClinVar:1005980"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 62,
+  "ts": "2026-10-05T16:30:43.251558Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [18]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-18"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+    "ClinVar:1007698"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 63,
+  "ts": "2026-10-05T16:30:43.251568Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [19]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-19"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+    "ClinVar:1007721"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 64,
+  "ts": "2026-10-05T16:30:43.251578Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [20]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-20"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+    "ClinVar:1008789"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 65,
+  "ts": "2026-10-05T16:30:43.251587Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [21]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-21"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+    "ClinVar:1009121"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 66,
+  "ts": "2026-10-05T16:30:43.251597Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [22]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-22"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+    "ClinVar:1009204"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 67,
+  "ts": "2026-10-05T16:30:43.251607Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [23]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-23"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+    "ClinVar:1009272"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 68,
+  "ts": "2026-10-05T16:30:43.251617Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [24]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-24"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+    "ClinVar:1009310"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 69,
+  "ts": "2026-10-05T16:30:43.251628Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [25]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-25"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+    "ClinVar:1009406"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 70,
+  "ts": "2026-10-05T16:30:43.251638Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [26]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-26"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+    "ClinVar:1009551"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 71,
+  "ts": "2026-10-05T16:30:43.251649Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [27]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-27"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+    "ClinVar:1010063"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 72,
+  "ts": "2026-10-05T16:30:43.251659Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [28]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-28"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+    "ClinVar:1010509"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 73,
+  "ts": "2026-10-05T16:30:43.251669Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [29]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-29"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+    "ClinVar:1010603"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 74,
+  "ts": "2026-10-05T16:30:43.251679Z",
+  "payload": {
+   "text": "SequenceVariant record ClinVar:1010631 [30]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-30"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.547+5G>A",
+    "ClinVar:1010631"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 75,
+  "ts": "2026-10-05T16:30:43.251689Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [31]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-31"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+    "ClinVar:1010734"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 76,
+  "ts": "2026-10-05T16:30:43.251698Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [32]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-32"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)",
+    "ClinVar:1011036"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 77,
+  "ts": "2026-10-05T16:30:43.251709Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [33]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-33"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1728del (p.Glu577fs)",
+    "ClinVar:1012155"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 78,
+  "ts": "2026-10-05T16:30:43.251719Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [34]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-34"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)",
+    "ClinVar:1012156"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 79,
+  "ts": "2026-10-05T16:30:43.251728Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [35]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-35"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)",
+    "ClinVar:1012905"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 80,
+  "ts": "2026-10-05T16:30:43.251739Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [36]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-36"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)",
+    "ClinVar:1013802"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 81,
+  "ts": "2026-10-05T16:30:43.251750Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr) [37]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-37"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr)",
+    "ClinVar:1014065"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 82,
+  "ts": "2026-10-05T16:30:43.251760Z",
+  "payload": {
+   "text": "SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu) [38]. ",
+   "marker_ids": [
+    "cq-5716fce1c208-38"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu)",
+    "ClinVar:1014279"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 83,
+  "ts": "2026-10-05T16:30:43.251771Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 84,
+  "ts": "2026-10-05T16:30:43.251780Z",
+  "payload": {
+   "text": "Clinvar records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 85,
+  "ts": "2026-10-05T16:30:43.251790Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Variant",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 86,
+  "ts": "2026-10-05T16:30:43.251801Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.4358-2753A>T [39]. ",
+   "marker_ids": [
+    "ne-3c9f1f2571a4-39"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.4358-2753A>T",
+    "VCV004935316"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 87,
+  "ts": "2026-10-05T16:30:43.251811Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [42]. ",
+   "marker_ids": [
+    "ne-f1f395f6d932-42"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.5243_5277+2788del",
+    "VCV000267740"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 88,
+  "ts": "2026-10-05T16:30:43.251822Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.3900_3904del (p.Cys1300_Glu1302delinsTer) [45]. ",
+   "marker_ids": [
+    "ne-3c9f1f2571a4-48"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.3900_3904del (p.Cys1300_Glu1302delinsTer)",
+    "VCV004935318"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 89,
+  "ts": "2026-10-05T16:30:43.251833Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [47]. ",
+   "marker_ids": [
+    "ne-f1f395f6d932-50"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG",
+    "VCV000267741"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 90,
+  "ts": "2026-10-05T16:30:43.251844Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.2485T>C (p.Phe829Leu) [49]. ",
+   "marker_ids": [
+    "ne-3c9f1f2571a4-55"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.2485T>C (p.Phe829Leu)",
+    "VCV004935321"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 91,
+  "ts": "2026-10-05T16:30:43.251855Z",
+  "payload": {
+   "text": "Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [51]. ",
+   "marker_ids": [
+    "ne-f1f395f6d932-57"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NG_005905.2:g.(147057_150288)_(160933_166866)del",
+    "VCV000373892"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 92,
+  "ts": "2026-10-05T16:30:43.251865Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.2313G>C (p.Leu771Phe) [53]. ",
+   "marker_ids": [
+    "ne-3c9f1f2571a4-61"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.2313G>C (p.Leu771Phe)",
+    "VCV004935322"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 93,
+  "ts": "2026-10-05T16:30:43.251875Z",
+  "payload": {
+   "text": "Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [55]. ",
+   "marker_ids": [
+    "ne-f1f395f6d932-63"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3",
+    "VCV004823850"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 94,
+  "ts": "2026-10-05T16:30:43.251885Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.2128A>C (p.Thr710Pro) [57]. ",
+   "marker_ids": [
+    "ne-3c9f1f2571a4-67"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.2128A>C (p.Thr710Pro)",
+    "VCV004935323"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 95,
+  "ts": "2026-10-05T16:30:43.251894Z",
+  "payload": {
+   "text": "Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [59]. ",
+   "marker_ids": [
+    "ne-f1f395f6d932-69"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)",
+    "VCV004848411"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 96,
+  "ts": "2026-10-05T16:30:43.251904Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 97,
+  "ts": "2026-10-05T16:30:43.251913Z",
+  "payload": {
+   "text": "Pubmed records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 98,
+  "ts": "2026-10-05T16:30:43.251923Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Paper",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 99,
+  "ts": "2026-10-05T16:30:43.251933Z",
+  "payload": {
+   "text": "Pubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [41]. ",
+   "marker_ids": [
+    "ne-6f9fea50e88e-41"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.",
+    "PMID:28976962"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 100,
+  "ts": "2026-10-05T16:30:43.251943Z",
+  "payload": {
+   "text": "Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [46]. ",
+   "marker_ids": [
+    "ne-6f9fea50e88e-49"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1: An Endocrine and Metabolic Regulator.",
+    "PMID:35432218"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 101,
+  "ts": "2026-10-05T16:30:43.251954Z",
+  "payload": {
+   "text": "Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [50]. ",
+   "marker_ids": [
+    "ne-6f9fea50e88e-56"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.",
+    "PMID:36914836"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 102,
+  "ts": "2026-10-05T16:30:43.251963Z",
+  "payload": {
+   "text": "Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [54]. ",
+   "marker_ids": [
+    "ne-6f9fea50e88e-62"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.",
+    "PMID:39261728"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 103,
+  "ts": "2026-10-05T16:30:43.251973Z",
+  "payload": {
+   "text": "Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [58]. ",
+   "marker_ids": [
+    "ne-6f9fea50e88e-68"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.",
+    "PMID:39265497"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 104,
+  "ts": "2026-10-05T16:30:43.251984Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 105,
+  "ts": "2026-10-05T16:30:43.251994Z",
+  "payload": {
+   "text": "Omim records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 106,
+  "ts": "2026-10-05T16:30:43.252004Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Record",
+    "Identifier"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 107,
+  "ts": "2026-10-05T16:30:43.252014Z",
+  "payload": {
+   "text": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN [43]. ",
+   "marker_ids": [
+    "ne-c11c2e732696-43"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+    "omim 113705"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 108,
+  "ts": "2026-10-05T16:30:43.252024Z",
+  "payload": {
+   "text": "BRCA1 [43]. ",
+   "marker_ids": [
+    "ne-c11c2e732696-43"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+    "omim 113705"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 109,
+  "ts": "2026-10-05T16:30:43.252034Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 110,
+  "ts": "2026-10-05T16:30:43.252043Z",
+  "payload": {
+   "text": "Clinical trial records found\n\n",
+   "marker_ids": [],
+   "kind": "heading",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 111,
+  "ts": "2026-10-05T16:30:43.252053Z",
+  "payload": {
+   "text": "",
+   "marker_ids": [],
+   "kind": "table_header",
+   "cells": [
+    "Trial",
+    "Identifier",
+    "Status"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 112,
+  "ts": "2026-10-05T16:30:43.252064Z",
+  "payload": {
+   "text": "Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [44]. ",
+   "marker_ids": [
+    "ct-5d7c6e9df6b0-45"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer",
+    "NCT00590109",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 113,
+  "ts": "2026-10-05T16:30:43.252075Z",
+  "payload": {
+   "text": "Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [48]. ",
+   "marker_ids": [
+    "ct-5d7c6e9df6b0-52"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "BRCA1 Haploinsufficiency and Gene Expression",
+    "NCT00597987",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 114,
+  "ts": "2026-10-05T16:30:43.252086Z",
+  "payload": {
+   "text": "Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [52]. ",
+   "marker_ids": [
+    "ct-5d7c6e9df6b0-58"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma",
+    "NCT00617656",
+    "TERMINATED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 115,
+  "ts": "2026-10-05T16:30:43.252096Z",
+  "payload": {
+   "text": "Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [56]. ",
+   "marker_ids": [
+    "ct-5d7c6e9df6b0-64"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation",
+    "NCT00673335",
+    "COMPLETED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 116,
+  "ts": "2026-10-05T16:30:43.252106Z",
+  "payload": {
+   "text": "Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [60]. ",
+   "marker_ids": [
+    "ct-5d7c6e9df6b0-70"
+   ],
+   "kind": "table_row",
+   "cells": [
+    "Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations",
+    "NCT00700778",
+    "TERMINATED"
+   ],
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 117,
+  "ts": "2026-10-05T16:30:43.252116Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 118,
+  "ts": "2026-10-05T16:30:43.252125Z",
+  "payload": {
+   "text": "Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query",
+   "marker_ids": [],
+   "kind": "note",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 119,
+  "ts": "2026-10-05T16:30:43.252135Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 120,
+  "ts": "2026-10-05T16:30:43.252145Z",
+  "payload": {
+   "text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+   "marker_ids": [],
+   "kind": "note",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 121,
+  "ts": "2026-10-05T16:30:43.252155Z",
+  "payload": {
+   "text": "\n\n",
+   "marker_ids": [],
+   "kind": "paragraph_break",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "token",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 122,
+  "ts": "2026-10-05T16:30:43.252164Z",
+  "payload": {
+   "text": "Note: this answer does not address the following entities named in the question: RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer.",
+   "marker_ids": [],
+   "kind": "note",
+   "cells": null,
+   "emphasis": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 123,
+  "ts": "2026-10-05T16:30:43.252203Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-1",
+   "display_index": 1,
+   "source": "NCBIGene",
+   "source_id": "NCBIGene:672",
+   "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "Gene NCBIGene:672, name: BRCA1 DNA repair associated",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "BRCA1 DNA repair associated"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 124,
+  "ts": "2026-10-05T16:30:43.252237Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-2",
+   "display_index": 2,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1000183",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 125,
+  "ts": "2026-10-05T16:30:43.252263Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-3",
+   "display_index": 3,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1000551",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 126,
+  "ts": "2026-10-05T16:30:43.252274Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-4",
+   "display_index": 4,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1001081",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 127,
+  "ts": "2026-10-05T16:30:43.252287Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-5",
+   "display_index": 5,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1002154",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 128,
+  "ts": "2026-10-05T16:30:43.252298Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-6",
+   "display_index": 6,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1002750",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 129,
+  "ts": "2026-10-05T16:30:43.252310Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-7",
+   "display_index": 7,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1003072",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 130,
+  "ts": "2026-10-05T16:30:43.252322Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-8",
+   "display_index": 8,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1003150",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 131,
+  "ts": "2026-10-05T16:30:43.252333Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-9",
+   "display_index": 9,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1004428",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 132,
+  "ts": "2026-10-05T16:30:43.252344Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-10",
+   "display_index": 10,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1004775",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 133,
+  "ts": "2026-10-05T16:30:43.252356Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-11",
+   "display_index": 11,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1004786",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 134,
+  "ts": "2026-10-05T16:30:43.252367Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-12",
+   "display_index": 12,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1005082",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 135,
+  "ts": "2026-10-05T16:30:43.252381Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-13",
+   "display_index": 13,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1005528",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 136,
+  "ts": "2026-10-05T16:30:43.252393Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-14",
+   "display_index": 14,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1005598",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 137,
+  "ts": "2026-10-05T16:30:43.252404Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-15",
+   "display_index": 15,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1005841",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 138,
+  "ts": "2026-10-05T16:30:43.252415Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-16",
+   "display_index": 16,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1005942",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 139,
+  "ts": "2026-10-05T16:30:43.252427Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-17",
+   "display_index": 17,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1005980",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 140,
+  "ts": "2026-10-05T16:30:43.252438Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-18",
+   "display_index": 18,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1007698",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 141,
+  "ts": "2026-10-05T16:30:43.252449Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-19",
+   "display_index": 19,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1007721",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 142,
+  "ts": "2026-10-05T16:30:43.252460Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-20",
+   "display_index": 20,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1008789",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 143,
+  "ts": "2026-10-05T16:30:43.252472Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-21",
+   "display_index": 21,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009121",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 144,
+  "ts": "2026-10-05T16:30:43.252483Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-22",
+   "display_index": 22,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009204",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 145,
+  "ts": "2026-10-05T16:30:43.252497Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-23",
+   "display_index": 23,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009272",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 146,
+  "ts": "2026-10-05T16:30:43.252509Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-24",
+   "display_index": 24,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009310",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 147,
+  "ts": "2026-10-05T16:30:43.252520Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-25",
+   "display_index": 25,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009406",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 148,
+  "ts": "2026-10-05T16:30:43.252532Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-26",
+   "display_index": 26,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1009551",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 149,
+  "ts": "2026-10-05T16:30:43.252544Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-27",
+   "display_index": 27,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1010063",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 150,
+  "ts": "2026-10-05T16:30:43.252556Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-28",
+   "display_index": 28,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1010509",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 151,
+  "ts": "2026-10-05T16:30:43.252568Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-29",
+   "display_index": 29,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1010603",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 152,
+  "ts": "2026-10-05T16:30:43.252579Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-30",
+   "display_index": 30,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1010631",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631",
+   "layer": "layer_1_graph",
+   "field": "curie",
+   "claim_text": "SequenceVariant record ClinVar:1010631",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "hedged",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 153,
+  "ts": "2026-10-05T16:30:43.252592Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-31",
+   "display_index": 31,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1010734",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 154,
+  "ts": "2026-10-05T16:30:43.252604Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-32",
+   "display_index": 32,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1011036",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 155,
+  "ts": "2026-10-05T16:30:43.252616Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-33",
+   "display_index": 33,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1012155",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1728del (p.Glu577fs)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 156,
+  "ts": "2026-10-05T16:30:43.252628Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-34",
+   "display_index": 34,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1012156",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 157,
+  "ts": "2026-10-05T16:30:43.252639Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-35",
+   "display_index": 35,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1012905",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 158,
+  "ts": "2026-10-05T16:30:43.252651Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-36",
+   "display_index": 36,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1013802",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 159,
+  "ts": "2026-10-05T16:30:43.252663Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-37",
+   "display_index": 37,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1014065",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014065",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 160,
+  "ts": "2026-10-05T16:30:43.252675Z",
+  "payload": {
+   "citation_id": "cq-5716fce1c208-38",
+   "display_index": 38,
+   "source": "ClinVar",
+   "source_id": "ClinVar:1014279",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014279",
+   "layer": "layer_1_graph",
+   "field": "name",
+   "claim_text": "SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": "2026-04-22",
+   "entity_name": "NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu)"
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 161,
+  "ts": "2026-10-05T16:30:43.252687Z",
+  "payload": {
+   "citation_id": "ne-3c9f1f2571a4-39",
+   "display_index": 39,
+   "source": "clinvar",
+   "source_id": "VCV004935316",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935316/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.4358-2753A>T",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 162,
+  "ts": "2026-10-05T16:30:43.252700Z",
+  "payload": {
+   "citation_id": "ne-d17480b32833-40",
+   "display_index": 40,
+   "source": "gene",
+   "source_id": "672",
+   "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+   "layer": "layer_2_api",
+   "field": "symbol",
+   "claim_text": "gene symbol: BRCA1",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 163,
+  "ts": "2026-10-05T16:30:43.252713Z",
+  "payload": {
+   "citation_id": "ne-6f9fea50e88e-41",
+   "display_index": 41,
+   "source": "pubmed",
+   "source_id": "28976962",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 164,
+  "ts": "2026-10-05T16:30:43.252725Z",
+  "payload": {
+   "citation_id": "ne-f1f395f6d932-42",
+   "display_index": 42,
+   "source": "clinvar",
+   "source_id": "267740",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 165,
+  "ts": "2026-10-05T16:30:43.252737Z",
+  "payload": {
+   "citation_id": "ne-c11c2e732696-43",
+   "display_index": 43,
+   "source": "omim",
+   "source_id": "113705",
+   "source_url": "https://omim.org/entry/113705",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 166,
+  "ts": "2026-10-05T16:30:43.252751Z",
+  "payload": {
+   "citation_id": "ct-5d7c6e9df6b0-45",
+   "display_index": 44,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00590109",
+   "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 167,
+  "ts": "2026-10-05T16:30:43.252764Z",
+  "payload": {
+   "citation_id": "ne-3c9f1f2571a4-48",
+   "display_index": 45,
+   "source": "clinvar",
+   "source_id": "VCV004935318",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935318/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.3900_3904del (p.Cys1300_Glu1302delinsTer)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 168,
+  "ts": "2026-10-05T16:30:43.252776Z",
+  "payload": {
+   "citation_id": "ne-6f9fea50e88e-49",
+   "display_index": 46,
+   "source": "pubmed",
+   "source_id": "35432218",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: BRCA1: An Endocrine and Metabolic Regulator",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 169,
+  "ts": "2026-10-05T16:30:43.252788Z",
+  "payload": {
+   "citation_id": "ne-f1f395f6d932-50",
+   "display_index": 47,
+   "source": "clinvar",
+   "source_id": "267741",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 170,
+  "ts": "2026-10-05T16:30:43.252800Z",
+  "payload": {
+   "citation_id": "ct-5d7c6e9df6b0-52",
+   "display_index": 48,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00597987",
+   "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 171,
+  "ts": "2026-10-05T16:30:43.252811Z",
+  "payload": {
+   "citation_id": "ne-3c9f1f2571a4-55",
+   "display_index": 49,
+   "source": "clinvar",
+   "source_id": "VCV004935321",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935321/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.2485T>C (p.Phe829Leu)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 172,
+  "ts": "2026-10-05T16:30:43.252823Z",
+  "payload": {
+   "citation_id": "ne-6f9fea50e88e-56",
+   "display_index": 50,
+   "source": "pubmed",
+   "source_id": "36914836",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 173,
+  "ts": "2026-10-05T16:30:43.252836Z",
+  "payload": {
+   "citation_id": "ne-f1f395f6d932-57",
+   "display_index": 51,
+   "source": "clinvar",
+   "source_id": "373892",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 174,
+  "ts": "2026-10-05T16:30:43.252847Z",
+  "payload": {
+   "citation_id": "ct-5d7c6e9df6b0-58",
+   "display_index": 52,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00617656",
+   "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 175,
+  "ts": "2026-10-05T16:30:43.252859Z",
+  "payload": {
+   "citation_id": "ne-3c9f1f2571a4-61",
+   "display_index": 53,
+   "source": "clinvar",
+   "source_id": "VCV004935322",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935322/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.2313G>C (p.Leu771Phe)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 176,
+  "ts": "2026-10-05T16:30:43.252871Z",
+  "payload": {
+   "citation_id": "ne-6f9fea50e88e-62",
+   "display_index": 54,
+   "source": "pubmed",
+   "source_id": "39261728",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 177,
+  "ts": "2026-10-05T16:30:43.252884Z",
+  "payload": {
+   "citation_id": "ne-f1f395f6d932-63",
+   "display_index": 55,
+   "source": "clinvar",
+   "source_id": "4823850",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 178,
+  "ts": "2026-10-05T16:30:43.252897Z",
+  "payload": {
+   "citation_id": "ct-5d7c6e9df6b0-64",
+   "display_index": 56,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00673335",
+   "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 179,
+  "ts": "2026-10-05T16:30:43.253098Z",
+  "payload": {
+   "citation_id": "ne-3c9f1f2571a4-67",
+   "display_index": 57,
+   "source": "clinvar",
+   "source_id": "VCV004935323",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935323/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.2128A>C (p.Thr710Pro)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 180,
+  "ts": "2026-10-05T16:30:43.253117Z",
+  "payload": {
+   "citation_id": "ne-6f9fea50e88e-68",
+   "display_index": 58,
+   "source": "pubmed",
+   "source_id": "39265497",
+   "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 181,
+  "ts": "2026-10-05T16:30:43.253129Z",
+  "payload": {
+   "citation_id": "ne-f1f395f6d932-69",
+   "display_index": 59,
+   "source": "clinvar",
+   "source_id": "4848411",
+   "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+   "layer": "layer_2_api",
+   "field": "title",
+   "claim_text": "clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)",
+   "evidence_kind": "primary_assertion",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "citation",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 182,
+  "ts": "2026-10-05T16:30:43.253141Z",
+  "payload": {
+   "citation_id": "ct-5d7c6e9df6b0-70",
+   "display_index": 60,
+   "source": "clinicaltrials.gov",
+   "source_id": "NCT00700778",
+   "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+   "layer": "layer_3_enrichment",
+   "field": "name",
+   "claim_text": "Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations",
+   "evidence_kind": "external_annotation",
+   "assertion_confidence": "asserted",
+   "population_ancestry_context": null,
+   "license": "public_domain_us_gov",
+   "snapshot_date": null,
+   "entity_name": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 183,
+  "ts": "2026-10-05T16:30:43.253169Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-1",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 184,
+  "ts": "2026-10-05T16:30:43.253190Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-2",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 185,
+  "ts": "2026-10-05T16:30:43.253208Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-3",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 186,
+  "ts": "2026-10-05T16:30:43.253220Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-4",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 187,
+  "ts": "2026-10-05T16:30:43.253233Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-5",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 188,
+  "ts": "2026-10-05T16:30:43.253246Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-6",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 189,
+  "ts": "2026-10-05T16:30:43.253258Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-7",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 190,
+  "ts": "2026-10-05T16:30:43.253270Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-8",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 191,
+  "ts": "2026-10-05T16:30:43.253283Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-9",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 192,
+  "ts": "2026-10-05T16:30:43.253295Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-10",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 193,
+  "ts": "2026-10-05T16:30:43.253309Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-11",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 194,
+  "ts": "2026-10-05T16:30:43.253321Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-12",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 195,
+  "ts": "2026-10-05T16:30:43.253334Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-13",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 196,
+  "ts": "2026-10-05T16:30:43.253346Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-14",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 197,
+  "ts": "2026-10-05T16:30:43.253359Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-15",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 198,
+  "ts": "2026-10-05T16:30:43.253372Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-16",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 199,
+  "ts": "2026-10-05T16:30:43.253384Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-17",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 200,
+  "ts": "2026-10-05T16:30:43.253397Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-18",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 201,
+  "ts": "2026-10-05T16:30:43.253410Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-19",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 202,
+  "ts": "2026-10-05T16:30:43.253422Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-20",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 203,
+  "ts": "2026-10-05T16:30:43.253435Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-21",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 204,
+  "ts": "2026-10-05T16:30:43.253447Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-22",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 205,
+  "ts": "2026-10-05T16:30:43.253460Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-23",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 206,
+  "ts": "2026-10-05T16:30:43.253472Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-24",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 207,
+  "ts": "2026-10-05T16:30:43.253485Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-25",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 208,
+  "ts": "2026-10-05T16:30:43.253513Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-26",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 209,
+  "ts": "2026-10-05T16:30:43.253527Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-27",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 210,
+  "ts": "2026-10-05T16:30:43.253540Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-28",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 211,
+  "ts": "2026-10-05T16:30:43.253553Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-29",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 212,
+  "ts": "2026-10-05T16:30:43.253566Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-30",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 213,
+  "ts": "2026-10-05T16:30:43.253580Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-31",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 214,
+  "ts": "2026-10-05T16:30:43.253592Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-32",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 215,
+  "ts": "2026-10-05T16:30:43.253605Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-33",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 216,
+  "ts": "2026-10-05T16:30:43.253617Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-34",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 217,
+  "ts": "2026-10-05T16:30:43.253630Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-35",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 218,
+  "ts": "2026-10-05T16:30:43.253642Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-36",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 219,
+  "ts": "2026-10-05T16:30:43.253655Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-37",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 220,
+  "ts": "2026-10-05T16:30:43.253668Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "cq-5716fce1c208-38",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 221,
+  "ts": "2026-10-05T16:30:43.253681Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-3c9f1f2571a4-39",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 222,
+  "ts": "2026-10-05T16:30:43.253694Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-d17480b32833-40",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 223,
+  "ts": "2026-10-05T16:30:43.253706Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-6f9fea50e88e-41",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 224,
+  "ts": "2026-10-05T16:30:43.253719Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-f1f395f6d932-42",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 225,
+  "ts": "2026-10-05T16:30:43.253732Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-c11c2e732696-43",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 226,
+  "ts": "2026-10-05T16:30:43.253745Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-5d7c6e9df6b0-45",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 227,
+  "ts": "2026-10-05T16:30:43.253758Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-3c9f1f2571a4-48",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 228,
+  "ts": "2026-10-05T16:30:43.253771Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-6f9fea50e88e-49",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 229,
+  "ts": "2026-10-05T16:30:43.253784Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-f1f395f6d932-50",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 230,
+  "ts": "2026-10-05T16:30:43.253797Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-5d7c6e9df6b0-52",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 231,
+  "ts": "2026-10-05T16:30:43.253809Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-3c9f1f2571a4-55",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 232,
+  "ts": "2026-10-05T16:30:43.253821Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-6f9fea50e88e-56",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 233,
+  "ts": "2026-10-05T16:30:43.253834Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-f1f395f6d932-57",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 234,
+  "ts": "2026-10-05T16:30:43.253846Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-5d7c6e9df6b0-58",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 235,
+  "ts": "2026-10-05T16:30:43.253859Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-3c9f1f2571a4-61",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 236,
+  "ts": "2026-10-05T16:30:43.253872Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-6f9fea50e88e-62",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 237,
+  "ts": "2026-10-05T16:30:43.253885Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-f1f395f6d932-63",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 238,
+  "ts": "2026-10-05T16:30:43.253897Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-5d7c6e9df6b0-64",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 239,
+  "ts": "2026-10-05T16:30:43.253909Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-3c9f1f2571a4-67",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 240,
+  "ts": "2026-10-05T16:30:43.253922Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-6f9fea50e88e-68",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 241,
+  "ts": "2026-10-05T16:30:43.253934Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ne-f1f395f6d932-69",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 242,
+  "ts": "2026-10-05T16:30:43.253946Z",
+  "payload": {
+   "outcome": "answer",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": "ct-5d7c6e9df6b0-70",
+   "scope": "claim",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "trust_signal",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 243,
+  "ts": "2026-10-05T16:30:43.253968Z",
+  "payload": {
+   "outcome": "ask",
+   "risk_tier": "low",
+   "grounded": true,
+   "triangulated": null,
+   "citation_id": null,
+   "scope": "answer",
+   "message": null,
+   "fallback_link": null
+  }
+ },
+ {
+  "type": "done",
+  "version": "v1",
+  "trace_id": "37cc477e-3f95-481d-bfe9-b8a0ebeb021d",
+  "seq": 245,
+  "ts": "2026-10-05T16:30:43.254132Z",
+  "payload": {
+   "total_cost_usd": 0.0,
+   "total_tool_calls": 12,
+   "elapsed_ms": 13387,
+   "trust_outcome": "ask",
+   "trust_line": "Based on 60 sources, not yet confirmed",
+   "layer_calls_used": 17,
+   "next_step": null,
+   "next_step_query": null,
+   "decisions": [
+    {
+     "name": "guardrail.injection",
+     "options": [
+      "injection",
+      "not_injection"
+     ],
+     "chosen": "not_injection",
+     "decided_by": "jev",
+     "jev_choice": "not_injection",
+     "jev_confidence": 1.0,
+     "guard_choice": "not_injection",
+     "agreed": true,
+     "fallback_reason": null,
+     "jev_latency_ms": 185
+    },
+    {
+     "name": "think.recent_years",
+     "options": [
+      "recent_unbounded",
+      "not_applicable"
+     ],
+     "chosen": "not_applicable",
+     "decided_by": "jev",
+     "jev_choice": "not_applicable",
+     "jev_confidence": 1.0,
+     "guard_choice": null,
+     "agreed": null,
+     "fallback_reason": null,
+     "jev_latency_ms": 129
+    },
+    {
+     "name": "plan.literature",
+     "options": [
+      "wants_literature",
+      "not_literature"
+     ],
+     "chosen": "not_literature",
+     "decided_by": "jev",
+     "jev_choice": "not_literature",
+     "jev_confidence": 0.99,
+     "guard_choice": null,
+     "agreed": null,
+     "fallback_reason": null,
+     "jev_latency_ms": 142
+    },
+    {
+     "name": "think.asks_features",
+     "options": [
+      "asks_features",
+      "not_applicable"
+     ],
+     "chosen": "not_applicable",
+     "decided_by": "jev",
+     "jev_choice": "not_applicable",
+     "jev_confidence": 1.0,
+     "guard_choice": null,
+     "agreed": null,
+     "fallback_reason": null,
+     "jev_latency_ms": 179
+    }
+   ]
+  }
+ }
+]

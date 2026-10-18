@@ -1,6 +1,6 @@
 ---
 name: standup
-description: "Answer where the build stands right now, in seven plain lines: the phase, what has landed, what is in motion this moment, what is next, how long until it is done, what decisions are waiting on the product owner, and what is blocked. Reports BOTH committed work and uncommitted work, including running agents, running commands, and what the assistant is mid-way through, since the product owner asking mid-flight is usually asking about the present and the present is not in the git log yet. Reads the tracker and git rather than the conversation, so it is correct in a fresh session and in a long one. TRIGGER on 'standup', 'catch me up', 'where are we', 'what is the status', 'what did I miss', 'what are you doing', 'quick update'. Distinct from task-tracker, which maintains the board and ticket detail: this only reports, never edits. Distinct from phase-checkpoint, which syncs planning documents at a phase boundary."
+description: "Report where the build stands now in seven plain lines, covering committed and uncommitted work, from the tracker and git. TRIGGER on 'standup', 'catch me up', 'where are we', 'what is the status', 'quick update'. Unlike task-tracker and phase-checkpoint, it only reports."
 scope: project
 ---
 
@@ -14,9 +14,9 @@ Its whole reason for existing is that the product owner asks "where are we" mid-
 
 1. `git branch --show-current` and `git log --oneline -8`: what is actually committed, and on what.
 2. `git status --short`: whether anything is uncommitted right now.
-3. `tracker/BOARD.md`: the phase in flight and its open flags.
+3. The board, `testing/UI_fix_plan.md`, and the open ledgers under `tracker/`: the card or numbered phase in flight. `tracker/BOARD.md` is frozen at build phase 6.2 and says nothing about current work.
 4. `tracker/phase_N.M.md` for that phase, bottom first: the newest sections carry the current state, and a WITHDRAWN or superseded heading there outranks anything older in the same file.
-5. `requirements/phase_6/Continuation_prompt.md`, the "State now" and "The next session starts here" sections: what the last session left for this one.
+5. `HANDOFF.md`: what is live, what awaits the product owner, and the one next action the last session left for this one.
 
 Skip any of these that cannot answer the question at hand. Reading all five costs little; reading none and answering from memory is the failure this skill prevents.
 
@@ -27,7 +27,7 @@ Skip any of these that cannot answer the question at hand. Reading all five cost
 - Right now: what is in motion this moment and is NOT committed. See below; this line is the one most often skipped and the one most often wanted.
 - Next: the one next action.
 - Time to done: how long until this phase is finished, and what that estimate assumes. See below.
-- Your call: the decisions waiting on the product owner, each written so the answer is yes, no, or pick one. See below.
+- Your call: the decisions already waiting on the product owner, each written so the answer is yes, no, or pick one. This line reports a decision that was already asked per `decision-cadence`; it never asks one for the first time here. See below.
 - Blockers: what is stopping progress, or "None".
 
 Write every line in plain words. A defect is what it did to a person, not its finding id. Prefer bullets over sentences, per `.claude/rules/writing-style.md`: if a line carries three or more things, break it into bullets rather than chaining them with commas.

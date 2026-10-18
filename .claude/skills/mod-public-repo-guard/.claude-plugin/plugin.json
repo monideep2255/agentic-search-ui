@@ -1,0 +1,6 @@
+{
+  "name": "mod-public-repo-guard",
+  "version": "1.0.0",
+  "description": "Guards git commit and git push into a public repository: blocks skipped hooks, force pushes, and pushes to protected branches, runs the repository's leak scanner first, and asks before pushing to a confirm-listed branch. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" }
+}

@@ -1,0 +1,1783 @@
+{
+ "record": {
+  "id": "G-021",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which papers in the graph mention the CFTR gene, and what do they cover?",
+  "session_id": "c103-db9c6611418c",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:18:46+00:00",
+  "run_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 72 sources, not yet confirmed",
+  "citations": 72,
+  "distinct_sources": 71,
+  "citations_by_layer": {
+   "layer_1_graph": 54,
+   "layer_2_api": 13,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   17,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 465,
+  "answer_start": "Found 54 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29]",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 11,
+  "server_elapsed_s": 27.013,
+  "seconds": 28.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 96,
+   "citation": 72,
+   "trust_signal": 73,
+   "done": 1
+  },
+  "first_word_s": 27.425,
+  "first_token_ts": "2026-09-26T17:17:34.714973Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 0,
+   "ts": "2026-09-26T17:17:09.540092Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 2,
+   "ts": "2026-09-26T17:17:11.370283Z",
+   "payload": {
+    "narrative": "The question asks for papers mentioning a gene and what they cover, which is broad and open-ended regarding content and requires assembling evidence across multiple papers.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 4,
+   "ts": "2026-09-26T17:17:11.373083Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-7130e217a8c7",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f8a3db618f58",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-233f38256707",
+      "layer": "layer_3_enrichment",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-d471dac96393",
+      "layer": "layer_3_enrichment",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2a17ab1e9044",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-827b01670357",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-14dca2a989b6",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-45f181c6123d",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-2afe0d81a163",
+      "layer": "layer_3_enrichment",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-613d68197e30",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-43437e3f9c02",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f36359045c76",
+      "layer": "layer_2_api",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5fa7ea79a47c",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 6,
+   "ts": "2026-09-26T17:17:11.374611Z",
+   "payload": {
+    "call_id": "cq-7130e217a8c7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 7,
+   "ts": "2026-09-26T17:17:11.374648Z",
+   "payload": {
+    "call_id": "ne-f8a3db618f58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 8,
+   "ts": "2026-09-26T17:17:11.374664Z",
+   "payload": {
+    "call_id": "pa-233f38256707",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 9,
+   "ts": "2026-09-26T17:17:11.374677Z",
+   "payload": {
+    "call_id": "ct-d471dac96393",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 10,
+   "ts": "2026-09-26T17:17:11.374690Z",
+   "payload": {
+    "call_id": "ne-2a17ab1e9044",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 11,
+   "ts": "2026-09-26T17:17:11.374703Z",
+   "payload": {
+    "call_id": "ne-827b01670357",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 12,
+   "ts": "2026-09-26T17:17:11.374715Z",
+   "payload": {
+    "call_id": "ne-14dca2a989b6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 13,
+   "ts": "2026-09-26T17:17:11.374728Z",
+   "payload": {
+    "call_id": "ne-45f181c6123d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 14,
+   "ts": "2026-09-26T17:17:11.374742Z",
+   "payload": {
+    "call_id": "pa-2afe0d81a163",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 15,
+   "ts": "2026-09-26T17:17:11.374754Z",
+   "payload": {
+    "call_id": "ne-613d68197e30",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 16,
+   "ts": "2026-09-26T17:17:11.374767Z",
+   "payload": {
+    "call_id": "ne-43437e3f9c02",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 17,
+   "ts": "2026-09-26T17:17:11.374779Z",
+   "payload": {
+    "call_id": "ne-f36359045c76",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 18,
+   "ts": "2026-09-26T17:17:11.374792Z",
+   "payload": {
+    "call_id": "cq-5fa7ea79a47c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 19,
+   "ts": "2026-09-26T17:17:11.690783Z",
+   "payload": {
+    "call_id": "pa-233f38256707",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 20,
+   "ts": "2026-09-26T17:17:11.707587Z",
+   "payload": {
+    "call_id": "ne-2a17ab1e9044",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 21,
+   "ts": "2026-09-26T17:17:11.718747Z",
+   "payload": {
+    "call_id": "ne-f8a3db618f58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 22,
+   "ts": "2026-09-26T17:17:11.772358Z",
+   "payload": {
+    "call_id": "ne-827b01670357",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 23,
+   "ts": "2026-09-26T17:17:11.774224Z",
+   "payload": {
+    "call_id": "ne-14dca2a989b6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 24,
+   "ts": "2026-09-26T17:17:11.837301Z",
+   "payload": {
+    "call_id": "ct-d471dac96393",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 25,
+   "ts": "2026-09-26T17:17:11.843393Z",
+   "payload": {
+    "call_id": "ne-f36359045c76",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 26,
+   "ts": "2026-09-26T17:17:11.963117Z",
+   "payload": {
+    "call_id": "cq-5fa7ea79a47c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 27,
+   "ts": "2026-09-26T17:17:22.078146Z",
+   "payload": {
+    "call_id": "cq-7130e217a8c7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "100 row(s) of 1945",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 28,
+   "ts": "2026-09-26T17:17:22.238526Z",
+   "payload": {
+    "call_id": "pa-2afe0d81a163",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 29,
+   "ts": "2026-09-26T17:17:22.324059Z",
+   "payload": {
+    "call_id": "ne-613d68197e30",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 30,
+   "ts": "2026-09-26T17:17:22.462459Z",
+   "payload": {
+    "call_id": "ne-43437e3f9c02",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 31,
+   "ts": "2026-09-26T17:17:22.486584Z",
+   "payload": {
+    "call_id": "ne-45f181c6123d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 32,
+   "ts": "2026-09-26T17:17:30.250691Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 33,
+   "ts": "2026-09-26T17:17:34.714973Z",
+   "payload": {
+    "text": "Found 54 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54]. ",
+    "marker_ids": [
+     "cq-7130e217a8c7-1",
+     "cq-7130e217a8c7-2",
+     "cq-7130e217a8c7-3",
+     "cq-7130e217a8c7-4",
+     "cq-7130e217a8c7-5",
+     "cq-7130e217a8c7-6",
+     "cq-7130e217a8c7-7",
+     "cq-7130e217a8c7-8",
+     "cq-7130e217a8c7-9",
+     "cq-7130e217a8c7-10",
+     "cq-7130e217a8c7-11",
+     "cq-7130e217a8c7-12",
+     "cq-7130e217a8c7-13",
+     "cq-7130e217a8c7-14",
+     "cq-7130e217a8c7-15",
+     "cq-7130e217a8c7-16",
+     "cq-7130e217a8c7-17",
+     "cq-7130e217a8c7-18",
+     "cq-7130e217a8c7-19",
+     "cq-7130e217a8c7-20"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "CFTR"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10075921",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10075921/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10094564",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10094564/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10200050",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10200050/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10561583",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10561583/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10581360",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10581360/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10651488",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10651488/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10666020",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10666020/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10766763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10766763/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10799517",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10799517/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10852925",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10852925/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10862786",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10862786/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10893422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10893422/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10982807",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10982807/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11025834",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11025834/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11051556",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11051556/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11095651",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11095651/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11104661",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11104661/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11109941",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11109941/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11115825",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11115825/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11117575",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11117575/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11134427",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11134427/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11146634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11146634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11158634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11158634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11168024",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11168024/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11175304",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11175304/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11186891",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11186891/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11243954",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11243954/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11304524",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11304524/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11333866",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11333866/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11354633",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11354633/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11356077",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11356077/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11379874",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11379874/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11397675",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11397675/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11400707",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11400707/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462247",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462247/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462248",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462248/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11524016",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11524016/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11529289",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11529289/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11536079",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11536079/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11569691",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11569691/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11574497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11574497/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11597137",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11597137/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11667976",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11667976/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11680956",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11680956/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11683083",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11683083/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11686989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11686989/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11688981",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11688981/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11707463",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11707463/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713441",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713441/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713719",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713719/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11715005",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11715005/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11748227",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11748227/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11756355",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11756355/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11773581",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11773581/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "602421",
+    "source_url": "https://omim.org/entry/602421",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41235117",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/41235117/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "f19ea335-703b-4407-9c00-d95e12d4002e",
+   "seq": 275,
+   "ts": "2026-09-26T17:17:34.720915Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 11,
+    "elapsed_ms": 27013,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 72 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.98,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 174
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 150
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "wants_literature",
+      "decided_by": "jev",
+      "jev_choice": "wants_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 146
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 372
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 54 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54]. \n\nArticle records found\n\nArticle record PMID:10075921 [1]. Article record PMID:10094564 [2]. Article record PMID:10200050 [3]. Article record PMID:10561583 [4]. Article record PMID:10581360 [5]. Article record PMID:10651488 [6]. Article record PMID:10666020 [7]. Article record PMID:10766763 [8]. Article record PMID:10799517 [9]. Article record PMID:10852925 [10]. Article record PMID:10862786 [11]. Article record PMID:10893422 [12]. Article record PMID:10982807 [13]. Article record PMID:11025834 [14]. Article record PMID:11051556 [15]. Article record PMID:11095651 [16]. Article record PMID:11104661 [17]. Article record PMID:11109941 [18]. Article record PMID:11115825 [19]. Article record PMID:11117575 [20]. Article record PMID:11134427 [21]. Article record PMID:11146634 [22]. Article record PMID:11158634 [23]. Article record PMID:11168024 [24]. Article record PMID:11175304 [25]. Article record PMID:11186891 [26]. Article record PMID:11243954 [27]. Article record PMID:11304524 [28]. Article record PMID:11333866 [29]. Article record PMID:11354633 [30]. Article record PMID:11356077 [31]. Article record PMID:11379874 [32]. Article record PMID:11397675 [33]. Article record PMID:11400707 [34]. Article record PMID:11462247 [35]. Article record PMID:11462248 [36]. Article record PMID:11524016 [37]. Article record PMID:11529289 [38]. Article record PMID:11536079 [39]. Article record PMID:11569691 [40]. Article record PMID:11574497 [41]. Article record PMID:11597137 [42]. Article record PMID:11667976 [43]. Article record PMID:11680956 [44]. Article record PMID:11683083 [45]. Article record PMID:11686989 [46]. Article record PMID:11688981 [47]. Article record PMID:11707463 [48]. Article record PMID:11713441 [49]. Article record PMID:11713719 [50]. Article record PMID:11715005 [51]. Article record PMID:11748227 [52]. Article record PMID:11756355 [53]. Article record PMID:11773581 [54]. \n\nGene records found\n\nGene symbol: CFTR [55]. Gene name: CFTR [59]. \n\nPubmed records found\n\nPubmed title: Molecular Structure of the Human CFTR Ion Channel [56]. Pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [61]. Pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [64]. Pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [67]. Pubmed title: Beyond Trikafta: new models to assess tissue dependent rescue of N1303K-CFTR [70]. \n\nClinvar records found\n\nClinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [57]. Clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [62]. Clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [65]. Clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [68]. Clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [71]. \n\nOmim records found\n\nCYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR [58]. CFTR [58]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [63]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [66]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [69]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [72]. \n\nNote: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

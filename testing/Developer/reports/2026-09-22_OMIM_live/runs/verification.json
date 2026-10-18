@@ -1,0 +1,182 @@
+[
+  {
+    "gene": "BRCA1",
+    "run": 1,
+    "trace_id": "c31eafb5-b685-4c14-bdcd-717081df4f34",
+    "elapsed_s": 20.2,
+    "citations": 73,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "113705",
+        "title": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 2,
+    "trace_id": "98c11f2a-fb29-422a-9cfa-af2b3f400317",
+    "elapsed_s": 12.6,
+    "citations": 73,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "113705",
+        "title": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 3,
+    "trace_id": "8e6f6eba-6ef2-46c7-98c0-a67435c68928",
+    "elapsed_s": 11.7,
+    "citations": 73,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "113705",
+        "title": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 4,
+    "trace_id": "6ecffd85-0885-4775-84d7-e12310218d01",
+    "elapsed_s": 14.1,
+    "citations": 73,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "113705",
+        "title": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "BRCA1",
+    "run": 5,
+    "trace_id": "21f12900-6034-4664-87b3-7a7bfba21d6b",
+    "elapsed_s": 13.0,
+    "citations": 73,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "113705",
+        "title": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 1,
+    "trace_id": "87542048-3cff-4e51-938b-9f4172af3bd9",
+    "elapsed_s": 21.8,
+    "citations": 54,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "138079",
+        "title": "GLUCOKINASE; GCK",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 2,
+    "trace_id": "140ab5c6-30da-4ac2-afae-da7d97ac319f",
+    "elapsed_s": 33.6,
+    "citations": 54,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "138079",
+        "title": "GLUCOKINASE; GCK",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 3,
+    "trace_id": "fd2d2d00-beec-4f69-a463-d909ed408dd9",
+    "elapsed_s": 19.7,
+    "citations": 54,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "138079",
+        "title": "GLUCOKINASE; GCK",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 4,
+    "trace_id": "994c8f51-9753-48be-ba0f-66598012adae",
+    "elapsed_s": 19.5,
+    "citations": 54,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "138079",
+        "title": "GLUCOKINASE; GCK",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 5,
+    "trace_id": "393a71a5-c735-418f-a6b1-7c3e7f2aa88c",
+    "elapsed_s": 30.5,
+    "citations": 54,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 11,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "138079",
+        "title": "GLUCOKINASE; GCK",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  }
+]

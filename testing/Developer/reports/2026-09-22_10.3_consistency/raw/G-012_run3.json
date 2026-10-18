@@ -1,0 +1,372 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-00c2a8991b40",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:21:06+00:00",
+  "run_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "MedGen:C0206693",
+   "MedGen:C1335487",
+   "MedGen:C1412014",
+   "MedGen:C1709664",
+   "MedGen:C5419191",
+   "MedGen:C5419192",
+   "MedGen:C5419517",
+   "MedGen:C5556661"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 8,
+  "distinct_sources": 8,
+  "citations_by_layer": {
+   "layer_2_api": 8
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   8
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 117,
+  "answer_start": "Found 8 disease records for carcinoma not otherwise specified [1][2][3][4][5][6][7][8]. \n\nDisease records found\n\nDisease name: Medullary Carcinoma, Not Otherwis",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 5.096,
+  "seconds": 12.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 13,
+   "citation": 8,
+   "trust_signal": 9,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 0,
+   "ts": "2026-09-22T17:19:34.414531Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 2,
+   "ts": "2026-09-22T17:19:37.376132Z",
+   "payload": {
+    "narrative": "The query asks to find clinical trials for a specific disease condition, which is a direct search of a clinical trials database. (carcinoma not otherwise specified: 8 of 15 MedGen records matched by name)",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 4,
+   "ts": "2026-09-22T17:19:37.378513Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-603ed3e31678",
+      "layer": "layer_1_graph",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 6,
+   "ts": "2026-09-22T17:19:37.379515Z",
+   "payload": {
+    "call_id": "cq-603ed3e31678",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 7,
+   "ts": "2026-09-22T17:19:38.375579Z",
+   "payload": {
+    "call_id": "cq-603ed3e31678",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "8 row(s) of 8",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 8,
+   "ts": "2026-09-22T17:19:38.376988Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0206693",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0206693",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1335487",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1335487",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1412014",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1412014",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1709664",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1709664",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5419191",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5419191",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5419192",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5419192",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5419517",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5419517",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C5556661",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C5556661",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "d31ffba6-6bbb-462e-84f0-6ec48021fca2",
+   "seq": 40,
+   "ts": "2026-09-22T17:19:45.545640Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 5096,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 8 disease records for carcinoma not otherwise specified [1][2][3][4][5][6][7][8]. \n\nDisease records found\n\nDisease name: Medullary Carcinoma, Not Otherwise Specified [1]. Disease name: Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst [2]. Disease name: Infiltrating duct carcinoma of breast [3]. Disease name: Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst [4]. Disease name: Advanced Renal Cell Carcinoma, Not Otherwise Specified [5]. Disease name: Metastatic Renal Cell Carcinoma, Not Otherwise Specified [6]. Disease name: Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified [7]. Disease name: Cervical Squamous Cell Carcinoma, Not Otherwise Specified [8]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

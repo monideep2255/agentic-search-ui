@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui"
+ROOT = "<repo-root>"
 SRC = ROOT + "/src/system_03_search_agent"
 T = ROOT + "/tests/system_03_search_agent"
 

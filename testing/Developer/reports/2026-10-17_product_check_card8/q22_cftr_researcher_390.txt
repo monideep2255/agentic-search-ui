@@ -1,0 +1,1314 @@
+Which clinically significant variants have been reported in CFTR?
+New search
+
+? Answered13.3s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 54 sequence variant records for CFTR, of 6047 available.⁠1–20
+
+SEQUENCE VARIANT RECORDS FOUND
+NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)⁠1
+ClinVar:1000823
+NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)⁠2
+ClinVar:1002760
+NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)⁠3
+ClinVar:1003660
+NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)⁠4
+ClinVar:1007213
+NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)⁠5
+ClinVar:1009171
+NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)⁠6
+ClinVar:1009391
+NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)⁠7
+ClinVar:1009463
+NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)⁠8
+ClinVar:1010196
+NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)⁠9
+ClinVar:1011536
+NM_000492.4(CFTR):c.744-9G>T⁠10
+ClinVar:1012571
+Showing 1–10 of 54
+‹ Previous
+Page 1 of 6
+Next ›
+GENE RECORDS FOUND
+CFTR⁠55, 59
+NCBIGene:1080
+PUBMED RECORDS FOUND
+Molecular Structure of the Human CFTR Ion Channel.⁠56
+PMID:28340353
+ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction.⁠61
+PMID:36207272
+ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.⁠64
+PMID:36220763
+Molecular structures reveal synergistic rescue of Δ508 CFTR by Trikafta modulators.⁠67
+PMID:36264792
+In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.⁠70
+PMID:38388235
+CLINVAR RECORDS FOUND
+NM_000492.4(CFTR):c.1209+1988_1392+2067inv⁠57
+VCV001705265
+NM_000492.4(CFTR):c.1392+2072_1392+2074del⁠62
+VCV001705266
+NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA⁠65
+VCV001705980
+NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT⁠68
+VCV001705981
+NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del⁠71
+VCV001706438
+OMIM RECORDS FOUND
+CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR⁠58
+omim 602421
+CLINICAL TRIAL RECORDS FOUND
+NPDT Evaluation in Children With CFTR and (PSC)⁠60
+NCT00179439
+COMPLETED
+Study of VX-809 in Cystic Fibrosis Subjects With the ∆F508-CFTR Gene Mutation⁠63
+NCT00865904
+COMPLETED
+Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects⁠66
+NCT01078740
+COMPLETED
+Effects of Sildenafil on CFTR-dependent Ion Transport Activity⁠69
+NCT01132482
+COMPLETED
+Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators⁠72
+NCT01348204
+COMPLETED
+NOTES
+ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification.
+Note: this answer was truncated because only 117 of the 6047 records that matched this question in the graph were retrieved
+▶
+SOURCES
+71
+▶
+KNOWLEDGE GRAPH
+54
+▶
+[1]
+
+ClinVar 1000823
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1000823
+▶
+[2]
+
+ClinVar 1002760
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1002760
+▶
+[3]
+
+ClinVar 1003660
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1003660
+▶
+[4]
+
+ClinVar 1007213
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1007213
+▶
+[5]
+
+ClinVar 1009171
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009171
+▶
+[6]
+
+ClinVar 1009391
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009391
+▶
+[7]
+
+ClinVar 1009463
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1009463
+▶
+[8]
+
+ClinVar 1010196
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1010196
+▶
+[9]
+
+ClinVar 1011536
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1011536
+▶
+[10]
+
+ClinVar 1012571
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1012571
+▶
+[11]
+
+ClinVar 1012572
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1012572
+▶
+[12]
+
+ClinVar 1018653
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1018653
+▶
+[13]
+
+ClinVar 1018890
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1018890
+▶
+[14]
+
+ClinVar 1024644
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1024644
+▶
+[15]
+
+ClinVar 1027585
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1027585
+▶
+[16]
+
+ClinVar 1027591
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1027591
+▶
+[17]
+
+ClinVar 1029874
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1029874
+▶
+[18]
+
+ClinVar 1029875
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1029875
+▶
+[19]
+
+ClinVar 1029876
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1029876
+▶
+[20]
+
+ClinVar 1035472
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1035472
+▶
+[21]
+
+ClinVar 1036122
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1036122
+▶
+[22]
+
+ClinVar 1037205
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1037205
+▶
+[23]
+
+ClinVar 1037208
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1037208
+▶
+[24]
+
+ClinVar 1038310
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1038310
+▶
+[25]
+
+ClinVar 1038737
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1038737
+▶
+[26]
+
+ClinVar 1039311
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1039311
+▶
+[27]
+
+ClinVar 1040997
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1040997
+▶
+[28]
+
+ClinVar 1042311
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1042311
+▶
+[29]
+
+ClinVar 1043026
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1043026
+▶
+[30]
+
+ClinVar 1043097
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1043097
+▶
+[31]
+
+ClinVar 1043398
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1043398
+▶
+[32]
+
+ClinVar 1044113
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1044113
+▶
+[33]
+
+ClinVar 1044502
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1044502
+▶
+[34]
+
+ClinVar 1046296
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1046296
+▶
+[35]
+
+ClinVar 1048778
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1048778
+▶
+[36]
+
+ClinVar 1051107
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1051107
+▶
+[37]
+
+ClinVar 1052121
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1052121
+▶
+[38]
+
+ClinVar 1052165
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1052165
+▶
+[39]
+
+ClinVar 1053721
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1053721
+▶
+[40]
+
+ClinVar 1053748
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1053748
+▶
+[41]
+
+ClinVar 1054952
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1054952
+▶
+[42]
+
+ClinVar 1055358
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1055358
+▶
+[43]
+
+ClinVar 1060053
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1060053
+▶
+[44]
+
+ClinVar 1064446
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1064446
+▶
+[45]
+
+ClinVar 1064636
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1064636
+▶
+[46]
+
+ClinVar 1065566
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1065566
+▶
+[47]
+
+ClinVar 1065569
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1065569
+▶
+[48]
+
+ClinVar 1065570
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1065570
+▶
+[49]
+
+ClinVar 1065980
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1065980
+▶
+[50]
+
+ClinVar 1069281
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1069281
+▶
+[51]
+
+ClinVar 1069526
+
+L1 · graph
+Flag: does not support
+TOOL
+curie
+EVIDENCE
+primary_assertion
+CONFIDENCE
+hedged
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1069526
+▶
+[52]
+
+ClinVar 1069549
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1069549
+▶
+[53]
+
+ClinVar 1070544
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1070544
+▶
+[54]
+
+ClinVar 1073653
+
+L1 · graph
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1073653
+▶
+LIVE NCBI APIS
+12
+▶
+[55][59]
+
+gene 1080
+
+L2 · live
+Flag: does not support
+TOOL
+symbol, name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/1080/
+▶
+[56]
+
+pubmed 28340353
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/28340353/
+▶
+[57]
+
+clinvar 1705265
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/
+▶
+[58]
+
+omim 602421
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/602421
+Not linked: this URL is not on a recognised NCBI host.
+▶
+[61]
+
+pubmed 36207272
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36207272/
+▶
+[62]
+
+clinvar 1705266
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/
+▶
+[64]
+
+pubmed 36220763
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36220763/
+▶
+[65]
+
+clinvar 1705980
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/
+▶
+[67]
+
+pubmed 36264792
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36264792/
+▶
+[68]
+
+clinvar 1705981
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/
+▶
+[70]
+
+pubmed 38388235
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/38388235/
+▶
+[71]
+
+clinvar 1706438
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/
+▶
+ENRICHMENT
+5
+▶
+[60]
+
+clinicaltrials.gov NCT00179439
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00179439
+▶
+[63]
+
+clinicaltrials.gov NCT00865904
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00865904
+▶
+[66]
+
+clinicaltrials.gov NCT01078740
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01078740
+▶
+[69]
+
+clinicaltrials.gov NCT01132482
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01132482
+▶
+[72]
+
+clinicaltrials.gov NCT01348204
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01348204
+Based on 71 sources cited from ClinVar, ClinicalTrials.gov, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

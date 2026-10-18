@@ -131,7 +131,7 @@ def test_tier_context_invalid_input_unknown_tier_raises() -> None:
 #
 # A plain substring/line grep for a "/" false-positives on ordinary prose
 # ("request/response", "mint/decode/generate", "alembic/versions/...") that
-# already exists throughout this repo's docstrings and comments. Scanning
+# already exists throughout this repository's docstrings and comments. Scanning
 # only the string *constants* the AST actually parses, and requiring the
 # ENTIRE constant (not a substring of a longer sentence) to match a bare
 # provider/model slug shape, keys the check to what the acceptance
@@ -148,12 +148,12 @@ _TIERS_FILE = _SRC_ROOT / "harness" / "tiers.py"
 # "application/json" trips the scan below as a false positive of the
 # SCANNER's mechanism, not a violation of the PURPOSE it exists to catch
 # (a real provider/model id hardcoded outside `_DEFAULT_MODELS`). This
-# repo tripped this exact guard once before, in build phase 2.2
+# repository tripped this exact guard once before, in build phase 2.2
 # (LEARNINGS.md, 2026-08-03), so the fix here is a precision improvement
 # to the check, not a relaxation of it.
 #
 # The exemption is a closed, hand-enumerated set of the SPECIFIC string
-# literals this repo's source actually uses, never a pattern rule such as
+# literals this repository's source actually uses, never a pattern rule such as
 # "the top-level type is a known IANA registered type": a pattern-based
 # exemption would itself be gameable by any future model id that happened
 # to start with "text" or "application". A fixed enumeration cannot hide
@@ -167,27 +167,15 @@ _EXEMPT_MEDIA_TYPE_LITERALS = frozenset(
     {
         "text/event-stream",  # adapters/cli/client.py: the SSE Accept header
         "application/json",  # adapters/cli/client.py: the JSON body content-type check
+        # Build phase 8.10, on the lead's approval: an MCP method name, not a
+        # media type, and the same false positive. The MCP specification
+        # names its methods "namespace/name", so its cancellation
+        # notification is the literal "notifications/cancelled", which
+        # adapters/cli/mcp_bridge.py matches to stop waiting on a request
+        # the agent gave up on. The exact string only, never a pattern.
+        "notifications/cancelled",
     }
 )
-
-
-def _iter_string_constants(path: Path) -> list[tuple[int, str]]:
-    """Return (line, value) for every string constant an AST parse finds.
-
-    This deliberately excludes docstrings and comments from being matched
-    as "just more text": a docstring IS a string constant to `ast`, so a
-    short, single-line docstring shaped like a model id would still be
-    caught. What it avoids is treating one line of a long, multi-sentence
-    docstring or comment as if it were a standalone literal, since the
-    fullmatch in the caller requires the ENTIRE constant, not one line of
-    a bigger string, to look like a model id.
-    """
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    return [
-        (node.lineno, node.value)
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
-    ]
 
 
 def test_model_id_shape_regex_matches_known_default_values() -> None:
@@ -200,7 +188,7 @@ def test_model_id_shape_regex_matches_known_default_values() -> None:
 
 def test_model_id_shape_regex_rejects_ordinary_prose_with_slashes() -> None:
     """Negative control: ordinary multi-word prose containing a "/" (the
-    shape already present elsewhere in this repo's docstrings, e.g.
+    shape already present elsewhere in this repository's docstrings, e.g.
     "request/response") must not be mistaken for a model id.
     """
     prose_examples = [
@@ -213,29 +201,68 @@ def test_model_id_shape_regex_rejects_ordinary_prose_with_slashes() -> None:
         assert _MODEL_ID_SHAPE.fullmatch(prose) is None
 
 
+def _fallback_price_key_positions(path: Path) -> set[tuple[int, int, str]]:
+    """Return (line, column, value) for each key of the dict literal assigned
+    to `_FALLBACK_PRICES_USD_PER_TOKEN` in `path`, found by syntax-tree
+    position. A string equal to one of those keys anywhere else in the file
+    is not in this set.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    positions: set[tuple[int, int, str]] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+            value = node.value
+        elif isinstance(node, ast.Assign):
+            targets = list(node.targets)
+            value = node.value
+        else:
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "_FALLBACK_PRICES_USD_PER_TOKEN" for t in targets):
+            continue
+        if not isinstance(value, ast.Dict):
+            continue
+        for key in value.keys:
+            if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                positions.add((key.lineno, key.col_offset, key.value))
+    return positions
+
+
 def test_no_model_id_shaped_string_outside_the_default_table() -> None:
     """system-design-patterns.md pattern 11: resolve_model() never
-    hardcodes a model id anywhere outside the one app-config default
-    table. A repo-wide scan of every string constant for a literal,
-    OpenRouter-shaped provider/model slug must find matches only among
-    harness/tiers.py's _DEFAULT_MODELS values, never inline in any other
-    harness, node, or graph module.
+    hardcodes a model id anywhere outside the allowed tables. A repo-wide
+    scan of every string constant for a literal, OpenRouter-shaped
+    provider/model slug must find matches only among harness/tiers.py's
+    _DEFAULT_MODELS values and the keys of its
+    _FALLBACK_PRICES_USD_PER_TOKEN dict literal (allowed by syntax-tree
+    position, so a hardcoded comparison against a priced model elsewhere in
+    tiers.py still fails), never inline in any other harness, node, or graph
+    module.
     """
-    allowed_values = set(_DEFAULT_MODELS.values())
+    default_values = set(_DEFAULT_MODELS.values())
+    price_key_positions = _fallback_price_key_positions(_TIERS_FILE)
+    assert price_key_positions, "positive control: the price table's keys were found"
     violations: list[str] = []
     for path in sorted(_SRC_ROOT.rglob("*.py")):
-        for lineno, value in _iter_string_constants(path):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Constant) and isinstance(node.value, str)):
+                continue
+            value = node.value
             if _MODEL_ID_SHAPE.fullmatch(value) is None:
                 continue
-            if path == _TIERS_FILE and value in allowed_values:
+            if path == _TIERS_FILE and value in default_values:
+                continue
+            if path == _TIERS_FILE and (node.lineno, node.col_offset, value) in price_key_positions:
                 continue
             if value in _EXEMPT_MEDIA_TYPE_LITERALS:
                 continue
-            violations.append(f"{path.relative_to(_SRC_ROOT)}:{lineno}: {value!r}")
+            violations.append(f"{path.relative_to(_SRC_ROOT)}:{node.lineno}: {value!r}")
 
     assert violations == [], (
         "model-id-shaped string found outside harness/tiers.py's "
-        f"_DEFAULT_MODELS table: {violations}"
+        "_DEFAULT_MODELS values and _FALLBACK_PRICES_USD_PER_TOKEN keys: "
+        f"{violations}"
     )
 
 

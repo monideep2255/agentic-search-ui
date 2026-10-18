@@ -1,0 +1,116 @@
+# Local stderr capture from a G-019 run, 2026-09-23.
+# Absolute paths were rewritten to repository-relative on 2026-09-23 before
+# committing, so this file names no home directory and no account. Nothing
+# else in it was edited: the traceback and the ordering are as captured.
+# NOTE, worth reading rather than scrolling past: this local run shows the
+# think classification failing its schema on attempt 1 and session memory not
+# being recorded. Neither is the MeSH work and neither was investigated here.
+
+think classification unusable (attempt 1 of 2, trace g019-local-1790139657): the plan tier's response did not match the think classification schema; reply length 213, starts ' {"query_class": "single_hop", "rationale": "A single lookup of one PubMed record to retrieve its assigned MeSH terms; one direct API call to PubMed/PubMed Central or NCBI E-utilities answers it.", "e'
+session memory not recorded for trace_id=g019-local-1790139657
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 625, in run
+    await _remember_turn(query, final_state["events"])
+  File "src/system_03_search_agent/core/run.py", line 529, in _remember_turn
+    await remember_turn_for_caller(
+  File "src/system_03_search_agent/core/session_memory.py", line 996, in remember_turn_for_caller
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+interaction capture failed for trace_id=g019-local-1790139657
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 315, in _capture_interaction
+    await capture_run(query, events)
+  File "src/system_03_search_agent/feedback/__init__.py", line 67, in capture_run
+    row = assemble_interaction(query, events)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+analytics query_completed event failed for trace_id=g019-local-1790139657
+Traceback (most recent call last):
+  File "src/system_03_search_agent/core/run.py", line 341, in _capture_interaction
+    interaction = assemble_interaction(query, events)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/feedback/capture.py", line 421, in assemble_interaction
+    session_id = session_row_key(  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 516, in session_row_key
+    owner = _require_owner_id(owner_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "src/system_03_search_agent/core/session_memory.py", line 490, in _require_owner_id
+    raise CallerIdentityRequired(
+system_03_search_agent.core.session_memory.CallerIdentityRequired: session memory requires the caller's namespaced identity (Principal.owner_id, e.g. 'user:<uuid>' or 'guest:<uuid>'), and got None. It is never derived from user_id, which is NULL for every guest. Pass caller.owner_id.
+question : What MeSH terms are assigned to PMID 11237011?
+seconds  : 11.3
+==========================================================================
+WHAT THE PERSON SEES
+--------------------------------------------------------------------------
+Found 20 ontology class records for PMID 11237011 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20].
+Ontology class records found
+OntologyClass name: Animals [1]. Animals
+OntologyClass name: Chromosome Mapping [2]. Chromosome Mapping
+OntologyClass name: DNA Transposable Elements [3]. DNA Transposable Elements
+OntologyClass name: Drug Industry [4]. Drug Industry
+OntologyClass name: Forecasting [5]. Forecasting
+OntologyClass name: Genes [6]. Genes
+OntologyClass name: Genetics, Medical [7]. Genetics, Medical
+OntologyClass name: Humans [8]. Humans
+OntologyClass name: Mutation [9]. Mutation
+OntologyClass name: Proteins [10]. Proteins
+OntologyClass name: Repetitive Sequences, Nucleic Acid [11]. Repetitive Sequences, Nucleic Acid
+OntologyClass name: RNA [12]. RNA
+OntologyClass name: Species Specificity [13]. Species Specificity
+OntologyClass name: Genome, Human [14]. Genome, Human
+OntologyClass name: Human Genome Project [15]. Human Genome Project
+OntologyClass name: Databases, Factual [16]. Databases, Factual
+OntologyClass name: Conserved Sequence [17]. Conserved Sequence
+OntologyClass name: Private Sector [18]. Private Sector
+OntologyClass name: Public Sector [19]. Public Sector
+OntologyClass name: Sequence Analysis, DNA [20]. Sequence Analysis, DNA
+OntologyClass name: CpG Islands [21]. CpG Islands
+OntologyClass name: Evolution, Molecular [22]. Evolution, Molecular
+OntologyClass name: Gene Duplication [23]. Gene Duplication
+OntologyClass name: Proteome [24]. Proteome
+OntologyClass name: GC Rich Sequence [25]. GC Rich Sequence
+OntologyClass name: Genetic Diseases, Inborn [26]. Genetic Diseases, Inborn
+Note: the written summary of these records could not be verified against them, so this answer lists the records found instead
+==========================================================================
+CITATIONS
+--------------------------------------------------------------------------
+  [1] layer_2_api    MeSH:D000818  https://www.ncbi.nlm.nih.gov/mesh/?term=D000818
+  [2] layer_2_api    MeSH:D002874  https://www.ncbi.nlm.nih.gov/mesh/?term=D002874
+  [3] layer_2_api    MeSH:D004251  https://www.ncbi.nlm.nih.gov/mesh/?term=D004251
+  [4] layer_2_api    MeSH:D004345  https://www.ncbi.nlm.nih.gov/mesh/?term=D004345
+  [5] layer_2_api    MeSH:D005544  https://www.ncbi.nlm.nih.gov/mesh/?term=D005544
+  [6] layer_2_api    MeSH:D005796  https://www.ncbi.nlm.nih.gov/mesh/?term=D005796
+  [7] layer_2_api    MeSH:D005826  https://www.ncbi.nlm.nih.gov/mesh/?term=D005826
+  [8] layer_2_api    MeSH:D006801  https://www.ncbi.nlm.nih.gov/mesh/?term=D006801
+  [9] layer_2_api    MeSH:D009154  https://www.ncbi.nlm.nih.gov/mesh/?term=D009154
+  [10] layer_2_api    MeSH:D011506  https://www.ncbi.nlm.nih.gov/mesh/?term=D011506
+  [11] layer_2_api    MeSH:D012091  https://www.ncbi.nlm.nih.gov/mesh/?term=D012091
+  [12] layer_2_api    MeSH:D012313  https://www.ncbi.nlm.nih.gov/mesh/?term=D012313
+  [13] layer_2_api    MeSH:D013045  https://www.ncbi.nlm.nih.gov/mesh/?term=D013045
+  [14] layer_2_api    MeSH:D015894  https://www.ncbi.nlm.nih.gov/mesh/?term=D015894
+  [15] layer_2_api    MeSH:D016045  https://www.ncbi.nlm.nih.gov/mesh/?term=D016045
+  [16] layer_2_api    MeSH:D016208  https://www.ncbi.nlm.nih.gov/mesh/?term=D016208
+  [17] layer_2_api    MeSH:D017124  https://www.ncbi.nlm.nih.gov/mesh/?term=D017124
+  [18] layer_2_api    MeSH:D017149  https://www.ncbi.nlm.nih.gov/mesh/?term=D017149
+  [19] layer_2_api    MeSH:D017150  https://www.ncbi.nlm.nih.gov/mesh/?term=D017150
+  [20] layer_2_api    MeSH:D017422  https://www.ncbi.nlm.nih.gov/mesh/?term=D017422
+  [21] layer_2_api    MeSH:D018899  https://www.ncbi.nlm.nih.gov/mesh/?term=D018899
+  [22] layer_2_api    MeSH:D019143  https://www.ncbi.nlm.nih.gov/mesh/?term=D019143
+  [23] layer_2_api    MeSH:D020440  https://www.ncbi.nlm.nih.gov/mesh/?term=D020440
+  [24] layer_2_api    MeSH:D020543  https://www.ncbi.nlm.nih.gov/mesh/?term=D020543
+  [25] layer_2_api    MeSH:D020862  https://www.ncbi.nlm.nih.gov/mesh/?term=D020862
+  [26] layer_2_api    MeSH:D030342  https://www.ncbi.nlm.nih.gov/mesh/?term=D030342
+==========================================================================
+done {'total_cost_usd': 0.016990935, 'total_tool_calls': 1, 'elapsed_ms': 4420, 'trust_outcome': 'ask', 'trust_line': 'Based on 1 source, not yet confirmed', 'layer_calls_used': 2, 'next_step': None, 'next_step_query': None}

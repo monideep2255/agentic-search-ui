@@ -1,0 +1,204 @@
+Commit d2f99e08, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: fix(write): a shared title word must distinguish its record, not just name it
+
+Card 25 (2026-09-25). _names_its_record in synthesis/grounding.py
+accepted a reworded sentence that switched to a different record on
+any shared content word with that record's title, including generic
+clinical vocabulary a record didn't own alone. Measured: after a
+Tay-Sachs sentence, "No patient carried more than one of these
+mutations" cited a BRCA paper whose title also says "patients".
+
+Fixed structurally, no stop-word list: a shared word only counts when
+it does not also appear in every OTHER cited record's title in the
+same answer. run_grounding_pass now builds that other-records label
+text and passes it alongside the switched-to record's own title.
+Replays the Tay-Sachs/BRCA case as a unit test and proves a genuinely
+distinguishing word still licenses a switch.
+
+
+diff --git a/src/system_03_search_agent/synthesis/grounding.py b/src/system_03_search_agent/synthesis/grounding.py
+index 819b1594..a131b164 100644
+--- a/src/system_03_search_agent/synthesis/grounding.py
++++ b/src/system_03_search_agent/synthesis/grounding.py
+@@ -1437,10 +1437,17 @@ def run_grounding_pass(
+             probe = "".join(part for part, _ in kept_parts)
+             this_refs = {ref for _, ref in kept_parts if ref is not None}
+             reworded = any(claim.evidence_quote for claim in pending_claims)
+-            this_labels = " ".join(
+-                labels_by_url.get((by_ref[ref].source_url or "").strip(), "")
+-                for ref in this_refs
+-                if ref in by_ref
++            this_urls = {
++                (by_ref[ref].source_url or "").strip() for ref in this_refs if ref in by_ref
++            }
++            this_labels = " ".join(labels_by_url.get(url, "") for url in this_urls)
++            # Card 25 (2026-09-25): the word that names this record must not
++            # also be a word every OTHER cited record's title carries, or it
++            # cannot distinguish which record the sentence actually switched
++            # to. `other_labels` is every other record's title text in this
++            # same answer.
++            other_labels = " ".join(
++                label for url, label in labels_by_url.items() if url and url not in this_urls
+             )
+             if (
+                 _is_unbalanced_fragment(probe)
+@@ -1451,7 +1458,7 @@ def run_grounding_pass(
+                 or (
+                     reworded
+                     and not (this_refs & previous_refs)
+-                    and not _names_its_record(probe, this_labels)
++                    and not _names_its_record(probe, this_labels, other_labels)
+                 )
+             ):
+                 stripped += len(pending_claims)
+@@ -1599,8 +1606,8 @@ def _opens_on_record_fragment(
+     return _starts_inside_record_sentence(claim.claim_text, claim.finding.field_value)
+ 
+ 
+-def _names_its_record(sentence: str, labels: str) -> bool:
+-    """Whether a sentence shares a content word with its own records' titles.
++def _names_its_record(sentence: str, labels: str, other_labels: str = "") -> bool:
++    """Whether a sentence names its own record, and only its own record.
+ 
+     Measured live 2026-09-23: after a sentence about Familial Mediterranean
+     fever, "This condition can cause ... neonatal hyperbilirubinemia, acute
+@@ -1609,12 +1616,33 @@ def _names_its_record(sentence: str, labels: str) -> bool:
+     reference between them was false. The structural signal is the switch
+     itself: a reworded sentence that cites records the sentence before it did
+     not cite must name something from those records' own titles, which are
+-    retrieved data, never a list. A record with no title or name cannot show
+-    what it is about, so such a switch does not stand.
++    retrieved data, never a list.
++
++    Card 25 (2026-09-25): a shared word is not enough on its own. Measured
++    live: after a Tay-Sachs sentence, "No patient carried more than one of
++    these mutations" cited a BRCA paper whose title happens to say
++    "patients", and the word "patient" was accepted as naming the switch. It
++    names nothing: it is generic clinical vocabulary that other records in
++    the same answer carry too, so it cannot say WHICH record the sentence
++    switched to. The product owner ruled against a stop-word list to catch
++    "patients": the fix is structural instead. A shared word only counts
++    when `other_labels`, every OTHER cited record's title text in this same
++    answer, does not ALSO carry it. A word every title in the answer shares
++    distinguishes none of them; a word only this record's title carries is
++    this record's own name for itself, whatever the word is.
++
++    `other_labels` defaults to empty for a caller with no other record to
++    compare against (a one-record answer), where any shared word is
++    necessarily this record's own and there is nothing for it to be confused
++    with.
+     """
+     if not labels.strip():
+         return False
+-    return bool(_stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels)))
++    shared = _stemmed(content_tokens(sentence)) & _stemmed(content_tokens(labels))
++    if not shared:
++        return False
++    distinguishing = shared - _stemmed(content_tokens(other_labels))
++    return bool(distinguishing)
+ 
+ 
+ def _capitalise_opening(sentence: str) -> str:
+diff --git a/tests/system_03_search_agent/synthesis/test_sentence_check.py b/tests/system_03_search_agent/synthesis/test_sentence_check.py
+index d4a0afdc..7f520641 100644
+--- a/tests/system_03_search_agent/synthesis/test_sentence_check.py
++++ b/tests/system_03_search_agent/synthesis/test_sentence_check.py
+@@ -362,6 +362,98 @@ def test_naming_the_other_record_instead_of_referring_back_stays() -> None:
+     assert len(result.sentences) == 2, result.sentences
+ 
+ 
++# ------------------------------------ Card 25 (2026-09-25): a generic shared
++# word must not be enough to name a record switch.
++
++TAY_SACHS = SynthFinding(
++    ref_index=30,
++    citation_id="c-30",
++    layer="layer_2_ncbi_api",
++    tool="ncbi_efetch",
++    field="abstract",
++    field_value="Tay-Sachs disease results from mutations in the HEXA gene.",
++    source_url="https://pubmed.ncbi.nlm.nih.gov/30/",
++    entity_type="Publication",
++    curie="pubmed:30",
++)
++# The word "patients" appears in BOTH titles below, on purpose: that is what
++# makes it generic clinical vocabulary rather than either record's own name,
++# and it is what the residual defect (testing/UI_fixes_done.md, item 12.16
++# part 4) actually rested on. A live BRCA paper's title happened to carry
++# "patients"; nothing about that word was BRCA's alone. Neither title
++# carries "mutation" or "mutations": that word is left for the probe
++# sentences below to use as the genuinely DISTINGUISHING word, so the two
++# tests only ever differ in whether the probe also says something the BRCA
++# title alone carries ("breast" or "cancer").
++TAY_SACHS_TITLE = replace_finding(
++    TAY_SACHS,
++    ref_index=31,
++    citation_id="c-31",
++    field="title",
++    field_value="Tay-Sachs disease diagnosis in patients",
++)
++BRCA = SynthFinding(
++    ref_index=32,
++    citation_id="c-32",
++    layer="layer_2_ncbi_api",
++    tool="ncbi_efetch",
++    field="abstract",
++    field_value="No patient carried more than one of these mutations in the cohort.",
++    source_url="https://pubmed.ncbi.nlm.nih.gov/32/",
++    entity_type="Publication",
++    curie="pubmed:32",
++)
++BRCA_TITLE = replace_finding(
++    BRCA,
++    ref_index=33,
++    citation_id="c-33",
++    field="title",
++    field_value="Breast cancer risk assessment in patients",
++)
++TAY_SACHS_FIRST = "Tay-Sachs disease results from mutations in the HEXA gene [30]. "
++
++
++def _approve_tay_sachs_and_brca(narrative: str) -> object:
++    sink: list[SynthesisCandidate] = []
++    findings = [TAY_SACHS, TAY_SACHS_TITLE, BRCA, BRCA_TITLE]
++    run_grounding_pass(narrative, findings, question=QUESTION, candidate_sink=sink)
++    return run_grounding_pass(
++        narrative, findings, question=QUESTION,
++        verified_syntheses=frozenset(c.key for c in sink),
++    )
++
++
++def test_a_generic_shared_word_does_not_name_the_switch() -> None:
++    """Measured live (testing/UI_fixes_done.md, item 12.16 part 4, residual):
++    after a Tay-Sachs sentence, "No patient carried more than one of these
++    mutations" cited a BRCA paper whose title says "patients", and the
++    shared word "patient" was accepted as naming the switch. It names
++    nothing: "patients" sits in the Tay-Sachs title too, so it cannot say
++    which of the two records the sentence switched to. The sentence must be
++    dropped, and Tay-Sachs must be the only sentence left standing.
++    """
++    wrong = TAY_SACHS_FIRST + (
++        "No patient had more than one of these mutations "
++        '[32: "No patient carried more than one of these mutations in the cohort"].'
++    )
++    result = _approve_tay_sachs_and_brca(wrong)
++    assert len(result.sentences) == 1, result.sentences
++    assert "Tay-Sachs" in result.sentences[0]
++
++
++def test_a_distinguishing_word_still_names_the_switch() -> None:
++    """The fix must not become a blanket ban on switching records: a word
++    that names ONLY the record being switched to still licenses it, exactly
++    as `test_naming_the_other_record_instead_of_referring_back_stays` proves
++    for G6PD/MEFV above."""
++    named = TAY_SACHS_FIRST + (
++        "No breast cancer patient had more than one of these mutations "
++        '[32: "No patient carried more than one of these mutations in the cohort"].'
++    )
++    result = _approve_tay_sachs_and_brca(named)
++    assert len(result.sentences) == 2, result.sentences
++
++
+ def test_the_opening_sentence_counts_a_paper_cited_twice_once() -> None:
+     """Measured live 2026-09-23: "Found 10 pubmed records" above a list of 5,
+     once the prose could cite a paper's abstract as well as its title."""

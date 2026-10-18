@@ -16,7 +16,15 @@ and the `\\A...\\Z` trailing-newline edge case, `max_snp_distance` bounds,
 `min_length` on identifier fields), output validation (`status` enum
 pattern, `maxItems`/`maxLength` caps on `isolates` and its nested fields,
 the host-pinned `source_url` pattern's accept and reject shapes,
-`fields_withheld` cap), and RootModel `.root` access. It does NOT
+`fields_withheld` cap), and RootModel `.root` access. It also exercises
+the third, additive `isolate_search` branch (G-035, 2026-09-22): its
+required and defaulted fields, the one-to-ten bound on
+`amr_gene_prefixes`, the two-to-forty bound and shape pattern on each
+prefix (a regex metacharacter outside the allowed alphabet is rejected,
+the `.`, `(` and `)` inside it are accepted because nothing compiles the
+value as a regex), the `max_isolates` bounds, and the two additive output
+fields `rows_scanned` and `scan_complete`, including that every existing
+output construction still validates without them. It does NOT
 exercise: the tool's own parsing logic (comma-join/NULL handling,
 withhold-not-truncate, deadline discipline) since that logic lives in
 `pathogen_detection.py`, not here; see `test_pathogen_detection.py` for
@@ -29,6 +37,7 @@ import pytest
 from pydantic import ValidationError
 
 from system_03_search_agent.tools.pathogen_detection_schemas import (
+    PATHOGEN_AMR_PREFIX_PATTERN,
     PATHOGEN_SOURCE_URL_PATTERN,
     PATHOGEN_TAXON_PATTERN,
     PathogenClusterSnpNeighborsInput,
@@ -36,6 +45,7 @@ from system_03_search_agent.tools.pathogen_detection_schemas import (
     PathogenDetectionOutput,
     PathogenIsolate,
     PathogenIsolateLookupInput,
+    PathogenIsolateSearchInput,
 )
 
 # ---------------------------------------------------------------------------
@@ -149,6 +159,177 @@ def test_cluster_snp_neighbors_biosample_acc_field_rejected_on_this_branch():
             pds_cluster="PDS000012345.1",
             biosample_acc="SAMN02147118",
         )
+
+
+# ---------------------------------------------------------------------------
+# Input: isolate_search branch (G-035, 2026-09-22)
+# ---------------------------------------------------------------------------
+
+
+def test_isolate_search_valid_payload_round_trips():
+    payload = {
+        "mode": "isolate_search",
+        "taxon": "Escherichia_coli_Shigella",
+        "amr_gene_prefixes": ["blaCTX-M", "blaTEM-1"],
+    }
+    parsed = PathogenDetectionInput.model_validate(payload)
+    assert isinstance(parsed.root, PathogenIsolateSearchInput)
+    assert parsed.root.mode == "isolate_search"
+    assert parsed.root.taxon == "Escherichia_coli_Shigella"
+    assert parsed.root.amr_gene_prefixes == ["blaCTX-M", "blaTEM-1"]
+
+
+def test_isolate_search_default_max_isolates_is_20():
+    parsed = PathogenDetectionInput(
+        mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=["blaTEM-1"]
+    )
+    assert parsed.root.max_isolates == 20
+
+
+def test_isolate_search_missing_amr_gene_prefixes_rejected():
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(mode="isolate_search", taxon="Salmonella")
+
+
+def test_isolate_search_empty_amr_gene_prefixes_rejected():
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=[]
+        )
+
+
+def test_isolate_search_ten_prefixes_accepted_eleven_rejected():
+    ten = [f"gene{i}" for i in range(10)]
+    parsed = PathogenDetectionInput(
+        mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=ten
+    )
+    assert len(parsed.root.amr_gene_prefixes) == 10
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=[*ten, "gene10"]
+        )
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        # Every one of these is a real gene-name spelling from the live
+        # E. coli Metadata TSV, or a family prefix a caller asks with.
+        "blaEC",
+        "blaTEM-1",
+        "blaCTX-M",
+        "aph(3'')-Ib",
+        "tet(A)",
+        "mcr-1.1",
+    ],
+)
+def test_isolate_search_real_gene_name_shapes_accepted(prefix):
+    parsed = PathogenDetectionInput(
+        mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=[prefix]
+    )
+    assert parsed.root.amr_gene_prefixes == [prefix]
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        # A regex metacharacter outside the allowed alphabet. Nothing
+        # compiles a prefix as a regex, and rejecting these keeps that
+        # true for the next reader.
+        "bla*",
+        "bla+",
+        "bla[TEM]",
+        "bla|EC",
+        # Shell and path punctuation.
+        "bla;rm -rf",
+        "bla/../etc",
+        # Whitespace, a leading digit, a trailing newline, and a
+        # single-character prefix that would match a large fraction of
+        # every AMR list in the file.
+        "bla TEM",
+        "1bla",
+        "blaTEM-1\n",
+        "b",
+        "",
+    ],
+)
+def test_isolate_search_unsafe_or_too_short_prefixes_rejected(prefix):
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=[prefix]
+        )
+
+
+def test_isolate_search_over_length_prefix_rejected():
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search", taxon="Salmonella", amr_gene_prefixes=["b" * 41]
+        )
+
+
+@pytest.mark.parametrize("value", [1, 20, 99, 100])
+def test_isolate_search_max_isolates_in_bounds_accepted(value):
+    parsed = PathogenDetectionInput(
+        mode="isolate_search",
+        taxon="Salmonella",
+        amr_gene_prefixes=["blaTEM-1"],
+        max_isolates=value,
+    )
+    assert parsed.root.max_isolates == value
+
+
+@pytest.mark.parametrize("value", [0, -1, 101, 1000])
+def test_isolate_search_max_isolates_out_of_bounds_rejected(value):
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search",
+            taxon="Salmonella",
+            amr_gene_prefixes=["blaTEM-1"],
+            max_isolates=value,
+        )
+
+
+def test_isolate_search_unsafe_taxon_rejected():
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search", taxon="../../../etc", amr_gene_prefixes=["blaTEM-1"]
+        )
+
+
+def test_isolate_search_extra_field_rejected():
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_search",
+            taxon="Salmonella",
+            amr_gene_prefixes=["blaTEM-1"],
+            biosample_acc="SAMN02147118",
+        )
+
+
+def test_amr_gene_prefixes_field_rejected_on_the_other_two_branches():
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="isolate_lookup",
+            taxon="Salmonella",
+            biosample_acc="SAMN02147118",
+            amr_gene_prefixes=["blaTEM-1"],
+        )
+    with pytest.raises(ValidationError):
+        PathogenDetectionInput(
+            mode="cluster_snp_neighbors",
+            taxon="Salmonella",
+            pds_cluster="PDS000012345.1",
+            amr_gene_prefixes=["blaTEM-1"],
+        )
+
+
+def test_pathogen_amr_prefix_pattern_constant_matches_field_pattern_behavior():
+    # Sanity: the exported constant is the same pattern actually enforced
+    # on the field, not a copy that has drifted.
+    import re
+
+    assert re.fullmatch(PATHOGEN_AMR_PREFIX_PATTERN, "blaCTX-M") is not None
+    assert re.fullmatch(PATHOGEN_AMR_PREFIX_PATTERN, "bla*") is None
 
 
 # ---------------------------------------------------------------------------
@@ -424,3 +605,42 @@ def test_pdg_snapshot_max_length_30_enforced():
         status="ok", mode="isolate_lookup", pdg_snapshot="PDG000000002.4157"
     )
     assert output.pdg_snapshot == "PDG000000002.4157"
+
+
+# ---------------------------------------------------------------------------
+# Output: rows_scanned and scan_complete (G-035, 2026-09-22)
+# ---------------------------------------------------------------------------
+
+
+def test_rows_scanned_and_scan_complete_default_to_none():
+    """Both are additive and optional, so every construction site that
+    predates the isolate_search branch still validates unchanged. This is
+    the arm that would go red if either field were made required.
+    """
+    output = PathogenDetectionOutput(status="ok", mode="isolate_lookup")
+    assert output.rows_scanned is None
+    assert output.scan_complete is None
+
+
+def test_rows_scanned_and_scan_complete_round_trip_real_values():
+    output = PathogenDetectionOutput(
+        status="ok",
+        mode="isolate_search",
+        isolate_count=20,
+        total_available=279100,
+        truncated=True,
+        rows_scanned=584433,
+        scan_complete=True,
+    )
+    assert output.rows_scanned == 584433
+    assert output.scan_complete is True
+    # Populate check: the values above are the ones supplied, not a
+    # default that happens to read plausibly.
+    assert PathogenDetectionOutput(
+        status="timeout", mode="isolate_search", rows_scanned=0, scan_complete=False
+    ).scan_complete is False
+
+
+def test_rows_scanned_cannot_be_negative():
+    with pytest.raises(ValidationError):
+        PathogenDetectionOutput(status="ok", mode="isolate_search", rows_scanned=-1)

@@ -1,0 +1,18 @@
+{
+  "about": "Card 71 fix round. Each case is the risk_tier of a run's trust_signal events in arrival order, and the tier capture must store for it. tests/system_03_search_agent/feedback/test_capture_saved_answer.py checks capture stores `stored`; frontend/src/lib/riskTag.parity.test.tsx feeds the same tiers to the live view and `stored` to the saved screen and checks both show the same words.",
+  "cases": [
+    { "tiers": ["high"], "stored": "high" },
+    { "tiers": ["low"], "stored": "low" },
+    { "tiers": ["low", "moderate"], "stored": "moderate" },
+    { "tiers": ["moderate", "critical", "high"], "stored": "critical" },
+    { "tiers": ["low", "high", "low"], "stored": "high" },
+    { "tiers": ["high", ""], "stored": "" },
+    { "tiers": ["", "high"], "stored": "" },
+    { "tiers": ["high", "unknown"], "stored": "unknown" },
+    { "tiers": ["unknown", "high"], "stored": "unknown" },
+    { "tiers": ["high", "severe"], "stored": "severe" },
+    { "tiers": ["severe", "brand-new"], "stored": "severe" },
+    { "tiers": ["High", "high"], "stored": "High" },
+    { "tiers": [], "stored": null }
+  ]
+}

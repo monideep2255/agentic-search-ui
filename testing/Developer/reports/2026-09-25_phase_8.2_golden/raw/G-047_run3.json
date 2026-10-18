@@ -1,0 +1,83 @@
+{
+ "record": {
+  "id": "G-047",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "Here is my VCF file, tell me which variants are concerning.",
+  "session_id": "c103-37c860ac6ff1",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:28:53+00:00",
+  "run_id": "704a5dc0-e81f-489b-8097-cf495576f59b",
+  "outcome": "refused_compute_request",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "compute_request",
+  "guard_reason": "This product cannot read or interpret a VCF file; v1 searches NCBI records. Ask about a gene or variant from the file by symbol or rs number and I will assemble cited evidence.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 4.409,
+  "seconds": 4.8,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "704a5dc0-e81f-489b-8097-cf495576f59b",
+   "seq": 0,
+   "ts": "2026-09-25T13:27:21.405148Z",
+   "payload": {
+    "passed": false,
+    "category": "compute_request",
+    "reason": "This product cannot read or interpret a VCF file; v1 searches NCBI records. Ask about a gene or variant from the file by symbol or rs number and I will assemble cited evidence."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "704a5dc0-e81f-489b-8097-cf495576f59b",
+   "seq": 2,
+   "ts": "2026-09-25T13:27:21.405235Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 4409,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": null
+   }
+  }
+ ],
+ "answer_text": ""
+}

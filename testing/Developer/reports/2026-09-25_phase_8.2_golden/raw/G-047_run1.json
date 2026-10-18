@@ -1,0 +1,83 @@
+{
+ "record": {
+  "id": "G-047",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "Here is my VCF file, tell me which variants are concerning.",
+  "session_id": "c103-459bc7f46575",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:10:32+00:00",
+  "run_id": "849ea3f4-bf77-41f0-b29d-24cc39fa2ad2",
+  "outcome": "refused_offtopic",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "off_topic",
+  "guard_reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 1.408,
+  "seconds": 1.8,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "849ea3f4-bf77-41f0-b29d-24cc39fa2ad2",
+   "seq": 0,
+   "ts": "2026-09-25T13:08:58.206147Z",
+   "payload": {
+    "passed": false,
+    "category": "off_topic",
+    "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "849ea3f4-bf77-41f0-b29d-24cc39fa2ad2",
+   "seq": 2,
+   "ts": "2026-09-25T13:08:58.206227Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 1408,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": null
+   }
+  }
+ ],
+ "answer_text": ""
+}

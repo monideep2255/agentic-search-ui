@@ -1,0 +1,14 @@
+Answered runs: 102
+Today (re-land): median 17.1, p90 24.8, max 31.3, over 20 s 32
+With B, both drafts at once: median 13.3, p90 19.6, max 28.9, over 20 s 9
+With B and C, PubTator capped at 6 s: median 13.3, p90 18.4, max 28.9, over 20 s 6
+First word today (client): median 16.8, p90 24.4
+With E, records on screen when Write starts: median 7.6, p90 13.8, max 25.1
+
+Runs still over 20 s with B and C (id, pass, today, projected, saved by B, saved by C):
+  ('G-021', 1, 31.3, 28.9, 2.4, 0.0)
+  ('G-035', 2, 26.6, 23.3, 3.3, 0.0)
+  ('G-029', 2, 30.6, 21.6, 3.0, 6.0)
+  ('G-016', 2, 24.9, 20.8, 4.1, 0.0)
+  ('G-021', 3, 22.9, 20.8, 2.1, 0.0)
+  ('G-032', 3, 27.6, 20.2, 7.4, 0.0)

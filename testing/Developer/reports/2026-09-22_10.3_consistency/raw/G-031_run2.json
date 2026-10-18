@@ -1,0 +1,1009 @@
+{
+ "record": {
+  "id": "G-031",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What molecular activity does the KRAS gene product have?",
+  "session_id": "c103-369eec41b188",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:17:41+00:00",
+  "run_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:3845"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 3 sources",
+  "citations": 29,
+  "distinct_sources": 17,
+  "citations_by_layer": {
+   "layer_2_api": 18,
+   "layer_3_enrichment": 11
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 720,
+  "answer_start": "Found 3 gene records, 4 pubmed records, 4 clinvar records, 1 literature entity record, 4 clinical trial records and 4 publication records for KRAS [1][2][3][4][",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 8,
+  "server_elapsed_s": 4.916,
+  "seconds": 13.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 10,
+   "tool_result": 10,
+   "step": 1,
+   "token": 63,
+   "citation": 29,
+   "trust_signal": 30,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 0,
+   "ts": "2026-09-22T17:16:09.993505Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 2,
+   "ts": "2026-09-22T17:16:11.986586Z",
+   "payload": {
+    "narrative": "Asks for a single fact about the molecular activity of a known gene product, answerable with one direct API call to a knowledge base of gene function.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "KRAS",
+      "curie": "NCBIGene:3845",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 4,
+   "ts": "2026-09-22T17:16:11.988544Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:3845. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-9138fcd53800",
+      "layer": "layer_1_graph",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4fd2f9fa7202",
+      "layer": "layer_2_api",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-714fe0c2aebf",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-f436ca06ba48",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-20715ff52777",
+      "layer": "layer_2_api",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d61d7527792e",
+      "layer": "layer_2_api",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-253a2df20484",
+      "layer": "layer_2_api",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-3607f89be66b",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-acebdd311e84",
+      "layer": "layer_2_api",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-120e9864fbdb",
+      "layer": "layer_2_api",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "KRAS",
+      "curie": "NCBIGene:3845",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 6,
+   "ts": "2026-09-22T17:16:11.989289Z",
+   "payload": {
+    "call_id": "cq-9138fcd53800",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 7,
+   "ts": "2026-09-22T17:16:11.989314Z",
+   "payload": {
+    "call_id": "ne-4fd2f9fa7202",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 8,
+   "ts": "2026-09-22T17:16:11.989324Z",
+   "payload": {
+    "call_id": "pa-714fe0c2aebf",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 9,
+   "ts": "2026-09-22T17:16:11.989333Z",
+   "payload": {
+    "call_id": "ct-f436ca06ba48",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 10,
+   "ts": "2026-09-22T17:16:11.989340Z",
+   "payload": {
+    "call_id": "ne-20715ff52777",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 11,
+   "ts": "2026-09-22T17:16:11.989347Z",
+   "payload": {
+    "call_id": "ne-d61d7527792e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 12,
+   "ts": "2026-09-22T17:16:11.989355Z",
+   "payload": {
+    "call_id": "ne-253a2df20484",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 13,
+   "ts": "2026-09-22T17:16:11.989372Z",
+   "payload": {
+    "call_id": "pa-3607f89be66b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 14,
+   "ts": "2026-09-22T17:16:11.989380Z",
+   "payload": {
+    "call_id": "ne-acebdd311e84",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 15,
+   "ts": "2026-09-22T17:16:11.989388Z",
+   "payload": {
+    "call_id": "ne-120e9864fbdb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 16,
+   "ts": "2026-09-22T17:16:12.296506Z",
+   "payload": {
+    "call_id": "ne-20715ff52777",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 17,
+   "ts": "2026-09-22T17:16:12.296739Z",
+   "payload": {
+    "call_id": "ne-d61d7527792e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 18,
+   "ts": "2026-09-22T17:16:12.321603Z",
+   "payload": {
+    "call_id": "pa-714fe0c2aebf",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 19,
+   "ts": "2026-09-22T17:16:12.351714Z",
+   "payload": {
+    "call_id": "ne-4fd2f9fa7202",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 20,
+   "ts": "2026-09-22T17:16:12.426771Z",
+   "payload": {
+    "call_id": "ct-f436ca06ba48",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 21,
+   "ts": "2026-09-22T17:16:12.495285Z",
+   "payload": {
+    "call_id": "cq-9138fcd53800",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 22,
+   "ts": "2026-09-22T17:16:12.512533Z",
+   "payload": {
+    "call_id": "ne-120e9864fbdb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 23,
+   "ts": "2026-09-22T17:16:12.712734Z",
+   "payload": {
+    "call_id": "pa-3607f89be66b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 24,
+   "ts": "2026-09-22T17:16:12.879132Z",
+   "payload": {
+    "call_id": "ne-acebdd311e84",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 25,
+   "ts": "2026-09-22T17:16:12.955847Z",
+   "payload": {
+    "call_id": "ne-253a2df20484",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 26,
+   "ts": "2026-09-22T17:16:12.957673Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3845",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/3845/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@GENE_KRAS",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/24525",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34776511",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34776511/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4859020",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859020/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3845",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/3845",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01715441",
+    "source_url": "https://clinicaltrials.gov/study/NCT01715441",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34776511",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34776511/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36284306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36284306/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4859021",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859021/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3845",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/3845",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01756625",
+    "source_url": "https://clinicaltrials.gov/study/NCT01756625",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36284306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36284306/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37768068",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37768068/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4859022",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859022/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02613650",
+    "source_url": "https://clinicaltrials.gov/study/NCT02613650",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37768068",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37768068/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38686056",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38686056/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4859023",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859023/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03171636",
+    "source_url": "https://clinicaltrials.gov/study/NCT03171636",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38686056",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38686056/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39298590",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39298590/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4859024",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859024/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03600883",
+    "source_url": "https://clinicaltrials.gov/study/NCT03600883",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39298590",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39298590/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34776511",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34776511/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36284306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36284306/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37768068",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37768068/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38686056",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38686056/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39298590",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39298590/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7e22daa0-0a31-4908-9a48-b46fea2abccc",
+   "seq": 150,
+   "ts": "2026-09-22T17:16:20.614591Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 8,
+    "elapsed_ms": 4916,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 3 sources",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records, 4 pubmed records, 4 clinvar records, 1 literature entity record, 4 clinical trial records and 4 publication records for KRAS [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nVariant Evidence\n\nThe gene is identified by symbol KRAS [1] and by literature entity name Kras [2]. \n\nGene records found\n\ngene symbol: KRAS [1]. gene name: KRAS [5]. This gene, a Kirsten ras oncogene homolog from the mammalian ras gene family, encodes a protein that is a member of the small GTPase superfamily [10]. A single amino acid substitution is responsible for an activating mutation [10]. The transforming protein that results is implicated in various malignancies, including lung adenocarcinoma, mucinous adenoma, ductal carcinoma of the pancreas and colorectal carcinoma [10]. Alternative splicing leads to variants encoding two isoforms that differ in the C-terminal re [10]. \n\nPubmed records found\n\npubmed title: KRAS mutation: from undruggable to druggable in cancer [3]. pubmed title: Drugging KRAS: current perspectives and state-of-art review [8]. pubmed title: Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression [13]. pubmed title: Targeting KRAS in pancreatic cancer [17]. pubmed title: Targeting cancer with small-molecule pan-KRAS degraders [21]. Cancer is the leading cause of death worldwide, and its treatment and outcomes have been dramatically revolutionised by targeted therapies [25]. As the most frequently mutated oncogene, Kirsten rat sarcoma viral oncogene homologue (KRAS) has attracted substantial attention [25]. The understanding of KRAS is constantly being updated by numerous studies on KRAS in the initiation and progression of cancer diseases [25]. However, KRAS has been deemed a challenging therapeutic target, even \"undruggable\", after drug [25]. After decades of efforts, we have recently made progress into targeting KRAS mutations in several malignancies [26]. Known as the 'holy grail' of targeted cancer therapies, KRAS is the most frequently mutated oncogene in human malignancies [26]. Under normal conditions, KRAS shuttles between the GDP-bound 'off' state and the GTP-bound 'on' state [26]. Mutant KRAS is constitutively activated and leads to persistent downstream signaling and oncogenesis [26]. In 2013, improved understanding of KRAS biology and newer d [26]. Oncogenic KRAS (KRAS*) contributes to many cancer hallmarks [27]. In colorectal cancer, KRAS* suppresses antitumor immunity to promote tumor invasion and metastasis [27]. Here, we uncovered that KRAS* transforms the phenotype of carcinoma-associated fibroblasts (CAF) into lipid-laden CAFs, promoting angiogenesis and tumor progression [27]. Mechanistically, KRAS* activates the transcription factor CP2 (TFCP2) that upregulates the expression of the proadipogenic factors BMP4 and WNT5B, triggering the transformat [27]. Pancreatic cancer has a dismal prognosis due to late detection and lack of efficient therapies [28]. The Kirsten rat sarcoma virus (KRAS) oncogene is mutated in up to 90% of all pancreatic ductal adenocarcinomas (PDACs) and constitutes an attractive target for therapy [28]. However, the most common KRAS mutations in PDAC are G12D (44%), G12V (34%) and G12R (20%) that are not amenable to treatment by KRAS G12C-directed cysteine-reactive KRAS inhibitors such as Sotorasib and Adagrasib that exhibit clinical [28]. Mutations in the Kirsten rat sarcoma viral oncogene homolog (KRAS) protein are highly prevalent in cancer [29]. However, small-molecule concepts that address oncogenic KRAS alleles remain elusive beyond replacing glycine at position 12 with cysteine (G12C), which is clinically drugged through covalent inhibitors [29]. Guided by biophysical and structural studies of ternary complexes, we designed a heterobifunctional small molecule that potently degrades 13 out of 17 of the most prevalent oncogenic KRAS al [29]. \n\nClinvar records found\n\nclinvar title: NM_004985.5(KRAS):c.36T>C (p.Gly12=) [4]. clinvar title: NM_004985.5(KRAS):c.337C>T (p.Leu113=) [9]. clinvar title: NM_033360.4(KRAS):c.524A>G (p.Glu175Gly) [14]. clinvar title: NM_004985.5(KRAS):c.435A>G (p.Ser145=) [18]. clinvar title: NM_004985.5(KRAS):c.417T>A (p.Ile139=) [22]. \n\nLiterature entity records found\n\nLiterature entity name: Kras [2]. \n\nClinical trial records found\n\nClinical trial name: Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors [6]. Clinical trial name: PREMIUM, Observational Study [11]. Clinical trial name: A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers [15]. Clinical trial name: Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients [19]. Clinical trial name: A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100) [23]. \n\nPublication records found\n\nPublication pmid: 34776511 [7]. Publication pmid: 36284306 [12]. Publication pmid: 37768068 [16]. Publication pmid: 38686056 [20]. Publication pmid: 39298590 [24]. "
+}

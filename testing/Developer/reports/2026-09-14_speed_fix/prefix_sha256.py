@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-root = "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui"
+root = "<repo-root>"
 rev = sys.argv[1]
 with open(os.path.join(root, ".env")) as env_file:
     for line in env_file:

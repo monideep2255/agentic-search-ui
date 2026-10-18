@@ -1,0 +1,1467 @@
+{
+ "record": {
+  "model": "anthropic/claude-opus-5.5+effort-minimal",
+  "model_id": "anthropic/claude-opus-5.5",
+  "synth_effort": "minimal",
+  "question_id": "G-033",
+  "run": 3,
+  "question": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+  "trace_id": "trace-wb3-G-033-r3-173f2a2f68b74af0",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T01:05:00Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 24,
+  "must_cite_total": 3,
+  "must_cite_hits": 3,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 5,
+  "prose_kept": [
+   "The first gene is NCBIGene:4292, mutL homolog 1 [1].",
+   "The second gene is NCBIGene:4436, mutS homolog 2 [2].",
+   "Another is Colorectal cancer, hereditary nonpolyposis, type 2 [3].",
+   "Mismatch repair cancer syndrome 1 was also retrieved [4].",
+   "Mismatch repair cancer syndrome 2 was retrieved as well [5]."
+  ],
+  "prose_text": "",
+  "jev_sent": 3,
+  "jev_approved": 2,
+  "writer_elapsed_s": [
+   10.299643000002106,
+   15.114607916999375
+  ],
+  "writer_completion_tokens": [
+   745,
+   1348
+  ],
+  "writer_reasoning_tokens": [
+   180,
+   267
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 33.221,
+  "done_elapsed_s": 33.195,
+  "metered_cost_usd": 0.1828365676,
+  "done_cost_usd": 0.1828365676,
+  "openrouter_cost_usd": 0.182797,
+  "writer_openrouter_cost_usd": 0.182596,
+  "writer_metered_cost_usd": 0.182596,
+  "answer_text": "Found 2 gene records and 5 disease records for MLH1, MSH2 and colorectal cancer [1][2][3][4][5][6][7]. \n\nGene records found\n\nGene NCBIGene:4292, name: mutL homolog 1 [1]. Gene NCBIGene:4436, name: mutS homolog 2 [5]. Gene symbol: MLH1 [8]. \n\nDisease records found\n\nDisease name: Muir-Torr\u00c3\u00a9 syndrome [2]. Disease name: Colorectal cancer, hereditary nonpolyposis, type 2 [3]. Disease name: Mismatch repair cancer syndrome 1 [4]. Disease name: Lynch syndrome 1 [6]. Disease name: Mismatch repair cancer syndrome 2 [7]. \n\nPubmed records found\n\nPubmed title: Association between the MLH1 gene and longevity [9]. Pubmed title: Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays [13]. Pubmed title: MLH1/PMS2-deficient Endometrial Carcinomas in a Universally Screened Population: MLH1 Hypermethylation and Germline Mutation Status [16]. Pubmed title: Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer [19]. Pubmed title: AI-generated MLH1 small binder improves prime editing efficiency [22]. \n\nClinvar records found\n\nClinvar title: NM_000249.4(MLH1):c.545+1271_677+737delinsCA [10]. Clinvar title: NM_000249.4(MLH1):c.453+625_545+920delinsT [14]. Clinvar title: NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [17]. Clinvar title: NM_000249.4(MLH1):c.884+5T>A [20]. Clinvar title: NM_000249.4(MLH1):c.1039-1013G>A [23]. \n\nOmim records found\n\nDNA MISMATCH REPAIR PROTEIN MLH1 [11]. MLH1 [11]. \n\nClinical trial records found\n\nClinical trial name: The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [12]. Clinical trial name: Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [15]. Clinical trial name: Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [18]. Clinical trial name: Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [21]. Clinical trial name: Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver [24]. \n\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer."
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 1.285,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 805,
+    "completion_tokens": 40,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.15065e-05,
+    "reply": null,
+    "dur": 1.298
+   },
+   {
+    "t": 2.597,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1003,
+    "completion_tokens": 101,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00015937,
+    "reply": null,
+    "dur": 0.67
+   },
+   {
+    "t": 6.72,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17213,
+    "completion_tokens": 745,
+    "cached_tokens": 0,
+    "reasoning_tokens": 180,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.083752,
+    "reply": "The retrieved records link two genes to inherited colorectal cancer risk, but they do not say which gene underlies which condition, so a gene-by-gene comparison is not possible from them. The first gene is NCBIGene:4292, mutL homolog 1 [1]. The second gene is NCBIGene:4436, mutS homolog 2 [5].\n\n## Associated Hereditary Syndromes\n\nOne condition retrieved for these genes is Lynch syndrome 1 [6]. Another is Colorectal cancer, hereditary nonpolyposis, type 2 [3]. A further condition is Muir-Torr\u00c3\u00a9 syndrome [2]. Mismatch repair cancer syndrome 1 was also retrieved [4]. Mismatch repair cancer syndrome 2 was retrieved as well [7].\n\n## MLH1 Molecular Function\n\nThe mutL homolog 1 protein pairs with PMS2 to form part of the DNA repair machinery [18: \"heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system\"]. This gene is repeatedly altered in hereditary colon cancer [18: \"identified as a locus frequently mutated in hereditary nonpolyposis colon cancer (HNPCC)\"]. Its annotated processes include GO:0006298, mismatch repair [21].\n\n## Supporting Literature and Trials\n\nOne study examined mismatch-repair-deficient tumours [27]. One trial studies MK-3475 in microsatellite-unstable tumours [19]. The retrieved records hold no equivalent functional summary for NCBIGene:4436, so its role cannot be compared in the same detail [5].",
+    "dur": 10.3
+   },
+   {
+    "t": 17.364,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17971,
+    "completion_tokens": 1348,
+    "cached_tokens": 0,
+    "reasoning_tokens": 267,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.098844,
+    "reply": "The retrieved records compare two mismatch repair genes, NCBIGene:4292 (mutL homolog 1) [1] and NCBIGene:4436 (mutS homolog 2) [5]. The conditions retrieved alongside them are hereditary cancer syndromes, but the records do not say which condition belongs to which gene, so they cannot rank the two genes' colorectal cancer risk.\n\n## Associated hereditary syndromes\n\nOne retrieved condition is Colorectal cancer, hereditary nonpolyposis, type 2 [3]. Another is Lynch syndrome 1 [6]. Another is Muir-Torr\u00c3\u00a9 syndrome [2]. Another is Mismatch repair cancer syndrome 1 [4]. Another is Mismatch repair cancer syndrome 2 [7].\n\n## MLH1 function and records\n\nThe gene symbol is MLH1 [8]. The gene name is MLH1 [12]. The OMIM entry is DNA MISMATCH REPAIR PROTEIN MLH1; MLH1 [11]. Its product partners with PMS2 in DNA repair [18: \"can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system\"]. It was linked to inherited colon cancer [18: \"identified as a locus frequently mutated in hereditary nonpolyposis colon cancer (HNPCC)\"]. Its annotated processes include mismatch repair [21]. They also include meiotic mismatch repair [15]. They also include response to stress [26].\n\n## Variants and literature\n\nOne ClinVar variant is NM_000249.4(MLH1):c.545+1271_677+737delinsCA [10]. Another is NM_000249.4(MLH1):c.453+625_545+920delinsT [17]. Another is NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [23]. Another is NM_000249.4(MLH1):c.884+5T>A [28]. One paper is Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays. [16]. Another is Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer. [27]. Another is MLH1/PMS2-deficient Endometrial Carcinomas in a Universally Screened Population: MLH1 Hypermethylation and Germline Mutation Status. [22]. Another is Association between the MLH1 gene and longevity. [9]. Related publications include PMID 16474933 [14]. They also include PMID 17510385 [20]. They also include PMID 33577226 [25]. They also include PMID 36150551 [30].\n\n## Clinical trials\n\nOne related trial is Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [19]. Another is The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [13]. Another is Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [24]. Another is Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [29].",
+    "dur": 15.115
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 1.254,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.298170583002502,
+    "prompt_tokens": 805,
+    "completion_tokens": 40,
+    "cost_usd": 4.16304e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.329
+   },
+   {
+    "t": 2.597,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 0.6702671249986452,
+    "prompt_tokens": 1003,
+    "completion_tokens": 101,
+    "cost_usd": 5.66832e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 0.67
+   },
+   {
+    "t": 6.719,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 10.299643000002106,
+    "prompt_tokens": 17213,
+    "completion_tokens": 745,
+    "cost_usd": 0.083752,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 10.301
+   },
+   {
+    "t": 17.364,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 15.114607916999375,
+    "prompt_tokens": 17971,
+    "completion_tokens": 1348,
+    "cost_usd": 0.098844,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 15.115
+   }
+  ],
+  "grounding": [
+   {
+    "t": 17.021,
+    "dur": 0.3375,
+    "narrative_chars": 1079,
+    "narrative": "The retrieved records link two genes to inherited colorectal cancer risk, but they do not say which gene underlies which condition, so a gene-by-gene comparison is not possible from them. The first gene is NCBIGene:4292, mutL homolog 1 [1]. The second gene is NCBIGene:4436, mutS homolog 2 [5]. One condition retrieved for these genes is Lynch syndrome 1 [6]. Another is Colorectal cancer, hereditary nonpolyposis, type 2 [3]. A further condition is Muir-Torr\u00c3\u00a9 syndrome [2]. Mismatch repair cancer syndrome 1 was also retrieved [4]. Mismatch repair cancer syndrome 2 was retrieved as well [7]. The mutL homolog 1 protein pairs with PMS2 to form part of the DNA repair machinery [18#0]. This gene is repeatedly altered in hereditary colon cancer [18#1]. Its annotated processes include GO:0006298, mismatch repair [21]. One study examined mismatch-repair-deficient tumours [27]. One trial studies MK-3475 in microsatellite-unstable tumours [19]. The retrieved records hold no equivalent functional summary for NCBIGene:4436, so its role cannot be compared in the same detail [5].",
+    "sentences": [
+     "The first gene is NCBIGene:4292, mutL homolog 1 [1].",
+     "The second gene is NCBIGene:4436, mutS homolog 2 [2].",
+     "Another is Colorectal cancer, hereditary nonpolyposis, type 2 [3].",
+     "Mismatch repair cancer syndrome 1 was also retrieved [4].",
+     "Mismatch repair cancer syndrome 2 was retrieved as well [5]."
+    ],
+    "claims": 5,
+    "claim_ids": [
+     "cq-befe8df46744-1",
+     "cq-befe8df46744-3",
+     "cq-befe8df46744-4",
+     "cq-befe8df46744-5",
+     "cq-befe8df46744-7"
+    ],
+    "claim_detail": [
+     {
+      "text": "The first gene is NCBIGene:4292, mutL homolog 1",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "mutL homolog 1"
+     },
+     {
+      "text": "The second gene is NCBIGene:4436, mutS homolog 2",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "mutS homolog 2"
+     },
+     {
+      "text": "Another is Colorectal cancer, hereditary nonpolyposis, type 2",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "Colorectal cancer, hereditary nonpolyposis, type 2"
+     },
+     {
+      "text": "Mismatch repair cancer syndrome 1 was also retrieved",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "Mismatch repair cancer syndrome 1"
+     },
+     {
+      "text": "Mismatch repair cancer syndrome 2 was retrieved as well",
+      "quote": "",
+      "ref": 7,
+      "field": "name",
+      "value": "Mismatch repair cancer syndrome 2"
+     }
+    ],
+    "stripped": 9,
+    "refused": false
+   },
+   {
+    "t": 32.534,
+    "dur": 0.286,
+    "narrative_chars": 2188,
+    "narrative": "The retrieved records compare two mismatch repair genes, NCBIGene:4292 (mutL homolog 1) [1] and NCBIGene:4436 (mutS homolog 2) [5]. The conditions retrieved alongside them are hereditary cancer syndromes, but the records do not say which condition belongs to which gene, so they cannot rank the two genes' colorectal cancer risk. One retrieved condition is Colorectal cancer, hereditary nonpolyposis, type 2 [3]. Another is Lynch syndrome 1 [6]. Another is Muir-Torr\u00c3\u00a9 syndrome [2]. Another is Mismatch repair cancer syndrome 1 [4]. Another is Mismatch repair cancer syndrome 2 [7]. The gene symbol is MLH1 [8]. The gene name is MLH1 [12]. The OMIM entry is DNA MISMATCH REPAIR PROTEIN MLH1; MLH1 [11]. Its product partners with PMS2 in DNA repair [18#0]. It was linked to inherited colon cancer [18#1]. Its annotated processes include mismatch repair [21]. They also include meiotic mismatch repair [15]. They also include response to stress [26]. One ClinVar variant is NM_000249.4(MLH1):c.545+1271_677+737delinsCA [10]. Another is NM_000249.4(MLH1):c.453+625_545+920delinsT [17]. Another is NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [23]. Another is NM_000249.4(MLH1):c.884+5T>A [28]. One paper is Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays. [16]. Another is Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer. [27]. Another is MLH1/PMS2-deficient Endometrial Carcinomas in a Universally Screened Population: MLH1 Hypermethylation and Germline Mutation Status. [22]. Another is Association between the MLH1 gene and longevity. [9]. Related publications include PMID 16474933 [14]. They also include PMID 17510385 [20]. They also include PMID 33577226 [25]. They also include PMID 36150551 [30]. One related trial is Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C) [19]. Another is The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [13]. Another is Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [24]. Another is Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [29].",
+    "sentences": [
+     "Another is Lynch syndrome 1 [1].",
+     "Another is Muir-Torr\u00c3\u00a9 syndrome [2].",
+     "Another is Mismatch repair cancer syndrome 1 [3].",
+     "Another is Mismatch repair cancer syndrome 2 [4].",
+     "The gene symbol is MLH1 [5].",
+     "The gene name is MLH1 [6].",
+     "MLH1 [7].",
+     "Its product partners with PMS2 in DNA repair [8].",
+     "It was linked to inherited colon cancer [8].",
+     "Another is NM_000249.4(MLH1):c.453+625_545+920delinsT [9].",
+     "Another is NM_000249.4(MLH1):c.1418A>T (p.His473Leu) [10].",
+     "Another is NM_000249.4(MLH1):c.884+5T>A [11].",
+     "Another is The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer [12].",
+     "Another is Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations [13].",
+     "Another is Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible) [14]."
+    ],
+    "claims": 15,
+    "claim_ids": [
+     "cq-befe8df46744-2",
+     "cq-befe8df46744-4",
+     "cq-befe8df46744-6",
+     "cq-befe8df46744-7",
+     "ct-8b668df25be5-13",
+     "ct-8b668df25be5-24",
+     "ct-8b668df25be5-29",
+     "ne-09397dd85ac1-17",
+     "ne-09397dd85ac1-23",
+     "ne-09397dd85ac1-28",
+     "ne-7ae0045466b7-8",
+     "ne-8da7f12dcfc5-11",
+     "ne-9dd7f4c732fb-12",
+     "ne-9dd7f4c732fb-18"
+    ],
+    "claim_detail": [
+     {
+      "text": "Another is Lynch syndrome 1",
+      "quote": "",
+      "ref": 6,
+      "field": "name",
+      "value": "Lynch syndrome 1"
+     },
+     {
+      "text": "Another is Muir-Torr\u00c3\u00a9 syndrome",
+      "quote": "",
+      "ref": 2,
+      "field": "name",
+      "value": "Muir-Torr\u00c3\u00a9 syndrome"
+     },
+     {
+      "text": "Another is Mismatch repair cancer syndrome 1",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "Mismatch repair cancer syndrome 1"
+     },
+     {
+      "text": "Another is Mismatch repair cancer syndrome 2",
+      "quote": "",
+      "ref": 7,
+      "field": "name",
+      "value": "Mismatch repair cancer syndrome 2"
+     },
+     {
+      "text": "The gene symbol is MLH1",
+      "quote": "",
+      "ref": 8,
+      "field": "symbol",
+      "value": "MLH1"
+     },
+     {
+      "text": "The gene name is MLH1",
+      "quote": "",
+      "ref": 12,
+      "field": "name",
+      "value": "MLH1"
+     },
+     {
+      "text": "MLH1",
+      "quote": "",
+      "ref": 11,
+      "field": "title",
+      "value": "DNA MISMATCH REPAIR PROTEIN MLH1; MLH1"
+     },
+     {
+      "text": "Its product partners with PMS2 in DNA repair",
+      "quote": "can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system",
+      "ref": 18,
+      "field": "summary",
+      "value": "The protein encoded by this gene can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system. When MutL alpha is bound by MutS beta and some accessory proteins, the PMS2 subunit of MutL alpha introduces a single-strand break near DNA mismatche"
+     },
+     {
+      "text": "It was linked to inherited colon cancer",
+      "quote": "identified as a locus frequently mutated in hereditary nonpolyposis colon cancer (HNPCC)",
+      "ref": 18,
+      "field": "summary",
+      "value": "The protein encoded by this gene can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system. When MutL alpha is bound by MutS beta and some accessory proteins, the PMS2 subunit of MutL alpha introduces a single-strand break near DNA mismatche"
+     },
+     {
+      "text": "Another is NM_000249.4(MLH1):c.453+625_545+920delinsT",
+      "quote": "",
+      "ref": 17,
+      "field": "title",
+      "value": "NM_000249.4(MLH1):c.453+625_545+920delinsT"
+     },
+     {
+      "text": "Another is NM_000249.4(MLH1):c.1418A>T (p.His473Leu)",
+      "quote": "",
+      "ref": 23,
+      "field": "title",
+      "value": "NM_000249.4(MLH1):c.1418A>T (p.His473Leu)"
+     },
+     {
+      "text": "Another is NM_000249.4(MLH1):c.884+5T>A",
+      "quote": "",
+      "ref": 28,
+      "field": "title",
+      "value": "NM_000249.4(MLH1):c.884+5T>A"
+     },
+     {
+      "text": "Another is The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer",
+      "quote": "",
+      "ref": 13,
+      "field": "name",
+      "value": "The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer"
+     },
+     {
+      "text": "Another is Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations",
+      "quote": "",
+      "ref": 24,
+      "field": "name",
+      "value": "Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations"
+     },
+     {
+      "text": "Another is Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)",
+      "quote": "",
+      "ref": 29,
+      "field": "name",
+      "value": "Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)"
+     }
+    ],
+    "stripped": 18,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 17.024,
+    "sent": 1,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.335
+   },
+   {
+    "t": 32.553,
+    "sent": 2,
+    "approved": 2,
+    "ok": true,
+    "dur": 0.265
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "mutL homolog 1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Muir-Torr\u00c3\u00a9 syndrome",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C1321489"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Colorectal cancer, hereditary nonpolyposis, type 2",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C1333991"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "Mismatch repair cancer syndrome 1",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C5399763"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "mutS homolog 2",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4436"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "Lynch syndrome 1",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C2936783"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Mismatch repair cancer syndrome 2",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C5436806"
+   },
+   {
+    "ref": 8,
+    "field": "symbol",
+    "value": "MLH1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292/"
+   },
+   {
+    "ref": 9,
+    "field": "title",
+    "value": "Association between the MLH1 gene and longevity.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/16474933/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "NM_000249.4(MLH1):c.545+1271_677+737delinsCA",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/"
+   },
+   {
+    "ref": 11,
+    "field": "title",
+    "value": "DNA MISMATCH REPAIR PROTEIN MLH1; MLH1",
+    "url": "https://omim.org/entry/120436"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "MLH1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT00261456"
+   },
+   {
+    "ref": 14,
+    "field": "pmid",
+    "value": "16474933",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/16474933/"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "meiotic mismatch repair",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 16,
+    "field": "title",
+    "value": "Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/17510385/"
+   },
+   {
+    "ref": 17,
+    "field": "title",
+    "value": "NM_000249.4(MLH1):c.453+625_545+920delinsT",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/"
+   },
+   {
+    "ref": 18,
+    "field": "summary",
+    "value": "The protein encoded by this gene can heterodimerize with mismatch repair endonuclease PMS2 to form MutL alpha, part of the DNA mismatch repair system. When MutL alpha is bound by MutS beta and some accessory proteins, the PMS2 subunit of MutL alpha introduces a single-strand break near DNA mismatche",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C)",
+    "url": "https://clinicaltrials.gov/study/NCT01876511"
+   },
+   {
+    "ref": 20,
+    "field": "pmid",
+    "value": "17510385",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/17510385/"
+   },
+   {
+    "ref": 21,
+    "field": "name",
+    "value": "mismatch repair",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 22,
+    "field": "title",
+    "value": "MLH1/PMS2-deficient Endometrial Carcinomas in a Universally Screened Population: MLH1 Hypermethylation and Germline Mutation Status.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/33577226/"
+   },
+   {
+    "ref": 23,
+    "field": "title",
+    "value": "NM_000249.4(MLH1):c.1418A>T (p.His473Leu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations",
+    "url": "https://clinicaltrials.gov/study/NCT02760849"
+   },
+   {
+    "ref": 25,
+    "field": "pmid",
+    "value": "33577226",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/33577226/"
+   },
+   {
+    "ref": 26,
+    "field": "name",
+    "value": "response to stress",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/4292"
+   },
+   {
+    "ref": 27,
+    "field": "title",
+    "value": "Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36150551/"
+   },
+   {
+    "ref": 28,
+    "field": "title",
+    "value": "NM_000249.4(MLH1):c.884+5T>A",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/"
+   },
+   {
+    "ref": 29,
+    "field": "name",
+    "value": "Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)",
+    "url": "https://clinicaltrials.gov/study/NCT02993068"
+   },
+   {
+    "ref": 30,
+    "field": "pmid",
+    "value": "36150551",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36150551/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 2.584,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.584,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 4.41,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.41,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 4.413,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.413,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.415,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.704,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.83,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.842,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.966,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.979,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.98,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.028,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.199,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.331,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.542,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.594,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.77,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.075,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 6.079,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.207,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 33.208,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 33.209,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.1828365676,
+  "total_tool_calls": 10,
+  "elapsed_ms": 33195,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 24 sources, not yet confirmed",
+  "layer_calls_used": 19,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 350
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 315
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.02,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 315
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.94,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 320
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/gene/4292",
+  "https://www.ncbi.nlm.nih.gov/medgen/C1321489",
+  "https://www.ncbi.nlm.nih.gov/medgen/C1333991",
+  "https://www.ncbi.nlm.nih.gov/medgen/C5399763",
+  "https://www.ncbi.nlm.nih.gov/gene/4436",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2936783",
+  "https://www.ncbi.nlm.nih.gov/medgen/C5436806",
+  "https://www.ncbi.nlm.nih.gov/gene/4292/",
+  "https://pubmed.ncbi.nlm.nih.gov/16474933/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/",
+  "https://omim.org/entry/120436",
+  "https://clinicaltrials.gov/study/NCT00261456",
+  "https://pubmed.ncbi.nlm.nih.gov/17510385/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/",
+  "https://clinicaltrials.gov/study/NCT01876511",
+  "https://pubmed.ncbi.nlm.nih.gov/33577226/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/",
+  "https://clinicaltrials.gov/study/NCT02760849",
+  "https://pubmed.ncbi.nlm.nih.gov/36150551/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/",
+  "https://clinicaltrials.gov/study/NCT02993068",
+  "https://pubmed.ncbi.nlm.nih.gov/40769155/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856878/",
+  "https://clinicaltrials.gov/study/NCT03005002"
+ ]
+}

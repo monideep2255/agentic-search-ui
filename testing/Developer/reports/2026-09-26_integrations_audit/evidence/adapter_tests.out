@@ -1,0 +1,77 @@
+== cli (tests/system_03_search_agent/adapters/cli)
+........................................................................ [ 33%]
+........................................................................ [ 66%]
+.......................................................................  [100%]
+215 passed in 1.95s
+exit: 0
+== graphql (tests/system_03_search_agent/adapters/graphql)
+        kwasync = {}
+        if 'async' in kwargs:
+            kwasync['async'] = kwargs.pop('async')
+        if 'async_' in kwargs:
+            kwasync['async_'] = kwargs.pop('async_')
+    
+        dsn = _ext.make_dsn(dsn, **kwargs)
+>       conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  role "postgres" does not exist
+E       
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+<repo-root>/venv/lib/python3.11/site-packages/psycopg2/__init__.py:122: OperationalError
+=============================== warnings summary ===============================
+src/system_03_search_agent/adapters/graphql/types.py:593
+  <scratch>/int_tree/src/system_03_search_agent/adapters/graphql/types.py:593: DeprecationWarning: Passing a class to strawberry.scalar() is deprecated. Use StrawberryConfig.scalar_map instead for better type checking support. See: https://strawberry.rocks/docs/types/scalars
+    AskText = strawberry.scalar(
+
+src/system_03_search_agent/adapters/graphql/types.py:599
+  <scratch>/int_tree/src/system_03_search_agent/adapters/graphql/types.py:599: DeprecationWarning: Passing a class to strawberry.scalar() is deprecated. Use StrawberryConfig.scalar_map instead for better type checking support. See: https://strawberry.rocks/docs/types/scalars
+    AskSessionId = strawberry.scalar(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+3 failed, 238 passed, 2 warnings in 15.79s
+exit: 1
+== mcp (tests/system_03_search_agent/adapters/mcp)
+................................                                         [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py:178: search_agent_users PostgreSQL database is not reachable; set USER_DB_URL and ensure the server is running to run the MCP no-cost and auth tests
+SKIPPED [1] tests/system_03_search_agent/adapters/mcp/test_phase_4_1_production_mount.py:92: search_agent_users PostgreSQL database is not reachable; set USER_DB_URL and ensure the server is running to run the phase 4.1 production-mount test (the real /mcp mount, end to end)
+32 passed, 2 skipped in 27.74s
+exit: 0
+== web_sse (tests/system_03_search_agent/adapters/web_sse)
+........................................................................ [ 78%]
+....................                                                     [100%]
+=============================== warnings summary ===============================
+src/system_03_search_agent/adapters/graphql/types.py:593
+  <scratch>/int_tree/src/system_03_search_agent/adapters/graphql/types.py:593: DeprecationWarning: Passing a class to strawberry.scalar() is deprecated. Use StrawberryConfig.scalar_map instead for better type checking support. See: https://strawberry.rocks/docs/types/scalars
+    AskText = strawberry.scalar(
+
+src/system_03_search_agent/adapters/graphql/types.py:599
+  <scratch>/int_tree/src/system_03_search_agent/adapters/graphql/types.py:599: DeprecationWarning: Passing a class to strawberry.scalar() is deprecated. Use StrawberryConfig.scalar_map instead for better type checking support. See: https://strawberry.rocks/docs/types/scalars
+    AskSessionId = strawberry.scalar(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/system_03_search_agent/adapters/web_sse/test_streaming_endpoints.py:70: search_agent_users PostgreSQL database is not reachable; set USER_DB_URL and ensure the server is running to run this suite
+92 passed, 1 skipped, 2 warnings in 12.56s
+exit: 0
+== export (tests/system_03_search_agent/export)
+........................................................................ [ 42%]
+........................................................................ [ 85%]
+........................                                                 [100%]
+168 passed in 2.07s
+exit: 0
+== depth (tests/system_03_search_agent/adapters/test_audience_depth_values.py)
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+tests/system_03_search_agent/adapters/test_audience_depth_values.py::test_web_request_model_accepts_every_depth
+  <scratch>/int_tree/src/system_03_search_agent/adapters/graphql/types.py:593: DeprecationWarning: Passing a class to strawberry.scalar() is deprecated. Use StrawberryConfig.scalar_map instead for better type checking support. See: https://strawberry.rocks/docs/types/scalars
+    AskText = strawberry.scalar(
+
+tests/system_03_search_agent/adapters/test_audience_depth_values.py::test_web_request_model_accepts_every_depth
+  <scratch>/int_tree/src/system_03_search_agent/adapters/graphql/types.py:599: DeprecationWarning: Passing a class to strawberry.scalar() is deprecated. Use StrawberryConfig.scalar_map instead for better type checking support. See: https://strawberry.rocks/docs/types/scalars
+    AskSessionId = strawberry.scalar(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+5 passed, 2 warnings in 20.92s
+exit: 0

@@ -1,0 +1,121 @@
+{
+  "question": "Which diseases are associated with BRCA1?",
+  "run": 5,
+  "run_id": "3e86024f-8095-43a1-933a-8245371fb1f6",
+  "outcome": "ask",
+  "elapsed": 13.7,
+  "error_payload": null,
+  "layer_1_slots": [
+    {
+      "slot": 0,
+      "call_id": "cq-c7868eeae5e5",
+      "status": "ok",
+      "result_count": 4,
+      "summary": "4 row(s) of 4",
+      "truncated": false
+    },
+    {
+      "slot": 1,
+      "call_id": "cq-d6774c24ba0d",
+      "status": "ok",
+      "result_count": 40,
+      "summary": "40 row(s) of 40",
+      "truncated": false
+    }
+  ],
+  "source_count": 61,
+  "l1_citation_count": 40,
+  "all_tool_results": [
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 10,
+      "summary": "search: 10 id(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "search: 5 id(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 10,
+      "summary": "search: 10 id(s)"
+    },
+    {
+      "tool": "clinicaltrials_search",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "ok: 5 record(s)"
+    },
+    {
+      "tool": "pubtator_annotate",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "ok: 1 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "summary: 1 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "dataset_report: 1 record(s)"
+    },
+    {
+      "tool": "cypher_query",
+      "layer": "layer_1_graph",
+      "status": "ok",
+      "result_count": 4,
+      "summary": "4 row(s) of 4"
+    },
+    {
+      "tool": "cypher_query",
+      "layer": "layer_1_graph",
+      "status": "ok",
+      "result_count": 40,
+      "summary": "40 row(s) of 40"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "summary: 5 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "summary: 1 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 10,
+      "summary": "fetch: 10 record(s)"
+    },
+    {
+      "tool": "pubtator_annotate",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "ok: 5 record(s)"
+    }
+  ]
+}

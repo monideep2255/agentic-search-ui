@@ -1,0 +1,32 @@
+{
+  "surface": "GraphQL",
+  "question": "What are the clinical features of Marfan syndrome?",
+  "session_id": "audit-gql-marfan",
+  "depth_sent": null,
+  "http_status": 200,
+  "outcome": "answered",
+  "trust_outcome": "answer",
+  "citation_count": 50,
+  "citation_hosts": [
+    "pubmed.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov"
+  ],
+  "citation_urls_sample": [
+    "https://pubmed.ncbi.nlm.nih.gov/35894201/",
+    "https://www.ncbi.nlm.nih.gov/medgen/C0024796",
+    "https://pubmed.ncbi.nlm.nih.gov/2402263/",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287"
+  ],
+  "first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [2].",
+  "answer_chars": 4848,
+  "answer_head": "Found 1 disease record for Marfan syndrome: Marfan syndrome [2]. \n\nClinical Context\n\nMarfan syndrome is a multisystem connective tissue disease with autosomal dominant inheritance, mainly caused by FBN1 gene mutation [1]. \n\nDisease records found\n\nDisease name: Marfan syndrome [2]. \n\nPubmed records found\n\nPubmed title: Marfan syndrome [3]. Pubmed title: [Latest advances in the diagnosis and treatment of Marfan syndrome] [77]. Pubmed title: What Is Marfan Syndrome [79]. Pubmed title: Marfan syndrome [81]. Pubmed title: Marfan syndrome [83]. \n\nMedgen records found\n\nMedgen title: Marfan syndrome [4]. \n\nClinical features MedGen lists for Marfan syndrome\n\nMedgen clinical_features: Aortic regurgitation [5]. Medgen clinical_features: Arachnodactyly [6]. Medgen clinical_features: Astigmatism [7]. Medgen clinical_features: Ectopia lentis [8]. Medgen clinical_features: Esotropia [9]. Medgen clinical_features: Exotropia [10]. Medgen clinical_features: Pes planus [11]. Medgen clinical_features: Glaucoma [12]. Medgen clinical_features: Congestive heart failure [13]. Medgen clinical_features: Hypertropia [14]. Medgen clinical_features: Micrognathia [15]. Medgen clinical_features: Mitral regurgita",
+  "trust_signal": {
+    "outcome": "answer",
+    "riskTier": "low",
+    "grounded": true,
+    "message": "34 citation(s) beyond this surface's 50-citation limit were omitted; some citation markers in the answer above may not resolve to a returned citation. 1 tool result(s) behind this answer were truncated by the tool itself, so the answer above may not reflect every matching record."
+  },
+  "persona_name": "Khorana",
+  "wall_s": 12.3
+}

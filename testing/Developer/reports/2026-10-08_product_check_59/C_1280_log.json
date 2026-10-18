@@ -1,0 +1,81 @@
+[
+ {
+  "step": "entered",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:54:27.882Z"
+ },
+ {
+  "step": "C1 base question",
+  "answeredSeconds": 33.335,
+  "doneSeconds": 22.963,
+  "at": "2026-10-08T06:55:01.287Z"
+ },
+ {
+  "step": "C2_early_brca1 early-press",
+  "question": "Which diseases are associated with BRCA1?",
+  "pressSeconds": 5.952,
+  "press": {
+   "enabled": true,
+   "clicked": true,
+   "t": 1791442510419,
+   "stopFirstPressableSeconds": 5.939
+  },
+  "at": "2026-10-08T06:55:10.475Z"
+ },
+ {
+  "step": "C2 screen right after press",
+  "seen": [
+   {
+    "stopping": true,
+    "stopped": false,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   },
+   {
+    "stopping": true,
+    "stopped": false,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   },
+   {
+    "stopping": false,
+    "stopped": true,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   },
+   {
+    "stopping": false,
+    "stopped": true,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   }
+  ],
+  "at": "2026-10-08T06:55:11.088Z"
+ },
+ {
+  "step": "C3 follow-up field visible at once",
+  "fieldReady": false,
+  "state": {
+   "stopping": false,
+   "stopped": true,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:55:11.161Z"
+ },
+ {
+  "fatal": "TimeoutError: locator.fill: Timeout 15000ms exceeded.\nCall log:\n  - waiting for getByRole('textbox', { name: /follow-up/i })\n",
+  "at": "2026-10-08T06:55:26.165Z"
+ }
+]

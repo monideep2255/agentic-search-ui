@@ -806,7 +806,9 @@ def test_the_environmental_retry_never_covers_a_personalization_failure() -> Non
 # ---------------------------------------------------------------------------
 
 
-def test_p1_the_default_depth_reaches_the_synth_prompt() -> None:
+def test_p1_the_default_depth_reaches_the_synth_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The DEFAULT path, and every default in it is the code's own.
 
     F-4.5-J-11. The shipped version of this arm read
@@ -836,8 +838,12 @@ def test_p1_the_default_depth_reaches_the_synth_prompt() -> None:
         did not render the researcher directive.
     """
     from system_03_search_agent.contracts.query import Query
+    from system_03_search_agent.synthesis import findings as findings_module
     from system_03_search_agent.synthesis.findings import build_synth_messages
 
+    # Card 125: each prompt draws its own random tag suffix. Pinned, so the
+    # two prompts below are still compared byte for byte.
+    monkeypatch.setattr(findings_module, "_delimiter_suffix", lambda untrusted: "0" * 16)
     owner_id, session_id = _fresh_identity("p1")
     default_query = Query(
         text="Which diseases are associated with BRCA1?",
@@ -1346,7 +1352,9 @@ async def _step_messages_for(
     return captured[0]
 
 
-def test_p5_session_memory_never_reaches_the_synth_prompt() -> None:
+def test_p5_session_memory_never_reaches_the_synth_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Section 14.4's firewall on the WRITE side, asserted by prompt bytes.
 
     F-4.5-J-05. The shipped version of this arm ran a live query with a
@@ -1384,7 +1392,11 @@ def test_p5_session_memory_never_reaches_the_synth_prompt() -> None:
         ResolvedEntity,
         SessionMemorySummary,
     )
+    from system_03_search_agent.synthesis import findings as findings_module
 
+    # Card 125: each prompt draws its own random tag suffix. Pinned, so the
+    # two prompts are still compared byte for byte.
+    monkeypatch.setattr(findings_module, "_delimiter_suffix", lambda untrusted: "0" * 16)
     fabricated = "BRCA1 is associated with Wilson disease"
     memory = SessionMemorySummary(
         session_id="premise-gate-4-5-p5",
@@ -1878,6 +1890,10 @@ _MEMORY_READERS_ALLOWED = {
     # because tool calls execute against fresh retrieval, and never
     # `write_node`, because memory must never become a citable source.
     "think_node",
+    # Build phase 8.2 (2026-09-25): `think_node` now starts the Think step's
+    # decisions and runs the step's body, `_think`, which is where the
+    # memory suffix is read. Same step, same permission.
+    "_think",
     "plan_node",
     # Added 2026-09-13 (UI fix set 7, item 7.1): the guardrail reads memory
     # through `_is_memory_bound_follow_up`, a deterministic rule that sets
@@ -1888,6 +1904,13 @@ _MEMORY_READERS_ALLOWED = {
     # still hold that neither `act_node` nor `write_node` reads memory.
     "guardrail_node",
     "_is_memory_bound_follow_up",
+    # Build phase 8.2 fix round (F-8.2-A01): the relevancy decision on a
+    # pronoun follow-up is handed the previous question the pronoun points
+    # at, the person's own earlier words, so its "off_topic" can refuse a
+    # follow-up exactly as it refuses a first question. This is the
+    # separate closed-option decision call, not the guard classifier's
+    # prompt, which still carries nothing from memory.
+    "_relevancy_state",
     # Item 7.5 (2026-09-13): Think asks a clarifying question only when no
     # remembered antecedent exists, so the rule must read memory; it reads
     # the same accessor Plan's binding reads and injects nothing.
@@ -2011,8 +2034,8 @@ def test_p10_memory_is_never_injected_into_the_act_or_write_step() -> None:
     # direction too. An empty walk, or a walk that stopped finding the real
     # sites because a helper was renamed, would satisfy the assertion above
     # while proving nothing. The two permitted sites must actually be there.
-    assert "_memory_suffix" in sites.get("think_node", set()), (
-        "think_node no longer reads session memory, so either the feature "
+    assert "_memory_suffix" in sites.get("_think", set()), (
+        "the Think step's body, `_think`, no longer reads session memory, so either the feature "
         "was removed or this walk has stopped seeing the real call sites and "
         f"the assertion above is vacuous. sites={sorted(sites)}"
     )

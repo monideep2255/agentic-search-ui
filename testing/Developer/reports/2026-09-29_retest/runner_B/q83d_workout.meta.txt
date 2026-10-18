@@ -1,0 +1,8 @@
+{
+ "modes": [
+  "=false",
+  "=false"
+ ],
+ "links": [],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

@@ -1,0 +1,5 @@
+base: 1966 passed, 66 skipped, 1 deselected, 1 xfailed, 2 warnings in 65.85s (0:01:05)
+nocolon: 1 failed, 1965 passed, 66 skipped, 1 deselected, 1 xfailed, 2 warnings in 65.85s (0:01:05)
+FAILED tests/system_03_search_agent/synthesis/test_pubmed_abstract_grounding.py::test_a_verbatim_abstract_excerpt_grounds_and_cites_its_own_paper
+tight: 1 failed, 1965 passed, 66 skipped, 1 deselected, 1 xfailed, 2 warnings in 65.85s (0:01:05)
+FAILED tests/system_03_search_agent/synthesis/test_pubmed_abstract_grounding.py::test_a_verbatim_abstract_excerpt_grounds_and_cites_its_own_paper

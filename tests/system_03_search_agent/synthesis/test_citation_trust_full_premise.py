@@ -87,7 +87,7 @@ Deliberately NOT exercised, each with the reason:
   `ncbi_efetch` only. Their provenance is graded directly (P5-P10), their
   presence in a synthesized narrative is not.
 - Organic (unconstructed) live conflict between a graph value and a live
-  value for the same field. Nothing in this repo's control guarantees the
+  value for the same field. Nothing in this repository's control guarantees the
   pinned BRCA1/TP53 fixtures actually disagree between Layer 1 and Layer 2
   on any given day, so P3 calls the real conflict-detection function
   directly with one real graph-sourced record and one real live-sourced
@@ -132,8 +132,16 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
+# Built from GRAPH_BOX_HOST (see env.example) rather than a hardcoded
+# address. GRAPH_BOX_HOST is stored as "user@host"; only the bare host is
+# needed after the literal "root@" below, so any "user@" prefix is stripped.
+# Unused by any test in this file today, since build phase 4.11 replaced
+# this tunnel transport with the HTTPS graph query service; kept only so a
+# future consumer never has to hardcode the box's address again.
+_GRAPH_BOX_HOST_BARE = os.environ.get("GRAPH_BOX_HOST", "").split("@")[-1]
 _REOPEN_TUNNEL_CMD = (
-    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@46.225.128.133"
+    "ssh -o BatchMode=yes -f -N -L 15432:127.0.0.1:5432 root@"
+    + (_GRAPH_BOX_HOST_BARE or "<server-ip>")
 )
 
 # Ground truth, live graph and live NCBI, read 2026-08-09. Reused from build
@@ -343,7 +351,7 @@ async def _ask(question: str) -> Answer:
 @premise_gate
 @pytest.mark.asyncio
 async def test_a_dual_layer_question_dispatches_and_cites_both_layers() -> None:
-    """T-3.4-05: the first time this repo ever dispatches two answer-
+    """T-3.4-05: the first time this repository ever dispatches two answer-
     bearing tools for one query. Before this phase, `act_node` called
     `cypher_query` alone; this is the premise every other test in this file
     depends on, so it is asserted first and asserted hard.
@@ -477,13 +485,13 @@ async def test_the_flagship_gene_disease_claim_is_high_risk_and_triangulates() -
 # P3. Section 7.2: conflict detection, exercised directly.
 #
 # Not a full-loop case. Organic live divergence between a graph value and a
-# live NCBI value for the same field is not something this repo controls or
+# live NCBI value for the same field is not something this repository controls or
 # can pin as ground truth: the two may agree on the day this runs. The real,
 # unmocked `conflict_detection` module is called directly instead, with one
 # real graph-sourced record and one real live-sourced record for the same
 # entity, and a manufactured value difference on one field, mirroring the
 # same "call the real function directly against real data" pattern every
-# single-tool premise gate in this repo already uses for cases a live
+# single-tool premise gate in this repository already uses for cases a live
 # organic sample cannot guarantee.
 # ---------------------------------------------------------------------------
 

@@ -124,7 +124,7 @@ withholds rather than truncates, and, like every other field this module
 reads, it is data for a downstream Write step to report or discard, never
 an instruction to execute, format as a template, or act on. 500 chars is
 kept as is rather than tightened further here: it already matches the
-cap every other tool in this repo uses for the same field, and this
+cap every other tool in this repository uses for the same field, and this
 finding's fix is documentation plus the existing cap, not a new
 sanitization layer (see `tracker/phase_3.3.md`'s F-3.3-A-08 disposition
 for why a narrower cap was considered and declined).

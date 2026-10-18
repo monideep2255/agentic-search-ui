@@ -1,0 +1,1218 @@
+{
+ "record": {
+  "model": "google/gemini-3.8-flash+effort-minimal",
+  "model_id": "google/gemini-3.8-flash",
+  "synth_effort": "minimal",
+  "question_id": "G-031",
+  "run": 3,
+  "question": "What molecular activity does the KRAS gene product have?",
+  "trace_id": "trace-wb3-G-031-r3-350f667971e2409e",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:58:15Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 20,
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 1,
+  "prose_kept": [
+   "The KRAS gene product functions as a small GTPase that serves as a molecular switch [1] [2] [3]."
+  ],
+  "prose_text": "The KRAS gene product functions as a small GTPase that serves as a molecular switch [1] [2] [3].",
+  "jev_sent": 11,
+  "jev_approved": 3,
+  "writer_elapsed_s": [
+   3.5005782499974885,
+   7.217972959002509
+  ],
+  "writer_completion_tokens": [
+   232,
+   889
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 16.974,
+  "done_elapsed_s": 16.953,
+  "metered_cost_usd": 0.025401434879999997,
+  "done_cost_usd": 0.025401434879999997,
+  "openrouter_cost_usd": 0.025282,
+  "writer_openrouter_cost_usd": 0.025056,
+  "writer_metered_cost_usd": 0.025056,
+  "answer_text": "Found 1 omim record, 2 gene records, 5 pubmed records, 1 literature entity record, 5 clinical trial records and 4 clinvar records for KRAS [1][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nThe KRAS gene product functions as a small GTPase that serves as a molecular switch [1] [2] [3]. \n\nGene records found\n\nGene symbol: KRAS [4]. Gene name: KRAS [6]. \n\nPubmed records found\n\nPubmed title: Role of oncogenic KRAS in the prognosis, diagnosis and treatment of colorectal cancer [5]. Pubmed title: KRAS mutation: from undruggable to druggable in cancer [9]. Pubmed title: Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression [12]. Pubmed title: Targeting KRAS in pancreatic cancer [15]. Pubmed title: Targeting cancer with small-molecule pan-KRAS degraders [18]. \n\nOmim records found\n\nKRAS PROTOONCOGENE, GTPase [1]. KRAS [1]. \n\nLiterature entity records found\n\nLiterature entity name: Kras [7]. \n\nClinical trial records found\n\nClinical trial name: Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors [8]. Clinical trial name: PREMIUM, Observational Study [11]. Clinical trial name: A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers [14]. Clinical trial name: Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients [17]. Clinical trial name: A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100) [20]. \n\nClinvar records found\n\nClinvar title: NM_004985.5(KRAS):c.36T>C (p.Gly12=) [10]. Clinvar title: NM_004985.5(KRAS):c.337C>T (p.Leu113=) [13]. Clinvar title: NM_033360.4(KRAS):c.524A>G (p.Glu175Gly) [16]. Clinvar title: NM_004985.5(KRAS):c.417T>A (p.Ile139=) [19]. \n\nNote: one further clinvar record was found for this question and is not covered in the summary above"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.111,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 799,
+    "completion_tokens": 40,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00019019,
+    "reply": null,
+    "dur": 1.091
+   },
+   {
+    "t": 1.223,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 991,
+    "completion_tokens": 51,
+    "cached_tokens": 872,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 3.59814e-05,
+    "reply": null,
+    "dur": 2.032
+   },
+   {
+    "t": 5.566,
+    "model": "openrouter/google/gemini-3.8-flash",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12852,
+    "completion_tokens": 232,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.010509,
+    "reply": "The KRAS gene product functions biochemically as a small GTPase [11: \"encodes a protein that is a member of the small GTPase superfamily\"]. In cellular signaling networks, the active protein operates as an on-off switch that continuously stimulates downstream cellular pathways [26: \"acts as a molecular switch to persistently stimulate downstream signaling pathways\"].\n\n## Enzymatic Activity\n\nThe official gene name is KRAS [5]. The protein operates as a GTPase enzyme [4]. It belongs to a broader group of small GTP-binding proteins [11: \"member of the small GTPase superfamily\"].\n\n## Signaling Function\n\nSingle residue alterations produce constitutively active variants [11: \"A single amino acid substitution is responsible for an activating mutation\"]. These oncogenic forms act as switches that drive key downstream programs for cell survival and multiplication [26: \"acts as a molecular switch to persistently stimulate downstream signaling pathways, including cell proliferation and survival\"]. Normal regulation can involve upstream exchange factors like Son of Sevenless 1 [29: \"guanosine exchange factor (GEF) Son of Sevenless 1 that drives KRAS\"].",
+    "dur": 3.501
+   },
+   {
+    "t": 9.341,
+    "model": "openrouter/google/gemini-3.8-flash",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 14951,
+    "completion_tokens": 889,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.014547,
+    "reply": "The KRAS gene product functions as a small GTPase that serves as a molecular switch [4][11: \"encodes a protein that is a member of the small GTPase superfamily\"][26: \"acts as a molecular switch to persistently stimulate downstream signaling pathways\"]. The official gene symbol is KRAS [1]. Its full gene name is KRAS [5].\n\n## Gene Function and Variants\nAlternative splicing yields isoforms differing at the C-terminus, while single substitutions confer activating oncogenic properties [11: \"Alternative splicing leads to variants encoding two isoforms that differ in the C-terminal region\"][11: \"A single amino acid substitution is responsible for an activating mutation\"]. One recorded variant is NM_004985.5(KRAS):c.458ATG[1] (p.Asp154del) [3]. Another documented variant is NM_004985.5(KRAS):c.36T>C (p.Gly12=) [10]. Another sequence alteration is NM_004985.5(KRAS):c.337C>T (p.Leu113=) [15]. Additionally, literature identifies the entity as Kras [6].\n\n## Pathogenic Mechanisms and Signatures\nMutated KRAS activates TFCP2 to trigger CAF transformation into lipid-rich cells that secrete VEGFA to drive vascularization in colorectal carcinoma [28: \"KRAS* activates the transcription factor CP2 (TFCP2) that upregulates the expression of the proadipogenic factors BMP4 and WNT5B, triggering the transformation of CAFs into lipid-rich CAFs\"][28: \"These lipid-rich CAFs, in turn, produce VEGFA to spur angiogenesis\"]. A related variant record is NM_033360.4(KRAS):c.524A>G (p.Glu175Gly) [19]. Another cataloged variant is NM_004985.5(KRAS):c.417T>A (p.Ile139=) [23]. Several publications explore KRAS pathogenesis across malignancies, including Role of oncogenic KRAS in the prognosis, diagnosis and treatment of colorectal cancer [2][8]. Another article is KRAS mutation: from undruggable to druggable in cancer [9][13]. Further literature includes Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression [14][17].\n\n## Therapeutic Targeting and Clinical Trials\nPancreatic cancer heavily features KRAS mutations, prompting both allele-specific approaches and pan-KRAS degraders capable of targeting multiple oncogenic variants [22][29: \"The Kirsten rat sarcoma virus (KRAS) oncogene is mutated in up to 90% of all pancreatic ductal adenocarcinomas (PDACs)\"][30: \"heterobifunctional small molecule that potently degrades 13 out of 17 of the most prevalent oncogenic KRAS alleles\"]. Targeting KRAS in pancreatic cancer details these therapeutic challenges [18][21]. Pan-KRAS degradation has emerged as a strategy [25][27: \"AMG510 was the first drug-targeting KRAS (G12C) to be approved for clinical use this year\"]. Clinical investigations include Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors [7]. Other trials include PREMIUM, Observational Study [12]. Additional studies comprise A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers [16]. Clinical studies also encompass Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients [20]. Finally, research includes A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100) [24].",
+    "dur": 7.218
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.104,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.0925513330003014,
+    "prompt_tokens": 799,
+    "completion_tokens": 40,
+    "cost_usd": 4.134816e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.1
+   },
+   {
+    "t": 1.223,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 2.0322699589996773,
+    "prompt_tokens": 991,
+    "completion_tokens": 51,
+    "cost_usd": 5.141472e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.033
+   },
+   {
+    "t": 5.565,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 3.5005782499974885,
+    "prompt_tokens": 12852,
+    "completion_tokens": 232,
+    "cost_usd": 0.010509,
+    "model": "google/gemini-3.8-flash",
+    "dur": 3.502
+   },
+   {
+    "t": 9.341,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 7.217972959002509,
+    "prompt_tokens": 14951,
+    "completion_tokens": 889,
+    "cost_usd": 0.014547000000000001,
+    "model": "google/gemini-3.8-flash",
+    "dur": 7.218
+   }
+  ],
+  "grounding": [
+   {
+    "t": 9.067,
+    "dur": 0.273,
+    "narrative_chars": 646,
+    "narrative": "The KRAS gene product functions biochemically as a small GTPase [11#0]. In cellular signaling networks, the active protein operates as an on-off switch that continuously stimulates downstream cellular pathways [26#1]. The official gene name is KRAS [5]. The protein operates as a GTPase enzyme [4]. It belongs to a broader group of small GTP-binding proteins [11#2]. Single residue alterations produce constitutively active variants [11#3]. These oncogenic forms act as switches that drive key downstream programs for cell survival and multiplication [26#4]. Normal regulation can involve upstream exchange factors like Son of Sevenless 1 [29#5].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 8,
+    "refused": true
+   },
+   {
+    "t": 16.587,
+    "dur": 0.3492,
+    "narrative_chars": 2327,
+    "narrative": "The KRAS gene product functions as a small GTPase that serves as a molecular switch [4][11#0][26#1]. The official gene symbol is KRAS [1]. Its full gene name is KRAS [5]. Alternative splicing yields isoforms differing at the C-terminus, while single substitutions confer activating oncogenic properties [11#2][11#3]. One recorded variant is NM_004985.5(KRAS):c.458ATG[1] (p.Asp154del) [3]. Another documented variant is NM_004985.5(KRAS):c.36T>C (p.Gly12=) [10]. Another sequence alteration is NM_004985.5(KRAS):c.337C>T (p.Leu113=) [15]. Additionally, literature identifies the entity as Kras [6]. Mutated KRAS activates TFCP2 to trigger CAF transformation into lipid-rich cells that secrete VEGFA to drive vascularization in colorectal carcinoma [28#4][28#5]. A related variant record is NM_033360.4(KRAS):c.524A>G (p.Glu175Gly) [19]. Another cataloged variant is NM_004985.5(KRAS):c.417T>A (p.Ile139=) [23]. Several publications explore KRAS pathogenesis across malignancies, including Role of oncogenic KRAS in the prognosis, diagnosis and treatment of colorectal cancer [2][8]. Another article is KRAS mutation: from undruggable to druggable in cancer [9][13]. Further literature includes Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression [14][17]. Pancreatic cancer heavily features KRAS mutations, prompting both allele-specific approaches and pan-KRAS degraders capable of targeting multiple oncogenic variants [22][29#6][30#7]. Targeting KRAS in pancreatic cancer details these therapeutic challenges [18][21]. Pan-KRAS degradation has emerged as a strategy [25][27#8]. Clinical investigations include Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors [7]. Other trials include PREMIUM, Observational Study [12]. Additional studies comprise A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers [16]. Clinical studies also encompass Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients [20]. Finally, research includes A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100) [24].",
+    "sentences": [
+     "The KRAS gene product functions as a small GTPase that serves as a molecular switch [1] [2] [3]."
+    ],
+    "claims": 3,
+    "claim_ids": [
+     "ne-35644fdb7138-26",
+     "ne-af2d798b7349-11",
+     "ne-db618c4b34a9-4"
+    ],
+    "claim_detail": [
+     {
+      "text": "The KRAS gene product functions as a small GTPase that serves as a molecular switch",
+      "quote": "encodes a protein that is a member of the small GTPase superfamily",
+      "ref": 4,
+      "field": "title",
+      "value": "KRAS PROTOONCOGENE, GTPase; KRAS"
+     },
+     {
+      "text": "The KRAS gene product functions as a small GTPase that serves as a molecular switch",
+      "quote": "encodes a protein that is a member of the small GTPase superfamily",
+      "ref": 11,
+      "field": "summary",
+      "value": "This gene, a Kirsten ras oncogene homolog from the mammalian ras gene family, encodes a protein that is a member of the small GTPase superfamily. A single amino acid substitution is responsible for an activating mutation. The transforming protein that results is implicated in various malignancies, i"
+     },
+     {
+      "text": "The KRAS gene product functions as a small GTPase that serves as a molecular switch",
+      "quote": "acts as a molecular switch to persistently stimulate downstream signaling pathways",
+      "ref": 26,
+      "field": "abstract",
+      "value": "Colorectal cancer (CRC) is a heterogeneous disease at the cellular and molecular levels. Kirsten rat sarcoma (KRAS) is a commonly mutated oncogene in CRC, with mutations in approximately 40% of all CRC cases; its mutations result in constitutive activation of the KRAS protein, which acts as a molecu"
+     }
+    ],
+    "stripped": 22,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 9.071,
+    "sent": 6,
+    "approved": 1,
+    "ok": true,
+    "dur": 0.267
+   },
+   {
+    "t": 16.619,
+    "sent": 5,
+    "approved": 2,
+    "ok": true,
+    "dur": 0.313
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "symbol",
+    "value": "KRAS",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/3845/"
+   },
+   {
+    "ref": 2,
+    "field": "title",
+    "value": "Role of oncogenic KRAS in the prognosis, diagnosis and treatment of colorectal cancer.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34742312/"
+   },
+   {
+    "ref": 3,
+    "field": "title",
+    "value": "NM_004985.5(KRAS):c.458ATG[1] (p.Asp154del)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4850885/"
+   },
+   {
+    "ref": 4,
+    "field": "title",
+    "value": "KRAS PROTOONCOGENE, GTPase; KRAS",
+    "url": "https://omim.org/entry/190070"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "KRAS",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/3845"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "Kras",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/24525"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors",
+    "url": "https://clinicaltrials.gov/study/NCT01715441"
+   },
+   {
+    "ref": 8,
+    "field": "pmid",
+    "value": "34742312",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34742312/"
+   },
+   {
+    "ref": 9,
+    "field": "title",
+    "value": "KRAS mutation: from undruggable to druggable in cancer.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34776511/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "NM_004985.5(KRAS):c.36T>C (p.Gly12=)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859020/"
+   },
+   {
+    "ref": 11,
+    "field": "summary",
+    "value": "This gene, a Kirsten ras oncogene homolog from the mammalian ras gene family, encodes a protein that is a member of the small GTPase superfamily. A single amino acid substitution is responsible for an activating mutation. The transforming protein that results is implicated in various malignancies, i",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/3845"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "PREMIUM, Observational Study",
+    "url": "https://clinicaltrials.gov/study/NCT01756625"
+   },
+   {
+    "ref": 13,
+    "field": "pmid",
+    "value": "34776511",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34776511/"
+   },
+   {
+    "ref": 14,
+    "field": "title",
+    "value": "Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37768068/"
+   },
+   {
+    "ref": 15,
+    "field": "title",
+    "value": "NM_004985.5(KRAS):c.337C>T (p.Leu113=)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859021/"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers",
+    "url": "https://clinicaltrials.gov/study/NCT02613650"
+   },
+   {
+    "ref": 17,
+    "field": "pmid",
+    "value": "37768068",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37768068/"
+   },
+   {
+    "ref": 18,
+    "field": "title",
+    "value": "Targeting KRAS in pancreatic cancer.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38686056/"
+   },
+   {
+    "ref": 19,
+    "field": "title",
+    "value": "NM_033360.4(KRAS):c.524A>G (p.Glu175Gly)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859022/"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients",
+    "url": "https://clinicaltrials.gov/study/NCT03171636"
+   },
+   {
+    "ref": 21,
+    "field": "pmid",
+    "value": "38686056",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38686056/"
+   },
+   {
+    "ref": 22,
+    "field": "title",
+    "value": "Targeting cancer with small-molecule pan-KRAS degraders.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39298590/"
+   },
+   {
+    "ref": 23,
+    "field": "title",
+    "value": "NM_004985.5(KRAS):c.417T>A (p.Ile139=)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859024/"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100)",
+    "url": "https://clinicaltrials.gov/study/NCT03600883"
+   },
+   {
+    "ref": 25,
+    "field": "pmid",
+    "value": "39298590",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39298590/"
+   },
+   {
+    "ref": 26,
+    "field": "abstract",
+    "value": "Colorectal cancer (CRC) is a heterogeneous disease at the cellular and molecular levels. Kirsten rat sarcoma (KRAS) is a commonly mutated oncogene in CRC, with mutations in approximately 40% of all CRC cases; its mutations result in constitutive activation of the KRAS protein, which acts as a molecu",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34742312/"
+   },
+   {
+    "ref": 27,
+    "field": "abstract",
+    "value": "Cancer is the leading cause of death worldwide, and its treatment and outcomes have been dramatically revolutionised by targeted therapies. As the most frequently mutated oncogene, Kirsten rat sarcoma viral oncogene homologue (KRAS) has attracted substantial attention. The understanding of KRAS is c",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34776511/"
+   },
+   {
+    "ref": 28,
+    "field": "abstract",
+    "value": "Oncogenic KRAS (KRAS*) contributes to many cancer hallmarks. In colorectal cancer, KRAS* suppresses antitumor immunity to promote tumor invasion and metastasis. Here, we uncovered that KRAS* transforms the phenotype of carcinoma-associated fibroblasts (CAF) into lipid-laden CAFs, promoting angiogene",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/37768068/"
+   },
+   {
+    "ref": 29,
+    "field": "abstract",
+    "value": "Pancreatic cancer has a dismal prognosis due to late detection and lack of efficient therapies. The Kirsten rat sarcoma virus (KRAS) oncogene is mutated in up to 90% of all pancreatic ductal adenocarcinomas (PDACs) and constitutes an attractive target for therapy. However, the most common KRAS mutat",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38686056/"
+   },
+   {
+    "ref": 30,
+    "field": "abstract",
+    "value": "Mutations in the Kirsten rat sarcoma viral oncogene homolog (KRAS) protein are highly prevalent in cancer. However, small-molecule concepts that address oncogenic KRAS alleles remain elusive beyond replacing glycine at position 12 with cysteine (G12C), which is clinically drugged through covalent in",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39298590/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.213,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.213,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 4.021,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.021,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 4.031,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.031,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.033,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.033,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.033,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.033,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.033,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.033,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.034,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.034,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.034,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.034,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.034,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.034,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.306,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.406,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.41,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.429,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.642,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.714,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.861,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.996,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.188,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.328,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.391,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.56,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 5.564,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.948,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.949,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.953,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 16.954,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.025401434879999997,
+  "total_tool_calls": 9,
+  "elapsed_ms": 16953,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 18 sources, not yet confirmed",
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 309
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.99,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 330
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 373
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 479
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://omim.org/entry/190070",
+  "https://www.ncbi.nlm.nih.gov/gene/3845",
+  "https://pubmed.ncbi.nlm.nih.gov/34742312/",
+  "https://www.ncbi.nlm.nih.gov/gene/3845/",
+  "https://pubmed.ncbi.nlm.nih.gov/34742312/",
+  "https://www.ncbi.nlm.nih.gov/gene/3845",
+  "https://www.ncbi.nlm.nih.gov/gene/24525",
+  "https://clinicaltrials.gov/study/NCT01715441",
+  "https://pubmed.ncbi.nlm.nih.gov/34776511/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859020/",
+  "https://clinicaltrials.gov/study/NCT01756625",
+  "https://pubmed.ncbi.nlm.nih.gov/37768068/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859021/",
+  "https://clinicaltrials.gov/study/NCT02613650",
+  "https://pubmed.ncbi.nlm.nih.gov/38686056/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859022/",
+  "https://clinicaltrials.gov/study/NCT03171636",
+  "https://pubmed.ncbi.nlm.nih.gov/39298590/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4859024/",
+  "https://clinicaltrials.gov/study/NCT03600883"
+ ]
+}

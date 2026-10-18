@@ -1,0 +1,72 @@
+expected  got                category         question
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+admit     admit              ok               papers on the effects of caffeine on exercise performance
+admit     admit              ok               Does coffee help make exercise more effective?
+admit     admit              ok               any trials for gerd?
+admit     admit              ok               recent papers on statins
+admit     admit              ok               what does the literature say about metformin
+admit     admit              ok               is there a trial recruiting for melanoma
+refuse    refuse             off_topic        is this investment strategy effective
+refuse    refuse             off_topic        research the stock market for me
+refuse    refuse             off_topic        what is the most effective way to learn spanish
+refuse    refuse             off_topic        papers on the effects of interest rates on house prices
+refuse    refuse             off_topic        which study technique is most effective for exams
+refuse    refuse             off_topic        is intermittent fasting an effective marketing trend
+refuse    refuse             off_topic        write me a study plan for my history exam
+refuse    prefilter_refused  off_topic        what is the most efficacious cryptocurrency
+
+68 questions, 0 wrong
+rc=0

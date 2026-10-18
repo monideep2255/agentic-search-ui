@@ -150,7 +150,7 @@ _DIR_FORBIDDEN_BITS = stat.S_IWGRP | stat.S_IWOTH
 # seven NCBI/graph tools `.claude/rules/tool-call-budgets.md` tabulates,
 # but the same rule's "every outbound HTTP call carries an explicit
 # timeout" line is not scoped to that table alone. 15 seconds matches the
-# per-call budget this repo already uses for every other interactive HTTPS
+# per-call budget this repository already uses for every other interactive HTTPS
 # call.
 REFRESH_TIMEOUT_SECONDS = 15.0
 
@@ -233,6 +233,10 @@ class InsecureCredentialsError(CredentialsError):
     """
 
 
+class InsecureCredentialsDirectoryError(InsecureCredentialsError):
+    """The credential folder needs private, owner-accessible permissions."""
+
+
 class RefreshError(CredentialsError):
     """`POST /auth/refresh` did not return 200.
 
@@ -268,6 +272,10 @@ class CorruptCredentialsError(CredentialsError):
     """
 
 
+class CredentialsPathIsDirectoryError(CorruptCredentialsError):
+    """A directory occupies the path reserved for the credential file."""
+
+
 class RefreshLockTimeoutError(CredentialsError):
     """Another process held the credential refresh lock past
     REFRESH_LOCK_WAIT_TIMEOUT_SECONDS (F-4.2-A-11).
@@ -290,7 +298,8 @@ class RefreshLockUnavailableError(CredentialsError):
 
 
 def _ensure_parent_dir_secure(parent: Path) -> None:
-    """Refuse a parent directory that is writable by group or other
+    """Refuse a parent directory that is writable by others or inaccessible
+    to its owner
     (F-4.2-A-18 / J-4.2-10).
 
     Checked on every load(), store() and lock acquisition, not only at
@@ -307,7 +316,7 @@ def _ensure_parent_dir_secure(parent: Path) -> None:
     check and the file open that follows it). Closing it fully would need
     directory-fd-relative opens throughout this module, a materially
     larger change than the finding asked for; recorded here rather than
-    silently left unstated, per this repo's coverage-declaration
+    silently left unstated, per this repository's coverage-declaration
     discipline.
     """
     if os.name != "posix":
@@ -316,11 +325,10 @@ def _ensure_parent_dir_secure(parent: Path) -> None:
         mode = stat.S_IMODE(os.stat(parent).st_mode)
     except FileNotFoundError:
         return
-    if mode & _DIR_FORBIDDEN_BITS:
-        raise InsecureCredentialsError(
-            f"{parent} is writable by group or other (mode {oct(mode)}). "
-            f"Another local account could replace the credential file "
-            f"through this directory, so it is being refused.",
+    if mode & _DIR_FORBIDDEN_BITS or not (mode & stat.S_IRUSR and mode & stat.S_IXUSR):
+        raise InsecureCredentialsDirectoryError(
+            f"{parent} is writable by another account or inaccessible to its "
+            f"owner (mode {oct(mode)}), so the credential file is being refused.",
             remedy=f"Run: chmod 700 {parent}",
         )
 
@@ -466,7 +474,11 @@ def load() -> Credentials:
         if os.name == "posix":
             st = os.fstat(fd)
             if not stat.S_ISREG(st.st_mode):
-                raise CorruptCredentialsError(
+                error_type = (
+                    CredentialsPathIsDirectoryError if stat.S_ISDIR(st.st_mode)
+                    else CorruptCredentialsError
+                )
+                raise error_type(
                     f"{path} is {_describe_non_regular(st.st_mode)}, not a "
                     f"regular file; the credential store expects a plain "
                     f"file there.",
@@ -718,9 +730,13 @@ async def _refresh_and_store(client: httpx.AsyncClient, creds: Credentials) -> C
             f"misconfiguration, not a normal failure.",
             remedy="Retry, or report this to the operator if it recurs.",
         )
+    # Every exception, not `ValueError` alone (build phase 8.10's fix round,
+    # F-8.10-J01): a body nested thousands deep raises `RecursionError`,
+    # which is not a `ValueError`, and escaped this function as the same
+    # uncurated failure F-4.2-D-05 above closed for a bad body.
     try:
         body = response.json()
-    except ValueError as exc:
+    except Exception as exc:
         raise RefreshError(
             f"POST /auth/refresh declared a JSON content type but the body "
             f"did not parse as JSON ({type(exc).__name__}).",

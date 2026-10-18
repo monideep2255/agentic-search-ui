@@ -331,7 +331,7 @@ Judged from the Technical specification's Section 25 build order table (lines 31
 From the Technical specification's Section 25 "Flags carried into this build order" table (lines 3297 to 3304), items marked still open:
 
 - Domain sign-off for the golden fixtures: the playbook flags this as a real gap on clinical and human-variation questions, tagged a Phase 4 process item. Still open, needs a named owner before build phase 5.1 ships the 50-query golden dataset. This is the same gap as D5-33 above.
-- Stale pull request template: .github/pull_request_template.md still lists BioLink and KGX validation gates from the System 1 and System 2 template repo. Still open, out of this build order's scope, belongs to Phase 5 Step 5.3 (root document updates).
+- Stale pull request template: .github/pull_request_template.md still lists BioLink and KGX validation gates from the System 1 and System 2 template repository. Still open, out of this build order's scope, belongs to Phase 5 Step 5.3 (root document updates).
 
 ## Slice 6: PRD
 

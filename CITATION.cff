@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "Agentic search UI"
+abstract: "Agentic search agent for querying NCBI biomedical data across a 115M-node knowledge graph and 30+ live APIs. Takes natural language questions about genes, diseases, variants, publications, and taxonomy, and returns cited answers with links back to NCBI source records. Built with FastAPI, LangGraph, and React."
+authors:
+  - given-names: Monideep
+    family-names: Chakraborti
+repository-code: "https://github.com/monideep2255/agentic-search-ui"
+url: "https://github.com/monideep2255/agentic-search-ui"
+license: Apache-2.0
+keywords:
+  - NCBI
+  - biomedical search
+  - knowledge graph
+  - LangGraph
+  - FastAPI

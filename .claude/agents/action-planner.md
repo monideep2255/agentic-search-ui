@@ -59,10 +59,10 @@ Scope mode: SELECTIVE EXPANSION - existing plan is solid, cherry-picking high-le
 
 ## Rules
 
-1. Be brutally specific: "Email Carl about desk" not "Follow up on logistics"
+1. Be specific: "Email the facilities contact about the desk request" not "Follow up on logistics"
 2. Include who, what, when: every task needs an owner and deadline
-3. Prioritize ruthlessly: not everything is Priority 1
-4. Max 5-7 tasks per priority level: if more, you need sub-projects
+3. Prioritize: not everything is Priority 1
+4. Keep each priority level short enough to scan. A long list usually means a sub-project
 5. Use checkboxes: `- [ ]` format for trackable tasks
 
 ## Prioritization framework

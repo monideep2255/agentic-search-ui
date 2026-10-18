@@ -64,17 +64,26 @@ it defaults to `None` so this ticket does not block on an unbuilt module.
 from __future__ import annotations
 
 import asyncio
+import logging
+import math
 import threading
+import time
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import Any, Literal
 
 import litellm
 
+from system_03_search_agent.harness.call_log import provider_of
 from system_03_search_agent.harness.tiers import (
     _FALLBACK_PRICES_USD_PER_TOKEN as _TIER_FALLBACK_PRICES,
 )
+from system_03_search_agent.harness.tiers import (
+    _REASONING_EFFORT_BY_MODEL as _MODEL_REASONING_EFFORT,
+)
 from system_03_search_agent.harness.tiers import Tier, TierContext
+
+logger = logging.getLogger(__name__)
 
 # A LiteLLM chat message: {"role": "system" | "user" | "assistant", "content": str}.
 # LiteLLM's own `completion`/`acompletion` accept `list[dict]`; this alias
@@ -122,6 +131,13 @@ class LLMResponse:
     `call_cost_usd` is this call's own cost, not a running total; `Harness`
     accumulates running totals separately via `track_cost`/
     `get_query_cost_usd`.
+
+    `elapsed_s` is how long this call took, in seconds, beside its cost
+    (build phase 8.6, T-8.6-08; product harness review C5): wall time from
+    the first request sent to the reply that returned, so a retry after a
+    transient failure or after a reasoning refusal is included, since the
+    person waited for it. `call_tier` always sets it; None only for a
+    response built some other way.
     """
 
     content: str
@@ -130,6 +146,10 @@ class LLMResponse:
     call_cost_usd: float
     model_id: str
     tier: Tier
+    elapsed_s: float | None = None
+    #: The upstream provider the router reported for this call, when its
+    #: reply carried one (card 72's call log reads it); None otherwise.
+    provider: str | None = None
 
 
 # Exceptions where the request itself was never the problem: a provider- or
@@ -172,16 +192,50 @@ def _classify_exception(exc: BaseException) -> ErrorClass:
     return "unexpected"
 
 
+#: The provider's own words when a model cannot turn reasoning off (product
+#: harness review W6 and C4; builder K's report, K-13), lower-cased. Matched
+#: as this whole phrase, never on the word "reasoning" alone.
+_MANDATORY_REASONING_REFUSAL = "reasoning is mandatory for this endpoint and cannot be disabled"
+
+
+def _refuses_reasoning_block(exc: BaseException) -> bool:
+    """Whether the provider refused the request because reasoning cannot be
+    turned off for this model (build phase 8.6, T-8.6-08; product harness
+    review W6 and C4).
+
+    Measured for the review: some models, one frontier writer among them,
+    cannot turn reasoning off, and OpenRouter answers the product's request
+    shape (`reasoning: {"effort": "none"}`) with HTTP 400, "Reasoning is
+    mandatory for this endpoint and cannot be disabled." litellm raises
+    that as a `BadRequestError` whose text carries the provider's words.
+
+    True only for a `BadRequestError` whose text, lower-cased with runs of
+    whitespace collapsed, carries that whole phrase
+    (`_MANDATORY_REASONING_REFUSAL`). A context-window or content-policy
+    error never qualifies, whatever its text: litellm makes both subclasses
+    of `BadRequestError`, they mean something else, and their text can echo
+    the person's own words. Keyed before the fix round on the word
+    "reasoning" anywhere in any 400, so a context-window 400, a
+    content-policy 400 or a 400 echoing "the reasoning behind BRCA1
+    testing" was retried once without the block, and that retry drops the
+    `effort: none` dial whose absence measured 20 to 45 seconds on the
+    synth tier (F-8.6-J05, A02).
+    """
+    if not isinstance(exc, litellm.BadRequestError):
+        return False
+    if isinstance(exc, (litellm.ContextWindowExceededError, litellm.ContentPolicyViolationError)):
+        return False
+    return _MANDATORY_REASONING_REFUSAL in " ".join(str(exc).lower().split())
+
+
 # Fallback OpenRouter per-model pricing, (input_price_per_token,
-# output_price_per_token) in USD. Primary pricing comes from litellm's own
-# maintained static map (litellm.get_model_info); this table exists only
-# for the gap where a resolved tier's model id (including the
-# tiers.py._DEFAULT_MODELS placeholders, themselves pending the Phase 6
-# model-bench) is not yet present in litellm's map. OpenRouter's live
-# catalog is larger than the ~96 "openrouter/*" entries litellm ships, so
-# this gap is real, not hypothetical. Extend this table, or wait for
-# litellm to add the model upstream, whichever lands first; never invent a
-# price for a model missing from both sources (see _price_per_token below).
+# output_price_per_token) in USD. Primary pricing comes from litellm's map
+# (litellm.get_model_info); this table stands in when litellm has no entry
+# for a resolved tier's model id, and when litellm maps a model the table
+# names at a price that is not a real one on either side (zero, negative,
+# NaN, infinite or not a number). Extend this table, or wait for litellm to
+# add the model upstream, whichever lands first; never invent a price for a
+# model missing from both sources (see _price_per_token below).
 # Fallback OpenRouter per-model pricing, re-exported from tiers.py.
 #
 # The table itself lives in tiers.py, not here, because its keys are model
@@ -190,6 +244,15 @@ def _classify_exception(exc: BaseException) -> ErrorClass:
 # model identity it prices. This name is kept so existing callers and tests
 # that patch harness._FALLBACK_PRICES_USD_PER_TOKEN keep working.
 _FALLBACK_PRICES_USD_PER_TOKEN = _TIER_FALLBACK_PRICES
+
+
+def _is_real_price(value: object) -> bool:
+    """True for a finite number above zero; False for zero, negative, NaN, infinite or non-numeric."""
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(number) and number > 0.0
 
 
 def _price_per_token(model_id: str) -> tuple[float, float]:
@@ -203,7 +266,11 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
     litellm updates its map upstream.
 
     Fallback: `_FALLBACK_PRICES_USD_PER_TOKEN`, for a model litellm does not
-    yet map.
+    map, or, when the table names the model, when litellm's price on EITHER
+    side is zero, negative, NaN, infinite or not a number. In that case the
+    table's price is used for both sides. When the table does not name the
+    model, litellm's figure is returned as it is (a ":free" model still
+    returns zeros) and a missing price still raises.
 
     Raises:
         HarnessCallError: error_class="unexpected", if neither source has a
@@ -215,7 +282,20 @@ def _price_per_token(model_id: str) -> tuple[float, float]:
         info = litellm.get_model_info(model=target)
         input_price = info.get("input_cost_per_token")
         output_price = info.get("output_cost_per_token")
-        if input_price is not None and output_price is not None:
+        # litellm can map a model at zero (anthropic/claude-opus-5.5 is
+        # one). A bad price there is a gap, not a free model: when the
+        # local table names the model, a litellm price that is not a
+        # real one on either side sends both sides to the table, so the
+        # per-question cost cap counts the real price. A model the table
+        # does not name keeps litellm's figure exactly as it was.
+        if (
+            input_price is not None
+            and output_price is not None
+            and (
+                model_id not in _FALLBACK_PRICES_USD_PER_TOKEN
+                or (_is_real_price(input_price) and _is_real_price(output_price))
+            )
+        ):
             return float(input_price), float(output_price)
     except Exception:  # noqa: BLE001, S110 - fall through to the local table below; no data is lost, the fallback path is exercised next
         pass
@@ -311,8 +391,28 @@ _TIER_REASONING: dict[Tier, dict[str, Any]] = {
     # deterministic grounding gate, and the summary sentence and record
     # lists are built in code, so hidden reasoning bought little the gate
     # keeps. Evidence: testing/Developer/reports/2026-09-14_answer_quality/.
+    #
+    # Build phase 8.7, T-8.7-02: the synth default is now Opus 5.5, which
+    # refuses `none` and so runs at `minimal` through the per-model table
+    # (`_reasoning_for` below). This tier value still applies to every
+    # model that table does not name, glm-5.2 included.
     "synth": {"effort": "none"},
 }
+
+
+def _reasoning_for(tier: Tier, model_id: str) -> dict[str, Any]:
+    """The reasoning block one call sends (build phase 8.7, T-8.7-02).
+
+    The model's own effort when `tiers._REASONING_EFFORT_BY_MODEL` names
+    one, which today is only Opus 5.5 at `minimal`, since it refuses
+    `none`. Every other model gets its tier's entry in `_TIER_REASONING`,
+    the same dict object as before this function existed, so their request
+    is byte for byte unchanged.
+    """
+    effort = _MODEL_REASONING_EFFORT.get(model_id)
+    if effort is None:
+        return _TIER_REASONING[tier]
+    return {"effort": effort}
 
 _TIER_MAX_TOKENS: dict[Tier, int] = {
     # Guard is validation and classification, which Section 3.1 budgets as
@@ -398,7 +498,9 @@ _STEP_TIER: dict[str, Tier] = {
 # CLASS alone, so every step of a lookup query got the same 5.0 s. The two
 # axes are not the same thing: query class describes how hard the question
 # is, while what a step actually costs is driven by which tier answers it.
-# Measured on the configured models at the reasoning effort each tier runs:
+# Measured on the configured models at the reasoning effort each tier ran at
+# the time. Plan and synth now run at effort none (see `_TIER_REASONING`), so
+# the plan and synth timings below predate that change:
 #
 #   guard  deepseek-v4-flash, effort none:               719 to 4615 ms
 #   plan   kimi-k2.6, effort high, 4000-token ceiling:   both completed and
@@ -490,6 +592,49 @@ def _with_cache_prefix(messages: list[Message], cache_prefix: str | None) -> lis
     return [{"role": "system", "content": cache_prefix}, *messages]
 
 
+# Build phase 8.7 fix round, F-8.7-J04 and F-8.7-A06: the most one call can
+# cost, known before it is sent, so the per-query cap is a bound and not a
+# guess. The output side is exact: the provider never writes more than the
+# call's `max_tokens`. The input side is the prompt actually sent, counted
+# before the call. No tokenizer for the answering model is installed
+# (`litellm` counts every model with its default encoder), so the count is
+# raised by a margin and floored at a character estimate:
+#
+#   - `_PROMPT_TOKEN_MARGIN_PERCENT`: the default encoder's count plus 35
+#     percent, the most a newer model's tokenizer is documented to add over
+#     the encoder it replaced for the same text.
+#   - `_BOUND_CHARS_PER_TOKEN`: one token per three characters, below the
+#     roughly four of English prose, the same floor `core.session_memory`
+#     uses where a count must not run low.
+_PROMPT_TOKEN_MARGIN_PERCENT = 135
+_BOUND_CHARS_PER_TOKEN = 3
+
+#: The model name the prompt count asks `litellm` for. Any name it cannot
+#: map gets its default encoder; this one says so in a log or a trace.
+_BOUND_ENCODER_MODEL = "system-3-prompt-bound-default-encoder"
+
+
+def prompt_token_bound(messages: list[Message]) -> int:
+    """The most prompt tokens `messages` can be billed as, before sending.
+
+    The larger of the default encoder's count raised by
+    `_PROMPT_TOKEN_MARGIN_PERCENT` and one token per
+    `_BOUND_CHARS_PER_TOKEN` characters. A count that fails, or is not a
+    number, leaves the character figure alone.
+    """
+    text = "\n".join(str(message.get("content") or "") for message in messages)
+    if not text:
+        return 0
+    by_chars = -(-len(text) // _BOUND_CHARS_PER_TOKEN)
+    try:
+        counted = litellm.token_counter(model=_BOUND_ENCODER_MODEL, text=text)
+    except Exception:  # noqa: BLE001 - a count that fails leaves the character floor
+        counted = None
+    if not isinstance(counted, int) or isinstance(counted, bool):
+        return by_chars
+    return max(-(-counted * _PROMPT_TOKEN_MARGIN_PERCENT // 100), by_chars)
+
+
 class Harness:
     """In-process module owning tier resolution, cost accounting, timeout
     enforcement, and the coordinator-worker split (Section 3.5). This
@@ -508,6 +653,15 @@ class Harness:
         self.trace_id = trace_id
         self._tier_context = TierContext()
         self._query_cost_usd: dict[str, float] = {}
+        # The elapsed seconds of the latest call `call_tier` completed, per
+        # (trace_id, tier), read by the operator-only `cost` event (C5).
+        self._last_call_elapsed_s: dict[tuple[str, Tier], float] = {}
+        # F-8.7-A06: the bound of every call `call_tier` has sent and not yet
+        # metered, per trace_id. The running cost cannot see a call in
+        # flight, so the cap check adds this (`in_flight_usd`); two calls
+        # running at once can then never each be admitted against a total
+        # that leaves out the other.
+        self._in_flight_usd: dict[str, float] = {}
         self._cost_lock = threading.Lock()
 
     async def call_tier(
@@ -528,115 +682,241 @@ class Harness:
         `openrouter/<model_id>` LiteLLM call target, and issues the call
         via `litellm.acompletion`.
 
+        Before anything is sent (build phase 8.6, T-8.6-08; product harness
+        review W7 and C6): the model's price is looked up. A model priced
+        by neither litellm's map nor the fallback table raises here, so the
+        provider never bills a call whose reply would then be discarded.
+
         On success: computes `call_cost_usd` from the returned token usage
         and the model's OpenRouter price, meters it via `track_cost`, and
-        returns an `LLMResponse`.
+        returns an `LLMResponse` carrying the call's `elapsed_s`, which
+        `last_call_elapsed_s` also reports for the operator-only `cost`
+        event (C5).
 
         On failure: classifies the exception transient, recoverable, or
-        unexpected (Section 3.5) before deciding whether to retry. Exactly
-        one retry fires, and only for a transient failure; a recoverable
-        or unexpected failure raises immediately. A retried call is a
-        genuinely new attempt against the same target, so if it succeeds
-        its own `call_cost_usd` is computed and metered independently of
-        the first attempt's outcome; the first attempt, having failed
-        before returning a response, contributes no cost (no tokens were
-        billed by the provider for a rejected or timed-out request).
+        unexpected (Section 3.5) before deciding whether to retry. Two
+        retries exist, each at most once per call:
+
+        - A transient failure is retried once, the same request again.
+        - A refusal of the `reasoning` block, recognised only by the
+          provider's own phrase "Reasoning is mandatory for this endpoint
+          and cannot be disabled" (W6 and C4; see
+          `_refuses_reasoning_block`), is retried once WITHOUT the block,
+          and the fallback is logged. The model then reasons at its own
+          default, still bounded by `max_tokens`. This is per call, never
+          remembered: one stray 400 must not take the reasoning dial away
+          from every later call in the process. Any other 400, one that
+          merely mentions reasoning included, is not retried.
+
+        Any other recoverable or unexpected failure raises immediately. A
+        retried call is a genuinely new attempt against the same target,
+        so if it succeeds its own `call_cost_usd` is computed and metered
+        independently of the earlier attempt's outcome; an attempt that
+        failed before returning a response contributes no cost (no tokens
+        were billed by the provider for a rejected or timed-out request).
 
         Raises:
             UnknownTierError: for a tier outside {"guard", "plan", "synth"},
                 before any call attempt.
-            HarnessCallError: for an exhausted-retry transport failure, or
-                a model resolved with no known OpenRouter price.
+            HarnessCallError: for a model resolved with no known OpenRouter
+                price, before any call attempt; for an exhausted-retry
+                transport failure; or for a refusal the retries above do
+                not cover.
         """
         model_id = self._tier_context.resolve(tier)  # UnknownTierError surfaces here, unwrapped
+        # C6: priced before dispatch. Raises HarnessCallError, unexpected, with
+        # `_price_per_token`'s own actionable message, and nothing is sent.
+        input_price, output_price = _price_per_token(model_id)
         final_messages = _with_cache_prefix(messages, cache_prefix)
         target = f"openrouter/{model_id}"
+        request: dict[str, Any] = {
+            "model": target,
+            "messages": final_messages,
+            "reasoning": _reasoning_for(tier, model_id),
+            # Per-call override, defaulting to the tier's own cap.
+            # F-4.12-01: a caller that KNOWS it is going to discard the
+            # reply should not pay for a tier-sized one. The tier cap
+            # stays the default so nothing that does not opt in
+            # changes.
+            "max_tokens": _TIER_MAX_TOKENS[tier] if max_tokens is None else max_tokens,
+        }
 
-        max_attempts = 2  # one retry, transient failures only
-        for attempt in range(1, max_attempts + 1):
-            try:
-                response: Any = await litellm.acompletion(
-                    model=target,
-                    messages=final_messages,
-                    reasoning=_TIER_REASONING[tier],
-                    # Per-call override, defaulting to the tier's own cap.
-                    # F-4.12-01: a caller that KNOWS it is going to discard the
-                    # reply should not pay for a tier-sized one. The tier cap
-                    # stays the default so nothing that does not opt in
-                    # changes.
-                    max_tokens=(
-                        _TIER_MAX_TOKENS[tier] if max_tokens is None else max_tokens
-                    ),
-                )
-            except asyncio.CancelledError:
-                # F-2.1-B02, second order. `enforce_timeout` cancels this
-                # coroutine on a timeout, so the metering below never runs
-                # and the call records 0.00 US dollars. The provider has
-                # already billed it: measured, a timed-out call cost 0.005
-                # to 0.010 while reporting cost_usd=0.000000. Since the most
-                # expensive query class is also the one most likely to time
-                # out, all three caps read zero for exactly the queries that
-                # spend the most, and spend accumulates invisibly.
-                #
-                # The real usage is unknowable here, because the response
-                # never arrived. So this meters a deliberate OVER-estimate:
-                # the tier's full output ceiling at its output price. A cost
-                # cap that guesses must guess toward stopping, never toward
-                # letting the next call through, and this is the only place
-                # that knows a billable call happened at all.
-                #
-                # Estimation has precedent in this file: Section 19.2
-                # already has the pre-flight check estimate a call's likely
-                # cost from the tier's token profile before dispatching it.
-                _, output_price = _price_per_token(model_id)
-                self.track_cost(
-                    self.trace_id, tier, _TIER_MAX_TOKENS[tier] * output_price
-                )
-                raise
-            except Exception as exc:
-                error_class = _classify_exception(exc)
-                if error_class == "transient" and attempt < max_attempts:
-                    continue
-                # F-3.4-A-07: the internal message carries str(exc), the
-                # provider's own error text (e.g. an OpenRouter 402
-                # affordability message), not just the exception type name.
-                # This never reaches the end user: _STEP_ERROR_END_USER_MESSAGES
-                # (graph.py, F-2.0-12) stays the deliberately generic
-                # client-facing string regardless of error_class. Without
-                # this, an "unexpected"-classed provider error (never
-                # auto-retried, unlike "transient") was root-caused only by
-                # live manual reproduction, since nothing else surfaced or
-                # logged the real cause.
-                raise HarnessCallError(
-                    f"call_tier failed for tier {tier!r} (model {model_id!r}) "
-                    f"after {attempt} attempt(s): {error_class} error "
-                    f"({type(exc).__name__}): {exc}",
-                    error_class=error_class,
-                ) from exc
-            else:
-                usage = response.usage
-                prompt_tokens = int(usage.prompt_tokens)
-                completion_tokens = int(usage.completion_tokens)
-                input_price, output_price = _price_per_token(model_id)
-                call_cost_usd = (
-                    prompt_tokens * input_price + completion_tokens * output_price
-                )
-                self.track_cost(self.trace_id, tier, call_cost_usd)
-                return LLMResponse(
-                    content=response.choices[0].message.content,
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    call_cost_usd=call_cost_usd,
-                    model_id=model_id,
-                    tier=tier,
-                )
-
-        # Unreachable: the loop above always returns (success) or raises
-        # (exhausted retries) before falling through.
-        raise HarnessCallError(
-            "call_tier retry loop exited without returning or raising",
-            error_class="unexpected",
+        transient_retry_left = True
+        reasoning_fallback_left = True
+        attempt = 0
+        started = time.monotonic()
+        # F-8.7-A06: held as in flight until this call is metered or fails,
+        # so a cap check made meanwhile counts it (`in_flight_usd`).
+        bound_usd = (
+            prompt_token_bound(final_messages) * input_price
+            + request["max_tokens"] * output_price
         )
+        with self._cost_lock:
+            self._in_flight_usd[self.trace_id] = (
+                self._in_flight_usd.get(self.trace_id, 0.0) + bound_usd
+            )
+        try:
+            while True:
+                attempt += 1
+                try:
+                    response: Any = await litellm.acompletion(**request)
+                except asyncio.CancelledError:
+                    # F-2.1-B02, second order. `enforce_timeout` cancels this
+                    # coroutine on a timeout, so the metering below never runs
+                    # and the call records 0.00 US dollars. The provider has
+                    # already billed it: measured, a timed-out call cost 0.005
+                    # to 0.010 while reporting cost_usd=0.000000. Since the most
+                    # expensive query class is also the one most likely to time
+                    # out, all three caps read zero for exactly the queries that
+                    # spend the most, and spend accumulates invisibly.
+                    #
+                    # The real usage is unknowable here, because the response
+                    # never arrived. So this meters a deliberate OVER-estimate:
+                    # the tier's full output ceiling at its output price. A cost
+                    # cap that guesses must guess toward stopping, never toward
+                    # letting the next call through, and this is the only place
+                    # that knows a billable call happened at all.
+                    #
+                    # Estimation has precedent in this file: Section 19.2
+                    # already has the pre-flight check estimate a call's likely
+                    # cost from the tier's token profile before dispatching it.
+                    # The output price was looked up before dispatch (C6).
+                    self.track_cost(
+                        self.trace_id, tier, _TIER_MAX_TOKENS[tier] * output_price
+                    )
+                    raise
+                except Exception as exc:
+                    if reasoning_fallback_left and _refuses_reasoning_block(exc):
+                        # C4: the same request without the reasoning block, once.
+                        # Logged by model and tier only: the provider's text is
+                        # already in the exception chain if this retry fails too.
+                        reasoning_fallback_left = False
+                        request = {key: value for key, value in request.items() if key != "reasoning"}
+                        logger.warning(
+                            "model %s (tier %s) refused the reasoning block; retrying once without it",
+                            model_id,
+                            tier,
+                        )
+                        continue
+                    error_class = _classify_exception(exc)
+                    if error_class == "transient" and transient_retry_left:
+                        transient_retry_left = False
+                        continue
+                    # F-3.4-A-07: the internal message carries str(exc), the
+                    # provider's own error text (e.g. an OpenRouter 402
+                    # affordability message), not just the exception type name.
+                    # This never reaches the end user: _STEP_ERROR_END_USER_MESSAGES
+                    # (graph.py, F-2.0-12) stays the deliberately generic
+                    # client-facing string regardless of error_class. Without
+                    # this, an "unexpected"-classed provider error (never
+                    # auto-retried, unlike "transient") was root-caused only by
+                    # live manual reproduction, since nothing else surfaced or
+                    # logged the real cause.
+                    raise HarnessCallError(
+                        f"call_tier failed for tier {tier!r} (model {model_id!r}) "
+                        f"after {attempt} attempt(s): {error_class} error "
+                        f"({type(exc).__name__}): {exc}",
+                        error_class=error_class,
+                    ) from exc
+                else:
+                    elapsed_s = time.monotonic() - started
+                    usage = response.usage
+                    prompt_tokens = int(usage.prompt_tokens)
+                    completion_tokens = int(usage.completion_tokens)
+                    call_cost_usd = (
+                        prompt_tokens * input_price + completion_tokens * output_price
+                    )
+                    self.track_cost(self.trace_id, tier, call_cost_usd)
+                    with self._cost_lock:
+                        self._last_call_elapsed_s[(self.trace_id, tier)] = elapsed_s
+                    return LLMResponse(
+                        content=response.choices[0].message.content,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                        call_cost_usd=call_cost_usd,
+                        model_id=model_id,
+                        tier=tier,
+                        elapsed_s=elapsed_s,
+                        provider=provider_of(response),
+                    )
+        finally:
+            with self._cost_lock:
+                left = self._in_flight_usd.get(self.trace_id, 0.0) - bound_usd
+                if left > 1e-12:
+                    self._in_flight_usd[self.trace_id] = left
+                else:
+                    self._in_flight_usd.pop(self.trace_id, None)
+
+    def model_for(self, tier: Tier) -> str:
+        """The model id this question resolved for `tier`, the one
+        `call_tier` would call (build phase 8.7, T-8.7-02). Resolved through
+        this Harness's `TierContext`, so it never differs from the model the
+        call itself uses."""
+        return self._tier_context.resolve(tier)
+
+    def price_per_token(self, tier: Tier) -> tuple[float, float]:
+        """(input, output) USD per token for the model this question
+        resolved for `tier` (build phase 8.7, T-8.7-02).
+
+        Read by `cost_control.check_per_query_cap`, so the pre-flight cap
+        check prices the next call at the real price of the model that will
+        answer it. Raises `HarnessCallError`, as `call_tier` would, when
+        neither litellm's map nor the fallback table prices the model.
+        """
+        return _price_per_token(self.model_for(tier))
+
+    def max_output_tokens(self, tier: Tier) -> int:
+        """The output ceiling a `tier` call sends when its caller names none."""
+        return _TIER_MAX_TOKENS[tier]
+
+    def call_cost_bound_usd(
+        self,
+        tier: Tier,
+        messages: list[Message],
+        *,
+        cache_prefix: str | None = None,
+        max_tokens: int | None = None,
+    ) -> float:
+        """The most this `call_tier` call can cost, before it is sent
+        (F-8.7-J04, F-8.7-A06).
+
+        The prompt `call_tier` would send, `cache_prefix` included, counted
+        by `prompt_token_bound`, at the input price, plus the call's
+        `max_tokens` (the tier's own ceiling when None) at the output
+        price, both of the model this question resolved for `tier`. The
+        same figure `call_tier` holds as in flight while the call runs.
+        Raises `HarnessCallError` when the model is unpriced, as
+        `price_per_token` does.
+        """
+        input_price, output_price = self.price_per_token(tier)
+        output_tokens = _TIER_MAX_TOKENS[tier] if max_tokens is None else max_tokens
+        prompt = prompt_token_bound(_with_cache_prefix(messages, cache_prefix))
+        return prompt * input_price + output_tokens * output_price
+
+    def in_flight_usd(self, trace_id: str) -> float:
+        """The summed bound of `trace_id`'s calls sent and not yet metered."""
+        with self._cost_lock:
+            return self._in_flight_usd.get(trace_id, 0.0)
+
+    def last_call_elapsed_s(self, trace_id: str, tier: Tier) -> float | None:
+        """Seconds the latest completed `call_tier` call on `tier` took for
+        `trace_id`, or None when none has completed (C5).
+
+        It measures one call: the most recent one on that tier to complete
+        for this question, whichever step made it. Read by
+        `cost_control.build_cost_event_payload` for the operator-only
+        `cost` event, so an event emitted straight after a call carries that
+        call's time. An event emitted by a step that made no call on the
+        tier repeats an earlier call's time instead: Plan emits its `plan`
+        cost event even when it used a template, so it then carries Think's
+        classification call, which runs on the plan tier too (fix round,
+        F-8.6-J11). Summing it over a question's cost events can therefore
+        count a call twice. Two calls on the same tier running at once for
+        one question can both complete before the event is built; the
+        event then carries whichever finished last.
+        """
+        with self._cost_lock:
+            return self._last_call_elapsed_s.get((trace_id, tier))
 
     def track_cost(self, trace_id: str, tier: Tier, usd: float) -> None:
         """Accumulate one metered call's cost against `trace_id`'s running total.

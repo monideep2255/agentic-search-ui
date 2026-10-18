@@ -70,7 +70,7 @@ Phase 1 is complete. Phase 2 is next; it produces the evaluation playbook.
 15. NCBI API rate limit upgraded to 100 req/sec
 16. Two-API strategy: E-utilities + Datasets API v2 + Variation Services
 17. PubTator3 REST API replaces all local NER/normalization
-18. NCBI KG repo as infrastructure template, not architecture blueprint
+18. NCBI KG repository as infrastructure template, not architecture blueprint
 19. Simplified query classification (not full typed IR)
 20. NL-to-Cypher separation: Plan step produces structured output, tools compile to Cypher
 21. Layer 2 as authoritative fallback when Layer 1 data is suspect

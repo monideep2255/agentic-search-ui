@@ -1,0 +1,40 @@
+✓ Answered15.6s · 8 tool calls · 12 sources cited from 2 layers
+
+Show work ▾
+
+I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to GERD.⁠2–13
+
+The typical symptoms of GERD are heartburn and regurgitation of stomach contents into the throat.⁠1 GERD happens when stomach contents flow back up into the esophagus or mouth, causing symptoms or complications.⁠1
+
+The search also returned a MedGen record titled Gastroesophageal reflux (GERD) and a literature entity named Gastroesophageal Reflux.⁠2, 3
+
+WHERE THIS ANSWER COMES FROM
+Gastroesophageal Reflux Disease.⁠4
+Gastroesophageal reflux (GERD)⁠2
+Gastroesophageal Reflux⁠3
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease⁠5
+Gastroesophageal Reflux Disease.⁠6
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)⁠7
+Gastroesophageal Reflux Disease.⁠8
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents⁠9
+Gastroesophageal reflux disease in children: What's new right now?⁠10
+On Demand Treatment of Reflux Disease⁠11
+Showing 1–10 of 12
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+12
+▶
+LIVE NCBI APIS
+6
+▶
+ENRICHMENT
+6
+Based on 12 sources cited
+
+NOTES: 

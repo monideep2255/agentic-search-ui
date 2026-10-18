@@ -1,0 +1,674 @@
+{
+ "record": {
+  "id": "G-005",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+  "session_id": "c103-ec16f9ad3d9e",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:11:39+00:00",
+  "run_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C1519126",
+   "MedGen:C4302012",
+   "MedGen:C4302019"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 4 sources",
+  "citations": 5,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 5
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "clinicaltrials_search",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 3,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   3
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 88,
+  "answer_start": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [2], Probable SARS (severe acute respiratory syndrome) [3] and SARS (severe acute respirator",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 7.024,
+  "seconds": 19.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 14,
+   "citation": 5,
+   "trust_signal": 6,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 0,
+   "ts": "2026-09-25T13:10:04.060763Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 2,
+   "ts": "2026-09-25T13:10:09.347269Z",
+   "payload": {
+    "narrative": "The query is broad, open-ended, and multi-source: it asks to find SRA runs based on multiple criteria (SARS-CoV-2, Illumina platform, clinical respiratory samples) and also expects an explanation of why each matches, which requires searching and evaluating evidence across databases. (SARS: 3 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 4,
+   "ts": "2026-09-25T13:10:09.349491Z",
+   "payload": {
+    "narrative": "searching 3 layers for sars coronavirus protease pathway. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8e102f60c5da",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-633c7f3ab753",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-40101a093981",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-57d7cbd6bdee",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e6a91edd48d5",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-930609dfb687",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-9fcccdb06c0c",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4b8f726eba82",
+      "layer": "layer_2_api",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 6,
+   "ts": "2026-09-25T13:10:09.350538Z",
+   "payload": {
+    "call_id": "cq-8e102f60c5da",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 7,
+   "ts": "2026-09-25T13:10:09.350574Z",
+   "payload": {
+    "call_id": "pa-633c7f3ab753",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 8,
+   "ts": "2026-09-25T13:10:09.350585Z",
+   "payload": {
+    "call_id": "ct-40101a093981",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 9,
+   "ts": "2026-09-25T13:10:09.350597Z",
+   "payload": {
+    "call_id": "ne-57d7cbd6bdee",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 10,
+   "ts": "2026-09-25T13:10:09.350610Z",
+   "payload": {
+    "call_id": "ne-e6a91edd48d5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 11,
+   "ts": "2026-09-25T13:10:09.350635Z",
+   "payload": {
+    "call_id": "ne-930609dfb687",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 12,
+   "ts": "2026-09-25T13:10:09.350644Z",
+   "payload": {
+    "call_id": "pa-9fcccdb06c0c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 13,
+   "ts": "2026-09-25T13:10:09.350653Z",
+   "payload": {
+    "call_id": "ne-4b8f726eba82",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 14,
+   "ts": "2026-09-25T13:10:09.496921Z",
+   "payload": {
+    "call_id": "ct-40101a093981",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 15,
+   "ts": "2026-09-25T13:10:09.623885Z",
+   "payload": {
+    "call_id": "pa-633c7f3ab753",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 16,
+   "ts": "2026-09-25T13:10:09.650736Z",
+   "payload": {
+    "call_id": "ne-e6a91edd48d5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 17,
+   "ts": "2026-09-25T13:10:09.677699Z",
+   "payload": {
+    "call_id": "ne-57d7cbd6bdee",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 18,
+   "ts": "2026-09-25T13:10:09.828801Z",
+   "payload": {
+    "call_id": "cq-8e102f60c5da",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "3 row(s) of 3",
+    "result_count": 3,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 19,
+   "ts": "2026-09-25T13:10:09.828905Z",
+   "payload": {
+    "call_id": "ne-930609dfb687",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 20,
+   "ts": "2026-09-25T13:10:09.828923Z",
+   "payload": {
+    "call_id": "pa-9fcccdb06c0c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 21,
+   "ts": "2026-09-25T13:10:10.087931Z",
+   "payload": {
+    "call_id": "ne-4b8f726eba82",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 22,
+   "ts": "2026-09-25T13:10:10.089410Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1519126",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1519126",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4302012",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4302012",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4302019",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4302019",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "276768",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "6cab1fa4-ff6f-44a1-8410-ba98d6ff528d",
+   "seq": 49,
+   "ts": "2026-09-25T13:10:22.432293Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 7024,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 4 sources",
+    "layer_calls_used": 5,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 166
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 172
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [2], Probable SARS (severe acute respiratory syndrome) [3] and SARS (severe acute respiratory syndrome) confirmed [4]. \n\nMedGen lists no clinical features for SARS Coronavirus Protease Pathway [1]. \n\nDisease records found\n\nDisease name: SARS Coronavirus Protease Pathway [2]. Disease name: Probable SARS (severe acute respiratory syndrome) [3]. Disease name: SARS (severe acute respiratory syndrome) confirmed [4]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [5]. Medgen clinical_features: MedGen lists no clinical features for SARS Coronavirus Protease Pathway [1]. "
+}

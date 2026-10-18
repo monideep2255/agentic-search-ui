@@ -530,7 +530,12 @@ async def test_p11_goes_red_when_the_promotion_write_loses_its_lock(
     ids=["bare", "wider-suffix", "wider-suffix-2", "lowercased", "leading-space"],
 )
 async def test_p1_goes_red_whatever_span_the_model_returns(
-    model: _Model, label: str, question: str, passing_mention: str, span_shape: str
+    monkeypatch: pytest.MonkeyPatch,
+    model: _Model,
+    label: str,
+    question: str,
+    passing_mention: str,
+    span_shape: str,
 ) -> None:
     """F-4.7-R2-02, made mechanical.
 
@@ -544,12 +549,21 @@ async def test_p1_goes_red_whatever_span_the_model_returns(
     Five span shapes, per question. Every one is the same defect: the
     database name taken as the subject of the question and confirmed live.
     All five must turn the arm red or the fix is partial.
+
+    Q10 names a BioProject accession, and since 2026-09-22 (fix-plan item 2)
+    an accession question confirms NONE of the model's spans: the accession
+    path is a second control in front of the lookup. With it in place the
+    corrupted lookup is never reached and the arm cannot go red, which is a
+    layered control rather than a vacuous arm, so this mutation takes that
+    control away as well (the accession is no longer recognised) before it
+    corrupts the lookup. Q4 to Q6 name no accession and are unaffected.
     """
     span = span_shape.format(
         token=passing_mention, token_lower=passing_mention.lower()
     )
 
     def _mutate() -> None:
+        monkeypatch.setattr(graph_module.accession, "parse_accession", lambda text: None)
         model.think_entities = [{"text": span, "entity_type": "gene"}]
         model.resolves = {span.strip().upper(): "NCBIGene:6301"}
 
@@ -604,7 +618,7 @@ async def test_p2_survives_an_empty_extraction_through_the_fallback_and_goes_red
         gate.test_p2_the_flagship_resolves_its_subject_from_raw_text,
         (),
         lambda: monkeypatch.setattr(
-            graph_module, "_gene_shaped_fallback_candidates", lambda text, exact: []
+            graph_module, "_gene_shaped_fallback_candidates", lambda text, exact, organisms=(): []
         ),
         "P2 / fallback extractor emptied",
     )
@@ -798,7 +812,14 @@ async def test_p12b_goes_red_when_the_graph_timeout_floor_is_destroyed(
     floor moved both sides of the comparison together. The rewritten arm
     reads the timeout `act_node` actually used and compares it against the
     constant's real value in `tools.graph_schema_constants`.
+
+    Routed as `lookup` since phase 8.6's re-land follow-up, R-09: the floor
+    is 30 seconds again, the same as `multi_hop`'s own Act budget, so on the
+    default `multi_hop` route destroying the floor changes nothing Act does
+    and no arm could see it. `lookup`'s budget is 15, under the floor, so
+    the floor is what decides Act's wait there.
     """
+    model.think_class = "lookup"
     model.think_entities = [{"text": "BRCA1", "entity_type": "gene"}]
     await _assert_arm_is_falsifiable(
         gate.test_p12b_act_runs_on_the_timeout_the_routed_class_selects,

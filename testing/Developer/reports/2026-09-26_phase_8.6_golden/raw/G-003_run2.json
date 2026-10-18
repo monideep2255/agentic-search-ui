@@ -1,0 +1,972 @@
+{
+ "record": {
+  "id": "G-003",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?",
+  "session_id": "c103-e55026602f99",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:08:49+00:00",
+  "run_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C4552100"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 26 sources, not yet confirmed",
+  "citations": 26,
+  "distinct_sources": 25,
+  "citations_by_layer": {
+   "layer_3_enrichment": 8,
+   "layer_1_graph": 11,
+   "layer_2_api": 7
+  },
+  "must_cite_total": 4,
+  "must_cite_hits": 3,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 3,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 12,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   12
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 299,
+  "answer_start": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndr",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 18.279,
+  "seconds": 18.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 47,
+   "citation": 26,
+   "trust_signal": 27,
+   "done": 1
+  },
+  "first_word_s": 18.495,
+  "first_token_ts": "2026-09-26T17:07:28.935445Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 0,
+   "ts": "2026-09-26T17:07:16.639647Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 2,
+   "ts": "2026-09-26T17:07:17.962163Z",
+   "payload": {
+    "narrative": "Broad, open-ended question asking for multiple types of information (causal genes, condition record, clinical variants, trials) across multiple databases without a single obvious path. (Lynch syndrome: 1 of 10 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 4,
+   "ts": "2026-09-26T17:07:17.977544Z",
+   "payload": {
+    "narrative": "searching 3 layers for lynch syndrome. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-269cd15da14e",
+      "layer": "layer_1_graph",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-0b74b2b6ce9f",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-6b0b9d5868db",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4fc8048fdcfa",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-71287387ce58",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-390d76a45f1a",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-64f7eafec195",
+      "layer": "layer_3_enrichment",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-169fe533bb98",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 6,
+   "ts": "2026-09-26T17:07:17.981796Z",
+   "payload": {
+    "call_id": "cq-269cd15da14e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 7,
+   "ts": "2026-09-26T17:07:17.981939Z",
+   "payload": {
+    "call_id": "pa-0b74b2b6ce9f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 8,
+   "ts": "2026-09-26T17:07:17.982054Z",
+   "payload": {
+    "call_id": "ct-6b0b9d5868db",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 9,
+   "ts": "2026-09-26T17:07:17.982076Z",
+   "payload": {
+    "call_id": "ne-4fc8048fdcfa",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 10,
+   "ts": "2026-09-26T17:07:17.982088Z",
+   "payload": {
+    "call_id": "ne-71287387ce58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 11,
+   "ts": "2026-09-26T17:07:17.982098Z",
+   "payload": {
+    "call_id": "ne-390d76a45f1a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 12,
+   "ts": "2026-09-26T17:07:17.982107Z",
+   "payload": {
+    "call_id": "pa-64f7eafec195",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 13,
+   "ts": "2026-09-26T17:07:17.982116Z",
+   "payload": {
+    "call_id": "ne-169fe533bb98",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 14,
+   "ts": "2026-09-26T17:07:18.151237Z",
+   "payload": {
+    "call_id": "ne-4fc8048fdcfa",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 15,
+   "ts": "2026-09-26T17:07:18.154642Z",
+   "payload": {
+    "call_id": "pa-0b74b2b6ce9f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "ok: 3 record(s)",
+    "result_count": 3,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 16,
+   "ts": "2026-09-26T17:07:18.363345Z",
+   "payload": {
+    "call_id": "ct-6b0b9d5868db",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 17,
+   "ts": "2026-09-26T17:07:18.838928Z",
+   "payload": {
+    "call_id": "ne-71287387ce58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 18,
+   "ts": "2026-09-26T17:07:19.110189Z",
+   "payload": {
+    "call_id": "cq-269cd15da14e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "12 row(s) of 12",
+    "result_count": 12,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 19,
+   "ts": "2026-09-26T17:07:19.248602Z",
+   "payload": {
+    "call_id": "pa-64f7eafec195",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 20,
+   "ts": "2026-09-26T17:07:19.377301Z",
+   "payload": {
+    "call_id": "ne-390d76a45f1a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "fetch: 8 record(s)",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 21,
+   "ts": "2026-09-26T17:07:19.384799Z",
+   "payload": {
+    "call_id": "ne-169fe533bb98",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 22,
+   "ts": "2026-09-26T17:07:19.386856Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 23,
+   "ts": "2026-09-26T17:07:28.935445Z",
+   "payload": {
+    "text": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndrome [7]. ",
+    "marker_ids": [
+     "ct-6b0b9d5868db-1",
+     "ct-6b0b9d5868db-2",
+     "ct-6b0b9d5868db-3",
+     "ct-6b0b9d5868db-4",
+     "ct-6b0b9d5868db-5",
+     "cq-269cd15da14e-6",
+     "cq-269cd15da14e-8",
+     "cq-269cd15da14e-9",
+     "cq-269cd15da14e-10",
+     "cq-269cd15da14e-11",
+     "cq-269cd15da14e-12",
+     "cq-269cd15da14e-13",
+     "cq-269cd15da14e-14",
+     "cq-269cd15da14e-15",
+     "cq-269cd15da14e-16",
+     "cq-269cd15da14e-17",
+     "cq-269cd15da14e-7"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Lynch syndrome"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00141466",
+    "source_url": "https://clinicaltrials.gov/study/NCT00141466",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00262171",
+    "source_url": "https://clinicaltrials.gov/study/NCT00262171",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00341575",
+    "source_url": "https://clinicaltrials.gov/study/NCT00341575",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00450424",
+    "source_url": "https://clinicaltrials.gov/study/NCT00450424",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00508573",
+    "source_url": "https://clinicaltrials.gov/study/NCT00508573",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:27030",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/27030",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 3",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4552100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4552100",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2956",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 6",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4072",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "epithelial cell adhesion molecule",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4763",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "neurofibromin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5378",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 1, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5395",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5395",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 2, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:6224",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/6224",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "ribosomal protein S20",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7048",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7048",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/999",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cadherin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "21508689",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/21508689/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1633554",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/1633554",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/C537261",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24468183",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24468183/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D003123",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30134129",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30134129/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Lynch_Syndrome_II",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D055847",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34798986",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34798986/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36706841",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36706841/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "4c4c8f4e-595d-4018-bbd6-54b589a16173",
+   "seq": 124,
+   "ts": "2026-09-26T17:07:28.938707Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 18279,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 26 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 132
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.98,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 156
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 177
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 215
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndrome [7]. \n\nDisease records found\n\nDisease name: Lynch syndrome [7]. \n\nClinical trial records found\n\nClinical trial name: Implementation of a New Strategy to Identify HNPCC Patients [1]. Clinical trial name: Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2]. Clinical trial name: Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3]. Clinical trial name: Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4]. Clinical trial name: Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5]. \n\nGene-to-disease mapping\n\nGene NCBIGene:27030, name: mutL homolog 3 [6]. Gene NCBIGene:2956, name: mutS homolog 6 [8]. Gene NCBIGene:4072, name: epithelial cell adhesion molecule [9]. Gene NCBIGene:4292, name: mutL homolog 1 [10]. Gene NCBIGene:4436, name: mutS homolog 2 [11]. Gene NCBIGene:4763, name: neurofibromin 1 [12]. Gene NCBIGene:5378, name: PMS1 homolog 1, mismatch repair system component [13]. Gene NCBIGene:5395, name: PMS1 homolog 2, mismatch repair system component [14]. Gene NCBIGene:6224, name: ribosomal protein S20 [15]. Gene NCBIGene:7048, name: transforming growth factor beta receptor 2 [16]. Gene NCBIGene:999, name: cadherin 1 [17]. \n\nPubmed records found\n\nPubmed title: Lynch syndrome [18]. Pubmed title: Differentiating Lynch-like from Lynch syndrome [21]. Pubmed title: Lynch Syndrome-Associated Colorectal Cancer [23]. Pubmed title: Identification of Lynch Syndrome [25]. Pubmed title: Lynch Syndrome Genetics and Clinical Implications [26]. \n\nMedgen records found\n\nMedgen title: Lynch syndrome [19]. \n\nLiterature entity records found\n\nLiterature entity name: Lynch syndrome I (site-specific colonic cancer) [20]. Literature entity name: Colorectal Neoplasms Hereditary Nonpolyposis [22]. Literature entity name: Lynch Syndrome II [24]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

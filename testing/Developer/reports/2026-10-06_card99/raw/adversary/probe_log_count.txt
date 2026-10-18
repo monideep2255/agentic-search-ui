@@ -1,0 +1,2 @@
+sentence check (trace t): 6 pair questions in 1 calls; 3 sentences held back by a pair, 0 not asked
+approved by the item question: 0; approved overall: 0

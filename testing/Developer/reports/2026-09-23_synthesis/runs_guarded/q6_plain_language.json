@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "answer",
+  "words": 138,
+  "paragraphs": 2,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 8 pubmed records [1][2][3][4][5][6][7][8]. \nOne of the most well-studied is a condition called Familial Mediterranean Fever, caused by changes in a gene called MEFV, which mainly affects people of Mediterranean descent and appears more often in Turkish, Jewish, Arabic, and Armenian populations [1]. The most frequent MEFV change in Turkish patients is called R202Q, found in about 39% of those tested [2]. Hemoglobin variants, including changes in the \u03b2-globin gene, also show high frequency in Mediterranean populations and their descendants [3]. \n\n## Pubmed records found\n\n- Diagnosis and management of G6PD deficiency.\n- High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.\n- Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.\n- Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.\n- Molecular analyses of MEFV gene mutation variants in Turkish population.\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q6"
+}

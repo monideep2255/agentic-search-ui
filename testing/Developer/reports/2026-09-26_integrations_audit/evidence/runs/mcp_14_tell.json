@@ -1,0 +1,36 @@
+{
+  "surface": "MCP",
+  "question": "Tell me about black holes.",
+  "tool": "ask_biomedical_question",
+  "args": {
+    "query": "Tell me about black holes."
+  },
+  "is_error": false,
+  "outcome": "refused",
+  "trust_outcome": "refuse",
+  "citation_count": 0,
+  "citation_hosts": [],
+  "citation_urls_sample": [],
+  "first_sentence": "This question could not be answered: it did not pass this system's content guardrail (I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.).",
+  "answer_chars": 213,
+  "answer_head": "This question could not be answered: it did not pass this system's content guardrail (I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.).",
+  "trust_signal": {
+    "outcome": "refuse",
+    "risk_tier": "unknown",
+    "grounded": false,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+  },
+  "persona_name": "Chargaff",
+  "structured_keys": [
+    "answer",
+    "citations",
+    "persona_name",
+    "run_id",
+    "trust_signal"
+  ],
+  "wall_s": 2.7
+}

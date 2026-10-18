@@ -1,0 +1,40 @@
+== 8.2 floor (09-25): 78 of 102 answered runs over 20 s
+  largest stage in those runs: {'act': 1, 'write': 73, 'think': 1, 'guardrail': 3}
+  server time at which Write starts: median 8.4, p90 18.4, max 94.0; over 3 s: 102 of 102
+  seconds each over-20 run must lose: median 10.1, max 82.7
+== 8.6 re-land (09-26): 32 of 102 answered runs over 20 s
+  G-021 p1  31.3s  guard  1.7 think  3.0 act   9.4 tail 10.0 write   6.2  withdrawn=True
+  G-030 p2  31.3s  guard  1.0 think  2.5 act  17.7 tail  0.0 write   9.6  withdrawn=True
+  G-029 p2  30.6s  guard  2.2 think  3.9 act  16.1 tail  0.0 write   7.7  withdrawn=True
+  G-021 p2  29.3s  guard  1.1 think  1.5 act  17.7 tail  1.5 write   6.8  withdrawn=True
+  G-032 p3  27.6s  guard  1.5 think  1.8 act   4.8 tail  0.0 write  18.8  withdrawn=False
+  G-035 p2  26.6s  guard  2.4 think  6.2 act   9.1 tail  0.0 write   8.5  withdrawn=False
+  G-032 p1  25.9s  guard  2.0 think  3.2 act   1.1 tail  0.0 write  19.1  withdrawn=False
+  G-032 p2  25.7s  guard  1.2 think  2.9 act   2.3 tail  0.0 write  18.7  withdrawn=False
+  G-017 p1  25.0s  guard  2.2 think  6.0 act   1.9 tail  0.0 write  14.4  withdrawn=False
+  G-027 p2  25.0s  guard  2.3 think  1.8 act  17.5 tail  0.0 write   2.9  withdrawn=False
+  G-016 p2  24.9s  guard  0.9 think  2.6 act  10.4 tail  0.0 write  10.5  withdrawn=True
+  G-033 p3  23.4s  guard  2.4 think  4.2 act   5.6 tail  0.0 write   9.6  withdrawn=True
+  G-040 p2  23.4s  guard  9.0 think  1.2 act   3.8 tail  0.0 write   8.9  withdrawn=False
+  G-025 p1  23.3s  guard  1.1 think  2.2 act   3.7 tail  0.0 write  15.8  withdrawn=True
+  G-025 p2  23.3s  guard  1.0 think  1.4 act   3.7 tail  0.0 write  16.8  withdrawn=True
+  G-012 p2  23.2s  guard  2.5 think  3.5 act   0.6 tail  0.0 write  15.6  withdrawn=False
+  G-016 p3  23.2s  guard  1.1 think  1.0 act  11.3 tail  0.0 write   9.1  withdrawn=True
+  G-021 p3  22.9s  guard  0.9 think  1.2 act  12.0 tail  2.8 write   5.4  withdrawn=True
+  G-025 p3  22.7s  guard  2.3 think  1.1 act   3.7 tail  0.0 write  14.9  withdrawn=True
+  G-030 p3  21.9s  guard  1.7 think  1.8 act   3.5 tail  0.0 write  11.3  withdrawn=False
+  G-002 p1  21.8s  guard  1.3 think  1.9 act   5.4 tail  0.0 write  12.4  withdrawn=False
+  G-038 p3  21.5s  guard  6.9 think  1.0 act   0.6 tail  0.0 write  12.4  withdrawn=False
+  G-012 p3  21.4s  guard  1.1 think  4.8 act   0.9 tail  0.0 write  13.1  withdrawn=False
+  G-016 p1  21.0s  guard  1.2 think  2.3 act   9.8 tail  0.0 write   7.2  withdrawn=True
+  G-028 p3  20.9s  guard  1.1 think  2.5 act   5.4 tail  0.0 write  11.0  withdrawn=False
+  G-002 p3  20.8s  guard  1.8 think  2.1 act   2.7 tail  0.0 write  13.1  withdrawn=True
+  G-050 p2  20.8s  guard  2.5 think  1.8 act   1.1 tail  0.0 write  14.3  withdrawn=False
+  G-030 p1  20.1s  guard  1.0 think  4.2 act   3.1 tail  0.0 write  11.3  withdrawn=True
+  G-031 p3  20.1s  guard  2.9 think  3.7 act   3.2 tail  0.0 write   9.8  withdrawn=False
+  G-035 p3  20.1s  guard  2.4 think  1.5 act   8.0 tail  0.0 write   7.6  withdrawn=False
+  G-039 p2  20.1s  guard  4.0 think  1.6 act   1.2 tail  0.0 write  12.1  withdrawn=False
+  G-050 p1  20.1s  guard  2.3 think  1.8 act   1.7 tail  0.0 write  13.8  withdrawn=True
+  largest stage in those runs: {'act_tail': 1, 'act': 9, 'write': 21, 'guardrail': 1}
+  server time at which Write starts: median 6.8, p90 13.1, max 24.2; over 3 s: 101 of 102
+  seconds each over-20 run must lose: median 3.2, max 11.3

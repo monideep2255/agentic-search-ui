@@ -1,0 +1,2306 @@
+{
+ "per_answer": [
+  {
+   "label": "gp1",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 4,
+   "live_prose": 4,
+   "code_only": 0,
+   "live_model_shown": 4,
+   "live_ok_not_shown": [
+    "gp1c1i5"
+   ],
+   "candidates": 6,
+   "outcome": "answer",
+   "showable": [
+    "gp1c1i1",
+    "gp1c1i2",
+    "gp1c1i3",
+    "gp1c1i4",
+    "gp1c1i6"
+   ],
+   "item1": 4,
+   "item1_model": 4,
+   "item1_B": 4,
+   "item2": 4,
+   "item2_model": 4,
+   "item2_B": 4,
+   "pair1": 2,
+   "pair1_model": 2,
+   "pair1_B": 2,
+   "pair2": 3,
+   "pair2_model": 3,
+   "pair2_B": 3,
+   "pair1_itemcall": 4,
+   "pair1_vetoed_shown": [
+    "gp1c1i4",
+    "gp1c1i6"
+   ],
+   "pair2_itemcall": 5,
+   "pair2_vetoed_shown": [
+    "gp1c1i4",
+    "gp1c1i6"
+   ]
+  },
+  {
+   "label": "gp2",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 0,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [
+    "gp2c2i4"
+   ],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "gp2c2i1",
+    "gp2c2i2",
+    "gp2c2i3",
+    "gp2c2i5"
+   ],
+   "item1": 3,
+   "item1_model": 3,
+   "item1_B": 3,
+   "item2": 3,
+   "item2_model": 3,
+   "item2_B": 3,
+   "pair1": 2,
+   "pair1_model": 2,
+   "pair1_B": 3,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 3,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [
+    "gp2c2i5"
+   ],
+   "pair2_itemcall": 3,
+   "pair2_vetoed_shown": [
+    "gp2c2i5"
+   ]
+  },
+  {
+   "label": "gp3",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 4,
+   "live_prose": 4,
+   "code_only": 0,
+   "live_model_shown": 4,
+   "live_ok_not_shown": [
+    "gp3c2i6"
+   ],
+   "candidates": 6,
+   "outcome": "answer",
+   "showable": [
+    "gp3c2i1",
+    "gp3c2i2",
+    "gp3c2i3",
+    "gp3c2i4",
+    "gp3c2i5"
+   ],
+   "item1": 4,
+   "item1_model": 4,
+   "item1_B": 4,
+   "item2": 4,
+   "item2_model": 4,
+   "item2_B": 4,
+   "pair1": 2,
+   "pair1_model": 2,
+   "pair1_B": 4,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 4,
+   "pair1_itemcall": 4,
+   "pair1_vetoed_shown": [
+    "gp3c2i3",
+    "gp3c2i4"
+   ],
+   "pair2_itemcall": 4,
+   "pair2_vetoed_shown": [
+    "gp3c2i3",
+    "gp3c2i4"
+   ]
+  },
+  {
+   "label": "gp4",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 2,
+   "live_prose": 2,
+   "code_only": 0,
+   "live_model_shown": 2,
+   "live_ok_not_shown": [],
+   "candidates": 8,
+   "outcome": "answer",
+   "showable": [
+    "gp4c2i1",
+    "gp4c2i2",
+    "gp4c2i3",
+    "gp4c2i4",
+    "gp4c2i5",
+    "gp4c2i6",
+    "gp4c2i7",
+    "gp4c2i8"
+   ],
+   "item1": 2,
+   "item1_model": 2,
+   "item1_B": 4,
+   "item2": 2,
+   "item2_model": 2,
+   "item2_B": 4,
+   "pair1": 1,
+   "pair1_model": 1,
+   "pair1_B": 3,
+   "pair2": 1,
+   "pair2_model": 1,
+   "pair2_B": 3,
+   "pair1_itemcall": 2,
+   "pair1_vetoed_shown": [
+    "gp4c2i6"
+   ],
+   "pair2_itemcall": 2,
+   "pair2_vetoed_shown": [
+    "gp4c2i6"
+   ]
+  },
+  {
+   "label": "gp5",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 1,
+   "match_score": 5,
+   "live_prose": 5,
+   "code_only": 0,
+   "live_model_shown": 5,
+   "live_ok_not_shown": [],
+   "candidates": 6,
+   "outcome": "answer",
+   "showable": [
+    "gp5c1i1",
+    "gp5c1i2",
+    "gp5c1i3",
+    "gp5c1i4",
+    "gp5c1i5",
+    "gp5c1i6"
+   ],
+   "item1": 5,
+   "item1_model": 5,
+   "item1_B": 5,
+   "item2": 5,
+   "item2_model": 5,
+   "item2_B": 5,
+   "pair1": 3,
+   "pair1_model": 3,
+   "pair1_B": 3,
+   "pair2": 3,
+   "pair2_model": 3,
+   "pair2_B": 3,
+   "pair1_itemcall": 5,
+   "pair1_vetoed_shown": [
+    "gp5c1i4",
+    "gp5c1i5"
+   ],
+   "pair2_itemcall": 5,
+   "pair2_vetoed_shown": [
+    "gp5c1i4",
+    "gp5c1i5"
+   ]
+  },
+  {
+   "label": "gr1",
+   "depth": "researcher",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 6,
+   "live_prose": 6,
+   "code_only": 1,
+   "live_model_shown": 5,
+   "live_ok_not_shown": [],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "gr1c2i1",
+    "gr1c2i2",
+    "gr1c2i3",
+    "gr1c2i4",
+    "gr1c2i5"
+   ],
+   "item1": 6,
+   "item1_model": 5,
+   "item1_B": 6,
+   "item2": 6,
+   "item2_model": 5,
+   "item2_B": 6,
+   "pair1": 6,
+   "pair1_model": 5,
+   "pair1_B": 6,
+   "pair2": 6,
+   "pair2_model": 5,
+   "pair2_B": 6,
+   "pair1_itemcall": 6,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 6,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "gr2",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 5,
+   "live_prose": 5,
+   "code_only": 1,
+   "live_model_shown": 4,
+   "live_ok_not_shown": [
+    "gr2c1i4"
+   ],
+   "candidates": 7,
+   "outcome": "answer",
+   "showable": [
+    "gr2c1i1",
+    "gr2c1i2",
+    "gr2c1i3",
+    "gr2c1i5",
+    "gr2c1i6",
+    "gr2c1i7"
+   ],
+   "item1": 5,
+   "item1_model": 4,
+   "item1_B": 5,
+   "item2": 5,
+   "item2_model": 4,
+   "item2_B": 5,
+   "pair1": 5,
+   "pair1_model": 4,
+   "pair1_B": 5,
+   "pair2": 5,
+   "pair2_model": 4,
+   "pair2_B": 5,
+   "pair1_itemcall": 5,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 5,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "gr3",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 1,
+   "match_score": 5,
+   "live_prose": 5,
+   "code_only": 0,
+   "live_model_shown": 5,
+   "live_ok_not_shown": [
+    "gr3c1i9"
+   ],
+   "candidates": 9,
+   "outcome": "answer",
+   "showable": [
+    "gr3c1i1",
+    "gr3c1i2",
+    "gr3c1i3",
+    "gr3c1i4",
+    "gr3c1i5",
+    "gr3c1i6",
+    "gr3c1i7",
+    "gr3c1i8"
+   ],
+   "item1": 6,
+   "item1_model": 6,
+   "item1_B": 6,
+   "item2": 5,
+   "item2_model": 5,
+   "item2_B": 5,
+   "pair1": 5,
+   "pair1_model": 5,
+   "pair1_B": 5,
+   "pair2": 5,
+   "pair2_model": 5,
+   "pair2_B": 5,
+   "pair1_itemcall": 5,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 5,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "gr4",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 5,
+   "live_prose": 5,
+   "code_only": 2,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [],
+   "candidates": 6,
+   "outcome": "answer",
+   "showable": [
+    "gr4c1i1",
+    "gr4c1i2",
+    "gr4c1i3",
+    "gr4c1i4",
+    "gr4c1i5",
+    "gr4c1i6"
+   ],
+   "item1": 5,
+   "item1_model": 3,
+   "item1_B": 5,
+   "item2": 5,
+   "item2_model": 3,
+   "item2_B": 5,
+   "pair1": 5,
+   "pair1_model": 3,
+   "pair1_B": 5,
+   "pair2": 5,
+   "pair2_model": 3,
+   "pair2_B": 5,
+   "pair1_itemcall": 5,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 5,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "gr5",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 7,
+   "live_prose": 7,
+   "code_only": 2,
+   "live_model_shown": 5,
+   "live_ok_not_shown": [],
+   "candidates": 6,
+   "outcome": "answer",
+   "showable": [
+    "gr5c1i1",
+    "gr5c1i2",
+    "gr5c1i3",
+    "gr5c1i4",
+    "gr5c1i5",
+    "gr5c1i6"
+   ],
+   "item1": 7,
+   "item1_model": 5,
+   "item1_B": 7,
+   "item2": 7,
+   "item2_model": 5,
+   "item2_B": 7,
+   "pair1": 7,
+   "pair1_model": 5,
+   "pair1_B": 7,
+   "pair2": 7,
+   "pair2_model": 5,
+   "pair2_B": 7,
+   "pair1_itemcall": 7,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 7,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "md1",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 2,
+   "live_prose": 2,
+   "code_only": 1,
+   "live_model_shown": 1,
+   "live_ok_not_shown": [],
+   "candidates": 3,
+   "outcome": "answer",
+   "showable": [
+    "md1c1i1",
+    "md1c1i2",
+    "md1c1i3"
+   ],
+   "item1": 2,
+   "item1_model": 1,
+   "item1_B": 2,
+   "item2": 2,
+   "item2_model": 1,
+   "item2_B": 2,
+   "pair1": 2,
+   "pair1_model": 1,
+   "pair1_B": 2,
+   "pair2": 2,
+   "pair2_model": 1,
+   "pair2_B": 2,
+   "pair1_itemcall": 2,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 2,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "md2",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 5,
+   "live_prose": 5,
+   "code_only": 4,
+   "live_model_shown": 1,
+   "live_ok_not_shown": [],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "md2c2i1",
+    "md2c2i2",
+    "md2c2i3",
+    "md2c2i4",
+    "md2c2i5"
+   ],
+   "item1": 7,
+   "item1_model": 3,
+   "item1_B": 7,
+   "item2": 7,
+   "item2_model": 3,
+   "item2_B": 7,
+   "pair1": 6,
+   "pair1_model": 2,
+   "pair1_B": 6,
+   "pair2": 6,
+   "pair2_model": 2,
+   "pair2_B": 6,
+   "pair1_itemcall": 7,
+   "pair1_vetoed_shown": [
+    "md2c2i3"
+   ],
+   "pair2_itemcall": 7,
+   "pair2_vetoed_shown": [
+    "md2c2i3"
+   ]
+  },
+  {
+   "label": "md3",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 0,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "md3c2i1",
+    "md3c2i2",
+    "md3c2i3",
+    "md3c2i4",
+    "md3c2i5"
+   ],
+   "item1": 3,
+   "item1_model": 3,
+   "item1_B": 3,
+   "item2": 3,
+   "item2_model": 3,
+   "item2_B": 3,
+   "pair1": 3,
+   "pair1_model": 3,
+   "pair1_B": 3,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 2,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 3,
+   "pair2_vetoed_shown": [
+    "md3c2i2"
+   ]
+  },
+  {
+   "label": "md4",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 4,
+   "live_prose": 4,
+   "code_only": 0,
+   "live_model_shown": 4,
+   "live_ok_not_shown": [],
+   "candidates": 4,
+   "outcome": "answer",
+   "showable": [
+    "md4c1i1",
+    "md4c1i2",
+    "md4c1i3",
+    "md4c1i4"
+   ],
+   "item1": 4,
+   "item1_model": 4,
+   "item1_B": 4,
+   "item2": 4,
+   "item2_model": 4,
+   "item2_B": 4,
+   "pair1": 4,
+   "pair1_model": 4,
+   "pair1_B": 4,
+   "pair2": 3,
+   "pair2_model": 3,
+   "pair2_B": 3,
+   "pair1_itemcall": 4,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 4,
+   "pair2_vetoed_shown": [
+    "md4c1i1"
+   ]
+  },
+  {
+   "label": "md5",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 2,
+   "live_prose": 2,
+   "code_only": 2,
+   "live_model_shown": 0,
+   "live_ok_not_shown": [],
+   "candidates": 2,
+   "outcome": "answer",
+   "showable": [
+    "md5c1i1",
+    "md5c1i2"
+   ],
+   "item1": 2,
+   "item1_model": 0,
+   "item1_B": 2,
+   "item2": 2,
+   "item2_model": 0,
+   "item2_B": 2,
+   "pair1": 2,
+   "pair1_model": 0,
+   "pair1_B": 2,
+   "pair2": 2,
+   "pair2_model": 0,
+   "pair2_B": 2,
+   "pair1_itemcall": 2,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 2,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cm1",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 1,
+   "live_prose": 1,
+   "code_only": 1,
+   "live_model_shown": 0,
+   "live_ok_not_shown": [],
+   "candidates": 4,
+   "outcome": "answer",
+   "showable": [
+    "cm1c1i1",
+    "cm1c1i2",
+    "cm1c1i3",
+    "cm1c1i4"
+   ],
+   "item1": 1,
+   "item1_model": 0,
+   "item1_B": 1,
+   "item2": 1,
+   "item2_model": 0,
+   "item2_B": 1,
+   "pair1": 1,
+   "pair1_model": 0,
+   "pair1_B": 1,
+   "pair2": 1,
+   "pair2_model": 0,
+   "pair2_B": 1,
+   "pair1_itemcall": 1,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 1,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cm2",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 0,
+   "live_prose": 0,
+   "code_only": 0,
+   "live_model_shown": 0,
+   "live_ok_not_shown": [],
+   "candidates": 4,
+   "outcome": "ask",
+   "showable": [
+    "cm2c2i1",
+    "cm2c2i2",
+    "cm2c2i3",
+    "cm2c2i4"
+   ],
+   "item1": 0,
+   "item1_model": 0,
+   "item1_B": 0,
+   "item2": 0,
+   "item2_model": 0,
+   "item2_B": 0,
+   "pair1": 0,
+   "pair1_model": 0,
+   "pair1_B": 0,
+   "pair2": 0,
+   "pair2_model": 0,
+   "pair2_B": 0,
+   "pair1_itemcall": 0,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 0,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cm3",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 0,
+   "live_prose": 0,
+   "code_only": 0,
+   "live_model_shown": 0,
+   "live_ok_not_shown": [],
+   "candidates": 2,
+   "outcome": "ask",
+   "showable": [
+    "cm3c2i1",
+    "cm3c2i2"
+   ],
+   "item1": 0,
+   "item1_model": 0,
+   "item1_B": 0,
+   "item2": 0,
+   "item2_model": 0,
+   "item2_B": 0,
+   "pair1": 0,
+   "pair1_model": 0,
+   "pair1_B": 0,
+   "pair2": 1,
+   "pair2_model": 1,
+   "pair2_B": 1,
+   "pair1_itemcall": 0,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 1,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cm4",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 6,
+   "live_prose": 6,
+   "code_only": 5,
+   "live_model_shown": 1,
+   "live_ok_not_shown": [
+    "cm4c2i2"
+   ],
+   "candidates": 9,
+   "outcome": "answer",
+   "showable": [
+    "cm4c2i1",
+    "cm4c2i3",
+    "cm4c2i4",
+    "cm4c2i5",
+    "cm4c2i6",
+    "cm4c2i7",
+    "cm4c2i8",
+    "cm4c2i9"
+   ],
+   "item1": 7,
+   "item1_model": 2,
+   "item1_B": 7,
+   "item2": 6,
+   "item2_model": 1,
+   "item2_B": 6,
+   "pair1": 6,
+   "pair1_model": 1,
+   "pair1_B": 6,
+   "pair2": 6,
+   "pair2_model": 1,
+   "pair2_B": 6,
+   "pair1_itemcall": 6,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 6,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cm5",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 1,
+   "live_model_shown": 2,
+   "live_ok_not_shown": [],
+   "candidates": 8,
+   "outcome": "answer",
+   "showable": [
+    "cm5c1i1",
+    "cm5c1i2",
+    "cm5c1i3",
+    "cm5c1i4",
+    "cm5c1i5",
+    "cm5c1i6",
+    "cm5c1i7",
+    "cm5c1i8"
+   ],
+   "item1": 3,
+   "item1_model": 2,
+   "item1_B": 3,
+   "item2": 3,
+   "item2_model": 2,
+   "item2_B": 3,
+   "pair1": 3,
+   "pair1_model": 2,
+   "pair1_B": 3,
+   "pair2": 3,
+   "pair2_model": 2,
+   "pair2_B": 3,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 3,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cp1",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 1,
+   "live_prose": 1,
+   "code_only": 0,
+   "live_model_shown": 1,
+   "live_ok_not_shown": [],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "cp1c1i1",
+    "cp1c1i2",
+    "cp1c1i3",
+    "cp1c1i4",
+    "cp1c1i5"
+   ],
+   "item1": 2,
+   "item1_model": 2,
+   "item1_B": 2,
+   "item2": 2,
+   "item2_model": 2,
+   "item2_B": 2,
+   "pair1": 3,
+   "pair1_model": 3,
+   "pair1_B": 3,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 2,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 2,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cp2",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 0,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [
+    "cp2c1i1",
+    "cp2c1i5"
+   ],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "cp2c1i2",
+    "cp2c1i3",
+    "cp2c1i4"
+   ],
+   "item1": 3,
+   "item1_model": 3,
+   "item1_B": 3,
+   "item2": 3,
+   "item2_model": 3,
+   "item2_B": 3,
+   "pair1": 2,
+   "pair1_model": 2,
+   "pair1_B": 3,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 3,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [
+    "cp2c1i4"
+   ],
+   "pair2_itemcall": 3,
+   "pair2_vetoed_shown": [
+    "cp2c1i4"
+   ]
+  },
+  {
+   "label": "cp3",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 0,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [
+    "cp3c2i4"
+   ],
+   "candidates": 7,
+   "outcome": "answer",
+   "showable": [
+    "cp3c2i1",
+    "cp3c2i2",
+    "cp3c2i3",
+    "cp3c2i5",
+    "cp3c2i6",
+    "cp3c2i7"
+   ],
+   "item1": 3,
+   "item1_model": 3,
+   "item1_B": 3,
+   "item2": 3,
+   "item2_model": 3,
+   "item2_B": 3,
+   "pair1": 2,
+   "pair1_model": 2,
+   "pair1_B": 2,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 2,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [
+    "cp3c2i5"
+   ],
+   "pair2_itemcall": 4,
+   "pair2_vetoed_shown": [
+    "cp3c2i3",
+    "cp3c2i5"
+   ]
+  },
+  {
+   "label": "cp4",
+   "depth": "plain",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 4,
+   "live_prose": 4,
+   "code_only": 1,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [],
+   "candidates": 6,
+   "outcome": "answer",
+   "showable": [
+    "cp4c2i1",
+    "cp4c2i2",
+    "cp4c2i3",
+    "cp4c2i4",
+    "cp4c2i5",
+    "cp4c2i6"
+   ],
+   "item1": 4,
+   "item1_model": 3,
+   "item1_B": 4,
+   "item2": 4,
+   "item2_model": 3,
+   "item2_B": 4,
+   "pair1": 3,
+   "pair1_model": 2,
+   "pair1_B": 3,
+   "pair2": 3,
+   "pair2_model": 2,
+   "pair2_B": 3,
+   "pair1_itemcall": 4,
+   "pair1_vetoed_shown": [
+    "cp4c2i6"
+   ],
+   "pair2_itemcall": 4,
+   "pair2_vetoed_shown": [
+    "cp4c2i6"
+   ]
+  },
+  {
+   "label": "cp5",
+   "depth": "plain",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 0,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [],
+   "candidates": 5,
+   "outcome": "answer",
+   "showable": [
+    "cp5c1i1",
+    "cp5c1i2",
+    "cp5c1i3",
+    "cp5c1i4",
+    "cp5c1i5"
+   ],
+   "item1": 3,
+   "item1_model": 3,
+   "item1_B": 3,
+   "item2": 3,
+   "item2_model": 3,
+   "item2_B": 3,
+   "pair1": 1,
+   "pair1_model": 1,
+   "pair1_B": 1,
+   "pair2": 1,
+   "pair2_model": 1,
+   "pair2_B": 1,
+   "pair1_itemcall": 3,
+   "pair1_vetoed_shown": [
+    "cp5c1i3",
+    "cp5c1i4"
+   ],
+   "pair2_itemcall": 3,
+   "pair2_vetoed_shown": [
+    "cp5c1i3",
+    "cp5c1i4"
+   ]
+  },
+  {
+   "label": "cr1",
+   "depth": "researcher",
+   "shown_check": 2,
+   "n_checks": 2,
+   "match_score": 9,
+   "live_prose": 9,
+   "code_only": 9,
+   "live_model_shown": 0,
+   "live_ok_not_shown": [],
+   "candidates": 1,
+   "outcome": "answer",
+   "showable": [
+    "cr1c2i1"
+   ],
+   "item1": 9,
+   "item1_model": 0,
+   "item1_B": 9,
+   "item2": 9,
+   "item2_model": 0,
+   "item2_B": 9,
+   "pair1": 9,
+   "pair1_model": 0,
+   "pair1_B": 9,
+   "pair2": 9,
+   "pair2_model": 0,
+   "pair2_B": 9,
+   "pair1_itemcall": 9,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 9,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cr2",
+   "depth": "researcher",
+   "no_check": true,
+   "outcome": null
+  },
+  {
+   "label": "cr3",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 1,
+   "live_prose": 1,
+   "code_only": 0,
+   "live_model_shown": 1,
+   "live_ok_not_shown": [],
+   "candidates": 7,
+   "outcome": "answer",
+   "showable": [
+    "cr3c1i1",
+    "cr3c1i2",
+    "cr3c1i3",
+    "cr3c1i4",
+    "cr3c1i5",
+    "cr3c1i6",
+    "cr3c1i7"
+   ],
+   "item1": 2,
+   "item1_model": 2,
+   "item1_B": 2,
+   "item2": 3,
+   "item2_model": 3,
+   "item2_B": 3,
+   "pair1": 2,
+   "pair1_model": 2,
+   "pair1_B": 2,
+   "pair2": 2,
+   "pair2_model": 2,
+   "pair2_B": 2,
+   "pair1_itemcall": 2,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 2,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cr4",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 3,
+   "live_prose": 3,
+   "code_only": 0,
+   "live_model_shown": 3,
+   "live_ok_not_shown": [],
+   "candidates": 10,
+   "outcome": "answer",
+   "showable": [
+    "cr4c1i1",
+    "cr4c1i10",
+    "cr4c1i2",
+    "cr4c1i3",
+    "cr4c1i4",
+    "cr4c1i5",
+    "cr4c1i6",
+    "cr4c1i7",
+    "cr4c1i8",
+    "cr4c1i9"
+   ],
+   "item1": 3,
+   "item1_model": 3,
+   "item1_B": 3,
+   "item2": 4,
+   "item2_model": 4,
+   "item2_B": 4,
+   "pair1": 4,
+   "pair1_model": 4,
+   "pair1_B": 4,
+   "pair2": 4,
+   "pair2_model": 4,
+   "pair2_B": 4,
+   "pair1_itemcall": 4,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 4,
+   "pair2_vetoed_shown": []
+  },
+  {
+   "label": "cr5",
+   "depth": "researcher",
+   "shown_check": 1,
+   "n_checks": 2,
+   "match_score": 6,
+   "live_prose": 6,
+   "code_only": 2,
+   "live_model_shown": 4,
+   "live_ok_not_shown": [],
+   "candidates": 7,
+   "outcome": "answer",
+   "showable": [
+    "cr5c1i1",
+    "cr5c1i2",
+    "cr5c1i3",
+    "cr5c1i4",
+    "cr5c1i5",
+    "cr5c1i6",
+    "cr5c1i7"
+   ],
+   "item1": 6,
+   "item1_model": 4,
+   "item1_B": 6,
+   "item2": 6,
+   "item2_model": 4,
+   "item2_B": 6,
+   "pair1": 6,
+   "pair1_model": 4,
+   "pair1_B": 6,
+   "pair2": 6,
+   "pair2_model": 4,
+   "pair2_B": 6,
+   "pair1_itemcall": 6,
+   "pair1_vetoed_shown": [],
+   "pair2_itemcall": 6,
+   "pair2_vetoed_shown": []
+  }
+ ],
+ "flags": [
+  [
+   "gp2",
+   "pair",
+   1,
+   "model B shows draft c1 (3) over the live draft c2 (2)"
+  ],
+  [
+   "gp2",
+   "pair",
+   2,
+   "model B shows draft c1 (3) over the live draft c2 (2)"
+  ],
+  [
+   "gp3",
+   "pair",
+   1,
+   "model B shows draft c1 (4) over the live draft c2 (2)"
+  ],
+  [
+   "gp3",
+   "pair",
+   2,
+   "model B shows draft c1 (4) over the live draft c2 (2)"
+  ],
+  [
+   "gp4",
+   "item",
+   1,
+   "model B shows draft c1 (4) over the live draft c2 (2)"
+  ],
+  [
+   "gp4",
+   "item",
+   2,
+   "model B shows draft c1 (4) over the live draft c2 (2)"
+  ],
+  [
+   "gp4",
+   "pair",
+   1,
+   "model B shows draft c1 (3) over the live draft c2 (1)"
+  ],
+  [
+   "gp4",
+   "pair",
+   2,
+   "model B shows draft c1 (3) over the live draft c2 (1)"
+  ],
+  [
+   "cm2",
+   "-",
+   0,
+   "no prose on screen live; last draft assumed"
+  ],
+  [
+   "cm3",
+   "-",
+   0,
+   "no prose on screen live; last draft assumed"
+  ],
+  [
+   "cp2",
+   "pair",
+   1,
+   "model B shows draft c2 (3) over the live draft c1 (2)"
+  ],
+  [
+   "cp2",
+   "pair",
+   2,
+   "model B shows draft c2 (3) over the live draft c1 (2)"
+  ]
+ ],
+ "dropped": [
+  {
+   "rep": 1,
+   "id": "gp1c1i4",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.19,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "relaxations of",
+     0.23,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "from abnormal",
+     0.42,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp1c1i6",
+   "vetoes": [
+    [
+     "in young",
+     0.12,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.16,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "nonspecific prompting",
+     0.48,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp1c2i6",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.21,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp2c2i4",
+   "vetoes": [
+    [
+     "from abnormal",
+     0.39,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "abnormal transient",
+     0.21,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "relaxations of",
+     0.23,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp2c2i5",
+   "vetoes": [
+    [
+     "in young",
+     0.26,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.28,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp3c1i6",
+   "vetoes": [
+    [
+     "the outpatient",
+     0.4,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp3c2i3",
+   "vetoes": [
+    [
+     "in young",
+     0.12,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.16,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp3c2i4",
+   "vetoes": [
+    [
+     "from abnormal",
+     0.44,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "abnormal transient",
+     0.27,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "transient relaxations",
+     0.24,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp4c1i4",
+   "vetoes": [
+    [
+     "attributable to",
+     0.49,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp4c2i6",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.13,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp5c1i4",
+   "vetoes": [
+    [
+     "in young",
+     0.17,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.16,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "gp5c1i5",
+   "vetoes": [
+    [
+     "from abnormal",
+     0.39,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "abnormal transient",
+     0.21,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "transient relaxations",
+     0.18,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "sphincter other",
+     0.45,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "md2c2i3",
+   "vetoes": [
+    [
+     "specific variant",
+     0.31,
+     "In this study, MEFV gene analysis results and clinical findings of 27,504 patients from 35 universities and institutions in Turkey and Northern Cyprus are combined in an effort to provide a better insight into the genotype-phenotype correlation and how a specific variant contributes to certain clinical findings in FMF patients."
+    ],
+    [
+     "to certain",
+     0.45,
+     "In this study, MEFV gene analysis results and clinical findings of 27,504 patients from 35 universities and institutions in Turkey and Northern Cyprus are combined in an effort to provide a better insight into the genotype-phenotype correlation and how a specific variant contributes to certain clinical findings in FMF patients."
+    ],
+    [
+     "certain clinical",
+     0.44,
+     "In this study, MEFV gene analysis results and clinical findings of 27,504 patients from 35 universities and institutions in Turkey and Northern Cyprus are combined in an effort to provide a better insight into the genotype-phenotype correlation and how a specific variant contributes to certain clinical findings in FMF patients."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp1c2i4",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.25,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "attributable to",
+     0.45,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "those most",
+     0.47,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "the outpatient",
+     0.5,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "warrant referral",
+     0.47,
+     "proton pump inhibitor trials as well as specific indications or clinical settings that warrant referral to Gastroenterology specialists"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp1c2i5",
+   "vetoes": [
+    [
+     "most effectively",
+     0.44,
+     "most effectively treated with proton-pump inhibitors (PPIs)"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp2c1i4",
+   "vetoes": [
+    [
+     "in young",
+     0.13,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "young children",
+     0.14,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "nonspecific prompting",
+     0.46,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp3c2i4",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.46,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "the outpatient",
+     0.42,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp3c2i5",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.49,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ],
+    [
+     "transient relaxations",
+     0.36,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp4c1i4",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.48,
+     "abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia"
+    ],
+    [
+     "transient relaxations",
+     0.45,
+     "abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp4c2i6",
+   "vetoes": [
+    [
+     "young children",
+     0.2,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp5c1i3",
+   "vetoes": [
+    [
+     "gerd in",
+     0.27,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "in young",
+     0.29,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "young children",
+     0.22,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 1,
+   "id": "cp5c1i4",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.29,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ],
+    [
+     "relaxations of",
+     0.25,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp1c1i4",
+   "vetoes": [
+    [
+     "from abnormal",
+     0.44,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "abnormal transient",
+     0.24,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "relaxations of",
+     0.26,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp1c1i6",
+   "vetoes": [
+    [
+     "in young",
+     0.11,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.14,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "nonspecific prompting",
+     0.5,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp1c2i6",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.18,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp2c2i4",
+   "vetoes": [
+    [
+     "from abnormal",
+     0.35,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "abnormal transient",
+     0.17,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "relaxations of",
+     0.18,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp2c2i5",
+   "vetoes": [
+    [
+     "in young",
+     0.25,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.26,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp3c1i6",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.44,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ],
+    [
+     "the outpatient",
+     0.46,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp3c2i3",
+   "vetoes": [
+    [
+     "young children",
+     0.17,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "in young",
+     0.14,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp3c2i4",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.22,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "transient relaxations",
+     0.19,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "from abnormal",
+     0.5,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp4c1i3",
+   "vetoes": [
+    [
+     "affects quality",
+     0.41,
+     "GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp4c2i6",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.12,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp5c1i4",
+   "vetoes": [
+    [
+     "in young",
+     0.12,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ],
+    [
+     "young children",
+     0.18,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "gp5c1i5",
+   "vetoes": [
+    [
+     "from abnormal",
+     0.39,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "abnormal transient",
+     0.19,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ],
+    [
+     "transient relaxations",
+     0.18,
+     "Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "md2c2i3",
+   "vetoes": [
+    [
+     "specific variant",
+     0.38,
+     "In this study, MEFV gene analysis results and clinical findings of 27,504 patients from 35 universities and institutions in Turkey and Northern Cyprus are combined in an effort to provide a better insight into the genotype-phenotype correlation and how a specific variant contributes to certain clinical findings in FMF patients."
+    ],
+    [
+     "certain clinical",
+     0.49,
+     "In this study, MEFV gene analysis results and clinical findings of 27,504 patients from 35 universities and institutions in Turkey and Northern Cyprus are combined in an effort to provide a better insight into the genotype-phenotype correlation and how a specific variant contributes to certain clinical findings in FMF patients."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "md3c2i2",
+   "vetoes": [
+    [
+     "incidence in",
+     0.5,
+     "Caused by the mutations in the MEditerranean FeVer (MEFV) gene, it mainly affects people of Mediterranean descent with a higher incidence in the Turkish, Jewish, Arabic, and Armenian populations."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "md4c1i1",
+   "vetoes": [
+    [
+     "incidence in",
+     0.48,
+     "Caused by the mutations in the MEditerranean FeVer (MEFV) gene, it mainly affects people of Mediterranean descent with a higher incidence in the Turkish, Jewish, Arabic, and Armenian populations."
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp1c2i4",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.33,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "attributable to",
+     0.45,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "those most",
+     0.42,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "warrant referral",
+     0.48,
+     "proton pump inhibitor trials as well as specific indications or clinical settings that warrant referral to Gastroenterology specialists"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp1c2i5",
+   "vetoes": [
+    [
+     "most effectively",
+     0.45,
+     "most effectively treated with proton-pump inhibitors (PPIs)"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp2c1i4",
+   "vetoes": [
+    [
+     "in young",
+     0.14,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "young children",
+     0.12,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "nonspecific prompting",
+     0.49,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp3c1i5",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.49,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp3c2i3",
+   "vetoes": [
+    [
+     "the clinical",
+     0.47,
+     "The clinical manifestations of GERD in young children are varied and nonspecific"
+    ],
+    [
+     "gerd in",
+     0.28,
+     "The clinical manifestations of GERD in young children are varied and nonspecific"
+    ],
+    [
+     "in young",
+     0.2,
+     "The clinical manifestations of GERD in young children are varied and nonspecific"
+    ],
+    [
+     "young children",
+     0.16,
+     "The clinical manifestations of GERD in young children are varied and nonspecific"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp3c2i4",
+   "vetoes": [
+    [
+     "symptoms potentially",
+     0.4,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "attributable to",
+     0.49,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ],
+    [
+     "the outpatient",
+     0.47,
+     "Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp3c2i5",
+   "vetoes": [
+    [
+     "transient relaxations",
+     0.46,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp4c1i4",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.33,
+     "abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia"
+    ],
+    [
+     "transient relaxations",
+     0.4,
+     "abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp4c2i6",
+   "vetoes": [
+    [
+     "young children",
+     0.22,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp5c1i3",
+   "vetoes": [
+    [
+     "gerd in",
+     0.28,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "in young",
+     0.23,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ],
+    [
+     "young children",
+     0.25,
+     "The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation"
+    ]
+   ],
+   "not_asked": false
+  },
+  {
+   "rep": 2,
+   "id": "cp5c1i4",
+   "vetoes": [
+    [
+     "abnormal transient",
+     0.29,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ],
+    [
+     "relaxations of",
+     0.32,
+     "abnormal transient relaxations of the lower esophageal sphincter"
+    ]
+   ],
+   "not_asked": false
+  }
+ ],
+ "not_asked_total": 0,
+ "failed_checks": [
+  {
+   "label": "cr5",
+   "check": 2,
+   "error": "SentenceCheckUnreadable: Jev made no verdict (http_error); approve nothing"
+  }
+ ],
+ "candidate_totals": {
+  "candidates": 304,
+  "item1": 145,
+  "item2": 143,
+  "pair1": 122,
+  "pair2": 122,
+  "item_call_in_pair1": 144,
+  "item_call_in_pair2": 148,
+  "item1_xor_item2": 10,
+  "pair1_xor_pair2": 10,
+  "flip_in_any_of_4_item_readings": 20
+ },
+ "spend": {
+  "item1": 0.00508,
+  "item2": 0.00508,
+  "pair1": 0.04254,
+  "pair2": 0.04254
+ },
+ "failed_spend": 0.0004,
+ "summary": {
+  "plain": {
+   "answers": 20,
+   "live_prose": {
+    "total": 58,
+    "mean": 2.9,
+    "min": 0,
+    "max": 6
+   },
+   "item1": {
+    "total": 62,
+    "mean": 3.1,
+    "min": 0,
+    "max": 7
+   },
+   "item2": {
+    "total": 61,
+    "mean": 3.05,
+    "min": 0,
+    "max": 7
+   },
+   "pair1": {
+    "total": 48,
+    "mean": 2.4,
+    "min": 0,
+    "max": 6
+   },
+   "pair2": {
+    "total": 47,
+    "mean": 2.35,
+    "min": 0,
+    "max": 6
+   },
+   "item1_B": {
+    "total": 64,
+    "mean": 3.2,
+    "min": 0,
+    "max": 7
+   },
+   "item2_B": {
+    "total": 63,
+    "mean": 3.15,
+    "min": 0,
+    "max": 7
+   },
+   "pair1_B": {
+    "total": 54,
+    "mean": 2.7,
+    "min": 0,
+    "max": 6
+   },
+   "pair2_B": {
+    "total": 53,
+    "mean": 2.65,
+    "min": 0,
+    "max": 6
+   },
+   "pair1_itemcall": {
+    "total": 62,
+    "mean": 3.1,
+    "min": 0,
+    "max": 7
+   },
+   "pair2_itemcall": {
+    "total": 64,
+    "mean": 3.2,
+    "min": 0,
+    "max": 7
+   },
+   "zero_pair_not_item_A": [],
+   "item_noise_A": [
+    1,
+    1
+   ],
+   "pair_noise_A": [
+    5,
+    5
+   ],
+   "zero_pair_not_item_B": [],
+   "item_noise_B": [
+    1,
+    1
+   ],
+   "pair_noise_B": [
+    5,
+    5
+   ],
+   "zero_pair_not_item": [],
+   "zero_by_run": {
+    "item1": [
+     "cm2",
+     "cm3"
+    ],
+    "item2": [
+     "cm2",
+     "cm3"
+    ],
+    "pair1": [
+     "cm2",
+     "cm3"
+    ],
+    "pair2": [
+     "cm2"
+    ]
+   },
+   "item_noise_answers_differ": 1,
+   "item_noise_abs_sum": 1,
+   "pair_noise_answers_differ": 5,
+   "pair_noise_abs_sum": 5
+  },
+  "researcher": {
+   "answers": 9,
+   "live_prose": {
+    "total": 47,
+    "mean": 5.22,
+    "min": 1,
+    "max": 9
+   },
+   "item1": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "item2": {
+    "total": 50,
+    "mean": 5.56,
+    "min": 3,
+    "max": 9
+   },
+   "pair1": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "pair2": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "item1_B": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "item2_B": {
+    "total": 50,
+    "mean": 5.56,
+    "min": 3,
+    "max": 9
+   },
+   "pair1_B": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "pair2_B": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "pair1_itemcall": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "pair2_itemcall": {
+    "total": 49,
+    "mean": 5.44,
+    "min": 2,
+    "max": 9
+   },
+   "zero_pair_not_item_A": [],
+   "item_noise_A": [
+    3,
+    3
+   ],
+   "pair_noise_A": [
+    0,
+    0
+   ],
+   "zero_pair_not_item_B": [],
+   "item_noise_B": [
+    3,
+    3
+   ],
+   "pair_noise_B": [
+    0,
+    0
+   ],
+   "zero_pair_not_item": [],
+   "zero_by_run": {
+    "item1": [],
+    "item2": [],
+    "pair1": [],
+    "pair2": []
+   },
+   "item_noise_answers_differ": 3,
+   "item_noise_abs_sum": 3,
+   "pair_noise_answers_differ": 0,
+   "pair_noise_abs_sum": 0
+  }
+ }
+}

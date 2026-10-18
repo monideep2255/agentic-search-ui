@@ -1,0 +1,8 @@
+G-032: wall 28.747s withdrawn=False citations=21 synth calls=2 [8.893, 9.209] jev batch=[0.34] cands=[6] approved=[1] guard_would=[6]
+G-013: wall 15.358s withdrawn=False citations=22 synth calls=2 [2.646, 3.436] jev batch=[0.439, 0.389] cands=[2, 2] approved=[0, 0] guard_would=[2, 2]
+G-025: wall 27.818s withdrawn=True citations=76 synth calls=2 [6.348, 11.957] jev batch=[] cands=[] approved=[] guard_would=[]
+G-003: wall 12.193s withdrawn=True citations=26 synth calls=2 [2.8, 3.018] jev batch=[] cands=[] approved=[] guard_would=[]
+G-026: wall 10.265s withdrawn=False citations=47 synth calls=2 [2.501, 1.951] jev batch=[] cands=[] approved=[] guard_would=[]
+G-001: wall 17.165s withdrawn=False citations=59 synth calls=2 [3.7, 5.63] jev batch=[] cands=[] approved=[] guard_would=[]
+G-038: wall 15.297s withdrawn=False citations=7 synth calls=2 [2.986, 5.604] jev batch=[0.259, 0.339] cands=[8, 12] approved=[1, 5] guard_would=[8, 12]
+done

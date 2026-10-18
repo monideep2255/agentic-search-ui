@@ -1,0 +1,4 @@
+{"model": "anthropic/claude-opus-5.5", "effort": "minimal", "accepted": true, "seconds": 3.08, "completion_tokens": 97, "reasoning_tokens": 0, "finish": "stop", "cost_usd": 0.002032}
+{"model": "openai/gpt-6-astra", "effort": "minimal", "accepted": true, "seconds": 1.4, "completion_tokens": 36, "reasoning_tokens": 0, "finish": "stop", "cost_usd": 0.00198}
+{"model": "google/gemini-3.1-pro-preview", "effort": "minimal", "accepted": true, "seconds": 5.25, "completion_tokens": 359, "reasoning_tokens": 319, "finish": "stop", "cost_usd": 0.00433}
+{"model": "google/gemini-3.8-flash", "effort": "minimal", "accepted": true, "seconds": 1.91, "completion_tokens": 50, "reasoning_tokens": 0, "finish": "stop", "cost_usd": 0.00019575}

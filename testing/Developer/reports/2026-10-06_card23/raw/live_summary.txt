@@ -1,0 +1,21 @@
+== r1: cost $0.022309028, 21820 ms
+   headings: ['Disease records found', 'Variant-to-disease mapping', 'Gene records found', 'Pubmed records found', 'Clinvar records found', 'Omim records found', 'Clinical trial records found']
+   variant table shown: True; source notes: 1
+   table header: ['Variant', 'Identifier', 'Associated disease(s)'], rows: 38
+   tokens between last row and note: ['paragraph_break']
+   on screen the note shows: in place, before the next block
+   rows whose own citation is a ClinVar variation record: 38 of 38
+   disease names with a MedGen record cited on the row: 17 of 17
+   variant row citation sources: ['ClinVar']
+== r2: cost $0.01833584, 24858 ms
+   headings: ['Disease records found', 'Variant-to-disease mapping', 'Gene records found', 'Pubmed records found', 'Clinvar records found', 'Omim records found', 'Clinical trial records found']
+   variant table shown: True; source notes: 1
+   table header: ['Variant', 'Identifier', 'Associated disease(s)'], rows: 38
+   tokens between last row and note: ['paragraph_break']
+   on screen the note shows: in place, before the next block
+   rows whose own citation is a ClinVar variation record: 38 of 38
+   disease names with a MedGen record cited on the row: 17 of 17
+   variant row citation sources: ['ClinVar']
+== p1: cost $0.018560216, 17628 ms
+   headings: ['Where this answer comes from']
+   variant table shown: False; source notes: 0

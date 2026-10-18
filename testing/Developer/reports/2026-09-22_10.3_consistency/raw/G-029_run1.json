@@ -1,0 +1,248 @@
+{
+ "record": {
+  "id": "G-029",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with Li-Fraumeni syndrome?",
+  "session_id": "c103-78bc791e9ec6",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:59:30+00:00",
+  "run_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0085390"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 2 sources",
+  "citations": 4,
+  "distinct_sources": 4,
+  "citations_by_layer": {
+   "layer_1_graph": 3,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 77,
+  "answer_start": "Found 3 gene records for Li-Fraumeni syndrome: checkpoint kinase 2 [1], cyclin dependent kinase inhibitor 2A [2] and tumor protein p53 [4], linked to 1 disease:",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 6.057,
+  "seconds": 11.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 12,
+   "citation": 4,
+   "trust_signal": 5,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 0,
+   "ts": "2026-09-22T16:57:59.583885Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 2,
+   "ts": "2026-09-22T16:58:02.158375Z",
+   "payload": {
+    "narrative": "A single query asking which genes are associated with a disease; one or two API calls to disease-gene associations should suffice. (Li-Fraumeni syndrome: 1 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Li-Fraumeni syndrome",
+      "curie": "MedGen:C0085390",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 4,
+   "ts": "2026-09-22T16:58:02.161526Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-870e02e000c8",
+      "layer": "layer_1_graph",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Li-Fraumeni syndrome",
+      "curie": "MedGen:C0085390",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 6,
+   "ts": "2026-09-22T16:58:02.163051Z",
+   "payload": {
+    "call_id": "cq-870e02e000c8",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 7,
+   "ts": "2026-09-22T16:58:03.521941Z",
+   "payload": {
+    "call_id": "cq-870e02e000c8",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 8,
+   "ts": "2026-09-22T16:58:03.523134Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:11200",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/11200",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "checkpoint kinase 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1029",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1029",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cyclin dependent kinase inhibitor 2A",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0085390",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0085390",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "74966806-0d73-4cdb-9dbb-0a1a46a5aefd",
+   "seq": 31,
+   "ts": "2026-09-22T16:58:07.948800Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 6057,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 2 sources",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for Li-Fraumeni syndrome: checkpoint kinase 2 [1], cyclin dependent kinase inhibitor 2A [2] and tumor protein p53 [4], linked to 1 disease: Li-Fraumeni syndrome [3]. \n\nThe gene checkpoint kinase 2, identified as NCBIGene:11200, is also associated with Li-Fraumeni syndrome [1]. \n\nDisease records found\n\nDisease name: Li-Fraumeni syndrome [3]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [2]. Gene NCBIGene:11200, name: checkpoint kinase 2 [1]. Gene NCBIGene:7157, name: tumor protein p53 [4]. "
+}

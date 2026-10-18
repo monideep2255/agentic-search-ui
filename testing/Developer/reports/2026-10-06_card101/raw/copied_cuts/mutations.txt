@@ -1,0 +1,48 @@
+M1 code approves every copy again (is_whole_record_sentence always True)
+  10 failed, 6 passed in 1.97s
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[approves
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[call
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[cost
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[too
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[unreadable]
+  red: test_a_copied_cut_becomes_a_check_candidate[antibiotics,
+  red: test_a_copied_cut_becomes_a_check_candidate[aspirin,
+  red: test_an_approved_cut_shows_and_the_fragment_rule_still_applies
+  red: test_the_check_approving_the_cuts_shows_them
+  red: test_two_copied_clauses_are_read_joined
+
+M2 no copy is ever whole (is_whole_record_sentence always False)
+  10 failed, 6 passed in 2.02s
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[approves
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[call
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[cost
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[too
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[unreadable]
+  red: test_a_whole_record_sentence_is_not_a_candidate[as
+  red: test_a_whole_record_sentence_is_not_a_candidate[first
+  red: test_a_whole_record_sentence_is_not_a_candidate[with
+  red: test_a_whole_record_sentence_shows_without_a_call
+  red: test_the_code_built_listing_still_grounds_whole
+
+M3 the check reads the clause alone, not the sentence up to it
+  1 failed, 15 passed in 2.05s
+  red: test_two_copied_clauses_are_read_joined
+
+M4 a collected cut is also kept on the first pass
+  8 failed, 8 passed in 2.03s
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[approves
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[call
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[cost
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[too
+  red: test_a_check_that_cannot_approve_shows_none_of_the_cuts[unreadable]
+  red: test_a_copied_cut_becomes_a_check_candidate[antibiotics,
+  red: test_a_copied_cut_becomes_a_check_candidate[aspirin,
+  red: test_two_copied_clauses_are_read_joined
+
+M5 a semicolon is not a sentence boundary
+  1 failed, 15 passed in 2.12s
+  red: test_the_code_built_listing_still_grounds_whole
+
+M6 a wrapped value goes to the check too
+  1 failed, 15 passed in 2.09s
+  red: test_a_wrapped_record_value_keeps_todays_path_for_now

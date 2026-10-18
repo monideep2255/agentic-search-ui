@@ -1,0 +1,89 @@
+Showing 11–20 of 38
+NM_000545.8(HNF1A):c.1108-6del⁠17
+ClinVar:1108836
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1108-15G>A⁠18
+ClinVar:1108874
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.245C>T (p.Thr82Met)⁠19
+ClinVar:1120099
+None named: the ClinVar record says not provided and not specified
+NM_000545.8(HNF1A):c.1011C>T (p.Ser337=)⁠20, 2
+ClinVar:1134661
+Maturity-onset diabetes of the young
+NM_000545.8(HNF1A):c.1719_1720inv (p.Ser574Gly)⁠21
+ClinVar:1148460
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.956-8C>T⁠22
+ClinVar:1158429
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1345_1346insG (p.Ile449fs)⁠23, 2
+ClinVar:1172848
+Maturity-onset diabetes of the young
+NM_000545.8(HNF1A):c.787C>G (p.Arg263Gly)⁠24
+ClinVar:1172902
+None named: the ClinVar record says not specified
+NM_000545.8(HNF1A):c.737T>G (p.Val246Gly)⁠25, 6, 9
+ClinVar:1173962
+Maturity-onset diabetes of the young type 3; Monogenic diabetes
+NM_000545.8(HNF1A):c.1369_1384dup (p.Val462fs)⁠26, 6
+ClinVar:1173963
+Maturity-onset diabetes of the young type 3
+----
+Showing 21–30 of 38
+NM_000545.8(HNF1A):c.1310-2A>G⁠27
+ClinVar:1179147
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.361T>C (p.Ser121Pro)⁠28
+ClinVar:1187378
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.-89T>C⁠29
+ClinVar:1203907
+None named: the ClinVar record says not provided and not specified
+NM_000545.8(HNF1A):c.-96T>G⁠30
+ClinVar:1204628
+None named: the ClinVar record says not provided and not specified
+NM_000545.8(HNF1A):c.1309+26C>T⁠31
+ClinVar:1207870
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1502-147A>G⁠32
+ClinVar:1211421
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1501+65G>C⁠33
+ClinVar:1215166
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.526+53C>G⁠34
+ClinVar:1218569
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1768+44C>T⁠35
+ClinVar:1224743
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1108-42G>T⁠36
+ClinVar:1228030
+None named: the ClinVar record says not provided
+----
+Showing 31–38 of 38
+NM_000545.8(HNF1A):c.327-91G>A⁠37
+ClinVar:1232183
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1769-159_1769-158insTT⁠38
+ClinVar:1249732
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.526+66G>C⁠39
+ClinVar:1253208
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1080_1081dup (p.Ser361fs)⁠40
+ClinVar:1256569
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.1502-19CT[2]⁠41
+ClinVar:1256570
+None named: the ClinVar record says not provided and not specified
+NM_000545.8(HNF1A):c.1641_1642del (p.Glu548fs)⁠42
+ClinVar:1256571
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.17G>T (p.Ser6Ile)⁠43
+ClinVar:1256572
+None named: the ClinVar record says not provided
+NM_000545.8(HNF1A):c.401_406dup (p.Asp135_Thr136insIleAsp)⁠44
+ClinVar:1256573
+None named: the ClinVar record says not provided

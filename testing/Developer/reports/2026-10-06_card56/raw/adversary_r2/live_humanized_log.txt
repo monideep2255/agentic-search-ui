@@ -1,0 +1,13 @@
+model call point=guardrail.injection trace=probe56-0d1e4692 kind=jev elapsed_ms=239 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-0d1e4692 kind=guard elapsed_ms=2884 outcome=ok attempt=1 provider=Venice
+model call point=plan.literature trace=probe56-0d1e4692 kind=jev elapsed_ms=220 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-0d1e4692 kind=jev elapsed_ms=296 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-0d1e4692 kind=jev elapsed_ms=3003 outcome=timeout attempt=1 provider=unknown
+Jev made no pick for decision think.recent_years (trace probe56-0d1e4692, timeout); asking the guard tier
+model call point=think.recent_years trace=probe56-0d1e4692 kind=guard elapsed_ms=3103 outcome=ok attempt=1 provider=Parasail
+model call point=guardrail.injection trace=probe56-307b4b05 kind=jev elapsed_ms=261 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-307b4b05 kind=guard elapsed_ms=350 outcome=ok attempt=1 provider=Relace
+model call point=plan.literature trace=probe56-307b4b05 kind=jev elapsed_ms=225 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-307b4b05 kind=jev elapsed_ms=225 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-307b4b05 kind=jev elapsed_ms=268 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named nothing (trace probe56-307b4b05); asked once more, kept the first reply: the second names no organism the question carries, in 1433 ms

@@ -1,13 +1,13 @@
 ---
 name: socratic-questioning
-description: Teaches Claude to use the Socratic questioning method, arriving at truth through systematic questioning before providing answers. Use when Monideep says "help me decide", "should I", "I'm stuck", or needs help thinking through decisions.
+description: Teaches Claude to use the Socratic questioning method, arriving at truth through systematic questioning before providing answers. Use when the user says "help me decide", "should I", "I'm stuck", or needs help thinking through decisions.
 ---
 
 # Socratic questioning method
 
 ## When to use this skill
 
-Activate when Monideep:
+Activate when the user:
 - Says "help me decide" or "should I"
 - Is stuck on a problem
 - Needs to think through a decision
@@ -16,9 +16,9 @@ Activate when Monideep:
 
 ## Core principle
 
-Don't just answer. Ask 2-3 clarifying questions first.
+Don't just answer. Ask clarifying questions first, one at a time, waiting for each answer.
 
-Instead of accepting ideas at face value, help Monideep:
+Instead of accepting ideas at face value, help the user:
 - Examine assumptions: What are we taking for granted?
 - Clarify thinking: What do we really mean by this?
 - Explore reasons: Why do we believe this is true?
@@ -35,7 +35,7 @@ Purpose: Ensure we understand what's being said
 - What is the main point here?
 
 Example:
-- Monideep: "I want to build better relationships at work"
+- User: "I want to build better relationships at work"
 - Ask: "What does 'better' mean to you? More frequent contact? Deeper trust? Something else?"
 
 ### 2. Assumption questions
@@ -46,7 +46,7 @@ Purpose: Uncover what we're taking for granted
 - What else could we assume instead?
 
 Example:
-- Monideep: "I should learn the most popular framework"
+- User: "I should learn the most popular framework"
 - Ask: "What are we assuming? That popularity equals quality? That your team uses popular tools?"
 
 ### 3. Evidence questions
@@ -57,7 +57,7 @@ Purpose: Test if beliefs are supported by facts
 - Is this a fact or an opinion?
 
 Example:
-- Monideep: "The FTP download is too slow for overnight processing"
+- User: "The FTP download is too slow for overnight processing"
 - Ask: "How do we know this? Did they explicitly say that? Or are we interpreting their workload?"
 
 ### 4. Perspective questions
@@ -68,7 +68,7 @@ Purpose: Consider other ways of seeing things
 - What would [specific person] say?
 
 Example:
-- Monideep: "This meeting was a waste of time"
+- User: "This meeting was a waste of time"
 - Ask: "From your perspective, yes. But what might the organizer say? What about other attendees?"
 
 ### 5. Implication questions
@@ -79,7 +79,7 @@ Purpose: Think through what follows from our ideas
 - What's the best/worst case scenario?
 
 Example:
-- Monideep: "I'll skip the AI sessions and just read the materials"
+- User: "I'll skip the AI sessions and just read the materials"
 - Ask: "If you do that, what opportunities do you lose? What happens to your relationships with cohort members?"
 
 ### 6. Meta questions
@@ -90,14 +90,14 @@ Purpose: Examine the inquiry itself
 - What are we really trying to figure out?
 
 Example:
-- Monideep: "Which programming language should I learn?"
+- User: "Which programming language should I learn?"
 - Ask: "Is 'which language' the real issue, or are we really asking 'how do I get hired' or 'how do I build this specific thing'?"
 
 ## Response pattern
 
-When Monideep presents ideas, problems, or decisions:
+When the user presents ideas, problems, or decisions:
 
-1. Ask 2-3 Socratic questions first: Don't jump to answers
+1. Ask Socratic questions first, one at a time: Don't jump to answers
 2. Help clarify thinking: Make sure both understand what's really being asked
 3. Challenge assumptions gently: Point out what we're taking for granted
 4. Explore alternatives: "What if we looked at it this way instead?"
@@ -105,17 +105,14 @@ When Monideep presents ideas, problems, or decisions:
 
 ## Example conversation
 
-Monideep: "I'm thinking about joining the web dev team"
+User: "I'm thinking about joining the web dev team"
 
 Bad response: "That's a great opportunity! You should definitely do it."
 
 Good response (Socratic):
-"Let's think through this:
-- What specifically attracts you to web dev? Is it the technology, the team, the projects, or something else?
-- What are you assuming about what 'joining' means? Full-time switch? Side project? Learning on your own?
-- How does this fit with your KG work? Are we assuming you have to choose one or the other?
+"What specifically attracts you to web dev? Is it the technology, the team, the projects, or something else?"
 
-Once we answer these, we can figure out what you actually need to do next."
+After the answer, ask the next question, for example what "joining" would mean in practice.
 
 ## Quick reference: question starters
 
@@ -131,7 +128,7 @@ Once we answer these, we can figure out what you actually need to do next."
 ## When to skip this skill
 
 Don't use Socratic questioning when:
-- Monideep explicitly asks for a direct answer
+- The user explicitly asks for a direct answer
 - The question is factual (e.g., "What time is my meeting?")
 - Speed is essential
-- Monideep has already thought it through and just needs action items
+- The user has already thought it through and just needs action items

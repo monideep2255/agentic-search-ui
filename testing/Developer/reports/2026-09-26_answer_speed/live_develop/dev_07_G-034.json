@@ -1,0 +1,582 @@
+{
+ "id": "G-034",
+ "question": "How many genes in the graph are associated with breast cancer?",
+ "started_at": "2026-09-26T21:36:53+00:00",
+ "run_id": "61f2ee5d-380f-4875-9330-fa0e8818a5a6",
+ "create_s": 0.203,
+ "stream_open_s": 0.392,
+ "headers": {
+  "cache-control": "no-store",
+  "content-type": "text/event-stream; charset=utf-8",
+  "server": "railway-hikari",
+  "x-accel-buffering": "no",
+  "transfer-encoding": "chunked",
+  "x-railway-edge": "iad1",
+  "connection": "close"
+ },
+ "events": [
+  {
+   "arrive_s": 2.886,
+   "type": "guard",
+   "seq": 0,
+   "ts": "2026-09-26T21:35:17.404236Z",
+   "summary": "passed=True",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   },
+   "text": null,
+   "lag_s": 0.012,
+   "server_s": 2.677
+  },
+  {
+   "arrive_s": 6.19,
+   "type": "think",
+   "seq": 2,
+   "ts": "2026-09-26T21:35:20.709083Z",
+   "summary": "class=aggregate",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.011,
+   "server_s": 5.982
+  },
+  {
+   "arrive_s": 7.174,
+   "type": "plan",
+   "seq": 4,
+   "ts": "2026-09-26T21:35:21.699542Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.005,
+   "server_s": 6.972
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 6,
+   "ts": "2026-09-26T21:35:21.700967Z",
+   "summary": "cypher_query:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 7,
+   "ts": "2026-09-26T21:35:21.701004Z",
+   "summary": "pubtator_annotate:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 8,
+   "ts": "2026-09-26T21:35:21.701014Z",
+   "summary": "clinicaltrials_search:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 9,
+   "ts": "2026-09-26T21:35:21.701022Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 10,
+   "ts": "2026-09-26T21:35:21.701030Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 11,
+   "ts": "2026-09-26T21:35:21.701038Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 12,
+   "ts": "2026-09-26T21:35:21.701045Z",
+   "summary": "pubtator_annotate:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.199,
+   "type": "tool_start",
+   "seq": 13,
+   "ts": "2026-09-26T21:35:21.701054Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.028,
+   "server_s": 6.974
+  },
+  {
+   "arrive_s": 7.325,
+   "type": "tool_result",
+   "seq": 14,
+   "ts": "2026-09-26T21:35:21.852437Z",
+   "summary": "pubtator_annotate:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.003,
+   "server_s": 7.125
+  },
+  {
+   "arrive_s": 7.333,
+   "type": "tool_result",
+   "seq": 15,
+   "ts": "2026-09-26T21:35:21.854290Z",
+   "summary": "clinicaltrials_search:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.009,
+   "server_s": 7.127
+  },
+  {
+   "arrive_s": 7.476,
+   "type": "tool_result",
+   "seq": 16,
+   "ts": "2026-09-26T21:35:22.006065Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.0,
+   "server_s": 7.279
+  },
+  {
+   "arrive_s": 7.668,
+   "type": "tool_result",
+   "seq": 17,
+   "ts": "2026-09-26T21:35:22.197364Z",
+   "summary": "ncbi_efetch:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 7.47
+  },
+  {
+   "arrive_s": 9.845,
+   "type": "tool_result",
+   "seq": 18,
+   "ts": "2026-09-26T21:35:24.352450Z",
+   "summary": "cypher_query:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.023,
+   "server_s": 9.625
+  },
+  {
+   "arrive_s": 9.845,
+   "type": "tool_result",
+   "seq": 19,
+   "ts": "2026-09-26T21:35:24.352563Z",
+   "summary": "ncbi_efetch:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.023,
+   "server_s": 9.625
+  },
+  {
+   "arrive_s": 9.845,
+   "type": "tool_result",
+   "seq": 20,
+   "ts": "2026-09-26T21:35:24.352583Z",
+   "summary": "pubtator_annotate:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.022,
+   "server_s": 9.625
+  },
+  {
+   "arrive_s": 9.957,
+   "type": "tool_result",
+   "seq": 21,
+   "ts": "2026-09-26T21:35:24.482448Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.005,
+   "server_s": 9.755
+  },
+  {
+   "arrive_s": 9.962,
+   "type": "step",
+   "seq": 22,
+   "ts": "2026-09-26T21:35:24.483743Z",
+   "summary": "write:started",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   },
+   "text": null,
+   "lag_s": 0.008,
+   "server_s": 9.756
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 23,
+   "ts": "2026-09-26T21:35:27.781115Z",
+   "summary": "len=63 kind=claim",
+   "payload": null,
+   "text": "Found 1 derived record for breast cancer: MedGen:C1320450 [1]. ",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 24,
+   "ts": "2026-09-26T21:35:27.781174Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 25,
+   "ts": "2026-09-26T21:35:27.781183Z",
+   "summary": "len=23 kind=heading",
+   "payload": null,
+   "text": "Derived records found\n\n",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 26,
+   "ts": "2026-09-26T21:35:27.781189Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 27,
+   "ts": "2026-09-26T21:35:27.781196Z",
+   "summary": "len=35 kind=table_row",
+   "payload": null,
+   "text": "Derived MedGen:C1320450, n: 0 [1]. ",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 28,
+   "ts": "2026-09-26T21:35:27.781203Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 29,
+   "ts": "2026-09-26T21:35:27.781209Z",
+   "summary": "len=22 kind=heading",
+   "payload": null,
+   "text": "Medgen records found\n\n",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 30,
+   "ts": "2026-09-26T21:35:27.781216Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 31,
+   "ts": "2026-09-26T21:35:27.781222Z",
+   "summary": "len=47 kind=table_row",
+   "payload": null,
+   "text": "Medgen title: Seen by breast cancer nurse [2]. ",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 32,
+   "ts": "2026-09-26T21:35:27.781230Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 33,
+   "ts": "2026-09-26T21:35:27.781236Z",
+   "summary": "len=125 kind=note",
+   "payload": null,
+   "text": "Note: the written summary of these records could not be verified against them, so this answer lists the records found instead",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 34,
+   "ts": "2026-09-26T21:35:27.781245Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "token",
+   "seq": 35,
+   "ts": "2026-09-26T21:35:27.781253Z",
+   "summary": "len=479 kind=note",
+   "payload": null,
+   "text": "Note: this answer does not address the following entities named in the question: Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer.",
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "citation",
+   "seq": 36,
+   "ts": "2026-09-26T21:35:27.781262Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.267,
+   "type": "citation",
+   "seq": 37,
+   "ts": "2026-09-26T21:35:27.781291Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.016,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.268,
+   "type": "trust_signal",
+   "seq": 38,
+   "ts": "2026-09-26T21:35:27.781312Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.268,
+   "type": "trust_signal",
+   "seq": 39,
+   "ts": "2026-09-26T21:35:27.781328Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.268,
+   "type": "trust_signal",
+   "seq": 40,
+   "ts": "2026-09-26T21:35:27.781342Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.054
+  },
+  {
+   "arrive_s": 13.275,
+   "type": "done",
+   "seq": 42,
+   "ts": "2026-09-26T21:35:27.781415Z",
+   "summary": "elapsed_ms=13054 outcome=ask",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 13054,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.95,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 194
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 135
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 146
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 201
+     }
+    ]
+   },
+   "text": null,
+   "lag_s": 0.024,
+   "server_s": 13.054
+  }
+ ],
+ "moments": {
+  "first_event": {
+   "arrive_s": 2.886,
+   "server_s": 2.677,
+   "lag_s": 0.012
+  },
+  "guard": {
+   "arrive_s": 2.886,
+   "server_s": 2.677,
+   "lag_s": 0.012
+  },
+  "think": {
+   "arrive_s": 6.19,
+   "server_s": 5.982,
+   "lag_s": 0.011
+  },
+  "plan": {
+   "arrive_s": 7.174,
+   "server_s": 6.972,
+   "lag_s": 0.005
+  },
+  "first_tool_start": {
+   "arrive_s": 7.199,
+   "server_s": 6.974,
+   "lag_s": 0.028
+  },
+  "last_tool_result": {
+   "arrive_s": 9.957,
+   "server_s": 9.755,
+   "lag_s": 0.005
+  },
+  "write_started": {
+   "arrive_s": 9.962,
+   "server_s": 9.756,
+   "lag_s": 0.008
+  },
+  "first_token": {
+   "arrive_s": 13.267,
+   "server_s": 13.054,
+   "lag_s": 0.016
+  },
+  "last_token": {
+   "arrive_s": 13.267,
+   "server_s": 13.054,
+   "lag_s": 0.016
+  },
+  "done": {
+   "arrive_s": 13.275,
+   "server_s": 13.054,
+   "lag_s": 0.024
+  },
+  "n_events": 39,
+  "n_tokens": 13,
+  "max_lag_s": 0.028,
+  "withdrawn": true
+ }
+}

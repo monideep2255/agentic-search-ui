@@ -1,0 +1,752 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-7071fa747253",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:06:13+00:00",
+  "run_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0206693",
+   "MedGen:C1335487",
+   "MedGen:C1412014",
+   "MedGen:C1709664",
+   "MedGen:C5419191",
+   "MedGen:C5419192",
+   "MedGen:C5419517",
+   "MedGen:C5556661"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 7 sources, not yet confirmed",
+  "citations": 9,
+  "distinct_sources": 8,
+  "citations_by_layer": {
+   "layer_2_api": 4,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "call did not complete within its per-step timeout budget"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 354,
+  "answer_start": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 93.828,
+  "seconds": 103.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 25,
+   "citation": 9,
+   "trust_signal": 10,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 0,
+   "ts": "2026-09-25T10:04:38.943808Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 2,
+   "ts": "2026-09-25T10:04:41.207048Z",
+   "payload": {
+    "narrative": "The question asks to find clinical trials for a specific disease term, which requires one or two direct API calls to a clinical trials database. (carcinoma not otherwise specified: 8 of 15 MedGen records matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 4,
+   "ts": "2026-09-25T10:04:41.213071Z",
+   "payload": {
+    "narrative": "searching 3 layers for medullary carcinoma, not otherwise specified. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-e1860f0dcd0c",
+      "layer": "layer_1_graph",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-ac8422e96858",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-f0a67187ea55",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-789a64bd7bde",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d491524ac721",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5b90818901ce",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-25425b7694b2",
+      "layer": "layer_3_enrichment",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4386a3935cf7",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 6,
+   "ts": "2026-09-25T10:04:41.215674Z",
+   "payload": {
+    "call_id": "cq-e1860f0dcd0c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 7,
+   "ts": "2026-09-25T10:04:41.215749Z",
+   "payload": {
+    "call_id": "pa-ac8422e96858",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 8,
+   "ts": "2026-09-25T10:04:41.215779Z",
+   "payload": {
+    "call_id": "ct-f0a67187ea55",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 9,
+   "ts": "2026-09-25T10:04:41.215807Z",
+   "payload": {
+    "call_id": "ne-789a64bd7bde",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 10,
+   "ts": "2026-09-25T10:04:41.215835Z",
+   "payload": {
+    "call_id": "ne-d491524ac721",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 11,
+   "ts": "2026-09-25T10:04:41.215863Z",
+   "payload": {
+    "call_id": "ne-5b90818901ce",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 12,
+   "ts": "2026-09-25T10:04:41.215891Z",
+   "payload": {
+    "call_id": "pa-25425b7694b2",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 13,
+   "ts": "2026-09-25T10:04:41.215918Z",
+   "payload": {
+    "call_id": "ne-4386a3935cf7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 14,
+   "ts": "2026-09-25T10:04:41.430599Z",
+   "payload": {
+    "call_id": "ne-789a64bd7bde",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 15,
+   "ts": "2026-09-25T10:04:41.536768Z",
+   "payload": {
+    "call_id": "pa-ac8422e96858",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 16,
+   "ts": "2026-09-25T10:04:41.679686Z",
+   "payload": {
+    "call_id": "ne-d491524ac721",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 17,
+   "ts": "2026-09-25T10:04:41.749459Z",
+   "payload": {
+    "call_id": "ct-f0a67187ea55",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 18,
+   "ts": "2026-09-25T10:06:11.216638Z",
+   "payload": {
+    "call_id": "cq-e1860f0dcd0c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "call did not complete within its per-step timeout budget",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 19,
+   "ts": "2026-09-25T10:06:11.383172Z",
+   "payload": {
+    "call_id": "pa-25425b7694b2",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 20,
+   "ts": "2026-09-25T10:06:11.447308Z",
+   "payload": {
+    "call_id": "ne-5b90818901ce",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "fetch: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 21,
+   "ts": "2026-09-25T10:06:11.473465Z",
+   "payload": {
+    "call_id": "ne-4386a3935cf7",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 22,
+   "ts": "2026-09-25T10:06:11.475725Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15365566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15365566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00004048",
+    "source_url": "https://clinicaltrials.gov/study/NCT00004048",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00026533",
+    "source_url": "https://clinicaltrials.gov/study/NCT00026533",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00100828",
+    "source_url": "https://clinicaltrials.gov/study/NCT00100828",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00118248",
+    "source_url": "https://clinicaltrials.gov/study/NCT00118248",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00134043",
+    "source_url": "https://clinicaltrials.gov/study/NCT00134043",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15365566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15365566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "104918",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7e7229ff-a93e-47a6-9133-4d8cee84a986",
+   "seq": 68,
+   "ts": "2026-09-25T10:06:20.789257Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 93828,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 7 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [2], Thalidomide in Treating Patients With Thyroid Cancer [3], Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [4], Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [5] and Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [6]. \n\nA population-based survival study of breast cancer morphology found that NOS carcinoma carried the lowest 5-year relative survival at 66% (95% CI 61-71), compared with 95% for special histologic types [1]. Morphology and hormone receptor status remained significant survival predictors after adjusting for age and stage [1]. \n\nClinical trial records found\n\nClinical trial name: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [2]. Clinical trial name: Thalidomide in Treating Patients With Thyroid Cancer [3]. Clinical trial name: Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [4]. Clinical trial name: Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [5]. Clinical trial name: Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [6]. \n\nPubmed records found\n\nPubmed title: Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study [7]. \n\nMedgen records found\n\nMedgen title: Medullary Carcinoma, Not Otherwise Specified [8]. Medgen clinical_features: MedGen lists no clinical features for Medullary Carcinoma, Not Otherwise Specified [9]. \n\nNote: this answer does not address the following entities named in the question: Medullary Carcinoma, Not Otherwise Specified, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst, Infiltrating duct carcinoma of breast, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst, Advanced Renal Cell Carcinoma, Not Otherwise Specified, Metastatic Renal Cell Carcinoma, Not Otherwise Specified, Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified, Cervical Squamous Cell Carcinoma, Not Otherwise Specified. Ask about them individually for a complete answer.\n\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry."
+}

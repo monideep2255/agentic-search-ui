@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Extract the publishable body from a standalone HTML page in this repo.
+# Extract the publishable body from a standalone HTML page in this repository.
 #
 # Why this exists: the local file is the source of truth. It is version
 # controlled, it survives the session, and it is what the product owner actually
 # opens. The published artifact is derived from it, never the other way round.
 #
 # An earlier version of this workflow had it backwards, with a scratchpad file as
-# the source and the repo copy generated from it. That put the real source in a
+# the source and the repository copy generated from it. That put the real source in a
 # temporary directory that disappears when the session ends, and it meant the
 # local page could silently fall behind the published one.
 #
@@ -26,7 +26,7 @@ if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
 fi
 
 # The fragment is a transient input to the publisher, not an artifact. It goes to
-# a temp path by default so the repo never carries two near-identical HTML files
+# a temp path by default so the repository never carries two near-identical HTML files
 # side by side, which is exactly the clutter that prompted this change.
 OUT="${2:-${TMPDIR:-/tmp}/$(basename "${SRC%.html}").body.html}"
 

@@ -1,0 +1,38 @@
+{
+ "entries": 86,
+ "entry_classes": {
+  "exact": 23,
+  "graded": 30,
+  "not runnable": 7,
+  "person": 3,
+  "screen": 23
+ },
+ "check_bullets": 380,
+ "bullet_classes": {
+  "exact": 149,
+  "graded": 80,
+  "not runnable": 39,
+  "person": 7,
+  "screen": 105
+ },
+ "context_bullets": 134,
+ "exact_checks": 186,
+ "non_exact_bullets_carrying_exact_checks": 5,
+ "entries_asking_questions": 69,
+ "unique_conversations": 80,
+ "questions_per_pass_at_most": 101,
+ "of_which_conditional_picks": 9,
+ "questions_before_sharing": 136,
+ "question_usd_per_pass": 1.84,
+ "minutes_per_pass_two_workers": 13.7,
+ "entries_with_screen_lines": 23,
+ "screen_entries_that_ask_a_question": 13,
+ "screen_capture_questions_both_widths": 38,
+ "entries_with_person_lines": 3,
+ "entries_with_not_runnable_lines": 15,
+ "grader_calls_per_pass": 63,
+ "grader_tokens_in_per_pass": 184361,
+ "grader_tokens_out_per_pass": 16770,
+ "grader_usd_per_pass": 0.54,
+ "accounts_for_three_passes_at_90_a_day": 4
+}

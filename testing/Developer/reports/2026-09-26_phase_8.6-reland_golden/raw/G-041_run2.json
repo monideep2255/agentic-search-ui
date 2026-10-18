@@ -1,0 +1,190 @@
+{
+ "record": {
+  "id": "G-041",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86c@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "Which diseases are associated with the gene ZZQXFAKE1?",
+  "session_id": "c103-9e2da868bdd7",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:51:16+00:00",
+  "run_id": "2004764d-ae54-40a2-8505-ecbee86a76ba",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 23,
+  "answer_start": "I could not identify that gene. NCBI has no record matching the name in your question, so no graph query was attempted. https://www.ncbi.nlm.nih.gov/search/all/",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 2.272,
+  "seconds": 3.4,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  },
+  "first_word_s": 2.713,
+  "first_token_ts": "2026-09-26T20:49:39.626122Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "2004764d-ae54-40a2-8505-ecbee86a76ba",
+   "seq": 0,
+   "ts": "2026-09-26T20:49:38.293720Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "2004764d-ae54-40a2-8505-ecbee86a76ba",
+   "seq": 2,
+   "ts": "2026-09-26T20:49:39.622474Z",
+   "payload": {
+    "narrative": "Asking for diseases linked to a single gene, which requires one API call to retrieve gene-disease associations.",
+    "query_class": "single_hop",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "2004764d-ae54-40a2-8505-ecbee86a76ba",
+   "seq": 4,
+   "ts": "2026-09-26T20:49:39.624454Z",
+   "payload": {
+    "narrative": "no tool selected; unresolved gene symbol candidate(s): ZZQXFAKE1",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "2004764d-ae54-40a2-8505-ecbee86a76ba",
+   "seq": 6,
+   "ts": "2026-09-26T20:49:39.626122Z",
+   "payload": {
+    "text": "I could not identify that gene. NCBI has no record matching the name in your question, so no graph query was attempted. https://www.ncbi.nlm.nih.gov/search/all/?term=ZZQXFAKE1",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "2004764d-ae54-40a2-8505-ecbee86a76ba",
+   "seq": 8,
+   "ts": "2026-09-26T20:49:39.626201Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 2272,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.95,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 117
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 97
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 160
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 171
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "I could not identify that gene. NCBI has no record matching the name in your question, so no graph query was attempted. https://www.ncbi.nlm.nih.gov/search/all/?term=ZZQXFAKE1"
+}

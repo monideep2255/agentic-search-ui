@@ -1,0 +1,36 @@
+{
+  "surface": "MCP",
+  "question": "GERD",
+  "tool": "ask_biomedical_question",
+  "args": {
+    "query": "GERD"
+  },
+  "is_error": false,
+  "outcome": "refused",
+  "trust_outcome": "refuse",
+  "citation_count": 0,
+  "citation_hosts": [],
+  "citation_urls_sample": [],
+  "first_sentence": "What would you like to know about GERD?",
+  "answer_chars": 39,
+  "answer_head": "What would you like to know about GERD?",
+  "trust_signal": {
+    "outcome": "refuse",
+    "risk_tier": "unknown",
+    "grounded": false,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": "What would you like to know about GERD?",
+    "fallback_link": "https://www.ncbi.nlm.nih.gov/search/all/?term=GERD"
+  },
+  "persona_name": "Chargaff",
+  "structured_keys": [
+    "answer",
+    "citations",
+    "persona_name",
+    "run_id",
+    "trust_signal"
+  ],
+  "wall_s": 3.3
+}

@@ -1,0 +1,1705 @@
+{
+ "record": {
+  "id": "G-001",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p81@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.",
+  "session_id": "c103-7271e38da181",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:01:41+00:00",
+  "run_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "NCBIGene:672",
+   "NCBIGene:140660",
+   "NCBIGene:127886930",
+   "NCBIGene:129664047",
+   "NCBIGene:126862571",
+   "NCBIGene:110485084",
+   "NCBIGene:111589216",
+   "NCBIGene:111589215"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 59 sources, not yet confirmed",
+  "citations": 59,
+  "distinct_sources": 59,
+  "citations_by_layer": {
+   "layer_1_graph": 38,
+   "layer_2_api": 16,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 40,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   40,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 556,
+  "answer_start": "Found 1 gene record and 37 sequence variant records for BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215 [1",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 12,
+  "server_elapsed_s": 7.501,
+  "seconds": 13.9,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 15,
+   "tool_result": 15,
+   "step": 1,
+   "token": 87,
+   "citation": 59,
+   "trust_signal": 60,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 0,
+   "ts": "2026-09-25T10:00:08.114081Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 2,
+   "ts": "2026-09-25T10:00:09.816927Z",
+   "payload": {
+    "narrative": "The query asks to list evidence across multiple databases (dbVar, ClinVar) and overlapping genes for a specific genomic region, requiring assembly of records from several sources. (the window chr17:43,044,295-43,125,364 (GRCh38) overlaps 8 genes: BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     },
+     {
+      "text": "RPL21P4",
+      "curie": "NCBIGene:140660",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC127886930",
+      "curie": "NCBIGene:127886930",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC129664047",
+      "curie": "NCBIGene:129664047",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC126862571",
+      "curie": "NCBIGene:126862571",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC110485084",
+      "curie": "NCBIGene:110485084",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589216",
+      "curie": "NCBIGene:111589216",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589215",
+      "curie": "NCBIGene:111589215",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 4,
+   "ts": "2026-09-25T10:00:09.823941Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-a521da01e80c",
+      "layer": "layer_1_graph",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-115ae594288b",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8f4a004b4d0d",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d27b751d6e9e",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-9cbcc728efda",
+      "layer": "layer_3_enrichment",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-e5e452da516f",
+      "layer": "layer_3_enrichment",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0ac45a5affb1",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f250c1e2fd9a",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-20ffb00fe3dd",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cf6785fab36c",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-c5261c4e6f07",
+      "layer": "layer_3_enrichment",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ef7d9e4d69d8",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-76b13bfe4c17",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ac92306a963d",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-afd4ebd383a2",
+      "layer": "layer_1_graph",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     },
+     {
+      "text": "RPL21P4",
+      "curie": "NCBIGene:140660",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC127886930",
+      "curie": "NCBIGene:127886930",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC129664047",
+      "curie": "NCBIGene:129664047",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC126862571",
+      "curie": "NCBIGene:126862571",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC110485084",
+      "curie": "NCBIGene:110485084",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589216",
+      "curie": "NCBIGene:111589216",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589215",
+      "curie": "NCBIGene:111589215",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 6,
+   "ts": "2026-09-25T10:00:09.826569Z",
+   "payload": {
+    "call_id": "cq-a521da01e80c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 7,
+   "ts": "2026-09-25T10:00:09.826652Z",
+   "payload": {
+    "call_id": "ne-115ae594288b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 8,
+   "ts": "2026-09-25T10:00:09.826679Z",
+   "payload": {
+    "call_id": "ne-8f4a004b4d0d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 9,
+   "ts": "2026-09-25T10:00:09.826703Z",
+   "payload": {
+    "call_id": "ne-d27b751d6e9e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 10,
+   "ts": "2026-09-25T10:00:09.826729Z",
+   "payload": {
+    "call_id": "pa-9cbcc728efda",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 11,
+   "ts": "2026-09-25T10:00:09.826753Z",
+   "payload": {
+    "call_id": "ct-e5e452da516f",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 12,
+   "ts": "2026-09-25T10:00:09.826776Z",
+   "payload": {
+    "call_id": "ne-0ac45a5affb1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 13,
+   "ts": "2026-09-25T10:00:09.826799Z",
+   "payload": {
+    "call_id": "ne-f250c1e2fd9a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 14,
+   "ts": "2026-09-25T10:00:09.826822Z",
+   "payload": {
+    "call_id": "ne-20ffb00fe3dd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 15,
+   "ts": "2026-09-25T10:00:09.826845Z",
+   "payload": {
+    "call_id": "ne-cf6785fab36c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 16,
+   "ts": "2026-09-25T10:00:09.826867Z",
+   "payload": {
+    "call_id": "pa-c5261c4e6f07",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 17,
+   "ts": "2026-09-25T10:00:09.826890Z",
+   "payload": {
+    "call_id": "ne-ef7d9e4d69d8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 18,
+   "ts": "2026-09-25T10:00:09.826914Z",
+   "payload": {
+    "call_id": "ne-76b13bfe4c17",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 19,
+   "ts": "2026-09-25T10:00:09.826938Z",
+   "payload": {
+    "call_id": "ne-ac92306a963d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 20,
+   "ts": "2026-09-25T10:00:09.826960Z",
+   "payload": {
+    "call_id": "cq-afd4ebd383a2",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 21,
+   "ts": "2026-09-25T10:00:10.264347Z",
+   "payload": {
+    "call_id": "ne-0ac45a5affb1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 22,
+   "ts": "2026-09-25T10:00:10.322955Z",
+   "payload": {
+    "call_id": "ne-f250c1e2fd9a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 23,
+   "ts": "2026-09-25T10:00:10.388666Z",
+   "payload": {
+    "call_id": "ct-e5e452da516f",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 24,
+   "ts": "2026-09-25T10:00:10.423395Z",
+   "payload": {
+    "call_id": "ne-20ffb00fe3dd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 25,
+   "ts": "2026-09-25T10:00:10.465468Z",
+   "payload": {
+    "call_id": "ne-d27b751d6e9e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 26,
+   "ts": "2026-09-25T10:00:10.530320Z",
+   "payload": {
+    "call_id": "ne-ac92306a963d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 27,
+   "ts": "2026-09-25T10:00:10.565077Z",
+   "payload": {
+    "call_id": "pa-9cbcc728efda",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 28,
+   "ts": "2026-09-25T10:00:10.609543Z",
+   "payload": {
+    "call_id": "ne-8f4a004b4d0d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "coordinate_overlap: 5 record(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 29,
+   "ts": "2026-09-25T10:00:10.713830Z",
+   "payload": {
+    "call_id": "cq-afd4ebd383a2",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "40 row(s) of 40",
+    "result_count": 40,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 30,
+   "ts": "2026-09-25T10:00:10.748632Z",
+   "payload": {
+    "call_id": "ne-115ae594288b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "coordinate_overlap: 5 record(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 31,
+   "ts": "2026-09-25T10:00:12.306290Z",
+   "payload": {
+    "call_id": "cq-a521da01e80c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "100 row(s) of 100",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 32,
+   "ts": "2026-09-25T10:00:12.608839Z",
+   "payload": {
+    "call_id": "ne-ef7d9e4d69d8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 33,
+   "ts": "2026-09-25T10:00:12.706445Z",
+   "payload": {
+    "call_id": "ne-76b13bfe4c17",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 34,
+   "ts": "2026-09-25T10:00:12.964352Z",
+   "payload": {
+    "call_id": "ne-cf6785fab36c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 35,
+   "ts": "2026-09-25T10:00:13.632060Z",
+   "payload": {
+    "call_id": "pa-c5261c4e6f07",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 36,
+   "ts": "2026-09-25T10:00:13.642949Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "BRCA1 DNA repair associated",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000183",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002154",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002750",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003150",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004428",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004775",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004786",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005082",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005528",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005598",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005841",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005942",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007698",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007721",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008789",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009121",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009204",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009272",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009310",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009406",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010063",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010509",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010603",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010734",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011036",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012155",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1728del (p.Glu577fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012156",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012905",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1013802",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014065",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014065",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014279",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014279",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004935309",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935309/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28288110",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28288110/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267740",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "113705",
+    "source_url": "https://omim.org/entry/113705",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00590109",
+    "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004935311",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935311/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267741",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00597987",
+    "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004935312",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935312/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "373892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00617656",
+    "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004935314",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4935314/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39261728",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4823850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00673335",
+    "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4848411",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00700778",
+    "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "81db29e1-96b4-47c3-9632-f266eb87fad6",
+   "seq": 244,
+   "ts": "2026-09-25T10:00:19.412112Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 12,
+    "elapsed_ms": 7501,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 59 sources, not yet confirmed",
+    "layer_calls_used": 17,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record and 37 sequence variant records for BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38]. \n\nGene records found\n\nGene NCBIGene:672, name: BRCA1 DNA repair associated [1]. Gene symbol: BRCA1 [40]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [2]. SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [3]. SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [4]. SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [5]. SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [6]. SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [7]. SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [8]. SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [9]. SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [10]. SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [11]. SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [12]. SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [13]. SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [14]. SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [15]. SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [16]. SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [17]. SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [18]. SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [19]. SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [20]. SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [21]. SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [22]. SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [23]. SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [24]. SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [25]. SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [26]. SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [27]. SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [28]. SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [29]. SequenceVariant record ClinVar:1010631 [30]. SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [31]. SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [32]. SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [33]. SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [34]. SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [35]. SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [36]. SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr) [37]. SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu) [38]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5075-32T>C [39]. Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [42]. Clinvar title: NM_007294.4(BRCA1):c.4779A>G (p.Ile1593Met) [45]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [47]. Clinvar title: NM_007294.4(BRCA1):c.4623G>A (p.Glu1541=) [49]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [51]. Clinvar title: NM_007294.4(BRCA1):c.4358-2733_4358-2720del [53]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [55]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [58]. \n\nPubmed records found\n\nPubmed title: HRDetect is a predictor of BRCA1 and BRCA2 deficiency based on mutational signatures [41]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [46]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [50]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [54]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [57]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [43]. BRCA1 [43]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [44]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [48]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [52]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [56]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [59]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer.\n\nNote: one further clinvar record was found for this question and is not included in the list above"
+}

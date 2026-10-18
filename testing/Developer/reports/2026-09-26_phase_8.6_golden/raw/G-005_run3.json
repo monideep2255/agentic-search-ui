@@ -1,0 +1,76 @@
+{
+ "record": {
+  "id": "G-005",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+  "session_id": "c103-ed2d102f2061",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:16:56+00:00",
+  "run_id": "e7b76c6a-99a1-4420-87fe-b3df680a5e2a",
+  "outcome": "error",
+  "timed_out": false,
+  "guard_passed": null,
+  "guard_category": null,
+  "guard_reason": null,
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": null,
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": {
+   "fatal": true,
+   "scope": "step",
+   "source": "guardrail",
+   "error_class": "transient",
+   "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+   "retry_after_s": 0
+  },
+  "total_cost_usd": null,
+  "total_tool_calls": null,
+  "server_elapsed_s": null,
+  "seconds": 15.5,
+  "event_types": {
+   "error": 1
+  },
+  "first_word_s": null,
+  "first_token_ts": null
+ },
+ "events": [
+  {
+   "type": "error",
+   "version": "v1",
+   "trace_id": "e7b76c6a-99a1-4420-87fe-b3df680a5e2a",
+   "seq": 0,
+   "ts": "2026-09-26T17:15:32.443987Z",
+   "payload": {
+    "fatal": true,
+    "scope": "step",
+    "source": "guardrail",
+    "error_class": "transient",
+    "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+    "retry_after_s": 0
+   }
+  }
+ ],
+ "answer_text": ""
+}

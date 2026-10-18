@@ -1,0 +1,81 @@
+{
+ "record": {
+  "id": "G-038",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "discovery",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Tell me about the tree of life.",
+  "session_id": "c103-7a8c65cb5a0d",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:24:34+00:00",
+  "run_id": "35d2ef0b-0c27-435b-9c5c-02d722879ba9",
+  "outcome": "refused_offtopic",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "off_topic",
+  "guard_reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 0.006,
+  "seconds": 0.6,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "35d2ef0b-0c27-435b-9c5c-02d722879ba9",
+   "seq": 0,
+   "ts": "2026-09-22T17:23:01.302415Z",
+   "payload": {
+    "passed": false,
+    "category": "off_topic",
+    "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "35d2ef0b-0c27-435b-9c5c-02d722879ba9",
+   "seq": 1,
+   "ts": "2026-09-22T17:23:01.302471Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 6,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": ""
+}

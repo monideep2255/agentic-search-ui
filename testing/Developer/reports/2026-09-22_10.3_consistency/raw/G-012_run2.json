@@ -1,0 +1,279 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-a0fc20a8a674",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:13:35+00:00",
+  "run_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C0206693",
+   "MedGen:C1335487",
+   "MedGen:C1412014",
+   "MedGen:C1709664",
+   "MedGen:C5419191",
+   "MedGen:C5419192",
+   "MedGen:C5419517",
+   "MedGen:C5556661"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 1,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "0 row(s) of 0"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC0206693%20MedGen%3AC13354",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 24.41,
+  "seconds": 26.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 0,
+   "ts": "2026-09-22T17:12:04.914563Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 2,
+   "ts": "2026-09-22T17:12:09.751888Z",
+   "payload": {
+    "narrative": "The query asks for clinical trials for a broad, unspecified carcinoma, which requires searching across trial registries and possibly multiple disease subtypes. (carcinoma not otherwise specified: 8 of 15 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 4,
+   "ts": "2026-09-22T17:12:09.754006Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5651b985f75c",
+      "layer": "layer_1_graph",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 6,
+   "ts": "2026-09-22T17:12:09.754944Z",
+   "payload": {
+    "call_id": "cq-5651b985f75c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 7,
+   "ts": "2026-09-22T17:12:27.346850Z",
+   "payload": {
+    "call_id": "cq-5651b985f75c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 8,
+   "ts": "2026-09-22T17:12:27.348468Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7c253670-7b41-4d19-a48d-c010bd0544ac",
+   "seq": 12,
+   "ts": "2026-09-22T17:12:28.176688Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 24410,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC0206693%20MedGen%3AC1335487%20MedGen%3AC1412014%20MedGen%3AC1709664%20MedGen%3AC5419191%20MedGen%3AC5419192%20MedGen%3AC5419517%20MedGen%3AC5556661"
+}

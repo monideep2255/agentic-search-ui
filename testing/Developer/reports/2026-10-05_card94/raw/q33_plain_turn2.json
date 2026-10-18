@@ -1,0 +1,70 @@
+{
+ "label": "q33_plain",
+ "turn": 2,
+ "depth": "plain_language",
+ "question": "Show me the ones from 2023",
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "5c0e8e65-b099-47dd-a38c-9c3acd09c46e",
+   "seq": 0,
+   "ts": "2026-10-05T16:33:22.389727Z",
+   "payload": {
+    "passed": false,
+    "category": "off_topic",
+    "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "5c0e8e65-b099-47dd-a38c-9c3acd09c46e",
+   "seq": 2,
+   "ts": "2026-10-05T16:33:22.389825Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 1779,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "off_topic",
+      "decided_by": "jev",
+      "jev_choice": "off_topic",
+      "jev_confidence": 0.22,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 106
+     },
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.94,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     }
+    ]
+   }
+  }
+ ],
+ "elapsed_s": 2.0
+}

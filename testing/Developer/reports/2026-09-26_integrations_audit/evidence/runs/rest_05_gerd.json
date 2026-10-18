@@ -1,0 +1,76 @@
+{
+  "surface": "REST+SSE",
+  "question": "GERD",
+  "session_id": "audit-rest-bare",
+  "depth_sent": null,
+  "create_status": 202,
+  "persona_name": "Ramon y Cajal",
+  "run_id": "75addfa5-7f7e-4a6a-a9fd-f9672e8271b1",
+  "stream_status": 200,
+  "outcome": "refused",
+  "trust_outcome": "refuse",
+  "citation_count": 0,
+  "citation_hosts": [],
+  "citation_urls_sample": [],
+  "first_sentence": "What would you like to know about GERD?",
+  "answer_chars": 39,
+  "answer_head": "What would you like to know about GERD?",
+  "event_type_counts": {
+    "guard": 1,
+    "think": 1,
+    "plan": 1,
+    "token": 1,
+    "trust_signal": 1,
+    "done": 1
+  },
+  "clarifying_question": "What would you like to know about GERD?",
+  "clarifying_options": [
+    "What is GERD?",
+    "Which genetic variants are associated with GERD?",
+    "Are there clinical trials on GERD treatments?",
+    "What does recent research say about GERD?"
+  ],
+  "think_narratives": [
+    "the ask-back classifier read a one-to-three-word opening question and decided it names a subject rather than a request, so the answer asks which aspect is meant before any search"
+  ],
+  "resolved_entities": [],
+  "done_trust_line": null,
+  "done_next_step": null,
+  "done_decisions": [
+    {
+      "name": "guardrail.injection",
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "plan.literature",
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.ask_back",
+      "chosen": "ask_back",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.recent_years",
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.asks_features",
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "fallback_reason": null
+    }
+  ],
+  "done_total_tool_calls": 0,
+  "done_elapsed_ms": 2376,
+  "answer_trust_signal_message": "What would you like to know about GERD?",
+  "errors": [],
+  "wall_s": 3.4
+}

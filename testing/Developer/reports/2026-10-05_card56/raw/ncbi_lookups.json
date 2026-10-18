@@ -1,0 +1,168 @@
+[
+ {
+  "call": "esearch db=taxonomy term=SARS-CoV-2[All Names]",
+  "count": "1",
+  "ids": [
+   "2697049"
+  ],
+  "translation": "SARS-CoV-2[All Names]"
+ },
+ {
+  "call": "esummary db=taxonomy id=2697049",
+  "title": "Severe acute respiratory syndrome coronavirus 2",
+  "extra": {
+   "rank": "isolate",
+   "division": "viruses",
+   "commonname": "",
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esearch db=taxonomy term=Severe acute respiratory syndrome coronavirus 2[All Names]",
+  "count": "1",
+  "ids": [
+   "2697049"
+  ],
+  "translation": "Severe acute respiratory syndrome coronavirus 2[All Names]"
+ },
+ {
+  "call": "esummary db=taxonomy id=2697049",
+  "title": "Severe acute respiratory syndrome coronavirus 2",
+  "extra": {
+   "rank": "isolate",
+   "division": "viruses",
+   "commonname": "",
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esearch db=taxonomy term=Mycobacterium tuberculosis[All Names]",
+  "count": "1",
+  "ids": [
+   "1773"
+  ],
+  "translation": "Mycobacterium tuberculosis[All Names]"
+ },
+ {
+  "call": "esummary db=taxonomy id=1773",
+  "title": "Mycobacterium tuberculosis",
+  "extra": {
+   "rank": "species",
+   "division": "high G+C Gram-positive bacteria",
+   "commonname": "",
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esearch db=taxonomy term=Salmonella enterica[All Names]",
+  "count": "1",
+  "ids": [
+   "28901"
+  ],
+  "translation": "Salmonella enterica[All Names]"
+ },
+ {
+  "call": "esummary db=taxonomy id=28901",
+  "title": "Salmonella enterica",
+  "extra": {
+   "rank": "species",
+   "division": "enterobacteria",
+   "commonname": "",
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esearch db=taxonomy term=SARS coronavirus 2[All Names]",
+  "count": "0",
+  "ids": [],
+  "translation": "(SARS coronavirus 2[All Names])"
+ },
+ {
+  "call": "esearch db=medgen term=SARS[All Fields]",
+  "count": "124",
+  "ids": [
+   "1896768",
+   "1872339",
+   "1864144",
+   "1863418",
+   "1841515"
+  ],
+  "translation": "SARS[All Fields]"
+ },
+ {
+  "call": "esummary db=medgen id=1896768",
+  "title": "Acute respiratory distress syndrome (associated with SARS-CoV-2, influenza A, RSV infections)",
+  "extra": {
+   "rank": null,
+   "division": null,
+   "commonname": null,
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esummary db=medgen id=1872339",
+  "title": "At increased risk of severe course of COVID-19",
+  "extra": {
+   "rank": null,
+   "division": null,
+   "commonname": null,
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esummary db=medgen id=1864144",
+  "title": "Anti-SARS-CoV-2 coronavirus antibody positivity",
+  "extra": {
+   "rank": null,
+   "division": null,
+   "commonname": null,
+   "organism": null,
+   "speciesname": null,
+   "assemblyaccession": null
+  }
+ },
+ {
+  "call": "esearch db=medgen term=SARS-CoV-2[All Fields]",
+  "count": "151",
+  "ids": [
+   "1897140",
+   "1896768",
+   "1879988"
+  ],
+  "translation": "\"Severe acute respiratory syndrome coronavirus 2\"[All Fields] OR SARS-CoV-2[All Fields]"
+ },
+ {
+  "call": "esearch db=taxonomy term=Illumina[All Names]",
+  "count": "0",
+  "ids": [],
+  "translation": "(Illumina[All Names])"
+ },
+ {
+  "call": "esearch db=assembly term=txid1773[Organism:exp]",
+  "count": "8934",
+  "ids": [
+   "92661198"
+  ],
+  "translation": "txid1773[Organism:exp]"
+ },
+ {
+  "call": "esearch db=sra term=txid2697049[Organism:exp] AND Illumina[Platform]",
+  "count": "6183835",
+  "ids": [
+   "47158876"
+  ],
+  "translation": "txid2697049[Organism:exp] AND Illumina[Platform]"
+ }
+]

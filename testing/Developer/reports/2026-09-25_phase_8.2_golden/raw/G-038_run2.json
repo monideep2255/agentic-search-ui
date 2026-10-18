@@ -1,0 +1,99 @@
+{
+ "record": {
+  "id": "G-038",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "discovery",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Tell me about the tree of life.",
+  "session_id": "c103-d7a650c63094",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:20:25+00:00",
+  "run_id": "32ba0834-149e-40d0-844d-267175057d4a",
+  "outcome": "refused_offtopic",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "off_topic",
+  "guard_reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 10.814,
+  "seconds": 11.3,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "32ba0834-149e-40d0-844d-267175057d4a",
+   "seq": 0,
+   "ts": "2026-09-25T13:19:00.035790Z",
+   "payload": {
+    "passed": false,
+    "category": "off_topic",
+    "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "32ba0834-149e-40d0-844d-267175057d4a",
+   "seq": 2,
+   "ts": "2026-09-25T13:19:00.035907Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 10814,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "on_topic",
+      "decided_by": "jev",
+      "jev_choice": "on_topic",
+      "jev_confidence": 0.89,
+      "guard_choice": "on_topic",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 140
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": ""
+}

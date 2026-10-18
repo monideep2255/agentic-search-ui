@@ -1,0 +1,282 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-8fc511618a27",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:17:42+00:00",
+  "run_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "call did not complete within its per-step timeout budget"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 26,
+  "answer_start": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nl",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 95.328,
+  "seconds": 95.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  },
+  "first_word_s": 95.5,
+  "first_token_ts": "2026-09-26T17:17:38.670914Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 0,
+   "ts": "2026-09-26T17:16:04.852628Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 2,
+   "ts": "2026-09-26T17:16:06.521851Z",
+   "payload": {
+    "narrative": "Requires traversal from a PMID to linked BioProjects, GEO series, assemblies, and sequence data, then to mark how each is linked",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 4,
+   "ts": "2026-09-26T17:16:06.524116Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-d8eb671cd87f",
+      "layer": "layer_1_graph",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 6,
+   "ts": "2026-09-26T17:16:06.525486Z",
+   "payload": {
+    "call_id": "cq-d8eb671cd87f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 7,
+   "ts": "2026-09-26T17:17:36.526376Z",
+   "payload": {
+    "call_id": "cq-d8eb671cd87f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "call did not complete within its per-step timeout budget",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 8,
+   "ts": "2026-09-26T17:17:36.528141Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 9,
+   "ts": "2026-09-26T17:17:38.670914Z",
+   "payload": {
+    "text": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=PMID%3A11237011",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "4b084a42-3357-40d2-9922-1c651e919d1b",
+   "seq": 12,
+   "ts": "2026-09-26T17:17:38.671060Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 95328,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.98,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 185
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 136
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 128
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.89,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 177
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=PMID%3A11237011"
+}

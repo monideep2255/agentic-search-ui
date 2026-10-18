@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-root = Path("/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui")
+root = Path("<repo-root>")
 for line in (root / ".env").read_text().splitlines():
     line = line.strip()
     if not line or line.startswith("#") or "=" not in line:

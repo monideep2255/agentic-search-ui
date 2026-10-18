@@ -1,0 +1,112 @@
+{
+ "record": {
+  "id": "G-004",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?",
+  "session_id": "c103-37ef1475ba7b",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:03:59+00:00",
+  "run_id": "9bda156b-921f-4ed8-a154-0a11ad1f49b8",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 32,
+  "answer_start": "Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 3.157,
+  "seconds": 3.7,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "9bda156b-921f-4ed8-a154-0a11ad1f49b8",
+   "seq": 0,
+   "ts": "2026-09-25T10:02:24.917418Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "9bda156b-921f-4ed8-a154-0a11ad1f49b8",
+   "seq": 2,
+   "ts": "2026-09-25T10:02:26.808086Z",
+   "payload": {
+    "narrative": "Requires linking an isolate to its SNP cluster, then querying AMR genes and nearby isolates through graph traversal.",
+    "query_class": "multi_hop",
+    "resolved_entities": [],
+    "clarifying_question": "Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15.",
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "9bda156b-921f-4ed8-a154-0a11ad1f49b8",
+   "seq": 4,
+   "ts": "2026-09-25T10:02:26.811262Z",
+   "payload": {
+    "narrative": "no tool selected; the question refers to something no earlier turn resolved, so the answer asks which",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "9bda156b-921f-4ed8-a154-0a11ad1f49b8",
+   "seq": 7,
+   "ts": "2026-09-25T10:02:26.814456Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 3157,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Which resistance gene or gene family should the isolates carry? For example ESBL (the blaCTX-M family), carbapenemase (blaKPC, blaNDM, blaOXA-48, blaVIM, blaIMP), colistin resistance (mcr), or a gene name such as blaCTX-M-15."
+}

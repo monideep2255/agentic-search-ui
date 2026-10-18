@@ -1,12 +1,54 @@
 #!/usr/bin/env bash
 # scope: project
 # depends_on: [.claude/hooks/lib/_json.sh]
-# depended_by: [.claude/settings.json]
+# depended_by: [.claude/settings.json, tests/ci/test_claude_hooks.py]
 # PreToolUse (Bash) hook: block commands containing secret patterns.
 # jq-free. Fails closed: if the command field cannot be parsed, scans the raw
 # input so a token cannot slip through on a parse failure. Catches both known
-# vendor token prefixes and this repo's secret-named-field shapes (PG_PASSWORD,
+# vendor token prefixes and this repository's secret-named-field shapes (PG_PASSWORD,
 # AUTH_SECRET, NCBI_API_KEY, LANGSMITH_API_KEY) assigned a literal value.
+#
+# A search names a field in order to find it, so the field check skips a
+# command whose first word is grep, rg or git grep, and scans every other
+# command as today. A chain counts as several commands: it is split on ; & |
+# ( ) ` and newlines, the searches it starts with are skipped, and everything
+# from its first other command to the end is field-checked as one text. So
+# "grep x f; export NCBI_API_KEY=<literal>" is still caught, a value holding a
+# separator is still read whole, and a search after another command is still
+# checked. The split ignores quotes: a separator inside a search's quoted
+# pattern can make the rest of the pattern read as a command, which blocks
+# more, never less. The token-prefix check still runs on the whole command, a
+# search included. Approved item by item by the product owner on 2026-09-25
+# (DECISIONS.md, "Four security-layer changes approved item by item", item 2).
+#
+# The token-prefix check also catches a key with a hyphen or underscore in the
+# part after sk-, the shape of the product's own model-provider key (sk-or-v1- then
+# 64 hex) and of sk-ant- and sk-proj- keys: sk- then 20 or more letters, digits,
+# hyphens or underscores, starting at a word boundary so a name such as
+# "task-tracker-some-long-branch-name" is not a key. Approved item by item by
+# the product owner on 2026-09-26 ("Also close the hook gaps").
+# tests/ci/test_claude_hooks.py pins it.
+#
+# A command longer than 8192 characters is field-checked whole, in one pass,
+# and never split. The split walks the command a piece at a time, and on a
+# long command that walk grew with the square of the length: about 63 seconds
+# on a 108 KB chain of searches, past the harness's time limit for a hook.
+# Below the bound the split stops after 64 pieces, empty ones included, and
+# field-checks the whole command, because 8 KB of ampersands alone took about
+# 5 to 10 seconds. Checking the whole text reads a superset of what the split
+# would keep, so a long command is checked at least as strictly as before,
+# and a long command that starts with a search is now checked like any other.
+# The token-prefix check is unchanged. Approved item by item by the product
+# owner on 2026-09-26 (DECISIONS.md, "The secret scan's slowdown on a very
+# long command"). tests/ci/test_claude_hooks.py times both slow shapes.
+#
+# Not covered, named and not closed:
+# - A hyphenated key glued to the letter, digit or underscore before it, such
+#   as one right after %20, an escape letter (\n) or MY_, since that check
+#   starts at a word boundary.
+# - A command holding a JSON lone surrogate. The JSON reader cannot print it,
+#   so the hook reads the raw JSON text instead, where a quoted value keeps
+#   its escaping backslash and the field check misses it.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
@@ -16,12 +58,71 @@ INPUT=$(cat)
 COMMAND=$(json_field "$INPUT" tool_input.command)
 [ -z "$COMMAND" ] && COMMAND="$INPUT"
 
-PREFIX='(sk-[a-zA-Z0-9]{20,}|ghp_[a-zA-Z0-9]{36,}|AKIA[A-Z0-9]{16}|xox[bpras]-[a-zA-Z0-9-]+|PRIVATE KEY)'
+# The second alternative is a key with a hyphen or underscore in the part after
+# sk-, such as sk-or-v1-, sk-ant- and sk-proj- keys. It starts at a word boundary
+# (the start of a line, or a character that is not a letter, digit or _), so
+# "task-tracker-some-long-branch-name" never reads as a key.
+PREFIX='(sk-[a-zA-Z0-9]{20,}|(^|[^[:alnum:]_])sk-[A-Za-z0-9_-]{20,}|ghp_[a-zA-Z0-9]{36,}|AKIA[A-Z0-9]{16}|xox[bpras]-[a-zA-Z0-9-]+|PRIVATE KEY)'
 # A secret-named var assigned a literal value (export X=..., X=...). A value
 # beginning with $ or { or ( or a quote-then-$ is a reference and is allowed.
 FIELD='(TOKEN|APIKEY|API_KEY|SECRET|PASSWORD|CREDENTIAL|_KEY)"?[[:space:]]*=[[:space:]]*"?[^$"{()[:space:]][^"[:space:]]{7,}'
 
-if printf '%s' "$COMMAND" | grep -qE "$PREFIX" || printf '%s' "$COMMAND" | grep -qiE "$FIELD"; then
+# Is this command's first word grep, rg or git grep? Leading whitespace is
+# ignored. Any other first word, egrep included, is not a search.
+is_search() {
+  local cmd=$1 rest
+  cmd=${cmd#"${cmd%%[![:space:]]*}"}
+  case $cmd in
+    grep|rg|grep[[:space:]]*|rg[[:space:]]*) return 0 ;;
+    git[[:space:]]*)
+      rest=${cmd#git}
+      rest=${rest#"${rest%%[![:space:]]*}"}
+      case $rest in
+        grep|grep[[:space:]]*) return 0 ;;
+      esac
+      ;;
+  esac
+  return 1
+}
+
+# What the field check reads: the whole command, unless the command starts
+# with a search. Then the leading searches (and the empty pieces between two
+# separators, as in &&) are dropped, and the text from the first other piece
+# to the end is kept whole, separators included, so a literal that holds a
+# separator is never cut short. A command longer than LONG_COMMAND characters
+# is never split: it is field-checked whole, in one pass. The split also stops
+# after MAX_PIECES pieces, empty ones included, and then the whole command is
+# field-checked, since each piece costs a pass over the rest of the command.
+LONG_COMMAND=8192
+MAX_PIECES=64
+SEPARATORS=$';&|()`\n'
+FIELD_TEXT=$COMMAND
+if [ "${#COMMAND}" -le "$LONG_COMMAND" ]; then
+  TRIMMED=${COMMAND#"${COMMAND%%[![:space:]]*}"}
+else
+  TRIMMED=
+fi
+if [ -n "$TRIMMED" ] && is_search "${TRIMMED%%[$SEPARATORS]*}"; then
+  FIELD_TEXT=
+  REST=$TRIMMED
+  PIECES=0
+  while :; do
+    PIECES=$((PIECES + 1))
+    if [ "$PIECES" -gt "$MAX_PIECES" ]; then
+      FIELD_TEXT=$COMMAND
+      break
+    fi
+    PIECE=${REST%%[$SEPARATORS]*}
+    case $PIECE in
+      *[![:space:]]*) is_search "$PIECE" || { FIELD_TEXT=$REST; break; } ;;
+    esac
+    [ "$PIECE" = "$REST" ] && break
+    REST=${REST:${#PIECE}+1}
+  done
+fi
+
+if printf '%s' "$COMMAND" | grep -qE "$PREFIX" \
+   || { [ -n "$FIELD_TEXT" ] && printf '%s' "$FIELD_TEXT" | grep -qiE "$FIELD"; }; then
   echo "BLOCKED: Command contains what looks like a secret/token. Use an environment variable instead." >&2
   exit 2
 fi

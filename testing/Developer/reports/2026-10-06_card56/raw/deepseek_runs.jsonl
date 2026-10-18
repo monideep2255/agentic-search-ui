@@ -1,0 +1,12 @@
+{"run": 1, "model": "deepseek/deepseek-v4-flash", "secs": 3.4, "class": "exploratory", "record_type": "sra", "entities": [["SARS-CoV-2", "organism"]], "resolved": ["NCBITaxon:2697049"], "ended": "planned 3 tool calls", "tools": ["?", "?", "?"], "cost": 0.0003}
+{"run": 2, "model": "deepseek/deepseek-v4-flash", "secs": 15.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0004}
+{"run": 3, "model": "deepseek/deepseek-v4-flash", "secs": 3.9, "class": "aggregate", "record_type": "sra", "entities": [["SARS-CoV-2", "organism"]], "resolved": ["NCBITaxon:2697049"], "ended": "planned 3 tool calls", "tools": ["?", "?", "?"], "cost": 0.0003}
+{"run": 4, "model": "deepseek/deepseek-v4-flash", "secs": 3.3, "class": "aggregate", "record_type": "sra", "entities": [["SARS-CoV-2", "organism"]], "resolved": ["NCBITaxon:2697049"], "ended": "planned 3 tool calls", "tools": ["?", "?", "?"], "cost": 0.0003}
+{"run": 5, "model": "deepseek/deepseek-v4-flash", "secs": 14.7, "class": "exploratory", "record_type": "sra", "entities": [], "resolved": ["MedGen:C1519126", "MedGen:C4302012", "MedGen:C4302019"], "ended": "planned 8 tool calls", "tools": ["?", "?", "?", "?", "?", "?", "?", "?"], "cost": 0.0004}
+{"run": 6, "model": "deepseek/deepseek-v4-flash", "secs": 15.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0004}
+{"run": 7, "model": "deepseek/deepseek-v4-flash", "secs": 0.1, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 8, "model": "deepseek/deepseek-v4-flash", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 9, "model": "deepseek/deepseek-v4-flash", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 10, "model": "deepseek/deepseek-v4-flash", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 11, "model": "deepseek/deepseek-v4-flash", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}
+{"run": 12, "model": "deepseek/deepseek-v4-flash", "secs": 0.0, "class": null, "record_type": null, "entities": null, "resolved": [], "ended": "a step failed", "tools": [], "cost": 0.0}

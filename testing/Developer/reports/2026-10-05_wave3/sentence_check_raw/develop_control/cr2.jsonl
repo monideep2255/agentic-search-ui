@@ -1,0 +1,3 @@
+{"tag": "ERROR", "t": 1791237483.106, "data": {"trust_outcome": null, "trust_line": null, "elapsed_ms": null, "total_cost_usd": null, "message": "A step in this query hit a temporary error. Retrying the query may succeed."}}
+{"tag": "DONE", "t": 1791237483.106, "data": {"trust_outcome": "refuse", "trust_line": null, "elapsed_ms": 15006, "total_cost_usd": 0.000350486, "message": null}}
+{"tag": "ELAPSED_S", "t": 1791237483.116, "data": 15.0}

@@ -1,0 +1,6 @@
+{
+  "name": "mod-test-triple",
+  "version": "1.0.0",
+  "description": "When a turn ends, looks at the route decorators added to web adapter files during the turn and toasts any route whose tests show no valid, invalid, or empty input case. A name based heuristic. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" }
+}

@@ -2,7 +2,7 @@
 
 How a visual design becomes React code in this repository. Four artifacts are involved and only one of them is the source of truth, so the first job of this document is to say which one and why. Written 2026-08-12 during the build phase 4.8 design review, and applicable to any future phase whose deliverable is visual rather than behavioural.
 
-For the twelve-stage cadence itself, read `../Build_workflow_cadence.md` one level up. This document sits on top of it and answers a narrower question: what does a builder actually build against when the deliverable is a look.
+For the build loop itself, read `.claude/skills/bossman-mode/SKILL.md`, its one home since 2026-09-25; when this was written it was the twelve-stage cadence in `../Build_workflow_cadence.md` one level up, which now keeps only the provider mapping. This document sits on top of it and answers a narrower question: what does a builder actually build against when the deliverable is a look.
 
 ## Table of contents
 
@@ -38,7 +38,7 @@ That third one is generated rather than copied on purpose. The artifact host sup
 | `design-system/prototype/app.html` | The prototype. The whole product, clickable, in one file | The product owner plays with it. People are shown it. No builder reads it as a spec |
 | `design-system/` (the cards) | The blueprints. 18 isolated cards: brand, foundations, identity, components, screens, flows | Builders build from it. Judges verify against it |
 | `Phase_4.8_visual_design.html` | The argument. One scroll explaining why the system looks the way it does | Anyone who needs the reasoning rather than the result |
-| Bossman mode | The build crew and the inspectors | Runs the twelve-stage cadence and produces the React code |
+| Bossman mode | The build crew and the inspectors | Runs the build loop (the twelve-stage cadence when this was written, one cadence with a risk dial since 2026-09-25) and produces the React code |
 
 The distinction that matters: the prototype and the pitch page are both allowed to go stale, because neither is what the code is checked against. The component cards are not allowed to go stale, because the premise gate asserts against them.
 
@@ -60,7 +60,7 @@ The design system's structure, as of 2026-08-12:
 
 This is the part worth understanding, because it is what stops a builder from styling things however it feels like.
 
-Every build phase here has a blocking premise gate at stage 5: write the test, watch it fail, then build. For a visual phase the obvious problem is that you cannot unit-test "looks good." The resolution is that the design system files become the thing the gate asserts against.
+Until 2026-09-24 every build phase here had a blocking premise gate at stage 5: write the test, watch it fail, then build. Since then premise gates are kept only for answer behaviour (DECISIONS.md, 2026-09-24), and a visual phase is checked at stage 10 by the product reviewer, which captures every changed screen at 1280 and 390 beside the design prototype. You cannot unit-test "looks good", so the design system files stay the thing the check compares against, and the four assertions below are what it looks for.
 
 Four assertions, in descending order of how load-bearing they are:
 
@@ -87,17 +87,17 @@ The four artifacts, and how each one stays current:
 | Artifact | Where it lives | How it syncs |
 |----------|---------------|--------------|
 | Claude Design project | Cloud, `claude.ai/design` | Source of truth. The product owner edits here and nowhere else |
-| `docs/build/design/design-system/` | Repo, under git | One-to-one mirror, pulled with `DesignSync`. Exact, no interpretation |
-| `design-system/prototype/app.html` | Repo, under git | Part of the same one-to-one mirror. This is the clickable prototype |
-| `Phase_4.8_prototype.html` | Repo, under git | Generated from the prototype card by `make_prototype_artifact.py`. Never hand-edited |
-| `Phase_4.8_visual_design.html` | Repo, under git | Hand-maintained narrative. Shares the tokens, not the content. Allowed to lag |
+| `docs/build/design/design-system/` | Repository, under git | One-to-one mirror, pulled with `DesignSync`. Exact, no interpretation |
+| `design-system/prototype/app.html` | Repository, under git | Part of the same one-to-one mirror. This is the clickable prototype |
+| `Phase_4.8_prototype.html` | Repository, under git | Generated from the prototype card by `make_prototype_artifact.py`. Never hand-edited |
+| `Phase_4.8_visual_design.html` | Repository, under git | Hand-maintained narrative. Shares the tokens, not the content. Allowed to lag |
 | The published artifacts | Cloud, two stable URLs | One for the prototype, one for the argument. Republished from their HTML files |
 
 ### The mirror is partial, and the prototype exists three times
 
 Found 2026-08-14, the hard way. The table above says "one-to-one mirror", and that is true of the paths it lists and false of the project as a whole. `DesignSync list_files` on the Claude Design project returns paths the repository mirror does not carry:
 
-| Remote path | In the repo mirror? | What it is |
+| Remote path | In the repository mirror? | What it is |
 |-------------|--------------------|------------|
 | `prototype/app.html` | Yes | The prototype card the mirror carries |
 | `NCBI Agentic Search prototype.html` | NO | A second full copy of the prototype, at the project root, its own card in the Prototype group |
@@ -132,7 +132,7 @@ The practical rule: settle the design first, then open the phase. Treat the desi
 
 Stage zero, the design review. Not a build. No branch, no tickets, no bossman. The product owner reacts to the pitch page, pushes things around in Claude Design, and the two sides go back and forth until nothing more wants changing. This stage has no cadence and no gates on purpose.
 
-Stage one onward, the build. The design freezes, `phase/4.8-web-ui-visual-design` opens, and the normal twelve-stage cadence in `Build_workflow_cadence.md` takes over with the design system as its fixture.
+Stage one onward, the build. The design freezes, `phase/4.8-web-ui-visual-design` opens, and the normal build loop takes over with the design system as its fixture: the twelve-stage cadence in `Build_workflow_cadence.md` for build phase 4.8, the bossman-mode skill since 2026-09-25.
 
 ## What build phase 4.8 looks like
 
@@ -249,4 +249,4 @@ The test is not "is this biomedical" but "would someone copy or compare this cha
 
 With these settled, the design review is complete and the phase can open on `phase/4.8-web-ui-visual-design`.
 
-Last updated: 2026-08-14
+Last updated: 2026-09-26

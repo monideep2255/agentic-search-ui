@@ -1,0 +1,32 @@
+{
+  "depth": "plain_language",
+  "question": "GERD",
+  "outcome": "answer",
+  "words": 315,
+  "paragraphs": 4,
+  "headings": 4,
+  "list_items": 7,
+  "table_rows": 5,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 12 sources",
+  "sources": [
+    "1795938",
+    "29132520",
+    "33351044",
+    "36170502",
+    "37034973",
+    "37516506",
+    "@DISEASE_Gastroesophageal_Reflux",
+    "NCT00141960",
+    "NCT00163306",
+    "NCT00181805",
+    "NCT00184522",
+    "NCT00235677"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 8 pubmed records, 1 medgen record, 1 literature entity record and 5 clinical trial records for GERD [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15]. \nGERD, short for gastroesophageal reflux disease, is a condition where stomach contents flow back up into the esophagus or mouth, causing symptoms or complications [1]. The typical symptoms are heartburn and regurgitation [1]. The condition can affect quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal adenocarcinoma [1]. It is a clinical diagnosis and is most effectively treated with proton-pump inhibitors [1]. Long-term use of PPIs is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection [1]. \nIn contrast, GERD in children is a less common disease process causing troublesome symptoms that may need medical management [2]. Factors involved in the disease process include abnormal relaxations of the lower esophageal sphincter, defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, and anatomical defects such as hiatal hernia [2]. The clinical signs in young children are varied and nonspecific, requiring careful diagnostic evaluation [2]. Management should target the underlying causes and limit complications [2]. \nSymptoms potentially attributable to GERD are among those most commonly reported to primary care providers in the outpatient setting [3]. Clinical approaches to evaluation and management include proton pump inhibitor trials as well as specific indications that warrant referral to gastroenterology specialists [3]. \n\n## Pubmed records found\n\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal Reflux Disease.\n- Gastroesophageal reflux disease in children: What's new right now?\n- Gastroesophageal Reflux Disease.\n\n## Medgen records found\n\n- Gastroesophageal reflux (GERD)\n\n## Literature entity records found\n\n- Gastroesophageal Reflux\n\n## Clinical trial records found\n\n- Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease / COMPLETED\n- Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339) / COMPLETED\n- Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents / COMPLETED\n- On Demand Treatment of Reflux Disease / COMPLETED\n- Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study / COMPLETED\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q2"
+}

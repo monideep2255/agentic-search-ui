@@ -1,0 +1,45 @@
+What does the RS1 gene do?
+New search
+
+✓ Answered6.4s · 13 tool calls · 18 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+The protein is built and released by specific eye cells as a multi-part complex.⁠20 I found 1 gene related to RS1.⁠1
+
+When this gene is mutated, it causes X-linked retinoschisis, a degenerative eye disease in males that splits the retina's inner layers and severely reduces vision.⁠20
+
+WHERE THIS ANSWER COMES FROM
+retinoschisin 1⁠1
+RS1⁠2
+Differential requirements of IQUB for the assembly of radial spoke 1 and the motility of mouse cilia and flagella.⁠3
+NM_000330.4(RS1):c.78+2T>C⁠4
+RETINOSCHISIN; RS1⁠5
+People s Expectations When Enrolling in a Phase I/II RS1 Ocular Gene Transfer Clinical Trial⁠6
+A viral ADP-ribosyltransferase attaches RNA chains to host proteins.⁠7
+NM_000330.4(RS1):c.184+2T>G⁠8
+RETINOSCHISIS 1, X-LINKED, JUVENILE; RS1⁠9
+Study of RS1 Ocular Gene Transfer for X-linked Retinoschisis⁠10
+Showing 1–10 of 19
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+18
+Sources disagree on at least one claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

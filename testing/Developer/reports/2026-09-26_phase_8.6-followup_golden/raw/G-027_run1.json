@@ -1,0 +1,967 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86f@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-72c4a811e0b8",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "15aae08",
+  "started_at": "2026-09-26T23:51:11+00:00",
+  "run_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 13 sources",
+  "citations": 27,
+  "distinct_sources": 13,
+  "citations_by_layer": {
+   "layer_2_api": 21,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 14,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 213,
+  "answer_start": "Found 1 disease record for Huntington disease: Huntington disease [2]. \n\nHuntington disease is a monogenic neurodegenerative disorder with an autosomal-dominant",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 9.261,
+  "seconds": 9.9,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 47,
+   "citation": 27,
+   "trust_signal": 28,
+   "done": 1
+  },
+  "first_word_s": 9.503,
+  "first_token_ts": "2026-09-26T23:49:42.226832Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 0,
+   "ts": "2026-09-26T23:49:34.338059Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 2,
+   "ts": "2026-09-26T23:49:36.290829Z",
+   "payload": {
+    "narrative": "The query asks what tests exist for a disease, requiring searching databases of genetic tests and possibly comparing multiple sources. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 4,
+   "ts": "2026-09-26T23:49:36.619326Z",
+   "payload": {
+    "narrative": "searching 3 layers for huntington disease. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-1c79c1828235",
+      "layer": "layer_1_graph",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-67cc055847cf",
+      "layer": "layer_3_enrichment",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-6ea41ee1b17c",
+      "layer": "layer_3_enrichment",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9975b810aa33",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e2eb76cb440a",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0f4d852efa58",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-219d60e8da64",
+      "layer": "layer_3_enrichment",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3474526f63ee",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 6,
+   "ts": "2026-09-26T23:49:36.620732Z",
+   "payload": {
+    "call_id": "cq-1c79c1828235",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 7,
+   "ts": "2026-09-26T23:49:36.620769Z",
+   "payload": {
+    "call_id": "pa-67cc055847cf",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 8,
+   "ts": "2026-09-26T23:49:36.620778Z",
+   "payload": {
+    "call_id": "ct-6ea41ee1b17c",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 9,
+   "ts": "2026-09-26T23:49:36.620787Z",
+   "payload": {
+    "call_id": "ne-9975b810aa33",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 10,
+   "ts": "2026-09-26T23:49:36.620795Z",
+   "payload": {
+    "call_id": "ne-e2eb76cb440a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 11,
+   "ts": "2026-09-26T23:49:36.620803Z",
+   "payload": {
+    "call_id": "ne-0f4d852efa58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 12,
+   "ts": "2026-09-26T23:49:36.620811Z",
+   "payload": {
+    "call_id": "pa-219d60e8da64",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 13,
+   "ts": "2026-09-26T23:49:36.620819Z",
+   "payload": {
+    "call_id": "ne-3474526f63ee",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 14,
+   "ts": "2026-09-26T23:49:36.779603Z",
+   "payload": {
+    "call_id": "ne-9975b810aa33",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 15,
+   "ts": "2026-09-26T23:49:36.782796Z",
+   "payload": {
+    "call_id": "pa-67cc055847cf",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 16,
+   "ts": "2026-09-26T23:49:36.993266Z",
+   "payload": {
+    "call_id": "ct-6ea41ee1b17c",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 17,
+   "ts": "2026-09-26T23:49:37.092842Z",
+   "payload": {
+    "call_id": "cq-1c79c1828235",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 18,
+   "ts": "2026-09-26T23:49:37.167606Z",
+   "payload": {
+    "call_id": "ne-e2eb76cb440a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 19,
+   "ts": "2026-09-26T23:49:37.315192Z",
+   "payload": {
+    "call_id": "pa-219d60e8da64",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 20,
+   "ts": "2026-09-26T23:49:37.411592Z",
+   "payload": {
+    "call_id": "ne-3474526f63ee",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "summary: 14 record(s)",
+    "result_count": 14,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 21,
+   "ts": "2026-09-26T23:49:37.430850Z",
+   "payload": {
+    "call_id": "ne-0f4d852efa58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 22,
+   "ts": "2026-09-26T23:49:37.432799Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 23,
+   "ts": "2026-09-26T23:49:42.226832Z",
+   "payload": {
+    "text": "Found 1 disease record for Huntington disease: Huntington disease [2]. ",
+    "marker_ids": [
+     "cq-1c79c1828235-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Huntington disease"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0020179",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0020179",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27228260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27228260/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Huntington_Disease",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D006816",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00052143",
+    "source_url": "https://clinicaltrials.gov/study/NCT00052143",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28221321",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28221321/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00075140",
+    "source_url": "https://clinicaltrials.gov/study/NCT00075140",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00980694",
+    "source_url": "https://clinicaltrials.gov/study/NCT00980694",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31371566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31371566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01554033",
+    "source_url": "https://clinicaltrials.gov/study/NCT01554033",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37603337",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37603337/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02336633",
+    "source_url": "https://clinicaltrials.gov/study/NCT02336633",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "307e39c6-dfb8-4fef-b9b9-a657c5136658",
+   "seq": 126,
+   "ts": "2026-09-26T23:49:42.230435Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 9261,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 13 sources",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 105
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 131
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 153
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 187
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 disease record for Huntington disease: Huntington disease [2]. \n\nHuntington disease is a monogenic neurodegenerative disorder with an autosomal-dominant inheritance pattern [1]. \n\nDisease records found\n\nDisease name: Huntington disease [2]. \n\nPubmed records found\n\nPubmed title: Huntington disease [3]. Pubmed title: Huntington disease [20]. Pubmed title: Huntington disease [22]. Pubmed title: Huntington disease: When does it begin [24]. Pubmed title: What Is Huntington Disease [26]. \n\nMedgen records found\n\nMedgen title: Huntington disease [4]. \n\nClinical features MedGen lists for Huntington disease\n\nMedgen clinical_features: Chorea [5]. Medgen clinical_features: Depression [6]. Medgen clinical_features: Gliosis [7]. Medgen clinical_features: Rigidity [8]. Medgen clinical_features: Seizure [9]. Medgen clinical_features: Hyperreflexia [10]. Medgen clinical_features: Bradykinesia [11]. Medgen clinical_features: Personality changes [12]. Medgen clinical_features: Abnormality of eye movement [13]. Medgen clinical_features: Dementia [14]. Medgen clinical_features: Cerebellar atrophy [15]. Medgen clinical_features: Gait ataxia [16]. Medgen clinical_features: Neuronal loss in central nervous system [17]. \n\nLiterature entity records found\n\nLiterature entity name: Huntington Disease [18]. \n\nClinical trial records found\n\nClinical trial name: Prospective Huntington At Risk Observational Study [19]. Clinical trial name: Family Health After Predictive Huntington Disease (HD) Testing [21]. Clinical trial name: Bioavailability of Ubiquinol in Huntington Disease [23]. Clinical trial name: Study of Huntington Patients in Connection With European Huntington's Disease Network (EHDN) [25]. Clinical trial name: Resveratrol and Huntington Disease [27]. "
+}

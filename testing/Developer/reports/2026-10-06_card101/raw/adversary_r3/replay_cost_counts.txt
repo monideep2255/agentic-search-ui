@@ -1,0 +1,20 @@
+folder | answer | grounding | dev shown | branch best | branch worst | lost worst | new items
+sentence_check_raw | md1 | 0 | 3 | 3 | 3 | 0 | 1
+develop_control | cm4 | 1 | 12 | 12 | 10 | 2 | 2
+develop_control | cp5 | 3 | 5 | 5 | 5 | 0 | 1
+develop_control | cr1 | 3 | 4 | 4 | 3 | 1 | 1
+live | gp1 | 3 | 7 | 7 | 7 | 0 | 1
+live | br2 | 0 | 6 | 6 | 5 | 1 | 4
+live | br3 | 0 | 5 | 5 | 5 | 0 | 3
+live | br3 | 3 | 2 | 2 | 1 | 1 | 4
+live | br4 | 0 | 2 | 2 | 2 | 0 | 1
+live | ge5 | 3 | 7 | 7 | 7 | 0 | 1
+live | br1 | 0 | 3 | 3 | 3 | 0 | 1
+live | br1 | 2 | 0 | 0 | 0 | 0 | 1
+out | gp1 | 3 | 6 | 6 | 6 | 0 | 1
+out | gp6 | 3 | 5 | 5 | 5 | 0 | 1
+out | hb1 | 0 | 4 | 4 | 3 | 1 | 2
+out | hb2 | 0 | 2 | 2 | 1 | 1 | 2
+out | hb4 | 0 | 3 | 3 | 4 | 0 | 3
+out | hd1 | 0 | 3 | 3 | 3 | 0 | 1
+{"rows": 159, "dev_shown": 644, "best_shown": 644, "worst_shown": 638, "lost": 7, "rows_lost": 6, "rows_emptied": 0, "new_items": 31, "rows_new_call": 3}

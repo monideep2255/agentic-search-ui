@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "What positive and negative genes do ashkenazi jewish people have?",
+  "outcome": "answer",
+  "words": 163,
+  "paragraphs": 3,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 1 source",
+  "sources": [
+    "10926794",
+    "1828838",
+    "19690183",
+    "34870614",
+    "35944511"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "key": "q7",
+  "answer_text": "Found 6 pubmed records: The 6q22.33 locus and breast cancer susceptibility. [1], Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study. [2], Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients. [3], Frequency of the Tay-Sachs disease splice and insertion mutations in the UK Ashkenazi Jewish population. [4], The 6q22.33 locus and breast cancer susceptibility. [5] and Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis. [6]. \nP = 0.0083]\" [1]. \nA fifth study is titled \"Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study\" [2]. \n\n## Pubmed records found\n\n- Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients.\n- Frequency of the Tay-Sachs disease splice and insertion mutations in the UK Ashkenazi Jewish population.\n- The 6q22.33 locus and breast cancer susceptibility.\n- Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis.\n- Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study.\n\n(This is a research summary, not medical advice.)\n"
+}

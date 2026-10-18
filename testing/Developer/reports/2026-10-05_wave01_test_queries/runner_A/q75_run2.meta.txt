@@ -1,0 +1,6 @@
+wall clock from ask to captured: 27.6s
+answer wait after pick or ask: 22.1s
+mode pressed: Researcher
+clarifying options: ["What is GERD?","Which genes are associated with GERD risk?","Are there clinical trials for GERD treatments?","What does recent research say about GERD management?"]
+matched pick candidate: What is GERD
+picked: typical symptoms||symptoms||What is GERD

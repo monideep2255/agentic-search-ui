@@ -1,9 +1,9 @@
 // Live check of UI fix sets 8 and 9 on develop, at 1280 and 390 wide.
-import { chromium } from "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/frontend/node_modules/playwright/index.mjs";
+import { chromium } from "<repo-root>/frontend/node_modules/playwright/index.mjs";
 import fs from "node:fs";
 
 const WEB = "https://search-agent-web-develop-2aeb.up.railway.app";
-const OUT = "/private/tmp/claude-501/-Users-anuradhachakraborti-Desktop-Tech-Skills-agentic-search-ui/4f191f8a-e777-42e2-84cd-0f89ca301845/scratchpad/live";
+const OUT = "/private/tmp/claude-501/-Users-<user>-Desktop-Tech-Skills-agentic-search-ui/4f191f8a-e777-42e2-84cd-0f89ca301845/scratchpad/live";
 fs.mkdirSync(OUT, { recursive: true });
 const results = [];
 const log = (r) => { results.push(r); console.log(JSON.stringify(r)); fs.writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2)); };

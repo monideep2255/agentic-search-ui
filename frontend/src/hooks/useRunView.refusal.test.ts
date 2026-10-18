@@ -311,6 +311,7 @@ describe("useRunView: no-data refusal", () => {
       ["rate_limited", "Daily question limit reached"],
       ["cost_capped", "System at capacity"],
       ["write_seeking", "Read-only system"],
+      ["compute_request", "Capability not in this product"],
       ["ok", "Could not process the question"],
     ];
 

@@ -1,0 +1,1559 @@
+{
+ "id": "G-032",
+ "question": "Which pathways does PTEN participate in?",
+ "depth": "researcher",
+ "wall_s": 28.747,
+ "done": {
+  "total_cost_usd": 0.021137204399999998,
+  "total_tool_calls": 9,
+  "elapsed_ms": 28663,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 18 sources",
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 462
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 712
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.96,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 718
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 826
+   }
+  ]
+ },
+ "withdrawn": false,
+ "citations": 21,
+ "stamps": [
+  {
+   "t": 28.706,
+   "type": "guard",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "think",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "plan",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "empty"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 28.706,
+   "type": "step",
+   "step": "write",
+   "tool": null,
+   "status": "started"
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.706,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 28.707,
+   "type": "done",
+   "step": null,
+   "tool": null,
+   "status": null
+  }
+ ],
+ "rec": {
+  "model": [
+   {
+    "t": 2.295,
+    "site": "other: You are an input classifier for a biomedical evidence search",
+    "role": "guard_or_plan",
+    "prompt_chars": 3827,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 800,
+    "completion_tokens": 46,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 2.802
+   },
+   {
+    "t": 5.136,
+    "site": "think: classification",
+    "role": "guard_or_plan",
+    "prompt_chars": 4319,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 990,
+    "completion_tokens": 64,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.826
+   },
+   {
+    "t": 10.051,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 48010,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12653,
+    "completion_tokens": 900,
+    "cached_tokens": 11393,
+    "finish": "stop",
+    "reply": "PTEN is a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase that negatively regulates the AKT/PKB signaling pathway by dephosphorylating phosphoinositide substrates, functioning as a tumor suppressor [10: \"negatively regulates intracellular levels of phosphatidylinositol-3,4,5-trisphosphate in cells and functions as a tumor suppressor by negatively regulating AKT/PKB signaling pathway\"][10: \"preferentially dephosphorylates phosphoinositide substrates\"]. It directly opposes the oncogenic PI3K/AKT/mTOR signalling network by metabolising PIP3 [25: \"PTEN is a phosphatase which metabolises PIP3, the lipid product of PI 3-Kinase, directly opposing the activation of the oncogenic PI3K/AKT/mTOR signalling network\"].\n\n## PI3K/AKT/mTOR Signalling\n\nPTEN loss of function represents one of the most common events observed across many cancer types, with the most frequent mechanisms being single-copy gene deletion and epigenetic silencing rather than coding-sequence mutations [25: \"loss of function of the PTEN tumour suppressor is one of the most common events observed in many types of cancer\"][25: \"the most frequently observed events are deletion of a single gene copy of PTEN and gene silencing\"]. In the cytoplasm, PTEN tumor suppressor opposes the PI3K/Akt signaling pathway [26: \"PTEN tumor suppressor opposes the PI3K/Akt signaling pathway in the cytoplasm\"].\n\n## Nuclear Functions and Chromosomal Integrity\n\nPTEN maintains chromosomal integrity in the nucleus, and its nucleus-cytoplasm shuttling is regulated by ubiquitylation, SUMOylation, and phosphorylation [26: \"maintains chromosomal integrity in the nucleus\"][26: \"Nucleus-cytoplasm shuttling of PTEN is regulated by ubiquitylation, SUMOylation and phosphorylation\"]. Under high glucose conditions, PTEN is conjugated by Nedd8, which induces its nuclear import; neddylated PTEN promotes cell proliferation and de novo fatty acid synthesis, correlating with tumor progression and poor prognosis in breast cancer [26: \"PTEN is conjugated by Nedd8 under high glucose conditions, which induces PTEN nuclear import\"][26: \"neddylated PTEN correlates with tumor progression and poor prognosis\"].\n\n## Immune Regulation via cGAS-STING\n\nPTEN loss suppresses cGAS-STING pathway activity in glioblastoma, with mutant PTEN patients showing decreased STING, IRF3, NF-KB1, and RELA mRNA expression alongside reduced CD8 infiltration and Granzyme B levels [28: \"Decreased STING, IRF3, NF-KB1, and RELA mRNA expressions were also found in patients with mutant PTEN\"][28: \"CD8 infiltration, cGAMP, and Granzyme B levels were reduced in the PTEN loss group\"]. Determining PTEN status in glioblastoma tumours is important when considering immunotherapeutic agents [28: \"determining the PTEN status in tumours is of great importance, like in situations when considering the treatment of glioblastoma patients with immunotherapeutic agents\"].\n\n## Secreted PTEN and Antitumor Immunity\n\nPTEN can be secreted through a TMED10-channeled protein secretion pathway and binds to PLXDC2 on macrophages, activating JAK2-STAT1 signaling that switches tumor-associated macrophages from an immunosuppressive to inflammatory phenotype [29: \"extracellular PTEN binds to the plexin domain-containing protein 2 (PLXDC2) on macrophages, triggering subsequent activation of JAK2-STAT1 signaling\"][29: \"switches tumor-associated macrophages (TAMs) from the immunosuppressive to inflammatory phenotype\"]. Intratumoral injection of PTEN protein promotes antitumor immunity and enhances the therapeutic efficacy of anti-PD-1 treatment in mice [29: \"intratumoral injection of PTEN protein promotes antitumor immunity and suppresses tumor growth in mice\"][29: \"PTEN treatment also enhances the therapeutic efficacy of anti-PD-1 treatment in mice\"].",
+    "dur": 8.893
+   },
+   {
+    "t": 19.345,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 53966,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 14141,
+    "completion_tokens": 791,
+    "cached_tokens": 12856,
+    "finish": "stop",
+    "reply": "PTEN participates in several interconnected pathways: it negatively regulates the PI3K/AKT/mTOR signalling network by metabolising PIP3 [10], maintains chromosomal integrity in the nucleus [26], modulates the cGAS-STING inflammatory pathway [28], and drives antitumor immunity through JAK2-STAT1 signalling in macrophages [29].\n\n## Core Signalling Pathway\n\nPTEN functions as a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase that preferentially dephosphorylates phosphoinositide substrates, directly opposing the activation of the oncogenic PI3K/AKT/mTOR signalling network [10][25]. The gene PTEN, formally designated PHOSPHATASE AND TENSIN HOMOLOG; PTEN, was identified as a tumor suppressor mutated at high frequency across many cancer types [4][10].\n\n## Nuclear Functions and Neddylation\n\nPTEN shuttles between the nucleus and cytoplasm, where nuclear PTEN maintains chromosomal integrity and exhibits tumor-suppressive functions [26]. Under high glucose conditions, PTEN is conjugated by Nedd8, which induces its nuclear import; neddylated PTEN then promotes cell proliferation and de novo fatty acid synthesis rather than suppressing it, correlating with tumor progression and poor prognosis in breast cancer [26].\n\n## Immune Regulation Pathways\n\nPTEN loss is linked to immunosuppression through the cGAS-STING pathway in glioblastoma, where mutant PTEN patients show decreased STING, IRF3, and NF-KB1 expression along with reduced CD8 infiltration and Granzyme B levels [28]. Secreted PTEN binds PLXDC2 on macrophages, activating JAK2-STAT1 signalling that switches tumor-associated macrophages from an immunosuppressive to inflammatory phenotype and enhances anti-PD-1 therapeutic efficacy [29].\n\n## Clinical Contexts and Variants\n\nSeveral clinical trials target PTEN-related pathways, including Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes [11] and Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer [23]. Additional trials examine PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion [6], PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia [15], and Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive? [19]. ClinVar records multiple PTEN variants including NM_000314.8(PTEN):c.-193C>G [3], NM_000314.8(PTEN):c.165-4T>A [9], NM_000314.8(PTEN):c.-515G>C [14], NM_000314.8(PTEN):c.-248C>T [18], and NM_000314.8(PTEN):c.224A>C (p.His75Pro) [22]. Associated publications include PMID 30738865 [7], PMID 33299139 [12], PMID 37547448 [16], PMID 38214828 [20], and PMID 39197453 [24]. In triple-negative breast carcinoma, PTEN protein expression and copy number variation were assessed in pretreatment and posttreatment specimens [13][27], and mechanisms of PTEN loss in cancer were reviewed across seven common tumour types [2]. PTEN expression in TNBC showed discordance between pretreatment and posttreatment primary tumors in 5% of patients and between posttreatment primary tumors and lymph node metastases in 9% [27].",
+    "dur": 9.209
+   },
+   {
+    "t": 28.747,
+    "site": "write: sentence check (guard)",
+    "role": "guard_or_plan",
+    "prompt_chars": 3636,
+    "max_tokens": 256,
+    "ok": true,
+    "prompt_tokens": 822,
+    "completion_tokens": 22,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 0.556
+   }
+  ],
+  "jev": [
+   {
+    "t": 5.136,
+    "kind": "decide",
+    "key": "think.asks_features",
+    "ok": true,
+    "dur": 0.717
+   },
+   {
+    "t": 5.136,
+    "kind": "decide",
+    "key": "plan.literature",
+    "ok": true,
+    "dur": 0.718
+   },
+   {
+    "t": 5.135,
+    "kind": "decide",
+    "key": "think.recent_years",
+    "ok": true,
+    "dur": 0.827
+   },
+   {
+    "t": 18.989,
+    "kind": "sentence_batch",
+    "questions": 6,
+    "timeout_s": 3.0,
+    "ok": true,
+    "dur": 0.34
+   }
+  ],
+  "http": [
+   {
+    "t": 2.413,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.408
+   },
+   {
+    "t": 2.448,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 2.569
+   },
+   {
+    "t": 5.49,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.333
+   },
+   {
+    "t": 5.202,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.639
+   },
+   {
+    "t": 5.174,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.745
+   },
+   {
+    "t": 5.505,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.393
+   },
+   {
+    "t": 7.04,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/symbol/PTEN/taxon/human",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.615
+   },
+   {
+    "t": 7.757,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/entity/autocomplete/",
+    "params": [
+     [
+      "limit",
+      "5"
+     ],
+     [
+      "query",
+      "PTEN"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.063
+   },
+   {
+    "t": 7.742,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/id/5728",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.079
+   },
+   {
+    "t": 8.135,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "PTEN[gene]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.828
+   },
+   {
+    "t": 8.203,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "gene"
+     ],
+     [
+      "id",
+      "5728"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.846
+   },
+   {
+    "t": 7.9,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "retmax",
+      "5"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "PTEN[Title/Abstract]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.186
+   },
+   {
+    "t": 7.803,
+    "host": "clinicaltrials.gov",
+    "path": "/api/v2/studies",
+    "params": [
+     [
+      "countTotal",
+      "true"
+     ],
+     [
+      "pageSize",
+      "50"
+     ],
+     [
+      "query.cond",
+      "PTEN"
+     ],
+     [
+      "sort",
+      "@relevance"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.328
+   },
+   {
+    "t": 8.14,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "PTEN"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.172
+   },
+   {
+    "t": 9.432,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/publications/export/biocjson",
+    "params": [
+     [
+      "pmids",
+      "39197453,38214828,37547448,33299139,30738865"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.373
+   },
+   {
+    "t": 9.514,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "id",
+      "4887840,4885596,4885578,4884119,4882546,4882529,4882510,4882499,4882482,4875220"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.328
+   },
+   {
+    "t": 9.583,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "id",
+      "620760,615107,613028,609538,608309,606791,605691,605309,601728,158350"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.35
+   },
+   {
+    "t": 9.379,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/efetch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "id",
+      "39197453,38214828,37547448,33299139,30738865"
+     ],
+     [
+      "retmode",
+      "xml"
+     ],
+     [
+      "rettype",
+      "abstract"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.558
+   },
+   {
+    "t": 10.064,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 8.848
+   },
+   {
+    "t": 19.043,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.28
+   },
+   {
+    "t": 19.351,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 9.157
+   },
+   {
+    "t": 28.765,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.537
+   }
+  ],
+  "write": [
+   {
+    "t": 10.049,
+    "what": "resolve_concept_ids",
+    "dur": 0.0,
+    "ids": 0
+   },
+   {
+    "t": 10.049,
+    "what": "resolve_descriptor_ids",
+    "dur": 0.0,
+    "ids": 0
+   },
+   {
+    "t": 10.049,
+    "what": "features_decision_wait",
+    "dur": 0.0,
+    "asked": false
+   },
+   {
+    "t": 18.972,
+    "what": "ground_with_sentence_check",
+    "dur": 0.369,
+    "claims": 4,
+    "stripped": 7
+   },
+   {
+    "t": 28.572,
+    "what": "ground_with_sentence_check",
+    "dur": 0.028,
+    "claims": 0,
+    "stripped": 30
+   }
+  ],
+  "grounding": [
+   {
+    "t": 18.972,
+    "dur": 0.0165,
+    "narrative_chars": 1813,
+    "findings": 29,
+    "claims": 3,
+    "stripped": 8,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 19.329,
+    "dur": 0.0113,
+    "narrative_chars": 1813,
+    "findings": 29,
+    "claims": 4,
+    "stripped": 7,
+    "refused": false,
+    "with_verified": true,
+    "collects_candidates": false
+   },
+   {
+    "t": 19.343,
+    "dur": 0.0023,
+    "narrative_chars": 1397,
+    "findings": 29,
+    "claims": 19,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   },
+   {
+    "t": 28.572,
+    "dur": 0.0278,
+    "narrative_chars": 2897,
+    "findings": 29,
+    "claims": 0,
+    "stripped": 30,
+    "refused": true,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 28.6,
+    "dur": 0.0035,
+    "narrative_chars": 1397,
+    "findings": 29,
+    "claims": 19,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 18.988,
+    "candidates": [
+     {
+      "sentence": "PTEN is a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase that negatively regulates the AKT/PKB signaling pathway by dephosphorylating phosphoinositide substrates, functioning as a tumor suppressor",
+      "quotes": [
+       "negatively regulates intracellular levels of phosphatidylinositol-3,4,5-trisphosphate in cells and functions as a tumor suppressor by negatively regulating AKT/PKB signaling pathway",
+       "preferentially dephosphorylates phosphoinositide substrates"
+      ]
+     },
+     {
+      "sentence": "PTEN loss of function represents one of the most common events observed across many cancer types, with the most frequent mechanisms being single-copy gene deletion and epigenetic silencing rather than coding-sequence mutations",
+      "quotes": [
+       "loss of function of the PTEN tumour suppressor is one of the most common events observed in many types of cancer",
+       "the most frequently observed events are deletion of a single gene copy of PTEN and gene silencing"
+      ]
+     },
+     {
+      "sentence": "neddylated PTEN promotes cell proliferation and de novo fatty acid synthesis, correlating with tumor progression and poor prognosis in breast cancer",
+      "quotes": [
+       "PTEN is conjugated by Nedd8 under high glucose conditions, which induces PTEN nuclear import",
+       "neddylated PTEN correlates with tumor progression and poor prognosis"
+      ]
+     },
+     {
+      "sentence": "PTEN loss suppresses cGAS-STING pathway activity in glioblastoma, with mutant PTEN patients showing decreased STING, IRF3, NF-KB1, and RELA mRNA expression alongside reduced CD8 infiltration and Granzyme B levels",
+      "quotes": [
+       "Decreased STING, IRF3, NF-KB1, and RELA mRNA expressions were also found in patients with mutant PTEN",
+       "CD8 infiltration, cGAMP, and Granzyme B levels were reduced in the PTEN loss group"
+      ]
+     },
+     {
+      "sentence": "Determining PTEN status in glioblastoma tumours is important when considering immunotherapeutic agents",
+      "quotes": [
+       "determining the PTEN status in tumours is of great importance, like in situations when considering the treatment of glioblastoma patients with immunotherapeutic agents"
+      ]
+     },
+     {
+      "sentence": "PTEN can be secreted through a TMED10-channeled protein secretion pathway and binds to PLXDC2 on macrophages, activating JAK2-STAT1 signaling that switches tumor-associated macrophages from an immunosuppressive to inflammatory phenotype",
+      "quotes": [
+       "extracellular PTEN binds to the plexin domain-containing protein 2 (PLXDC2) on macrophages, triggering subsequent activation of JAK2-STAT1 signaling",
+       "switches tumor-associated macrophages (TAMs) from the immunosuppressive to inflammatory phenotype"
+      ]
+     }
+    ],
+    "budget_s": 12.0,
+    "approved": [
+     "Determining PTEN status in glioblastoma tumours is important when considering immunotherapeutic agents"
+    ],
+    "ok": true,
+    "dur": 0.341
+   }
+  ],
+  "reader": []
+ },
+ "guard_sentence_check": [
+  {
+   "ok": true,
+   "dur": 0.556,
+   "approved": [
+    "PTEN is a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase that negatively regulates the AKT/PKB signaling pathway by dephosphorylating phosphoinositide substrates, functioning as a tumor suppressor",
+    "PTEN loss of function represents one of the most common events observed across many cancer types, with the most frequent mechanisms being single-copy gene deletion and epigenetic silencing rather than coding-sequence mutations",
+    "neddylated PTEN promotes cell proliferation and de novo fatty acid synthesis, correlating with tumor progression and poor prognosis in breast cancer",
+    "PTEN loss suppresses cGAS-STING pathway activity in glioblastoma, with mutant PTEN patients showing decreased STING, IRF3, NF-KB1, and RELA mRNA expression alongside reduced CD8 infiltration and Granzyme B levels",
+    "Determining PTEN status in glioblastoma tumours is important when considering immunotherapeutic agents",
+    "PTEN can be secreted through a TMED10-channeled protein secretion pathway and binds to PLXDC2 on macrophages, activating JAK2-STAT1 signaling that switches tumor-associated macrophages from an immunosuppressive to inflammatory phenotype"
+   ]
+  }
+ ],
+ "answer_text": "Found 5 pubmed records, 2 gene records, 5 clinvar records, 1 omim record and 5 clinical trial records for PTEN [4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21]. \n\nPI3K/AKT/mTOR Signalling\n\nIn the cytoplasm, PTEN tumor suppressor opposes the PI3K/Akt signaling pathway [1]. \n\nNuclear Functions and Chromosomal Integrity\n\nPTEN maintains chromosomal integrity in the nucleus, and its nucleus-cytoplasm shuttling is regulated by ubiquitylation, SUMOylation, and phosphorylation [1]. \n\nImmune Regulation via cGAS-STING\n\nDetermining PTEN status in glioblastoma tumours is important when considering immunotherapeutic agents [2]. \n\nSecreted PTEN and Antitumor Immunity\n\nIntratumoral injection of PTEN protein promotes antitumor immunity and enhances the therapeutic efficacy of anti-PD-1 treatment in mice [3]. \n\nGene records found\n\nGene symbol: PTEN [4]. Gene name: PTEN [8]. \n\nPubmed records found\n\nPubmed title: Mechanisms of PTEN loss in cancer: It's all about diversity [5]. Pubmed title: Neddylation of PTEN regulates its nuclear import and promotes tumor development [10]. Pubmed title: PTEN in triple-negative breast carcinoma: protein expression and genomic alteration in pretreatment and posttreatment specimens [13]. Pubmed title: Investigating the effects of PTEN mutations on cGAS-STING pathway in glioblastoma tumours [16]. Pubmed title: Secreted PTEN binds PLXDC2 on macrophages to drive antitumor immunity and tumor suppression [19]. \n\nClinvar records found\n\nClinvar title: NM_000314.8(PTEN):c.-193C>G [6]. Clinvar title: NM_000314.8(PTEN):c.165-4T>A [11]. Clinvar title: NM_000314.8(PTEN):c.-515G>C [14]. Clinvar title: NM_000314.8(PTEN):c.-248C>T [17]. Clinvar title: NM_000314.8(PTEN):c.224A>C (p.His75Pro) [20]. \n\nOmim records found\n\nPHOSPHATASE AND TENSIN HOMOLOG [7]. PTEN [7]. \n\nClinical trial records found\n\nClinical trial name: PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion [9]. Clinical trial name: Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes [12]. Clinical trial name: The Expression of PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia [15]. Clinical trial name: Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive [18]. Clinical trial name: Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer [21]. "
+}

@@ -1,0 +1,1919 @@
+{
+ "record": {
+  "model": "moonshotai/kimi-k2.5",
+  "model_id": "moonshotai/kimi-k2.5",
+  "synth_effort": "none",
+  "question_id": "G-040",
+  "run": 1,
+  "question": "Give me the full technical detail on BRCA1 variant classification evidence, including identifiers and assembly context.",
+  "trace_id": "trace-wb3-G-040-r1-ba7f7a330b6a4938",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:43:08Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 58,
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "withdrawn": true,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 0,
+  "prose_kept": [],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   20.71846687499783,
+   19.992382042000827
+  ],
+  "writer_completion_tokens": [
+   437,
+   572
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 49.828,
+  "done_elapsed_s": 49.79,
+  "metered_cost_usd": 0.013146946559999997,
+  "done_cost_usd": 0.013146946559999997,
+  "openrouter_cost_usd": 0.004989,
+  "writer_openrouter_cost_usd": 0.004799,
+  "writer_metered_cost_usd": 0.01297,
+  "answer_text": "Found 40 sequence variant records for BRCA1, of 15350 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [1]. SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [2]. SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [3]. SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [4]. SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [5]. SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [6]. SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [7]. SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [8]. SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [9]. SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [10]. SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [11]. SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [12]. SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [13]. SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [14]. SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [15]. SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [16]. SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [17]. SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [18]. SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [19]. SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [20]. SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [21]. SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [22]. SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [23]. SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [24]. SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [25]. SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [26]. SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [27]. SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [28]. SequenceVariant record ClinVar:1010631 [29]. SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [30]. SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [31]. SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [32]. SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [33]. SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [34]. SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [35]. SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr) [36]. SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu) [37]. SequenceVariant ClinVar:1014997, name: NM_007294.4(BRCA1):c.1709C>T (p.Pro570Leu) [38]. SequenceVariant ClinVar:1015821, name: NM_007294.4(BRCA1):c.2907T>A (p.Asn969Lys) [39]. SequenceVariant ClinVar:1015826, name: NM_007294.4(BRCA1):c.4581G>T (p.Glu1527Asp) [40]. \n\nGene records found\n\nGene symbol: BRCA1 [41]. Gene name: BRCA1 [45]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [42]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [47]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [50]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [53]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [56]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [43]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [48]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [51]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [54]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [57]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [44]. BRCA1 [44]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [46]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [49]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [52]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [55]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [58]. \n\nNote: this answer was truncated because only 140 of the 15350 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.128,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 803,
+    "completion_tokens": 48,
+    "cached_tokens": 512,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.4046e-05,
+    "reply": null,
+    "dur": 1.635
+   },
+   {
+    "t": 1.769,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1003,
+    "completion_tokens": 56,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00014607,
+    "reply": null,
+    "dur": 2.939
+   },
+   {
+    "t": 8.999,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11408,
+    "completion_tokens": 437,
+    "cached_tokens": 10112,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00227429,
+    "reply": "The search retrieved thirty BRCA1 missense variants from ClinVar, all named on transcript NM_007294.4, though one record lacks a complete HGVS expression in the returned data. These entries provide the primary variant identifiers and protein-level annotations used in clinical classification workflows.\n\n## Variant Identifiers and Nomenclature\n\nEach finding reports a ClinVar variant accession paired with an HGVS cDNA and protein change on the canonical BRCA1 transcript. Examples include ClinVar:1000183, name NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [1], ClinVar:1000551, name NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [2], and ClinVar:1001081, name NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [3]. The full set spans residues across the BRCA1 protein sequence, from p.Asp214Val to p.Pro1614Ala [26][30]. One entry, ClinVar:1010631, returned only the accession without accompanying HGVS detail [29].\n\n## Coverage Across Protein Domains\n\nThe variants distribute throughout the BRCA1 coding sequence. N-terminal examples include p.Leu118Pro [3] and p.Lys260Glu [20], while C-terminal entries include p.Pro1614Ala [30] and p.Pro1562Arg [12]. Mid-gene positions include p.Gln1388Lys [16] and p.Arg1443Leu [7]. This breadth indicates that the retrieved set captures missense changes across multiple functional regions of the protein.\n\n## Assembly and Transcript Context\n\nAll named variants use the same transcript reference, NM_007294.4, which provides consistent cDNA coordinates for classification comparison. The findings do not specify genomic assembly coordinates or SPDI expressions; researchers requiring GRCh37 or GRCh38 context would need to map these transcript-level annotations to genomic positions through additional lookup.",
+    "dur": 20.718
+   },
+   {
+    "t": 29.734,
+    "model": "openrouter/moonshotai/kimi-k2.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12370,
+    "completion_tokens": 572,
+    "cached_tokens": 11392,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00252454,
+    "reply": "The retrieved data set comprises 30 ClinVar sequence variant records for the BRCA1 gene, each identified by a ClinVar accession and named with HGVS-compliant transcript-level nomenclature on the NM_007294.4 reference sequence, but no assembly context, clinical significance, or supporting evidence details are present in these findings [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Variant Identifiers and Nomenclature\n\nEach record follows standard HGVS format with transcript identifier, cDNA change, and predicted protein consequence [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The variants span diverse positional classes, including missense changes such as NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro), NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys), and NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [1][2][3]. One record, ClinVar:1010631, carries no name field in the retrieved data [29].\n\n## Transcript Reference Consistency\n\nAll named variants use the identical RefSeq transcript NM_007294.4 as the reference sequence for cDNA and protein numbering [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][30]. This indicates a standardized annotation framework, though no genomic coordinates or genome build information accompany these records.\n\n## Scope of Available Evidence\n\nThe findings provide only identifier and nomenclature metadata; they do not include clinical significance assertions, review status, star ratings, submitter counts, or functional evidence categories that would constitute full variant classification evidence [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Assembly context such as GRCh37 or GRCh38 chromosomal coordinates is absent from all records.",
+    "dur": 19.992
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.124,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.634953916996892,
+    "prompt_tokens": 803,
+    "completion_tokens": 48,
+    "cost_usd": 4.228896e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.639
+   },
+   {
+    "t": 1.768,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 2.9390818339998077,
+    "prompt_tokens": 1003,
+    "completion_tokens": 56,
+    "cost_usd": 5.24496e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.939
+   },
+   {
+    "t": 8.997,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 20.71846687499783,
+    "prompt_tokens": 11408,
+    "completion_tokens": 437,
+    "cost_usd": 0.006116849999999999,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 20.721
+   },
+   {
+    "t": 29.734,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 19.992382042000827,
+    "prompt_tokens": 12370,
+    "completion_tokens": 572,
+    "cost_usd": 0.006853499999999999,
+    "model": "moonshotai/kimi-k2.5",
+    "dur": 19.993
+   }
+  ],
+  "grounding": [
+   {
+    "t": 29.732,
+    "dur": 0.0008,
+    "narrative_chars": 1622,
+    "narrative": "The search retrieved thirty BRCA1 missense variants from ClinVar, all named on transcript NM_007294.4, though one record lacks a complete HGVS expression in the returned data. These entries provide the primary variant identifiers and protein-level annotations used in clinical classification workflows. Each finding reports a ClinVar variant accession paired with an HGVS cDNA and protein change on the canonical BRCA1 transcript. Examples include ClinVar:1000183, name NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [1], ClinVar:1000551, name NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [2], and ClinVar:1001081, name NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [3]. The full set spans residues across the BRCA1 protein sequence, from p.Asp214Val to p.Pro1614Ala [26][30]. One entry, ClinVar:1010631, returned only the accession without accompanying HGVS detail [29]. The variants distribute throughout the BRCA1 coding sequence. N-terminal examples include p.Leu118Pro [3] and p.Lys260Glu [20], while C-terminal entries include p.Pro1614Ala [30] and p.Pro1562Arg [12]. Mid-gene positions include p.Gln1388Lys [16] and p.Arg1443Leu [7]. This breadth indicates that the retrieved set captures missense changes across multiple functional regions of the protein. All named variants use the same transcript reference, NM_007294.4, which provides consistent cDNA coordinates for classification comparison. The findings do not specify genomic assembly coordinates or SPDI expressions; researchers requiring GRCh37 or GRCh38 context would need to map these transcript-level annotations to genomic positions through additional lookup.",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 19,
+    "refused": true
+   },
+   {
+    "t": 49.728,
+    "dur": 0.0015,
+    "narrative_chars": 1817,
+    "narrative": "The retrieved data set comprises 30 ClinVar sequence variant records for the BRCA1 gene, each identified by a ClinVar accession and named with HGVS-compliant transcript-level nomenclature on the NM_007294.4 reference sequence, but no assembly context, clinical significance, or supporting evidence details are present in these findings [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Each record follows standard HGVS format with transcript identifier, cDNA change, and predicted protein consequence [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The variants span diverse positional classes, including missense changes such as NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro), NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys), and NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [1][2][3]. One record, ClinVar:1010631, carries no name field in the retrieved data [29]. All named variants use the identical RefSeq transcript NM_007294.4 as the reference sequence for cDNA and protein numbering [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][30]. This indicates a standardized annotation framework, though no genomic coordinates or genome build information accompany these records. The findings provide only identifier and nomenclature metadata; they do not include clinical significance assertions, review status, star ratings, submitter counts, or functional evidence categories that would constitute full variant classification evidence [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Assembly context such as GRCh37 or GRCh38 chromosomal coordinates is absent from all records.",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 9,
+    "refused": true
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775"
+   },
+   {
+    "ref": 10,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698"
+   },
+   {
+    "ref": 18,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121"
+   },
+   {
+    "ref": 21,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204"
+   },
+   {
+    "ref": 22,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272"
+   },
+   {
+    "ref": 23,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406"
+   },
+   {
+    "ref": 25,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551"
+   },
+   {
+    "ref": 26,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063"
+   },
+   {
+    "ref": 27,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509"
+   },
+   {
+    "ref": 28,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603"
+   },
+   {
+    "ref": 29,
+    "field": "curie",
+    "value": "ClinVar:1010631",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631"
+   },
+   {
+    "ref": 30,
+    "field": "name",
+    "value": "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.763,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.764,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 4.963,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.964,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 4.972,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.972,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.974,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.809,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.817,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.86,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.863,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.907,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.063,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.134,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.163,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.778,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.704,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.712,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.809,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 8.955,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 8.988,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.784,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.785,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.786,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 49.788,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.789,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 49.79,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 49.791,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 49.791,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.013146946559999997,
+  "total_tool_calls": 10,
+  "elapsed_ms": 49790,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 58 sources, not yet confirmed",
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 251
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.85,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 266
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 266
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 278
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014065",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014279",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014997",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1015821",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1015826",
+  "https://www.ncbi.nlm.nih.gov/gene/672/",
+  "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+  "https://omim.org/entry/113705",
+  "https://www.ncbi.nlm.nih.gov/gene/672",
+  "https://clinicaltrials.gov/study/NCT00590109",
+  "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+  "https://clinicaltrials.gov/study/NCT00597987",
+  "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+  "https://clinicaltrials.gov/study/NCT00617656",
+  "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+  "https://clinicaltrials.gov/study/NCT00673335",
+  "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+  "https://clinicaltrials.gov/study/NCT00700778"
+ ]
+}

@@ -1,0 +1,146 @@
+{
+ "name": "mody_c",
+ "q": "What genes are associated with MODY?",
+ "depth": "plain_language",
+ "seconds": 40.6,
+ "trust_outcome": "ask",
+ "trust_line": "Based on 19 sources, not yet confirmed",
+ "tokens": [
+  "I found 6 genes related to MODY [1][3][5][8][10][12], linked to 7 conditions [2][4][6][7][9][11]. ",
+  "\n\n",
+  "Where this answer comes from\n\n",
+  "Gene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1 [1]. ",
+  "Disease name: Maturity-onset diabetes of the young type 14 [2]. ",
+  "Gene NCBIGene:2645, name: glucokinase [3]. ",
+  "Disease name: Maturity-onset diabetes of the young type 2 [4]. ",
+  "Gene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha [5]. ",
+  "Disease name: Maturity-onset diabetes of the young type 1 [6]. ",
+  "Disease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young [7]. ",
+  "Gene NCBIGene:3651, name: pancreatic and duodenal homeobox 1 [8]. ",
+  "Disease name: Maturity-onset diabetes of the young type 4 [9]. ",
+  "Gene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11 [10]. ",
+  "Disease name: Maturity-onset diabetes of the young type 13 [11]. ",
+  "Gene NCBIGene:6927, name: HNF1 homeobox A [12]. ",
+  "Disease name: Maturity-onset diabetes of the young type 3 [13]. ",
+  "Medgen title: Impaired glucose tolerance in MODY (maturity onset diabetes in the young) [14]. ",
+  "Clinical trial name: Health Effects of Liposuction in Overweight Women With Elevated Insulin Levels, Impaired Glucose Tolerance and/or Type 2 Diabetes [15]. ",
+  "Clinical trial name: Lifestyle Interventions to Reduce Diabetes Risk [16]. ",
+  "Clinical trial name: Effects of Rosiglitazone on the Metabolic Phenotype of Impaired Glucose Tolerance in Youth [17]. ",
+  "Clinical trial name: Additional Glucose Lowering and Anti-Inflammatory Effects by Acarbose and Alcohol in Subjects With Impaired Glucose Tolerance or Mild Type 2 Diabetes [18]. ",
+  "Clinical trial name: Effects of Colesevelam HCl On Bile Acid Kinetics [19]. ",
+  "\n\n",
+  "Note: this answer does not address the following entities named in the question: Impaired glucose tolerance in MODY (maturity onset diabetes in the young). Ask about them individually for a complete answer.",
+  "\n\n",
+  "This is a research summary, not medical advice."
+ ],
+ "errors": [],
+ "citations": [
+  [
+   1,
+   "NCBIGene:26060",
+   "Gene NCBIGene:26060, name: adaptor protein, phosphotyrosine interacting with PH domain and leucine zipper 1"
+  ],
+  [
+   2,
+   "MedGen:C4225299",
+   "Disease name: Maturity-onset diabetes of the young type 14"
+  ],
+  [
+   3,
+   "NCBIGene:2645",
+   "Gene NCBIGene:2645, name: glucokinase"
+  ],
+  [
+   4,
+   "MedGen:C0342277",
+   "Disease name: Maturity-onset diabetes of the young type 2"
+  ],
+  [
+   5,
+   "NCBIGene:3172",
+   "Gene NCBIGene:3172, name: hepatocyte nuclear factor 4 alpha"
+  ],
+  [
+   6,
+   "MedGen:C1852093",
+   "Disease name: Maturity-onset diabetes of the young type 1"
+  ],
+  [
+   7,
+   "MedGen:C4014962",
+   "Disease name: Fanconi renotubular syndrome 4 with maturity-onset diabetes of the young"
+  ],
+  [
+   8,
+   "NCBIGene:3651",
+   "Gene NCBIGene:3651, name: pancreatic and duodenal homeobox 1"
+  ],
+  [
+   9,
+   "MedGen:C1833382",
+   "Disease name: Maturity-onset diabetes of the young type 4"
+  ],
+  [
+   10,
+   "NCBIGene:3767",
+   "Gene NCBIGene:3767, name: potassium inwardly rectifying channel subfamily J member 11"
+  ],
+  [
+   11,
+   "MedGen:C4225365",
+   "Disease name: Maturity-onset diabetes of the young type 13"
+  ],
+  [
+   12,
+   "NCBIGene:6927",
+   "Gene NCBIGene:6927, name: HNF1 homeobox A"
+  ],
+  [
+   13,
+   "MedGen:C1838100",
+   "Disease name: Maturity-onset diabetes of the young type 3"
+  ],
+  [
+   14,
+   "543472",
+   "medgen title: Impaired glucose tolerance in MODY (maturity onset diabetes in the young)"
+  ],
+  [
+   15,
+   "NCT00005760",
+   "Clinical trial name: Health Effects of Liposuction in Overweight Women With Elevated Insulin Levels, Impaired Glucose Tolerance and/or Type 2 Diabetes"
+  ],
+  [
+   16,
+   "NCT00006162",
+   "Clinical trial name: Lifestyle Interventions to Reduce Diabetes Risk"
+  ],
+  [
+   17,
+   "NCT00413335",
+   "Clinical trial name: Effects of Rosiglitazone on the Metabolic Phenotype of Impaired Glucose Tolerance in Youth"
+  ],
+  [
+   18,
+   "NCT00417950",
+   "Clinical trial name: Additional Glucose Lowering and Anti-Inflammatory Effects by Acarbose and Alcohol in Subjects With Impaired Glucose Tolerance or Mild Type 2 Diabetes"
+  ],
+  [
+   19,
+   "NCT00476710",
+   "Clinical trial name: Effects of Colesevelam HCl On Bile Acid Kinetics"
+  ]
+ ],
+ "types": [
+  "citation",
+  "done",
+  "guard",
+  "plan",
+  "step",
+  "think",
+  "token",
+  "tool_result",
+  "tool_start",
+  "trust_signal"
+ ]
+}

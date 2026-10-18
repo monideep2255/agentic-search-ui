@@ -18,6 +18,8 @@ Depends on:
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from system_03_search_agent.core import breadth_plan as bp
@@ -46,8 +48,24 @@ def test_pubmed_term_both_joined_with_and() -> None:
 
 
 def test_pubmed_term_strips_operator_characters_from_a_title() -> None:
+    """CHANGED on 2026-09-23 (fix-plan item 12.1), and the change is to the
+    SUBJECT rather than to the check. This arm used to expect `(x)` to lose
+    its brackets and keep its `x`, which was the documented behaviour while
+    no caller passed a disease title at all. A caller passes one now, and
+    what it passes is a MedGen preferred name, whose parenthetical is an
+    acronym gloss (`Gastroesophageal reflux (GERD)`): unbracketing it
+    leaves `gastroesophageal reflux gerd`, a phrase no paper contains, so
+    the search would find nothing while looking fixed. The gloss is now
+    dropped whole. Safety is unchanged or stronger, since every character
+    the strip pattern removes is inside what the drop removes."""
     term = bp.build_pubmed_term(None, 'cancer" OR "[All Fields] (x)')
-    assert term == '"cancer or all fields x"[Title/Abstract]'
+    assert term == '"cancer or all fields"[Title/Abstract]'
+    # The strip pattern still runs, so an UNBALANCED bracket is removed as
+    # a character and its text survives.
+    assert (
+        bp.build_pubmed_term(None, "cancer (of the lung")
+        == '"cancer of the lung"[Title/Abstract]'
+    )
 
 
 def test_pubmed_term_null_inputs_plan_nothing() -> None:
@@ -296,3 +314,198 @@ def test_omim_filter_rejects_a_malformed_symbol() -> None:
     with pytest.raises(ValueError):
         bp.filter_omim_titles(_OMIM_RECORDS, "GCK OR TP53")
 
+
+# ---------------------------------------------------------------------------
+# GEO DataSets (2026-09-22, fix-plan item 1: G-037 answered with no dataset)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Find GEO expression datasets studying TP53 in human tumour samples.",
+        "Is there a GEO dataset on BRCA1?",
+        "expression profiling of GCK in islets",
+        "any microarray data for TP53",
+        "RNA-seq for BRCA1",
+        "GSE12345 and TP53",
+    ],
+)
+def test_dataset_words_ask_for_a_geo_search(question: str) -> None:
+    assert bp.wants_dataset_search(question)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Which diseases are associated with BRCA1?",
+        "What does the BRCA1 gene do, and how is its expression regulated?",
+        "geological survey of MODY",
+        "",
+        None,
+    ],
+)
+def test_ordinary_questions_do_not_ask_for_a_geo_search(question: str | None) -> None:
+    assert not bp.wants_dataset_search(question)
+
+
+def test_gds_term_is_the_symbol_restricted_to_series() -> None:
+    assert bp.build_gds_term("tp53") == "TP53[All Fields] AND gse[Entry Type]"
+    assert bp.build_gds_term(None) is None
+    assert bp.build_gds_term("") is None
+    with pytest.raises(ValueError):
+        bp.build_gds_term("TP53 OR BRCA1")
+
+
+def test_first_stage_plans_the_geo_search_last_and_only_when_asked() -> None:
+    plain = bp.plan_first_stage("TP53", None)
+    with_datasets = bp.plan_first_stage("TP53", None, datasets=True)
+    assert [c.purpose for c in plain] == ["pubmed_search", "clinvar_search", "omim_search"]
+    assert [c.purpose for c in with_datasets] == [
+        "pubmed_search", "clinvar_search", "omim_search", "gds_search",
+    ]
+    gds = with_datasets[-1].tool_input.root
+    assert (gds.db, gds.term, gds.retmax) == ("gds", "TP53[All Fields] AND gse[Entry Type]", 5)
+    assert with_datasets[-1].tool == "ncbi_efetch" and with_datasets[-1].layer == "layer_2_api"
+    # A dataset question with no resolved gene plans no GEO search: the
+    # term needs a symbol, and the fan-out is gene-anchored like the rest.
+    assert bp.plan_first_stage(None, "breast cancer", datasets=True) == bp.plan_first_stage(
+        None, "breast cancer"
+    )
+
+
+def test_gds_follow_up_is_one_capped_summary() -> None:
+    (call,) = bp.plan_gds_follow_up(["200346694", "200315234", "200346344", "x", "200346694"])
+    assert call.purpose == "gds_summary"
+    assert call.tool_input.root.db == "gds"
+    assert call.tool_input.root.ids == ["200346694", "200346344", "200315234"]
+    assert bp.plan_gds_follow_up([]) == ()
+    assert bp.plan_gds_follow_up(["nope"]) == ()
+
+
+def test_the_geo_pair_keeps_a_dataset_question_under_the_call_ceiling() -> None:
+    """A gene question measured 14 to 16 of its 20 allowed Layer 2 and 3
+    calls on 2026-09-22 with OMIM on. The GEO search and its summary add
+    two, only on a question that asks for datasets, so the worst such
+    question reaches 18 and never the ceiling."""
+    assert len(bp.plan_first_stage("TP53", None, datasets=True)) == 4
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2, card 4: the publication-date limit. Since the fix round
+# (F-8.2-A07, J01) a limit is built ONLY from the window the person picked,
+# `recent_publication_window(months, label)`, never read from a question's
+# words; `states_publication_range` only says whether a question already
+# names a range, so it is not asked "How far back?" again. Whether a
+# question asks for recent work without one is
+# `decide(point="think.recent_years")`'s call and is exercised in
+# `test_bare_topic_clarification.py`. The clause shape was verified live
+# against ESearch's `querytranslation` on 2026-09-25 (builder J's report).
+# ---------------------------------------------------------------------------
+
+_TODAY = date(2026, 9, 25)
+
+
+@pytest.mark.parametrize(
+    ("months", "label", "start"),
+    [
+        (12, "the last 12 months", date(2025, 9, 25)),
+        (60, "the last 5 years", date(2021, 9, 25)),
+        (120, "the last 10 years", date(2016, 9, 25)),
+    ],
+)
+def test_a_picked_window_counts_back_from_today(months: int, label: str, start: date) -> None:
+    window = bp.recent_publication_window(months, label, today=_TODAY)
+    assert window == bp.PublicationWindow(start=start, end=None, label=label)
+
+
+@pytest.mark.parametrize("months", [0, -1, 1201])
+def test_a_window_that_is_not_a_recency_limit_is_refused(months: int) -> None:
+    with pytest.raises(ValueError):
+        bp.recent_publication_window(months, "x", today=_TODAY)
+
+
+def test_a_month_end_is_clamped_rather_than_invalid() -> None:
+    window = bp.recent_publication_window(12, "the last 12 months", today=date(2024, 2, 29))
+    assert window.start == date(2023, 2, 28)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Recent papers on statins from the last 5 years?",
+        "papers on statins over the past five years",
+        "statin trials in the last year",
+        "what was published in the past decade on statins",
+        "papers on statins since 2022",
+        "papers on statins in 2023",
+        "statin papers in the last 2 weeks",
+        "statin papers in the last 30 days",
+    ],
+)
+def test_a_question_that_names_a_range_says_so(question: str) -> None:
+    """Only so it is never asked "How far back?" again: see the graph arms."""
+    assert bp.states_publication_range(question, today=_TODAY) is True
+
+
+@pytest.mark.parametrize(
+    "question",
+    ["recent papers on statins", "What is GERD?", "papers on statins since 2099", "", None],
+)
+def test_no_named_range_reads_as_false(question: str | None) -> None:
+    """"recent" alone is not a range: whether it asks for one is the
+    classifier's call, never this function's."""
+    assert bp.states_publication_range(question, today=_TODAY) is False
+
+
+def test_nothing_in_this_module_turns_words_into_a_limit() -> None:
+    """F-8.2-A07 and J01: the function that read "in 2000 patients" as the
+    year 2000 and "the last month of pregnancy" as the past month is gone,
+    and no function taking a question returns a window."""
+    assert not hasattr(bp, "parse_publication_window")
+
+
+def test_a_range_s_own_words_never_become_search_words_but_add_no_limit() -> None:
+    """J02: "in the last 2 weeks" made "last" and "weeks" required words.
+    Stripping them only broadens the term; it never adds a date clause."""
+    (call,) = bp.plan_topic_search("statin papers in the last 2 weeks")
+    assert call.tool_input.model_dump()["term"] == "statin"
+    (call,) = bp.plan_topic_search("risk of stroke in the last month of pregnancy")
+    assert "[dp]" not in call.tool_input.model_dump()["term"]
+
+
+def test_the_clause_is_the_shape_esearch_was_verified_with() -> None:
+    open_range = bp.PublicationWindow(start=date(2021, 9, 25), end=None, label="the last 5 years")
+    closed = bp.PublicationWindow(start=date(2023, 1, 1), end=date(2023, 12, 31), label="in 2023")
+    assert open_range.clause() == '("2021/09/25"[dp] : "3000"[dp])'
+    assert closed.clause() == '("2023/01/01"[dp] : "2023/12/31"[dp])'
+
+
+def test_the_range_and_the_word_recent_never_become_search_words() -> None:
+    """Left in the AND chain, "last" and "years" and "recent" would each be
+    REQUIRED in every abstract."""
+    assert bp.topic_search_words("Recent papers on statins from the last 5 years?") == ["statins"]
+    assert bp.topic_search_words("papers on statins since 2022") == ["statins"]
+    assert bp.build_topic_term("latest research on long covid") == "long AND covid"
+
+
+def test_a_topic_search_with_a_window_carries_the_date_limit() -> None:
+    window = bp.recent_publication_window(60, "the last 5 years", today=_TODAY)
+    (call,) = bp.plan_topic_search("papers on statins from the last 5 years", window=window)
+    term = call.tool_input.model_dump()["term"]
+    assert term == 'statins AND ("2021/09/25"[dp] : "3000"[dp])'
+
+
+def test_a_topic_search_with_no_window_is_unchanged() -> None:
+    (call,) = bp.plan_topic_search("papers on statins")
+    assert call.tool_input.model_dump()["term"] == "statins"
+
+
+def test_a_window_limits_the_gene_pubmed_search_and_nothing_else() -> None:
+    """ClinVar and OMIM records are not papers; only PubMed is limited."""
+    window = bp.PublicationWindow(start=date(2021, 9, 25), end=None, label="the last 5 years")
+    calls = bp.plan_first_stage("BRCA1", None, window=window)
+    terms = {call.purpose: call.tool_input.model_dump()["term"] for call in calls}
+    assert terms["pubmed_search"] == 'BRCA1[Title/Abstract] AND ("2021/09/25"[dp] : "3000"[dp])'
+    assert terms["clinvar_search"] == "BRCA1[gene]"
+    assert terms["omim_search"] == "BRCA1"

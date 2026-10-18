@@ -3,7 +3,7 @@
 # Build phase 4.12. `railway up` indexes the working directory, and the first
 # attempt DIED rather than merely wasting bandwidth:
 #
-#   reference/personal-os-work/Reference-repos/agentmemory-Deep-Dive/agentmemory:
+#   reference/<private-repo>/Reference-repos/agentmemory-Deep-Dive/agentmemory:
 #   IO error ... No such file or directory (os error 2)
 #
 # `reference/` holds symlinks to read-only reference material outside this

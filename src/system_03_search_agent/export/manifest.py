@@ -62,13 +62,20 @@ _MAX_SNAPSHOT_VERSION_CHARS: Final[int] = 40
 # a consumer of nodes.tsv/edges.tsv cannot mistake a query-scoped export
 # for the three-layer picture the live search agent actually answers
 # with. Deliberately names Layer 2 and Layer 3 by their own live sources,
-# not just by number, so the statement is checkable against
-# docs/architecture/Three_layer_data_architecture.md.
+# not just by number, so the statement is checkable: the facts checker
+# (`.claude/skills/verify/scripts/check_facts.py`, facts `layers.l2_apis`
+# and `layers.l3_apis`) compares both lists with `tools/ncbi_transport.py`'s
+# `_LAYER_BY_FAMILY` and the Pathogen Detection transport, and its fact
+# `export.layer1_only` checks that no module of this package imports a tool
+# that reaches a live API, which is what makes "Layer 1 ... only" and "not
+# present in this file" true. Each sentence is checked whole, so a word added
+# to either fails the check. LitSense left the list on 2026-09-27 (card 53),
+# since no code calls it.
 _LAYER_NOTE: Final[str] = (
     "This export covers Layer 1, the pre-ingested knowledge graph, only. "
-    "Layer 2 (live NCBI E-utilities calls: EFetch, ELink, the dbSNP REST "
-    "API) and Layer 3 (enrichment APIs: PubTator3, LitVar2, LitSense, "
-    "ClinicalTrials.gov) are fetched live at query time by the search "
+    "Layer 2 (live NCBI APIs: E-utilities, Datasets, PubChem, dbSNP and "
+    "Pathogen Detection) and Layer 3 (enrichment APIs: PubTator3, LitVar2 "
+    "and ClinicalTrials.gov) are fetched live at query time by the search "
     "agent and are not present in this file."
 )
 

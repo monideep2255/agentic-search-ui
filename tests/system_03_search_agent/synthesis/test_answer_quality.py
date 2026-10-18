@@ -380,10 +380,7 @@ def test_a_list_label_prefers_a_resolved_title_over_the_rows_artifact_name() -> 
 _WORD_ASK = __import__("re").compile(r"about (\d+) words")
 
 
-@pytest.mark.parametrize(
-    "depth, ceiling",
-    [("researcher", 250), ("plain_language", 150)],
-)
+@pytest.mark.parametrize("depth, ceiling", [("researcher", 250)])
 def test_the_depth_directive_asks_for_no_more_than_the_answer_keeps(depth: str, ceiling: int) -> None:
     """Regression for the write-step transient error (2026-09-14).
 
@@ -393,8 +390,17 @@ def test_the_depth_directive_asks_for_no_more_than_the_answer_keeps(depth: str, 
     cause is the ASK, so the ask is pinned: each depth names a word target
     no larger than what its answer keeps, and the Researcher directive tells
     the model the records are listed by the system rather than restated.
-    Raising either ceiling is decision X8 territory (the step budget) and is
+    Raising this ceiling is decision X8 territory (the step budget) and is
     not a test edit.
+
+    `plain_language` LEFT THIS ARM ON 2026-09-21, by product-owner decision
+    under item 11.31, and it was moved rather than dropped: the arm below
+    pins what replaced the word cap. Recorded here because removing a depth
+    from a regression's parameter list is exactly the shape of a weakened
+    verify surface, and the difference is that the property this arm
+    asserted for `plain_language`, that it names a word target at all, is
+    now required to be FALSE. Its own arm asserts that, so the coverage did
+    not shrink. The researcher half is untouched.
     """
     directive = findings_module._DEPTH_DIRECTIVES[depth]
     match = _WORD_ASK.search(directive)
@@ -403,3 +409,176 @@ def test_the_depth_directive_asks_for_no_more_than_the_answer_keeps(depth: str, 
     if depth == "researcher":
         assert "listed below your answer by the system" in directive
         assert "Do not restate the records one by one" in directive
+
+
+def test_plain_language_is_bounded_by_shape_rather_than_by_a_word_count() -> None:
+    """Item 11.31 (2026-09-21): the replacement for the removed word cap.
+
+    The product owner removed the 120-word cap ("do not limit to 120 words
+    or whatever, it must be easy to understand") and chose a shape bound
+    over a bigger number. A paragraph count constrains neither which tokens
+    may appear nor which findings are covered, which is the one thing
+    Section 14.1's firewall lets a depth directive do. The hard backstops
+    stay in code: the 4000-token synth ceiling and the 45-second step
+    budget.
+
+    Populate-check: each assertion names the exact substring it needs, so a
+    directive rewritten to drop the property fails here rather than passing
+    on an empty search.
+    """
+    directive = findings_module._DEPTH_DIRECTIVES["plain_language"]
+
+    assert not _WORD_ASK.search(directive), (
+        "plain_language must not name a word target: "
+        f"{directive!r}"
+    )
+    # Version 5 (2026-09-21) went further than removing the word count, and
+    # this arm is the record of why. Version 4 replaced the count with a
+    # paragraph shape, which produced 206 words of "One disease is called X.
+    # Another disease is called Y." The product owner's verdict: "Number of
+    # words do not define an answer" and "it is not the words that matter but
+    # the content and how easy is it to explain and understand". So NO length
+    # instruction of any kind survives, not a word target and not a shape.
+    for banned in (
+        "paragraph", "sentences separated", "three to five", "two to four",
+        "how long", "at least", "at most", "no more than",
+    ):
+        assert banned not in directive.lower(), (
+            f"plain_language must carry no length instruction; found "
+            f"{banned!r}. Length is bounded in code by the 4000-token "
+            f"ceiling and the 45-second step budget, and the right length "
+            f"is audience fit rather than a number: {directive!r}"
+        )
+    assert "as much as they need to understand it and no more" in directive, (
+        f"populate-check: the audience-fit instruction is missing, which is "
+        f"what replaced the count: {directive!r}"
+    )
+
+
+def test_plain_language_keeps_every_sentence_sourced_and_asks_for_no_paraphrase() -> None:
+    """Item 11.31: the two constraints 11.31 may not relax, pinned.
+
+    The product owner's words on 2026-09-21: "Everything has to have a
+    source. The synthesis can be in simple terms". So plain language gets
+    longer and simpler and STILL cites every sentence.
+
+    The second half is the one a later reader is most likely to undo,
+    because "quote it exactly rather than rewording it" reads like a
+    style preference and is not. `grounding.ground_claim` accepts a claim
+    only on contiguous containment, so against a long free-text value only
+    a verbatim excerpt survives and a reworded one is stripped. A directive
+    that invites rewording would make this depth refuse, which is exactly
+    how version 1 of it failed.
+    """
+    directive = findings_module._DEPTH_DIRECTIVES["plain_language"]
+
+    assert "must rest on a finding and end with that finding's marker" in directive, (
+        f"populate-check: cite-or-refuse is not stated: {directive!r}"
+    )
+    # Items 12.9 and 12.10 (2026-09-23) replaced "quote it exactly rather
+    # than rewording it". The product owner chose to let a faithful synthesis
+    # through, so rewording is allowed ONLY with the record's exact words
+    # inside the marker, which code verifies and the model check reads.
+    # Without that instruction a reworded sentence carries no quote and is
+    # stripped, which is how this depth failed before.
+    assert "exact supporting words inside the marker" in directive, (
+        f"populate-check: the quote-anchored instruction is missing, and "
+        f"without it a reworded explanation is stripped by the gate: {directive!r}"
+    )
+    # The firewall: a depth directive may never constrain which tokens may
+    # appear. Version 1 did ("do not print CURIEs") and made the depth
+    # refuse outright, because a Layer 1 finding's value IS the identifier.
+    for banned in ("do not print", "do not state the identifier", "avoid identifiers"):
+        assert banned not in directive.lower(), (
+            f"plain_language must not constrain which tokens may appear "
+            f"({banned!r}); that is Section 14.1's firewall and version 1's "
+            f"recorded failure: {directive!r}"
+        )
+
+
+def test_the_two_depths_ask_for_materially_different_shapes() -> None:
+    """Item 11.31's whole point: the modes must not read alike.
+
+    Measured live on develop at `46fff40` before this change, at both
+    depths for two questions: the record dump was 66 rows for BRCA1 and
+    about 92 for HNF1A and IDENTICAL across depths, against 89 to 164 words
+    of prose. The part that did not differ was most of the page, so the
+    difference that did exist was swamped.
+
+    Removing the records from plain language was rejected: they are the
+    evidence trail, and the product owner asked for plain language to stay
+    grounded in sources. So the divergence has to come from the prose, and
+    this arm pins that the two directives ask for structurally different
+    prose rather than the same prose at two lengths.
+    """
+    plain = findings_module._DEPTH_DIRECTIVES["plain_language"]
+    researcher = findings_module._DEPTH_DIRECTIVES["researcher"]
+
+    # Researcher synthesises ACROSS records under headings; plain language
+    # walks them one at a time with no headings. Opposite instructions, not
+    # two dial settings.
+    # BOTH depths now forbid enumeration, and that is the point rather than
+    # an oversight in this arm. Version 4 told plain language to give each
+    # finding its own sentence, which is the OPPOSITE of the one clause
+    # already known to stop a depth listing its own records, and it produced
+    # exactly the enumeration that clause exists to prevent.
+    assert "Do not restate the records one by one" in researcher
+    assert "do NOT restate the records one by one" in plain
+    assert "give each finding its own sentence" not in plain, (
+        "version 4's enumeration instruction must not come back: it is what "
+        f"produced 'One disease is called X. Another disease is...': {plain!r}"
+    )
+
+    # They differ by WHO IS READING, which is what actually diverges them.
+    assert "no biology background and no familiarity with NCBI" in plain
+    assert "working researcher" in researcher
+    assert "explain what the answer MEANS" in plain, (
+        f"populate-check: plain language must be told to explain, not just "
+        f"to report: {plain!r}"
+    )
+
+    assert "'## Topic'" in researcher, (
+        f"populate-check: researcher's heading structure is missing: {researcher!r}"
+    )
+    assert "No headings, no lists, no tables." in plain, (
+        f"populate-check: plain language must forbid headings: {plain!r}"
+    )
+
+
+def test_researcher_asks_for_the_quote_a_reworded_sentence_rests_on() -> None:
+    """Card 88 (2026-10-05): the Researcher line said only "ends with the
+    marker", the model wrote a bare [18] after every reworded sentence, and
+    with no quote none of them reached the sentence check, so all were
+    stripped and the person saw only "Found 5 pubmed records". Rule 3a's
+    clause, as plain language carries it, sends them to the check."""
+    researcher = findings_module._DEPTH_DIRECTIVES["researcher"]
+
+    assert "exact supporting words inside the marker" in researcher, (
+        f"populate-check: the quote-anchored instruction is missing, and "
+        f"without it a reworded sentence is stripped by the gate: {researcher!r}"
+    )
+    assert "as rule 3a says" in researcher, researcher
+    assert "ends with the marker of the finding it rests on" in researcher, (
+        f"populate-check: cite-or-refuse is not stated: {researcher!r}"
+    )
+
+
+def test_rule_3a_asks_for_whole_record_sentences_one_quote_each() -> None:
+    """Card 89 (the owner's decision, 2026-10-05, option 2 of
+    `testing/Developer/reports/2026-10-05_sentence_check/design.md`): rule 3a
+    asked for a five-to-thirty-word span, so the writer quoted a fragment and
+    then wrote a sentence that also covered the rest of the record sentence,
+    or the next one, and the sentence check rightly rejected it. Rule 3a now
+    asks for each record sentence drawn on, whole, one quote per sentence.
+    The text stays in the fixed system block, so the cached prefix is still
+    byte-identical across queries."""
+    rule = findings_module.SYNTH_SYSTEM_INSTRUCTION.split("3a. ", 1)[1].split("\n4. ", 1)[0]
+
+    assert "five to thirty" not in rule, rule
+    assert "Quote the whole sentence of the finding" in rule, rule
+    assert "one quote per sentence" in rule, rule
+    assert '[4: "First sentence."][4: "Second sentence."]' in rule, rule
+    assert "say NOTHING MORE than the quoted words" in rule.replace("\n", " "), (
+        f"populate-check: the nothing-more rule must stay: {rule!r}"
+    )
+    assert "never turn a negative finding into a positive one" in rule.replace("\n", " "), rule

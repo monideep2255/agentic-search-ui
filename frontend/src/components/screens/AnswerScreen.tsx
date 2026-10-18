@@ -25,12 +25,14 @@
  */
 
 import type React from "react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Component, createRef, Fragment, useEffect, useRef, useState } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens, layerColour } from "../../theme";
+import { AUDIENCE_MODE_OPTIONS, DepthStripToggle, type AudienceDepth } from "../controls/DepthControl";
 import type { ReasoningStep } from "./RunProgress";
 import { ReasoningLog } from "./ReasoningLog";
+import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
 import { FeedbackSurface } from "../feedback/FeedbackSurface";
 import { PersonaInfo, WritingEllipsis } from "../shell/PersonaChip";
 import {
@@ -63,6 +65,8 @@ export interface Claim {
    *   sentence.
    * `heading`, `noteBefore`: a heading or a system note that stands directly
    *   before this claim.
+   * `noteAfter`: a note that belongs under the table this row ends (card 23's
+   *   variant-to-disease source line), shown directly after the table.
    * `cells`: the display values of a list item (one) or table row (two).
    * `emphasis`: substrings of `text` to bold, chosen in code by the backend.
    * `tableHeader`: the column labels, on the first row of a table.
@@ -78,18 +82,59 @@ export interface Claim {
   paragraph?: number;
   heading?: string;
   noteBefore?: string;
+  noteAfter?: string;
   cells?: string[];
   emphasis?: string[];
   tableHeader?: string[];
   /** 2026-09-14: a record line after the findings-tail note, set by `useRunView`. */
   findingsTail?: boolean;
+  /**
+   * Build phase 8.7, T-8.7-03 (card 50): "listing" for the code-built count
+   * line and record listing the server sends the moment the searches end.
+   * Absent means the written summary, which is where every claim from an
+   * older producer belongs. The summary always renders ABOVE the listing,
+   * whatever order the two arrived in, and a listing claim is not an answer
+   * sentence for Stop (card 58).
+   */
+  placement?: "listing";
 }
 
-/** What the trust line's info card says (item 9.9). */
+/**
+ * Whether a claim is part of the written answer rather than the record
+ * listing shown before it (build phase 8.7).
+ *
+ * Stop reads this, not `claims.length`: card 58 keeps Stop offered until the
+ * first sentence of the ANSWER is on screen, and records shown at the end of
+ * the searches are what the answer is built from, not the answer.
+ */
+export function isSummaryClaim(claim: Claim): boolean {
+  return claim.placement !== "listing";
+}
+
+/** How many sentences of the written answer are on screen (card 58, phase 8.7). */
+export function summarySentencesShown(claims: Claim[]): number {
+  return claims.filter(isSummaryClaim).length;
+}
+
+/**
+ * What the trust line's info card says (item 9.9).
+ *
+ * Card 22 (2026-10-06): this used to say sources were counted by database,
+ * which stopped being true for "Based on N sources" on 2026-09-23 (item
+ * 12.8 made it count pages). It now states what each number counts.
+ *
+ * Card 8 (2026-10-16): the "Based on" lines name their databases and no
+ * longer say "not yet confirmed", so the last sentence describes them: which
+ * databases, and when values could not be compared. It describes only what
+ * the reader sees, not how the backend checks a fact.
+ */
 export const TRUST_LINE_EXPLAINER =
-  "Sources are counted by the database each record comes from, so twenty records from one " +
-  "database are one source. Confirmed means two independent databases agree on the same " +
-  "high-stakes fact. Not yet confirmed means a high-stakes fact rests on a single source.";
+  "Sources cited counts the record pages this answer cites, the same pages listed under " +
+  "Sources; two links to one page count once. Confirmed means two or more independent " +
+  "databases agree on the same high-stakes fact. A Based on line names the databases the " +
+  "cited pages come from, the three most cited when there are four or more. When an answer rests " +
+  "on two or more databases and the values behind one of its high-stakes facts could not be compared, " +
+  "the line adds \"their values could not be compared\".";
 
 /*
  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
@@ -211,8 +256,133 @@ const PROSE_SX = {
   textWrap: "pretty",
   "&:last-child": { mb: 0 },
   "@media (max-width:860px)": { maxWidth: "none" },
-  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px" },
+  "@media (max-width:720px)": { fontSize: 16, lineHeight: 1.65, mb: "16px", overflowWrap: "anywhere" },
 } as const;
+
+/**
+ * The quiet "writing" mark, from the approved `Streaming.dc.html`
+ * (`testing/Developer/reports/2026-09-14_handover_inputs/design/`): the word
+ * "writing" at 13.5px in `inkMuted`, then the dots at weight 700 in `blue`,
+ * 4px apart. `aria-hidden`, because the claims region is already a polite
+ * live region and `RunProgress` announces "Write step running".
+ *
+ * Build phase 8.7 adds a second place for it, `inSlot`: above a record
+ * listing that is already on screen, where the summary will land.
+ *
+ * DESIGN GAP, named rather than filled silently (`design-consistency`). No
+ * design shows records on screen BEFORE the written answer: the approved
+ * `Streaming.dc.html`, `screens/streaming.html` and `prototype/app.html`
+ * all build the answer top to bottom, records last, with the mark at the
+ * end of what has been written. `docs/build/design/README.md`'s coverage
+ * table lists no such state. So the slot is the designed mark, unchanged,
+ * standing where the text will grow, and no new value is introduced:
+ *
+ *   type, colour, dots   the mark itself, as above
+ *   space below it       18px, 16px on a phone: `PROSE_SX`'s paragraph gap
+ *                        (`prototype/app.html`'s `.answer p`), so the slot
+ *                        sits a paragraph's gap above the records, the
+ *                        space the summary's own last paragraph keeps
+ *   space above it       0 in the slot; 8px (theme spacing 1) after the
+ *                        text, as before
+ */
+function WritingMark({ testId, inSlot = false }: { testId: string; inSlot?: boolean }) {
+  return (
+    <Box
+      data-testid={testId}
+      {...(inSlot ? { "data-writing-slot": "" } : {})}
+      aria-hidden="true"
+      sx={{
+        ...(inSlot
+          ? { m: "0 0 18px", "@media (max-width:720px)": { mb: "16px" } }
+          : { mt: 1 }),
+        fontSize: 13.5,
+        color: designTokens.inkMuted,
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+      }}
+    >
+      writing
+      <Box component="span" sx={{ fontWeight: 700, color: designTokens.blue }}>
+        <WritingEllipsis />
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * The top edge of what the reader can actually see: the bottom of the sticky
+ * app bar (`AppShell`'s `<AppBar position="sticky">`), or the viewport's top
+ * when there is no bar. Content scrolled behind the bar is out of sight.
+ */
+function readingEdge(): number {
+  const bar = document.querySelector("header");
+  return bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
+}
+
+/**
+ * Keeps the record listing where the reader is looking when the summary,
+ * the status line or the progress above it changes (build phase 8.7,
+ * T-8.7-03: "the summary appears above the list without the list jumping").
+ *
+ * WHAT A JUMP IS, and what this does about it. The web platform's own
+ * definition, CSS scroll anchoring: content changing ABOVE what the reader
+ * is looking at moves what they are reading. So:
+ *
+ *   - The reader has scrolled into the records (the listing's first record
+ *     is above the reading edge): whatever changes above them, the page
+ *     scrolls by exactly the distance the records moved, and the row they
+ *     were reading stays under their eyes.
+ *   - The top of the records is in view: the reader can see the slot where
+ *     the summary will land, and the summary fills it where they are looking.
+ *     Nothing is scrolled, because scrolling would carry the summary they are
+ *     waiting for out of sight.
+ *
+ * Browsers with native scroll anchoring (Chromium, Firefox) usually hold the
+ * records themselves; Safari does not. This measures the listing's position
+ * on screen AFTER any native adjustment, so where the browser already held
+ * it the measured move is zero and nothing is scrolled twice.
+ *
+ * A class, because `getSnapshotBeforeUpdate` is React's one hook that runs
+ * after a render and BEFORE the page changes, which is when the listing's
+ * old position can still be read.
+ */
+class ListingScrollAnchor extends Component<{ children: React.ReactNode }> {
+  private readonly root = createRef<HTMLDivElement>();
+
+  private firstListingElement(): HTMLElement | null {
+    return this.root.current?.querySelector<HTMLElement>('[data-placement="listing"]') ?? null;
+  }
+
+  getSnapshotBeforeUpdate(): number | null {
+    const listing = this.firstListingElement();
+    if (listing === null) return null;
+    const top = listing.getBoundingClientRect().top;
+    // Only a reader already reading inside the records is held in place.
+    return top < readingEdge() ? top : null;
+  }
+
+  componentDidUpdate(_props: unknown, _state: unknown, topBefore: number | null): void {
+    if (topBefore === null) return;
+    const listing = this.firstListingElement();
+    if (listing === null) return;
+    const moved = listing.getBoundingClientRect().top - topBefore;
+    if (Math.abs(moved) >= 1) window.scrollBy(0, moved);
+  }
+
+  render() {
+    return <div ref={this.root}>{this.props.children}</div>;
+  }
+}
+
+/**
+ * `data-placement="listing"` on a listing claim's element, and nothing on a
+ * summary claim, so a summary element is exactly what it was before 8.7.
+ * The scroll anchor (`ListingScrollAnchor`) finds the listing by it.
+ */
+function placementAttribute(claim: Claim): { "data-placement"?: "listing" } {
+  return claim.placement === "listing" ? { "data-placement": "listing" } : {};
+}
 
 const RTAB_CELL = {
   textAlign: "left",
@@ -234,6 +404,7 @@ const RTAB_ID = {
   fontSize: 12.5,
   whiteSpace: "nowrap",
   color: designTokens.inkMuted,
+  "@media (max-width:720px)": { whiteSpace: "normal", overflowWrap: "anywhere" },
 } as const;
 
 /**
@@ -278,6 +449,22 @@ export function isIdentifierCell(cell: string): boolean {
   return /^(?:[A-Za-z][\w.-]*:\S+|[A-Z]{1,4}\d{6,}|NCT\d{8}|rs\d+)$/.test(cell.trim());
 }
 
+/*
+ * Item 12.9 (2026-09-23): the Researcher table's identifier column, labelled
+ * by the backend (`synthesis/answer_layout.py`'s `IDENTIFIER_COLUMN_LABEL`).
+ * Every cell under it is the design system's identifier cell, the
+ * prototype's `.rtab td.g` (`RTAB_ID` above), whatever the value's shape, so
+ * a PubTator id ("@GENE_BRCA1") or a live record's "omim 138079" sits in the
+ * same mono as a CURIE beside it rather than in body type. `isIdentifierCell`
+ * still decides every other column, unchanged.
+ */
+export const IDENTIFIER_COLUMN_LABEL = "Identifier";
+
+/** Where a record table's identifier column is, or -1 when it has none. */
+export function identifierColumn(header: string[] | null): number {
+  return header ? header.indexOf(IDENTIFIER_COLUMN_LABEL) : -1;
+}
+
 /** The Plain language closing line, shown on its own rather than as a note. */
 export const MEDICAL_NOTE_PREFIX = "This is a research summary, not medical advice";
 
@@ -313,8 +500,18 @@ export type AnswerBlock =
  *     by label, with the label as the block's heading.
  * Everything else is prose, one paragraph per `paragraph` number, or one
  * paragraph per sentence for a producer that sends none.
+ *
+ * `indexes`, build phase 8.7: each claim's position in the run's whole claim
+ * list, when `claims` is one region of it (the summary or the listing).
+ * Every key and row index below is that ORIGINAL position, so a block keeps
+ * its identity when the other region grows: a records table already on
+ * screen is not rebuilt when the summary lands above it. Defaults to each
+ * claim's own position, so a caller passing one list sees no change.
  */
-export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
+export function buildAnswerBlocks(
+  claims: Claim[],
+  indexes: number[] = claims.map((_, position) => position),
+): AnswerBlock[] {
   const blocks: AnswerBlock[] = [];
   const labels = claims.map((claim) =>
     claim.kind === "list_item" || claim.kind === "table_row" ? null : parseRecordLine(claim.text),
@@ -325,7 +522,8 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
     if (claims[later]!.heading || claims[later]!.noteBefore) return false;
     return claims[other]!.paragraph === claims[index]!.paragraph;
   };
-  claims.forEach((claim, index) => {
+  claims.forEach((claim, position) => {
+    const index = indexes[position] ?? position;
     if (claim.noteBefore) blocks.push({ type: "note", text: claim.noteBefore, key: `note-${index}` });
     if (claim.heading) blocks.push({ type: "heading", text: claim.heading, key: `heading-${index}` });
     const last = blocks[blocks.length - 1];
@@ -349,12 +547,15 @@ export function buildAnswerBlocks(claims: Claim[]): AnswerBlock[] {
           rows: [row],
         });
       }
+      if (claim.noteAfter) blocks.push({ type: "note", text: claim.noteAfter, key: `note-after-${index}` });
       return;
     }
-    const parsed = labels[index];
+    const parsed = labels[position];
     if (
       parsed &&
-      (claim.findingsTail || adjacentRecordLine(index, index - 1) || adjacentRecordLine(index, index + 1))
+      (claim.findingsTail ||
+        adjacentRecordLine(position, position - 1) ||
+        adjacentRecordLine(position, position + 1))
     ) {
       const row = { claim, index, cells: [parsed.value] };
       if (last && last.type === "records" && last.source === "record_line" && last.label === parsed.label) {
@@ -413,13 +614,61 @@ export const LAYER_GROUP_LABEL: Record<Layer, string> = {
   3: "Enrichment",
 };
 
+/**
+ * Notes the answer still CARRIES but the web UI does not SHOW.
+ *
+ * Product-owner decision, 2026-09-21: "the Notes section is super confusing.
+ * remove it", naming two notes. On 2026-10-05 (D1) the owner reversed it for
+ * the no-written-summary note: a list with no reason reads as a defect, so
+ * that note is shown. Only the further-records note stays hidden. They asked for them deleted
+ * outright and that is what this does on screen.
+ *
+ * HIDDEN HERE RATHER THAN REMOVED IN THE BACKEND, and the reason is worth
+ * keeping. Both notes are produced by `core/graph.py`, which floors
+ * `trust_outcome` at `ask` in the same branch that builds them. Suppressing
+ * them at the source meant rewriting five tests that guard a real property:
+ * F-4.5-06 breach 2, an answer that silently reports a subset of its
+ * findings while looking complete. Those tests and that floor are untouched,
+ * so an incomplete answer still reaches this screen saying "not yet
+ * confirmed" on its trust line, and the API, CLI and MCP surfaces still
+ * carry the sentences for a programmatic caller.
+ *
+ * What the reader loses is the two sentences they called confusing. What
+ * nobody loses is the disclosure that the answer is unconfirmed.
+ *
+ * Matched by pattern rather than in full because both carry a count or a
+ * record type in the middle ("5 further pubmed records", "one further
+ * disease record").
+ */
+export const HIDDEN_NOTE_PATTERNS: RegExp[] = [
+  // "Note: 5 further pubmed records were found ...", and its singular
+  // "Note: one further disease record was found ...". Written as one
+  // pattern because the count and the record type both vary, and a prefix
+  // list got this wrong on the first attempt by matching only the singular.
+  /^Note: (?:one|\d+) further /,
+];
+
+/** Whether the web UI hides this note (see `HIDDEN_NOTE_PATTERNS`). */
+export const isHiddenNote = (text: string): boolean =>
+  HIDDEN_NOTE_PATTERNS.some((pattern) => pattern.test(text.trimStart()));
+
 /** One row in the grouped, deduplicated source list: `Source` plus every
  * citation marker that pointed at the same record. */
 export interface MergedSource {
-  /** Every citation marker this record answers for, ascending, e.g. [2, 5]. */
+  /** Every citation marker this record answers for, in citation order, e.g. [2, 5]. */
   ns: number[];
+  /** The group this card sits under (see `groupSourcesByLayer`). */
   layer: Layer;
+  /**
+   * Every layer a citation of this page came from, ascending, e.g. [1, 2]
+   * for the graph's gene link cited beside the live Datasets gene link
+   * (card 22 fix round). The card names each one.
+   */
+  layers: Layer[];
+  /** Which markers came from which layer, so a group can list its own. */
+  nsByLayer: Partial<Record<Layer, number[]>>;
   name: string;
+  /** Every distinct tool that cited this page, joined, e.g. "cypher_query, ncbi_datasets". */
   tool: string;
   evidence: string;
   confidence: string;
@@ -427,11 +676,65 @@ export interface MergedSource {
   url: string;
 }
 
+/** One layer group of the Sources list. */
+export interface SourceGroup {
+  layer: Layer;
+  label: string;
+  /** The cards that sit under this group. */
+  items: MergedSource[];
+  /**
+   * Pages also cited from this layer whose one card sits under an earlier
+   * group. Listed by name so the group, and the fact that the answer drew
+   * on this layer, never vanish (card 22 fix round, owner 2026-10-06).
+   */
+  alsoCited: MergedSource[];
+}
+
+/** The text a source card shows for its layers, e.g. "L1 · graph, L2 · live". */
+export function sourceLayerLabel(layers: Layer[]): string {
+  return layers.map((layer) => `L${layer} · ${LAYER_WORD[layer] ?? "source"}`).join(", ");
+}
+
+/**
+ * The key that decides whether two citations point at the same page.
+ *
+ * Card 22 (owner, 2026-10-06): every number on the answer screen that says
+ * "sources" counts distinct pages under this key. It is the same rule as
+ * `source_page_key` in `synthesis/trust.py`, which counts the trust line's
+ * "Based on N sources cited": surrounding whitespace and trailing slashes are
+ * dropped, nothing else. The one measured duplicate was `.../gene/672` beside
+ * `.../gene/672/` (the graph's and the live Datasets builder's links to one
+ * gene). Case, query strings and fragments are kept, because a query string
+ * can name a different record and merging on a guess would hide a source.
+ *
+ * An empty string means "no page"; callers fall back to their own id.
+ */
+export function sourcePageKey(url: string | null | undefined): string {
+  return (url ?? "").trim().replace(/\/+$/, "");
+}
+
+/**
+ * How many distinct pages the answer cites, and from how many layers: the
+ * numbers the meta line states. Read off `groupSourcesByLayer` itself, so
+ * the meta line can never disagree with the Sources list heading.
+ *
+ * Card 22 fix round (owner, 2026-10-06): `layers` counts every layer any
+ * cited page came from. A page cited from the graph and from a live fetch
+ * is one page from two layers, so that answer reads "1 source cited from
+ * 2 layers", and both groups show in the list (`SourceGroup.alsoCited`).
+ */
+export function citedSourceCounts(sources: Source[]): { pages: number; layers: number } {
+  const groups = groupSourcesByLayer(sources);
+  return {
+    pages: groups.reduce((total, group) => total + group.items.length, 0),
+    layers: groups.length,
+  };
+}
+
 /**
  * Groups `sources` by layer, Knowledge graph then Live NCBI APIs then
- * Enrichment, and within each group collapses every citation that names the
- * SAME record (`source.url`) into one row carrying every marker that
- * pointed at it.
+ * Enrichment, and collapses every citation that names the SAME record into
+ * one card carrying every marker that pointed at it.
  *
  * This dedupes the SOURCE LIST only, never a table row. `AnswerScreen`'s
  * result table (`RTAB`, rendered from `claims`) is untouched by this
@@ -443,42 +746,73 @@ export interface MergedSource {
  * the duplication the product owner asked removed (2026-09-20), and this
  * function only ever runs on the list that answers that question.
  *
- * A merged record's group is the layer of its FIRST citation. The same URL
- * cited from two different layers is not a modelled case in this system
- * (Section 6 gives each tool exactly one layer, so a record's layer is fixed
- * by which tool fetched it); this is a defensive default, not a real path.
+ * Card 22 (owner, 2026-10-06): "the same record" is decided by
+ * `sourcePageKey`, the one page key the trust line's count also uses, so a
+ * link with and without a trailing slash is one card, and the heading over
+ * this list, the meta line and "Based on N sources cited" are one number.
+ *
+ * ONE PAGE CITED FROM TWO LAYERS (card 22 fix round, owner's decision of
+ * 2026-10-06 on J-22-02 and A-22-09). Under the page key this is
+ * reachable: the graph's gene link has no trailing slash and the live
+ * Datasets gene link has one. The page stays ONE card, and:
+ *
+ * - the card names every layer it was cited from ("L1 · graph, L2 · live"),
+ *   so no marker points at a card that names a different layer;
+ * - THE RULE FOR WHERE IT SITS: the card sits under the group of the
+ *   lowest-numbered layer it was cited from, Knowledge graph before Live
+ *   NCBI APIs before Enrichment. That is the first group in the list that
+ *   holds it, and it does not depend on which citation came first, so the
+ *   same answer always files the card in the same place;
+ * - every other layer it was cited from still shows its group, listing the
+ *   page by name under `alsoCited` with that layer's own markers and where
+ *   its card is. A group never vanishes while a citation in the answer
+ *   still points at its layer, and the meta line counts that layer.
+ *
+ * The card's name, evidence, confidence and licence come from its first
+ * citation in the layer it sits under; its tool line names every tool that
+ * cited the page.
  */
-export function groupSourcesByLayer(
-  sources: Source[],
-): { layer: Layer; label: string; items: MergedSource[] }[] {
-  const byUrl = new Map<string, MergedSource>();
-  const order: string[] = [];
+export function groupSourcesByLayer(sources: Source[]): SourceGroup[] {
+  const byKey = new Map<string, Source[]>();
   sources.forEach((source) => {
-    const existing = byUrl.get(source.url);
-    if (existing) {
-      existing.ns.push(source.n);
-      return;
-    }
-    byUrl.set(source.url, {
-      ns: [source.n],
-      layer: source.layer,
-      name: source.name,
-      tool: source.tool,
-      evidence: source.evidence,
-      confidence: source.confidence,
-      license: source.license,
-      url: source.url,
-    });
-    order.push(source.url);
+    // A source with no link is its own card, never merged with another
+    // link-less one: the same fallback the trust line's count uses.
+    const key = sourcePageKey(source.url) || `#${source.n}`;
+    const cited = byKey.get(key);
+    if (cited) cited.push(source);
+    else byKey.set(key, [source]);
   });
-  const merged = order.map((url) => byUrl.get(url) as MergedSource);
+  const merged: MergedSource[] = Array.from(byKey.values()).map((cited) => {
+    const layers = ([1, 2, 3] as Layer[]).filter((layer) =>
+      cited.some((source) => source.layer === layer),
+    );
+    const home = layers[0];
+    const primary = cited.find((source) => source.layer === home) ?? cited[0];
+    const nsByLayer: Partial<Record<Layer, number[]>> = {};
+    cited.forEach((source) => {
+      (nsByLayer[source.layer] ??= []).push(source.n);
+    });
+    return {
+      ns: cited.map((source) => source.n),
+      layer: home,
+      layers,
+      nsByLayer,
+      name: primary.name,
+      tool: Array.from(new Set(cited.map((source) => source.tool))).join(", "),
+      evidence: primary.evidence,
+      confidence: primary.confidence,
+      license: primary.license,
+      url: primary.url,
+    };
+  });
   return ([1, 2, 3] as Layer[])
     .map((layer) => ({
       layer,
       label: LAYER_GROUP_LABEL[layer],
       items: merged.filter((item) => item.layer === layer),
+      alsoCited: merged.filter((item) => item.layer !== layer && item.layers.includes(layer)),
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.items.length + group.alsoCited.length > 0);
 }
 
 export interface TrustSignal {
@@ -502,7 +836,7 @@ export interface TrustSignal {
 export interface AnswerBodyContent {
   claims: Claim[];
   sources: Source[];
-  /** The counts line the run reported, e.g. "3 tools · 5 sources". */
+  /** The counts line the run reported, e.g. "3 tool calls · 5 sources cited from 2 layers". */
   meta?: string;
   /** The run's outcome word, e.g. "Answered" (F-4.8-D-05). */
   outcome?: string | null;
@@ -568,6 +902,8 @@ export interface AnswerBodyContent {
 export interface PreviousTurn extends AnswerBodyContent {
   question: string;
   meta: string;
+  /** The mode this turn was asked at; labels the folded row (J-24-06). */
+  depth?: AudienceDepth;
 }
 
 export interface AnswerScreenProps extends AnswerBodyContent {
@@ -685,6 +1021,14 @@ export interface AnswerScreenProps extends AnswerBodyContent {
    */
   onFlagSource?: (n: number) => void;
   flaggedSources?: number[];
+  /**
+   * Card 24. Present only from the answer screen's caller when a landed
+   * answer's depth can be switched in place, which today is every live turn:
+   * a streaming preview has no landed depth to switch yet, and a folded
+   * previous turn is a question the reader is no longer looking at.
+   */
+  onDepthChange?: (value: AudienceDepth) => void;
+  depthValue?: AudienceDepth;
 }
 
 /** Monospace marks a string transcribed exactly. Gene symbols are excluded. */
@@ -934,6 +1278,91 @@ export interface AnswerBodyProps extends AnswerBodyContent {
    * main point is the lead's first emphasised term.
    */
   question?: string | null;
+  /**
+   * Card 24 (2026-09-25). Present only for the live turn: `AnswerScreen`
+   * passes this to the one `AnswerBody` call that renders the current
+   * answer, never to the streaming preview or to a folded previous turn,
+   * both of which either have no landed depth to switch or belong to a
+   * question the reader is no longer looking at.
+   *
+   * When present, the status strip renders `DepthStripToggle` beside `Show
+   * work`. Choosing the other depth calls this with the NEW depth; it is
+   * `AnswerScreen`'s caller's job to re-run the question at it, the same
+   * as any other depth change.
+   */
+  onDepthChange?: (value: AudienceDepth) => void;
+  /** Which button `DepthStripToggle` lights up. Ignored when `onDepthChange` is absent. */
+  depthValue?: AudienceDepth;
+}
+
+/** Card 24. The label `AUDIENCE_MODE_OPTIONS` gives a mode. */
+function depthModeLabel(value: AudienceDepth): string {
+  return AUDIENCE_MODE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
+/**
+ * Card 24. The cost shown before a mode switch re-runs the question: one
+ * sentence from the caller, then "Ask again" (styled as New search) and
+ * "Cancel" (styled as Show work). No design draws it; named in the report.
+ */
+function DepthConfirmLine({
+  testId,
+  text,
+  onAsk,
+  onCancel,
+}: {
+  testId: string;
+  text: string;
+  onAsk: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Box
+      data-testid={testId}
+      sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.25 }}
+    >
+      <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+        {text}
+      </Typography>
+      <Box
+        component="button"
+        type="button"
+        onClick={onAsk}
+        sx={{
+          font: "inherit",
+          fontSize: 12.5,
+          fontWeight: 600,
+          px: 1.6,
+          py: 0.6,
+          flex: "none",
+          borderRadius: 0.5,
+          cursor: "pointer",
+          color: designTokens.surface,
+          bgcolor: designTokens.blue,
+          border: `1px solid ${designTokens.blue}`,
+          "&:hover": { bgcolor: designTokens.navy, borderColor: designTokens.navy },
+        }}
+      >
+        Ask again
+      </Box>
+      <Box
+        component="button"
+        type="button"
+        onClick={onCancel}
+        sx={{
+          font: "inherit",
+          fontSize: 13,
+          border: 0,
+          bgcolor: "transparent",
+          color: designTokens.link,
+          cursor: "pointer",
+          p: 0,
+        }}
+      >
+        Cancel
+      </Box>
+    </Box>
+  );
 }
 
 /**
@@ -994,9 +1423,43 @@ export function AnswerBody({
   streaming = false,
   writing = false,
   question = null,
+  onDepthChange,
+  depthValue,
 }: AnswerBodyProps) {
   /** `Show work` starts closed, as the prototype's `#workPanel` does. */
   const [workOpen, setWorkOpen] = useState(false);
+  /*
+   * Card 24. The mode the person clicked and has not yet confirmed. The
+   * switch only ever sets this; `onDepthChange` (a new run) fires from "Ask
+   * again" alone. Cleared when the answer's own mode or question changes,
+   * so a new answer never opens with a stale prompt.
+   */
+  const [heldDepth, setHeldDepth] = useState<AudienceDepth | null>(null);
+  useEffect(() => {
+    setHeldDepth(null);
+  }, [depthValue, question]);
+  /*
+   * J-24-02, J-24-03. Cancel and Escape put focus back on the button that
+   * opened the line, so a keyboard or screen-reader user is not thrown to
+   * the top of the page when the line unmounts.
+   */
+  const switchRef = useRef<HTMLDivElement | null>(null);
+  const cancelHeld = () => {
+    const mode = heldDepth;
+    setHeldDepth(null);
+    if (mode) {
+      switchRef.current
+        ?.querySelector<HTMLButtonElement>(`[data-testid="answer-depth-toggle-${mode}"]`)
+        ?.focus();
+    }
+  };
+  /*
+   * A-24-01, J-24-12. A refused, asked-back, capped or failed answer cannot
+   * differ by mode, so the switch is not offered: re-asking would spend a
+   * search for the same refusal. (A clarifying question arrives as a
+   * refusal with a label, so it is covered by the same test.)
+   */
+  const switchable = Boolean(onDepthChange) && !(refusal || refusalLabel || failure || capMessage);
   /*
    * Source disclosure state, F-4.8-D-01.
    *
@@ -1073,6 +1536,16 @@ export function AnswerBody({
     />
   );
 
+  const citedRecordName = (name: string, claim: Claim, index: number) => (
+    <>
+      {name.slice(0, -3)}
+      <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+        {name.slice(-3)}
+        {citationChips(claim, index)}
+      </Box>
+    </>
+  );
+
   /*
    * What each claim rests on, as a data attribute on the claim itself: its
    * layer, "pending" while its citations are still arriving, or "none". This
@@ -1097,15 +1570,49 @@ export function AnswerBody({
    * since `AnswerBody` for the live turn is one long-lived component that
    * outlives any single answer.
    */
-  const RECORDS_PAGE_SIZE = 10;
   const [recordsPage, setRecordsPage] = useState<Record<string, number>>({});
   useEffect(() => {
     setRecordsPage({});
   }, [question]);
 
-  const blocks = buildAnswerBlocks(claims);
-  // UI fix 11.27: the one bold term in the body, or none.
-  const mainPoint = mainPointFor(claims, question);
+  /*
+   * Build phase 8.7, T-8.7-03 (card 50): THE SUMMARY ABOVE, THE LISTING
+   * BELOW, whatever order they arrived in. The server sends the records the
+   * moment the searches end and the count line with the written summary
+   * later, so the records are on screen while the summary is still being
+   * written, and the summary is placed above them when it lands.
+   *
+   * Each region is grouped into blocks on its own, keyed by each claim's
+   * position in the arrival-ordered list (`buildAnswerBlocks`' `indexes`).
+   * The listing's blocks therefore keep their keys when the summary lands:
+   * React inserts the summary's elements above them and leaves every record
+   * row, the table's page and the reader's place in it where they were.
+   *
+   * An older producer sends no placement, so its whole answer is the
+   * summary region and renders exactly as before.
+   */
+  const summaryIndexes: number[] = [];
+  const listingIndexes: number[] = [];
+  claims.forEach((claim, index) => (isSummaryClaim(claim) ? summaryIndexes : listingIndexes).push(index));
+  const summaryBlocks = buildAnswerBlocks(
+    summaryIndexes.map((index) => claims[index]!),
+    summaryIndexes,
+  );
+  const listingBlocks = buildAnswerBlocks(
+    listingIndexes.map((index) => claims[index]!),
+    listingIndexes,
+  );
+  // UI fix 11.27: the one bold term in the body, or none. Chosen in READING
+  // order, summary first, so the lead a reader sees first is the one read.
+  const readingOrder = [...summaryIndexes, ...listingIndexes];
+  const mainPointInOrder = mainPointFor(
+    readingOrder.map((index) => claims[index]!),
+    question,
+  );
+  const mainPoint =
+    mainPointInOrder === null
+      ? null
+      : { index: readingOrder[mainPointInOrder.index]!, term: mainPointInOrder.term };
   let headingNumber = 0;
   let noteNumber = 0;
   let recordsNumber = 0;
@@ -1131,69 +1638,15 @@ export function AnswerBody({
     currentPage: number,
     totalPages: number,
     totalRows: number,
-  ) => {
-    const start = currentPage * RECORDS_PAGE_SIZE + 1;
-    const end = Math.min(start + RECORDS_PAGE_SIZE - 1, totalRows);
-    const goTo = (next: number) =>
-      setRecordsPage((current) => ({ ...current, [block.key]: next }));
-    const navSx = {
-      font: "inherit",
-      fontSize: 13,
-      fontWeight: 600,
-      border: 0,
-      bgcolor: "transparent",
-      color: designTokens.link,
-      cursor: "pointer",
-      p: 0,
-      "&:disabled": { color: designTokens.inkFaint, cursor: "default" },
-    } as const;
-    return (
-      <Box
-        data-testid={`${testIdPrefix}answer-records-${number}-pagination`}
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "8px 16px",
-          fontSize: 13,
-          color: designTokens.inkMuted,
-          m: "0 0 16px",
-          pt: "8px",
-          borderTop: `1px solid ${designTokens.line}`,
-        }}
-      >
-        <Box component="span" aria-live="polite" data-testid={`${testIdPrefix}answer-records-${number}-status`}>
-          {`Showing ${start}–${end} of ${totalRows}`}
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <Box
-            component="button"
-            type="button"
-            data-testid={`${testIdPrefix}answer-records-${number}-prev`}
-            onClick={() => goTo(currentPage - 1)}
-            disabled={currentPage === 0}
-            sx={navSx}
-          >
-            {"‹ Previous"}
-          </Box>
-          <Box component="span" sx={{ color: designTokens.inkFaint, fontSize: 12.5 }}>
-            {`Page ${currentPage + 1} of ${totalPages}`}
-          </Box>
-          <Box
-            component="button"
-            type="button"
-            data-testid={`${testIdPrefix}answer-records-${number}-next`}
-            onClick={() => goTo(currentPage + 1)}
-            disabled={currentPage >= totalPages - 1}
-            sx={navSx}
-          >
-            {"Next ›"}
-          </Box>
-        </Box>
-      </Box>
-    );
-  };
+  ) => (
+    <RecordsPaginationBar
+      testIdBase={`${testIdPrefix}answer-records-${number}`}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalRows={totalRows}
+      onGo={(next) => setRecordsPage((current) => ({ ...current, [block.key]: next }))}
+    />
+  );
 
   const renderRecords = (block: Extract<AnswerBlock, { type: "records" }>) => {
     const number = recordsNumber++;
@@ -1204,6 +1657,8 @@ export function AnswerBody({
     const visibleRows = isPaginated
       ? block.rows.slice(currentPage * RECORDS_PAGE_SIZE, currentPage * RECORDS_PAGE_SIZE + RECORDS_PAGE_SIZE)
       : block.rows;
+    const idColumn = identifierColumn(block.header);
+    const isIdAt = (cell: string, column: number) => column === idColumn || isIdentifierCell(cell);
     const heading =
       block.label !== null ? (
         <Typography
@@ -1230,6 +1685,7 @@ export function AnswerBody({
                 key={index}
                 data-testid={`${testIdPrefix}claim-text-${index}`}
                 data-layer={provenance(claim)}
+                {...placementAttribute(claim)}
                 sx={{
                   display: "flex",
                   flexDirection: "column",
@@ -1242,10 +1698,9 @@ export function AnswerBody({
               >
                 <Box
                   component="span"
-                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, ...uncitedInk(claim) }}
+                  sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, overflowWrap: "anywhere", ...uncitedInk(claim) }}
                 >
-                  {cells[0] ?? claim.text}
-                  {citationChips(claim, index)}
+                  {citedRecordName(cells[0] ?? claim.text, claim, index)}
                 </Box>
                 {cells.slice(1).map((cell, c) =>
                   cell ? (
@@ -1253,7 +1708,7 @@ export function AnswerBody({
                       component="span"
                       key={c}
                       sx={
-                        isIdentifierCell(cell)
+                        isIdAt(cell, c + 1)
                           ? RTAB_ID
                           : { fontSize: 13.5, lineHeight: 1.45, color: designTokens.inkMuted }
                       }
@@ -1308,13 +1763,14 @@ export function AnswerBody({
                   key={index}
                   data-testid={`${testIdPrefix}claim-text-${index}`}
                   data-layer={provenance(claim)}
+                  {...placementAttribute(claim)}
                   sx={{ ...uncitedInk(claim), ...rise }}
                 >
                   {cells.map((cell, c) => (
                     <Box
                       component="td"
                       key={c}
-                      sx={isIdentifierCell(cell) ? { ...RTAB_CELL, ...RTAB_ID } : RTAB_CELL}
+                      sx={isIdAt(cell, c) ? { ...RTAB_CELL, ...RTAB_ID } : RTAB_CELL}
                     >
                       {cell}
                     </Box>
@@ -1359,30 +1815,63 @@ export function AnswerBody({
     if (block.type === "records") return renderRecords(block);
     return (
       <Typography key={block.key} component="p" sx={PROSE_SX}>
-        {block.items.map(({ claim, index }) => (
-          <Box
-            component="span"
-            key={index}
-            data-testid={`${testIdPrefix}claim-text-${index}`}
-            data-layer={provenance(claim)}
-            sx={{ ...uncitedInk(claim), ...rise }}
-          >
-            {/* No space before the markers: a superscript sits against the
-                sentence it cites, and a space would let it wrap alone. */}
-            {withMainPoint(
-              claim.text,
-              mainPoint?.index === index ? mainPoint.term : undefined,
-              `${testIdPrefix}answer-main-point`,
-            )}
-            {citationChips(claim, index)}{" "}
-          </Box>
-        ))}
+        {block.items.map(({ claim, index }) => {
+          const trailing = claim.text.match(/[.!?]*\s*$/)?.[0].length ?? 0;
+          const longFinalName = (claim.citations.length > 0 || !!claim.pendingCitations)
+            && /(?:^|\s)\S{20,}$/.test(claim.text.slice(0, claim.text.length - trailing));
+          const tailStart = Math.max(0, claim.text.length - trailing - 3);
+          const term = mainPoint?.index === index ? mainPoint.term : undefined;
+          const termStart = term ? claim.text.indexOf(term) : -1;
+          const crossesTail = term && termStart >= 0 && termStart < tailStart && termStart + term.length > tailStart;
+          const mainPointId = `${testIdPrefix}answer-main-point`;
+          return (
+            <Box
+              component="span"
+              key={index}
+              data-testid={`${testIdPrefix}claim-text-${index}`}
+              data-layer={provenance(claim)}
+              {...placementAttribute(claim)}
+              sx={{ ...uncitedInk(claim), ...rise }}
+            >
+              {!longFinalName ? (
+                <>
+                  {withMainPoint(claim.text, term, mainPointId)}
+                  {citationChips(claim, index)}
+                </>
+              ) : crossesTail ? (
+                <>
+                  {claim.text.slice(0, termStart)}
+                  <Box component="strong" data-testid={mainPointId} sx={{ fontWeight: 700 }}>
+                    {claim.text.slice(termStart, tailStart)}
+                  </Box>
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    <Box component="strong" sx={{ fontWeight: 700 }}>
+                      {claim.text.slice(tailStart, termStart + term.length)}
+                    </Box>
+                    {claim.text.slice(termStart + term.length)}
+                    {citationChips(claim, index)}
+                  </Box>
+                </>
+              ) : (
+                <>
+                  {withMainPoint(claim.text.slice(0, tailStart), termStart < tailStart ? term : undefined, mainPointId)}
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    {withMainPoint(claim.text.slice(tailStart), termStart >= tailStart ? term : undefined, mainPointId)}
+                    {citationChips(claim, index)}
+                  </Box>
+                </>
+              )}{" "}
+            </Box>
+          );
+        })}
       </Typography>
     );
   };
 
   const medicalNotes = systemNotes.filter((note) => note.trimStart().startsWith(MEDICAL_NOTE_PREFIX));
-  const otherNotes = systemNotes.filter((note) => !note.trimStart().startsWith(MEDICAL_NOTE_PREFIX));
+  const otherNotes = systemNotes
+    .filter((note) => !note.trimStart().startsWith(MEDICAL_NOTE_PREFIX))
+    .filter((note) => !isHiddenNote(note));
 
   return (
     /*
@@ -1415,7 +1904,17 @@ export function AnswerBody({
         everything below is this component's.
       */}
       {meta || outcome ? (
-        <Box sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}>
+        <Box
+          data-testid={`${testIdPrefix}answer-status-strip`}
+          onKeyDown={(event: React.KeyboardEvent) => {
+            // J-24-03: Escape closes the cost line, like Cancel.
+            if (event.key === "Escape" && heldDepth) {
+              event.stopPropagation();
+              cancelHeld();
+            }
+          }}
+          sx={{ pt: 1.5, pb: 2, mb: 2.5, borderBottom: `1px solid ${designTokens.line}` }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -1475,6 +1974,44 @@ export function AnswerBody({
               {elapsedMs !== null ? `${(elapsedMs / 1000).toFixed(1)}s · ` : ""}
               {meta}
             </Typography>
+            {/*
+              Card 24. `Main.dc.html` and `Researcher.dc.html` draw the depth
+              toggle and `Show work` as one trailing group on the right.
+
+              DOM ORDER IS THE TAB ORDER (J-24-03, A-24-03): the switch, then
+              the cost line it opens, then `Show work`. `order` puts the line
+              on its own row below and keeps `Show work` beside the switch,
+              so the screen reads as before and a keyboard user lands on
+              "Ask again" as the very next stop after the switch.
+            */}
+            {switchable ? (
+              <Box ref={switchRef} sx={{ ml: "auto", display: "flex" }}>
+                <DepthStripToggle
+                  value={depthValue}
+                  onChange={setHeldDepth}
+                  onSelectCurrent={() => setHeldDepth(null)}
+                />
+              </Box>
+            ) : null}
+            {switchable ? (
+              <Box
+                aria-live="polite"
+                sx={{ flexBasis: "100%", order: 3, ...(heldDepth ? {} : { mt: -1.25 }) }}
+              >
+                {heldDepth ? (
+                  <DepthConfirmLine
+                    testId="answer-depth-confirm"
+                    text={`Ask this question again in ${depthModeLabel(heldDepth)}? It runs as one new search.`}
+                    onAsk={() => {
+                      const next = heldDepth;
+                      setHeldDepth(null);
+                      onDepthChange?.(next);
+                    }}
+                    onCancel={cancelHeld}
+                  />
+                ) : null}
+              </Box>
+            ) : null}
             {steps.length > 0 ? (
               <Box
                 component="button"
@@ -1482,7 +2019,8 @@ export function AnswerBody({
                 onClick={() => setWorkOpen((open) => !open)}
                 aria-expanded={workOpen}
                 sx={{
-                  ml: "auto",
+                  order: 2,
+                  ml: switchable ? 0 : "auto",
                   font: "inherit",
                   fontSize: 13,
                   border: 0,
@@ -1534,34 +2072,29 @@ export function AnswerBody({
         data-testid={`${testIdPrefix}claims`}
         aria-live={streaming ? "polite" : undefined}
       >
-        {blocks.map(renderBlock)}
+        {summaryBlocks.map(renderBlock)}
+        {/*
+          Build phase 8.7: THE WRITING SLOT. While the records are on screen
+          and the summary is still being written, the "writing" mark stands
+          where the summary will land, above the records, and stays at the
+          end of the summary as its sentences arrive. See `WritingMark` for
+          where every value comes from, and why this placement is a named
+          design gap.
+        */}
+        {streaming && writing && listingBlocks.length > 0 ? (
+          <WritingMark testId={`${testIdPrefix}streaming-writing-indicator`} inSlot />
+        ) : null}
+        {listingBlocks.map(renderBlock)}
       </Box>
 
       {/*
         The "writing" line at the end of the streamed text, from the approved
-        `Streaming.dc.html`: 13.5px `inkMuted`, the dots 700 in `blue`. Gone
-        the moment the run lands or stops. `aria-hidden`, because the claims
-        region is already a polite live region and `RunProgress` announces
-        "Write step running".
+        `Streaming.dc.html`. Gone the moment the run lands or stops. With a
+        record listing on screen it stands in the slot above the listing
+        instead, where the text is still growing.
       */}
-      {streaming && writing ? (
-        <Box
-          data-testid={`${testIdPrefix}streaming-writing-indicator`}
-          aria-hidden="true"
-          sx={{
-            mt: 1,
-            fontSize: 13.5,
-            color: designTokens.inkMuted,
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          writing
-          <Box component="span" sx={{ fontWeight: 700, color: designTokens.blue }}>
-            <WritingEllipsis />
-          </Box>
-        </Box>
+      {streaming && writing && listingBlocks.length === 0 ? (
+        <WritingMark testId={`${testIdPrefix}streaming-writing-indicator`} />
       ) : null}
 
       {/*
@@ -1788,9 +2321,32 @@ export function AnswerBody({
                     px: 0.75,
                   }}
                 >
-                  {group.items.length}
+                  {/* Pages cited from this layer, its own cards plus any it
+                      shares with an earlier group (card 22 fix round). */}
+                  {group.items.length + group.alsoCited.length}
                 </Box>
               </Box>
+
+              {/*
+                A page also cited from this layer whose one card sits under
+                an earlier group (card 22 fix round, owner 2026-10-06): named
+                here with this layer's own markers and where its card is, so
+                the group, and the fact that the answer drew on this layer,
+                never vanish. A line, not a second card.
+              */}
+              {group.alsoCited.map((source) => (
+                <Typography
+                  key={`also-${source.ns.join(",")}`}
+                  component="p"
+                  data-testid={`${testIdPrefix}sources-group-${group.layer}-also-${source.ns[0]}`}
+                  sx={{ fontSize: 12.5, color: designTokens.inkMuted, m: 0, mb: 1, pl: 2.5 }}
+                >
+                  <Box component="span" sx={{ ...mono, fontWeight: 700, fontSize: 12, mr: 0.75 }}>
+                    {(source.nsByLayer[group.layer] ?? []).map((n) => `[${n}]`).join("")}
+                  </Box>
+                  {source.name}: one card for this page, listed under {LAYER_GROUP_LABEL[source.layer]}
+                </Typography>
+              ))}
 
               {group.items.map((source) => {
                 const colour = layerColour(source.layer);
@@ -1801,6 +2357,7 @@ export function AnswerBody({
                     component="details"
                     data-testid={`${testIdPrefix}source-${primaryN}`}
                     data-layer={source.layer}
+                    data-layers={source.layers.join(" ")}
                     open={openSources.includes(primaryN)}
                     sx={{
                       border: `1px solid ${designTokens.line}`,
@@ -1847,18 +2404,27 @@ export function AnswerBody({
                       >
                         {source.ns.map((n) => `[${n}]`).join("")}
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, "@media (max-width:720px)": { minWidth: 0, overflowWrap: "anywhere" } }}
+                      >
                         {source.name}
                       </Typography>
                       {/*
                         F-4.8-D-02. This read "L1", which a reader has to already
                         know how to decode. The prototype names the layer in words.
                       */}
+                      {/*
+                        Card 22 fix round: every layer this page was cited
+                        from, so a live marker merged into a graph card never
+                        points at a card that says only "graph".
+                      */}
                       <Box
                         component="span"
+                        data-testid={`${testIdPrefix}source-${primaryN}-layers`}
                         sx={{ ...mono, ml: "auto", fontSize: 11.5, color: designTokens.inkMuted }}
                       >
-                        L{source.layer} · {LAYER_WORD[source.layer] ?? "source"}
+                        {sourceLayerLabel(source.layers)}
                       </Box>
                     </Box>
 
@@ -2110,6 +2676,15 @@ function FoldedTurn({ turn, index }: { turn: PreviousTurn; index: number }) {
                   >
                     {turn.meta}
                   </Typography>
+                  {turn.depth ? (
+                    <Typography
+                      component="span"
+                      data-testid={`previous-turn-${index}-mode`}
+                      sx={{ fontSize: 12, color: designTokens.inkMuted }}
+                    >
+                      {depthModeLabel(turn.depth)}
+                    </Typography>
+                  ) : null}
                   {/*
                     Product-owner feedback, 2026-09-13, on the retest: "have a
                     show answer and hide answer on the right hand side that
@@ -2207,6 +2782,8 @@ export function AnswerScreen({
   systemNotes = [],
   onFlagSource,
   flaggedSources = [],
+  onDepthChange,
+  depthValue,
 }: AnswerScreenProps) {
   /*
    * UI fix set 7 (R22). Bring the new turn's heading into view when a
@@ -2228,6 +2805,7 @@ export function AnswerScreen({
    * check is the same courtesy the screen fade in `App.tsx` already extends.
    */
   const headingRef = useRef<HTMLDivElement | null>(null);
+  const questionHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const running = progress !== null && progress !== undefined;
   useEffect(() => {
     if (!running) return;
@@ -2344,7 +2922,13 @@ export function AnswerScreen({
             body below. */}
         <Box ref={headingRef} sx={{ pb: 2, borderBottom: `1px solid ${designTokens.line}` }}>
           <Box sx={{ display: "flex", gap: 1.75, alignItems: "flex-start" }}>
-            <Typography variant="h3" component="h1" sx={{ flex: 1 }}>
+            <Typography
+              variant="h3"
+              component="h1"
+              ref={questionHeadingRef}
+              tabIndex={-1}
+              sx={{ flex: 1, outline: "none" }}
+            >
               {question}
             </Typography>
             {onNewSearch ? (
@@ -2391,63 +2975,96 @@ export function AnswerScreen({
           question above it.
         */}
         <Box sx={{ mt: 2.5 }}>
-          {running ? (
-            <>
-              {progress}
-              {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
-              {claims.length > 0 ? (
-                <Box data-testid="streaming-answer" sx={{ mt: 2.5 }}>
-                  <AnswerBody streaming writing={!stopped} question={question} claims={claims} sources={sources} />
-                </Box>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <AnswerBody
-                tour
-                question={question}
-                claims={claims}
-                sources={sources}
-                meta={meta}
-                outcome={outcome}
-                outcomeTone={outcomeTone}
-                elapsedMs={elapsedMs}
-                steps={steps}
-                trust={trust}
-                refusal={refusal}
-                refusalLabel={refusalLabel}
-                refusalLink={refusalLink}
-                failure={failure}
-                capMessage={capMessage}
-                systemNotes={systemNotes}
-                onFlagSource={onFlagSource}
-                flaggedSources={flaggedSources}
-              />
+          {/*
+            Build phase 8.7, T-8.7-03: ONE ANSWER BODY FROM THE FIRST RECORD
+            TO THE LANDED ANSWER. The records now arrive while the run is
+            live and the summary lands with `done`, so the moment the run
+            lands is the moment the summary is placed above the records.
+            This used to swap the running branch's `AnswerBody` for a second
+            one in the landed branch, which React treats as a different
+            element: every record row was rebuilt and the records table went
+            back to its first page at exactly that moment. The body now
+            stands at one position in both states, and only what it is given
+            changes, so the records stay the same elements on screen.
+          */}
+          <ListingScrollAnchor>
+            {running ? progress : null}
+            {/* UI fix set 9, item 9.6: the answer builds under the progress. */}
+            {!running || claims.length > 0 ? (
+              <Box
+                {...(running ? { "data-testid": "streaming-answer" } : {})}
+                sx={running ? { mt: 2.5 } : undefined}
+              >
+                {running ? (
+                  <AnswerBody
+                    streaming
+                    writing={!stopped}
+                    question={question}
+                    claims={claims}
+                    sources={sources}
+                  />
+                ) : (
+                  <AnswerBody
+                    tour
+                    question={question}
+                    claims={claims}
+                    sources={sources}
+                    meta={meta}
+                    outcome={outcome}
+                    outcomeTone={outcomeTone}
+                    elapsedMs={elapsedMs}
+                    steps={steps}
+                    trust={trust}
+                    refusal={refusal}
+                    refusalLabel={refusalLabel}
+                    refusalLink={refusalLink}
+                    failure={failure}
+                    capMessage={capMessage}
+                    systemNotes={systemNotes}
+                    onDepthChange={
+                      onDepthChange
+                        ? (next) => {
+                            onDepthChange(next);
+                            // J-24-02: focus goes to the question heading,
+                            // which stays mounted through the new run.
+                            questionHeadingRef.current?.focus({ preventScroll: true });
+                          }
+                        : undefined
+                    }
+                    depthValue={depthValue}
+                    onFlagSource={onFlagSource}
+                    flaggedSources={flaggedSources}
+                  />
+                )}
+              </Box>
+            ) : null}
+            {!running ? (
+              <>
+                {/*
+                  F-4.8-D-11. These were the other way round. The prototype's `#tail`
+                  orders sources, verdict pills, the follow-up form, then the rating,
+                  which asks "was that useful" AFTER offering the next question rather
+                  than before it.
+                */}
 
-              {/*
-                F-4.8-D-11. These were the other way round. The prototype's `#tail`
-                orders sources, verdict pills, the follow-up form, then the rating,
-                which asks "was that useful" AFTER offering the next question rather
-                than before it.
-              */}
-
-              <Box ref={followUpRef}>{followUp}</Box>
-              {/*
-                T-4.6-09. `FeedbackSurface` is built here, not passed in as an
-                opaque node, so it can be given the real POST target (`runId`) and
-                bearer token (`authToken`) it needs. `key={question}` remounts it
-                per question, the same reset the old call site in `App.tsx`
-                achieved with `key={searchView.question}`, so a rating typed for
-                one answer can never linger onto the next.
-              */}
-              <FeedbackSurface
-                key={question}
-                runId={runId}
-                authToken={authToken}
-                flaggedSources={flaggedSources}
-              />
-            </>
-          )}
+                <Box ref={followUpRef}>{followUp}</Box>
+                {/*
+                  T-4.6-09. `FeedbackSurface` is built here, not passed in as an
+                  opaque node, so it can be given the real POST target (`runId`) and
+                  bearer token (`authToken`) it needs. `key={question}` remounts it
+                  per question, the same reset the old call site in `App.tsx`
+                  achieved with `key={searchView.question}`, so a rating typed for
+                  one answer can never linger onto the next.
+                */}
+                <FeedbackSurface
+                  key={question}
+                  runId={runId}
+                  authToken={authToken}
+                  flaggedSources={flaggedSources}
+                />
+              </>
+            ) : null}
+          </ListingScrollAnchor>
         </Box>
       </Box>
     </Box>

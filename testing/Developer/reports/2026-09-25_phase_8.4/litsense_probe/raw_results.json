@@ -1,0 +1,1567 @@
+[
+  {
+    "id": "G-002",
+    "question": "Give me everything NCBI knows about BRCA1: the gene record, associated conditions, clinically significant variants and literature evidence.",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 1.4929119999869727,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 41619087,
+          "section": "DISCUSS",
+          "score": 0.8182990098102494,
+          "text": "It is evident from other studies that there are clinically significant variants in genes other than BRCA1 and BRCA1 associated with ovarian cancer.",
+          "annotations": [
+            "110|5|gene|672",
+            "100|5|gene|672",
+            "132|14|disease|MESH:D010051"
+          ],
+          "pmcid": "PMC12860814"
+        },
+        {
+          "pmid": 31645350,
+          "section": null,
+          "score": 0.8113432546652808,
+          "text": "The assessment prioritized hereditary cancer genes without existing variant curation efforts (i.e.  Evidence-based Network for the Interpretation of Germline Mutant Alleles [ENIGMA] for BRCA1/BRCA2 and International Society for Gastrointestinal Hereditary Tumors [InSiGHT] for mismatch repair genes), estimated cancer risk associated with pathogenic variants from literature review, ranked the number of conflicting and uncertain variants in ClinVar, prioritized genes included on the ACMG Secondary Findings list, and assessed the presence on hereditary cancer sequencing panels among seven large clinical sequencing laboratories.",
+          "annotations": [
+            "228|34|disease|MESH:D013132",
+            "27|17|disease|MESH:D009386",
+            "311|6|disease|MESH:D009369",
+            "192|5|gene|675",
+            "186|5|gene|672",
+            "544|17|disease|MESH:D009386"
+          ],
+          "pmcid": "PMC6824250"
+        },
+        {
+          "pmid": 37425424,
+          "section": "METHODS",
+          "score": 0.7749643000176356,
+          "text": "For example, strong clinical significance for BRCA1/2 gene variants may be related to variants' known association with familial cancer risks, or response to PARP inhibitors, among other lines of evidence.",
+          "annotations": [
+            "157|4|gene|1302",
+            "119|15|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC10326790"
+        },
+        {
+          "pmid": 40754672,
+          "section": "RESULTS",
+          "score": 0.7505130518937018,
+          "text": "Each of the 1117 database records was annotated with detailed information such as: gene symbol, full name, NCBI gene ID, Ensembl ID, RNA type (i.e., mRNA, lncRNA or miRNA), expression levels of each gene among patients with different prognosis (e.g., up or down), expression differences between patients and healthy subjects, the associated biological pathways or clinical conditions, a \"Notes\" section with additional insights from the literature review, as well as bibliographic references.",
+          "annotations": [
+            "210|8|species|9606",
+            "295|8|species|9606"
+          ],
+          "pmcid": "PMC12318825"
+        },
+        {
+          "pmid": 32191543,
+          "section": "INTRO",
+          "score": 0.7157809153484435,
+          "text": "To date, CIViC contains 6,471 interpretation evidence records (ie, clinical significance statements extracted from biomedical literature) describing 2,312 variants in 402 genes.",
+          "annotations": null,
+          "pmcid": "PMC7113080"
+        },
+        {
+          "pmid": 33087732,
+          "section": "RESULTS",
+          "score": 0.7043212666810245,
+          "text": "Yet, there is significant evidence in the literature for the former to be a pathogenetic variant, whereas M1532V is reported in dbSNP, lacking information about the association to a clinical condition and about minor allele frequency.",
+          "annotations": [
+            "106|6|mutation|rs201075910"
+          ],
+          "pmcid": "PMC7578092"
+        },
+        {
+          "pmid": 40844318,
+          "section": "RESULTS",
+          "score": 0.6803043471481138,
+          "text": "Whilst 7 participants had variants in genes (DNMT3A, KMT2B, PDGFRB and SH2B3) for which germline monoallelic P/LP variants are associated with an inherited disorder, no evidence of these conditions was recorded in the available clinical information.",
+          "annotations": [
+            "45|6|gene|1788",
+            "60|6|gene|5159",
+            "53|5|gene|9757",
+            "71|5|gene|10019",
+            "146|18|disease|MESH:D030342",
+            "109|4|gene|25824"
+          ],
+          "pmcid": "PMC12541567"
+        },
+        {
+          "pmid": 40844318,
+          "section": "DISCUSS",
+          "score": 0.6723142340520064,
+          "text": "However, many of the genes in which we found variants have been associated with developmental disorders, and there was no evidence of the relevant conditions in the available clinical records.",
+          "annotations": [
+            "80|23|disease|MESH:D002658"
+          ],
+          "pmcid": "PMC12541567"
+        },
+        {
+          "pmid": 40844318,
+          "section": "RESULTS",
+          "score": 0.6720242245871859,
+          "text": "While 5 of these participants had variants in 5 genes (ASXL1, KMT2B, KMT2C, SH2B3, and SUZ12) for which germline monoallelic P/LP variants are associated with a developmental disorder, no evidence of these conditions was recorded in the available clinical information.",
+          "annotations": [
+            "76|5|gene|10019",
+            "62|5|gene|9757",
+            "69|5|gene|58508",
+            "125|4|gene|25824",
+            "161|22|disease|MESH:D002658",
+            "87|5|gene|23512",
+            "55|5|gene|171023"
+          ],
+          "pmcid": "PMC12541567"
+        },
+        {
+          "pmid": 30835568,
+          "section": "METHODS",
+          "score": 0.6673289362785673,
+          "text": "ALSgeneScanner groups genes and loci associated with ALS into three classes: i) genes and loci identified by our manual scientific literature review to be associated with the disease or an influence on the phenotype in ALS (see Table 1), ii) genes in which variants of clinical significance have been reported on ClinVar and for which no contradictory interpretation is present, and iii) genes for which any association evidence has been submitted to ALSoD.",
+          "annotations": null,
+          "pmcid": "PMC6567555"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=Give+me+everything+NCBI+knows+about+BRCA1%3A+the+gene+record%2C+associated+conditions%2C+clinically+significant+variants+and+literature+evidence.&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-006",
+    "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 1.115854334027972,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 41160891,
+          "section": null,
+          "score": 0.8292828501255785,
+          "text": "To facilitate deeper analysis and validation, direct links to the original publication (via PMID) and, where available, the raw sequencing data (e.g. via GEO series accession number) are provided for each study.",
+          "annotations": null,
+          "pmcid": "PMC12807992"
+        },
+        {
+          "pmid": 41780700,
+          "section": "SUPPL",
+          "score": 0.8105407821055914,
+          "text": "RNA sequencing data have been deposited in the NCBI Gene Expression Omnibus database (GEO Series accession: GSE310211; linked to BioProject PRJNA1141714).",
+          "annotations": null,
+          "pmcid": "PMC13077727"
+        },
+        {
+          "pmid": 30988315,
+          "section": "RESULTS",
+          "score": 0.7825248182532173,
+          "text": "Raw and processed data in the form of sequence reads and assembled transcriptomes have been deposited in GenBank and are available under the BioProject PRJNA478852 (transcriptome assembly) and GEO Series accession number GSE116989 (raw reads and quantification).",
+          "annotations": null,
+          "pmcid": "PMC6465361"
+        },
+        {
+          "pmid": 36782070,
+          "section": "SUPPL",
+          "score": 0.7741647894818401,
+          "text": "Raw sequence data of the iHMP are also available from the NCBI sequence read archive (SRA) via BioProject PRJNA398089, metatranscriptome data through GEO Series accession number GSE111889, and metabolomics data at the Metabolomics Workbench (http://www.metabolomicsworkbench.org; Project ID PR000639).",
+          "annotations": null,
+          "pmcid": "PMC10423304"
+        },
+        {
+          "pmid": 34980227,
+          "section": "METHODS",
+          "score": 0.7646266217179445,
+          "text": "Original and processed files for the small RNA sequencing data described in this research have been deposited in NCBI's Gene Expression Omnibus (GEO) and are accessible through GEO Series accession number GSE171980, and through BioProject PRJNA721612.",
+          "annotations": null,
+          "pmcid": "PMC8722000"
+        },
+        {
+          "pmid": 33531552,
+          "section": "SUPPL",
+          "score": 0.7616466219861125,
+          "text": "All sequencing data is publicly available on NCBI's Gene Expression Omnibus through GEO Series accession number GSE154299 (Bioproject PRJNA645822).",
+          "annotations": null,
+          "pmcid": "PMC7854659"
+        },
+        {
+          "pmid": 39572529,
+          "section": "SUPPL",
+          "score": 0.7602286133555074,
+          "text": "Previously published sequencing data are available under GEO Series accession codes GSE48423, GSE97589, GSE131018, and Sequence Read Archive (SRA) BioProject numbers PRJEB21297, PRJEB42378, PRJNA397123.",
+          "annotations": null,
+          "pmcid": "PMC11582664"
+        },
+        {
+          "pmid": 36423280,
+          "section": "METHODS",
+          "score": 0.7595116432149028,
+          "text": "Sequencing data have been deposited at the National Center for Biotechnology Information BioProjects Gene Expression Omnibus (GEO) and are accessible through GEO Series accession number GSE214258.",
+          "annotations": null,
+          "pmcid": "PMC7618116"
+        },
+        {
+          "pmid": 40368888,
+          "section": "SUPPL",
+          "score": 0.7595005131906656,
+          "text": "Sequencing data generated in this study have been deposited at the National Center for Biotechnology Information BioProjects Gene Expression Omnibus (GEO) and are accessible through GEO Series accession number GSE237311.",
+          "annotations": null,
+          "pmcid": "PMC12078473"
+        },
+        {
+          "pmid": 33397430,
+          "section": "METHODS",
+          "score": 0.7567321849784836,
+          "text": "Sequence data from this study can be found in the National Center for Biotechnology Information Sequence Read Archive (https://www.ncbi.nlm.nih.gov/sra) under SRA accession SRP214989 of BioProject PRJNA542495 and Gene Expression Omnibus (GEO) accessible through GEO Series accession number GSE135711.",
+          "annotations": null,
+          "pmcid": "PMC7784297"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=For+PMID+11237011%2C+what+sequence+data%2C+BioProjects%2C+GEO+series+and+assemblies+are+linked+to+it%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-019",
+    "question": "What MeSH terms are assigned to PMID 11237011?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 0.6728712089825422,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 34629973,
+          "annotations": null,
+          "text": "Next, a version of MEDLINE/PubMed integrated into WoS was used as the linkage between WoS and PubMed, in which a PubMed unique article reference number (PMID) and MeSH terms were assigned to each journal article.",
+          "score": 0.9029175937175751,
+          "pmcid": "PMC8485965",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 34502381,
+          "annotations": null,
+          "text": "Once the PMID list was imported into SWIFT-Review, the program organized articles were sorted in categories based on tags automatically assigned according to pre-defined search filters for chemicals and topics prepared by information scientists at NIEHS and EPA, as well as on data imported with articles from PubMed, including MeSH terms, supplementary concept records, keywords, publication type, and Medline indexing tags.",
+          "score": 0.8960461616516113,
+          "pmcid": "PMC8430601",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 36338335,
+          "annotations": null,
+          "text": "For authors, identifiers are Author IDs (AIDs) in the database, PMIDs identify articles, Project IDs identify NIH projects, Header IDs identify MeSH terms, and extracted biological entities are identified by their unique Entity ID assigned by BioBERT in the original paper (Xu et al.,).",
+          "score": 0.8909380733966827,
+          "pmcid": "PMC9627348",
+          "section": null
+        },
+        {
+          "pmid": 28412964,
+          "annotations": [
+            "25|6|chemical|-",
+            "177|6|chemical|-"
+          ],
+          "text": "To be more general (each BioASQ test set contains continuous PMIDs which may belong to a limited set of journals), we randomly selected 5,000 PubMed documents from the latest 9 BioASQ test sets (start from Batch 2 Week 2 in order to avoid overlap with our system training data) to create BioASQ5000, with their corresponding MeSH terms already assigned by December 6, 2014.",
+          "score": 0.8886242806911469,
+          "pmcid": "PMC5392968",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 27013077,
+          "annotations": null,
+          "text": "The PMIDs thereby obtained were downloaded via PubMed and compiled, and publications assigned to MeSH terms for HN neoplasms were manually curated by two independent investigators.",
+          "score": 0.8878465890884399,
+          "pmcid": "PMC4806539",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 27013077,
+          "annotations": null,
+          "text": "Identification of studies on HNSCC in PubMed using MeSH terms of interest, retrieval of PMIDs, gene-to-publication assignment via gene2pubmed association file, selection of genes in HNOCDB and OrCGDB databases, manual curation to confirm a positive involvement of PMIDs in HNSCC subsites of interest, retrieval of a nonredundant list of 1370 genes related to HNSCC, access to biological meanings, identification of novel gene associations.",
+          "score": 0.8653153777122498,
+          "pmcid": "PMC4806539",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 33870056,
+          "annotations": [
+            "106|21|species|11138",
+            "128|21|gene|None"
+          ],
+          "text": "On the other hand, an article might be indexed with several MeSH terms:e.g.  The article \"Localization of mouse hepatitis virus open reading frame 1A derived proteins\" (PMID: 10065901) has Primary MeSH terms (no subheading):",
+          "score": 0.8520146916165682,
+          "pmcid": "PMC8025982",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 24717403,
+          "annotations": null,
+          "text": "Regarding categorization, we retrieved the PMIDs of the hESC-related articles and assigned a category to each article using the MeSH and general terms in PubMed.",
+          "score": 0.8473559867796737,
+          "pmcid": "PMC3981698",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 24297565,
+          "annotations": null,
+          "text": "We include gene expression measurements at different time-points of a 24-hour development cycle (R13, 14 experiments), gene annotations with experimental evidence code to 148 generic slim terms from the GO (R12), associations of PMIDs and genes from dictyBaseb, March, 2013 (R14), genes participating in KEGG pathways (R16), assignments of MeSH descriptors to publications from PubMed (R45), references to published work associated with GO terms (R42), and associations of enzymes involved in KEGG pathways and related to GO terms (R62).",
+          "score": 0.8027489412714588,
+          "pmcid": "PMC3902649",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 36718276,
+          "annotations": null,
+          "text": "Biclustering results were used to construct four heat maps, with columns and rows corresponding to PMIDs and high-frequency MeSH terms/subheadings, respectively.",
+          "score": 0.7607191214814516,
+          "pmcid": "PMC9884171",
+          "section": "METHODS"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=What+MeSH+terms+are+assigned+to+PMID+11237011%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-021",
+    "question": "Which papers in the graph mention the CFTR gene, and what do they cover?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 0.9648934160359204,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 28845852,
+          "section": "abstract",
+          "score": 0.8229377971374392,
+          "text": "The results obtained in the field of cystic fibrosis, with the cloning of CFTR gene, and use of Kalydeco , have demonstrated how using the mentioned strategies could also have success in rare disease management.",
+          "annotations": [
+            "74|4|gene|1080",
+            "37|15|disease|MESH:D003550"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 34086689,
+          "section": null,
+          "score": 0.8147917540223575,
+          "text": "As the authors mentioned, they got 50 genetic variants in the CFTR gene.",
+          "annotations": [
+            "62|4|gene|1080"
+          ],
+          "pmcid": "PMC8177500"
+        },
+        {
+          "pmid": 34086689,
+          "section": null,
+          "score": 0.8147917540223575,
+          "text": "As the authors mentioned, they got 50 genetic variants in the CFTR gene.",
+          "annotations": [
+            "62|4|gene|1080"
+          ],
+          "pmcid": "PMC8177500"
+        },
+        {
+          "pmid": 31511888,
+          "section": "RESULTS",
+          "score": 0.8111569801325492,
+          "text": "Histograms at the top of the graph demonstrates allele prior probability distribution for reference databases of target clinically significant variants build based on BIC and CFTR2 databases for BRCA1/2 and CFTR genes respectively.",
+          "annotations": [
+            "207|4|gene|1080"
+          ],
+          "pmcid": "PMC6868350"
+        },
+        {
+          "pmid": 34145091,
+          "section": null,
+          "score": 0.7904440314919925,
+          "text": "It is also important to mention here that some CBAVD men do not have mutations in CFTR gene.",
+          "annotations": [
+            "53|3|species|9606",
+            "82|4|gene|1080"
+          ],
+          "pmcid": "PMC8224159"
+        },
+        {
+          "pmid": 29466940,
+          "section": "INTRO",
+          "score": 0.7840846033246494,
+          "text": "Another reason for investigating the CFTR gene was that the above mentioned CF producing mutation (2184insA) is very common in certain geographical regions of Europe, including Hungary.",
+          "annotations": [
+            "99|8|mutation|tmVar:c|INS|2184|A",
+            "76|2|disease|MESH:D003550",
+            "37|4|gene|1080"
+          ],
+          "pmcid": "PMC5822529"
+        },
+        {
+          "pmid": 32225107,
+          "section": "DISCUSS",
+          "score": 0.7763715834767795,
+          "text": "As mentioned before, Hefferon et al. and Ohno et al. showed that aberrant splicing of the CFTR gene or reduced splicing of the CHRNE gene could be rescued by strengthening the alternative splice sites.",
+          "annotations": [
+            "90|4|gene|443347",
+            "127|5|gene|101110155"
+          ],
+          "pmcid": "PMC7177576"
+        },
+        {
+          "pmid": 27417354,
+          "section": "METHODS",
+          "score": 0.7759445415222048,
+          "text": "The two pivotal studies were preceded by a clinical dose finding study and complemented by two further studies: one study similar in design to the two mentioned pivotal studies, but in CF patients homozygous for the F508del mutation (the most prevalent mutation) in the CFTR gene and a follow-up safety study, into which most study participants of all ivacaftor studies where switched.",
+          "annotations": [
+            "270|4|gene|1080",
+            "216|7|mutation|rs113993960",
+            "332|12|species|9606",
+            "188|8|species|9606",
+            "185|2|disease|MESH:D003550",
+            "352|9|chemical|MESH:C545203"
+          ],
+          "pmcid": "PMC4928746"
+        },
+        {
+          "pmid": 36142302,
+          "section": "DISCUSS",
+          "score": 0.7602424473912692,
+          "text": "N. Baatallah et al. showed on a HEK293 cell line transfected with plasmids with a normal (WT) genetic variant of the CFTR gene, as well as mutant L467F and F508del variants, using Western blotting, that the proportion of functional protein (mature, fully glycosylated) for the mentioned variants is 86% (WT), ~40% (L467F), and 22% (F508del).",
+          "annotations": [
+            "332|7|mutation|rs113993960",
+            "146|5|mutation|rs1800089",
+            "156|7|mutation|rs113993960",
+            "32|6|cellline|CVCL:0045",
+            "117|4|gene|1080",
+            "315|5|mutation|rs1800089"
+          ],
+          "pmcid": "PMC9499621"
+        },
+        {
+          "pmid": 29850441,
+          "section": "DISCUSS",
+          "score": 0.7436233268463015,
+          "text": "It is worth mentioning that different and unique spectrums of mutations in CFTR gene were observed in non-European population such as in Kashmiri population of India.",
+          "annotations": [
+            "75|4|gene|1080"
+          ],
+          "pmcid": "PMC5960049"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=Which+papers+in+the+graph+mention+the+CFTR+gene%2C+and+what+do+they+cover%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-023",
+    "question": "Which clinically significant variants have been reported in CFTR?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 1.7971610419917852,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 32512765,
+          "annotations": [
+            "144|2|disease|MESH:D003550",
+            "408|8|species|9606",
+            "251|8|species|9606",
+            "405|2|disease|MESH:D003550",
+            "305|2|disease|MESH:D003550",
+            "468|2|disease|MESH:D003550",
+            "423|8|species|9606",
+            "183|2|disease|MESH:D003550",
+            "0|4|gene|1080",
+            "97|2|disease|MESH:D003550"
+          ],
+          "text": "CFTR variants have been classified into five categories according to their clinical consequence: CF-causing variants, which are responsible for CF when combined in trans with a known CF-causing variant; CFTR-RD-causing variants, which are observed in patients with a CFTR-RD when combined in trans with a CF-causing variant; variants of varying clinical consequences (VVCC), which are reported as well in CF patients as in patients with a CFTR-RD when in trans with a CF-causing variant; variants of unproven or uncertain clinical significance (VUS) and variants with no clinical consequences.",
+          "score": 0.9304479956626892,
+          "pmcid": "PMC7349214",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 36834620,
+          "annotations": [
+            "44|2|disease|MESH:D003550",
+            "178|2|disease|MESH:D003550",
+            "32|6|species|9606",
+            "112|4|gene|1080",
+            "353|2|disease|MESH:D003550",
+            "267|2|disease|MESH:D003550"
+          ],
+          "text": "With data from more than 89,000 people with CF, this database provides information on the different variants of CFTR, including whether the variant or variant combination causes CF, its variable clinical effects, and whether they have unknown significance or are not CF-causing (current numbers report close to 500 variants classifying more than 400 as CF-causing).",
+          "score": 0.8972193002700806,
+          "pmcid": "PMC9961391",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 34996830,
+          "annotations": [
+            "78|8|species|9606",
+            "175|2|disease|MESH:D003550",
+            "302|2|disease|MESH:D003550",
+            "95|2|disease|MESH:D003550",
+            "257|16|disease|MESH:D003550",
+            "226|2|disease|MESH:D003550",
+            "75|2|disease|MESH:D003550"
+          ],
+          "text": "Using the CFTR2 database, we found that 147 variants have been reported in CF patients; 36 are CF-causing variants, 25 are variants of varying clinical consequence (may cause CF in some individuals but not others), 18 are non-CF causing variants (may cause CFTR dysfunction but not sufficient to cause CF) and 68 variants have not been evaluated or are of unknown significance.",
+          "score": 0.8889976441860199,
+          "pmcid": "PMC9840463",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 41828725,
+          "annotations": [
+            "258|12|mutation|rs75541969",
+            "232|11|mutation|rs113993960",
+            "214|17|mutation|tmVar:p|DEL|1521_1523|L",
+            "191|4|gene|1080",
+            "123|10|mutation|rs398123724",
+            "202|11|refseq|NM_000492.4",
+            "111|11|refseq|NM_003482.4",
+            "99|5|gene|8085",
+            "248|9|mutation|rs75541969",
+            "134|12|mutation|rs398123724"
+          ],
+          "text": "High-throughput sequencing identified a previously reported pathogenic heterozygous variant in the KMT2D gene, NM_003482.4:c.15142C>T p.Arg5048Cys, and two known heterozygous variants in the CFTR gene: NM_000492.4:c.1521_1523delCTT p.Phe508del and c.3454G>C p.Asp1152His, classified as pathogenic and of variable clinical significance, respectively.",
+          "score": 0.8748341202735901,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 37175647,
+          "annotations": [
+            "116|4|gene|1080"
+          ],
+          "text": "The use of WGS in the future will make it possible to assess the full range of molecular genetic alterations of the CFTR gene, including extended deletions/insertions, as well as clinically significant variants in the intron and regulatory regions of the gene.",
+          "score": 0.8679428994655609,
+          "pmcid": "PMC10178054",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 30996306,
+          "annotations": [
+            "447|2|disease|MESH:D003550",
+            "118|2|disease|MESH:D003550",
+            "522|2|disease|MESH:D003550",
+            "142|15|disease|MESH:D003550",
+            "121|8|species|9606",
+            "317|4|gene|1080"
+          ],
+          "text": "Thus, we adopted as a criterion for pathogenicity the report/description of the variant in three genetic databases of CF patients, namely (i) cystic fibrosis mutation database [http://www.genet.sickkids.on.ca] - the database was last updated on April 25, 2011; and (ii) CFTR2 - Clinical and Functional Translation of CFTR [http://cftr2.org] - the database was last updated on December 8, 2017 and included a total of 374 variants annotated as (a) CF-causing: 312; (b) variants of varying clinical consequence: 36; (c) non CF-causing: 13; and (d) variants of unknown significance: 13.",
+          "score": 0.8675851225852966,
+          "pmcid": "PMC6470152",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 28469871,
+          "annotations": [
+            "68|2|disease|MESH:D003550",
+            "98|4|gene|1080"
+          ],
+          "text": "We report on a premature newborn who was highly suspected of having CF and was found to carry two CFTR variants, one of which being a new missense variant of uncertain clinical significance.",
+          "score": 0.8645274639129639,
+          "pmcid": "PMC5412805",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 38463894,
+          "annotations": [
+            "38|8|species|9606",
+            "326|4|gene|1080",
+            "164|8|chemical|MESH:D002712",
+            "52|6|mutation|rs80034486",
+            "81|3|chemical|-",
+            "221|4|gene|1080",
+            "91|7|species|9606"
+          ],
+          "text": "In line with previous case reports of patients with N1303K variants treated with ETI, this patient had clinical improvement despite no significant changes in sweat chloride (108 mM-99 mM), suggesting functional rescue of CFTR at least in the lung, and supporting an indirect relationship between the clinical response and the CFTR functional rescue.",
+          "score": 0.8616283237934113,
+          "pmcid": "PMC10920363",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 31511888,
+          "annotations": [
+            "282|4|gene|1080",
+            "128|4|gene|1080"
+          ],
+          "text": "In our study, we used BIC (Breast Cancer Information Core, assessed may 2018) and CFTR2 (Clinical and Functional Translation of CFTR, assessed may 2018) databases to compile two target variant spectrums in order to test efficiency of diverse NGS-based systems to detect BRCA1/2 and CFTR clinically significant variants respectively.",
+          "score": 0.8547677099704742,
+          "pmcid": "PMC6868350",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 31511888,
+          "annotations": [
+            "207|4|gene|1080"
+          ],
+          "text": "Histograms at the top of the graph demonstrates allele prior probability distribution for reference databases of target clinically significant variants build based on BIC and CFTR2 databases for BRCA1/2 and CFTR genes respectively.",
+          "score": 0.8432113230228424,
+          "pmcid": "PMC6868350",
+          "section": "RESULTS"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=Which+clinically+significant+variants+have+been+reported+in+CFTR%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-024",
+    "question": "What is rs334 and what condition is it associated with?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 2.4533233330002986,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 26445879,
+          "section": "RESULTS",
+          "score": 0.7651532888412476,
+          "text": " HbS allelic and genotypic frequency (TA for dbSNP rs334) and severe malaria association HbS conditioned to parasitaemia levels",
+          "annotations": [
+            "108|12|disease|None",
+            "62|14|disease|MESH:D008288",
+            "51|5|mutation|rs334"
+          ],
+          "pmcid": "PMC4596417"
+        },
+        {
+          "pmid": 39444160,
+          "section": "abstract",
+          "score": 0.7581513524055481,
+          "text": "After conditioning on rs334, the most strongly associated variant in the beta-globin locus, rs33930165 (T allele, 1KG: OR = 4.09; 95% CI, 2.29-7.29; p = 1.7 x 10-6; TOPMed: OR = 3.58; 95% CI, 2.18-5.90; p = 4.7 x 10-7), which as a compound heterozygote with rs334 A allele, can cause SCD.",
+          "annotations": [
+            "258|5|mutation|rs334",
+            "73|11|gene|3043",
+            "284|3|gene|6319",
+            "22|5|mutation|rs334",
+            "92|10|mutation|rs33930165"
+          ],
+          "pmcid": "PMC11664401"
+        },
+        {
+          "pmid": 39444160,
+          "section": "RESULTS",
+          "score": 0.7452108561992645,
+          "text": "To determine if the association of rs334 with pneumonia could account for the association of other variants in the beta-globin locus region, we performed conditional logistic regression in the total dataset including rs334 (from 1KG imputation) as a covariate in the analysis.",
+          "annotations": [
+            "217|5|mutation|rs334",
+            "46|9|disease|MESH:D011014",
+            "35|5|mutation|rs334",
+            "115|11|gene|3043"
+          ],
+          "pmcid": "PMC11664401"
+        },
+        {
+          "pmid": 39444160,
+          "section": "RESULTS",
+          "score": 0.734074056148529,
+          "text": "beta-Globin locus SNPs most significantly associated with pneumonia in the total sample without and with conditioning on rs334",
+          "annotations": [
+            "58|9|disease|MESH:D011014",
+            "121|5|mutation|rs334",
+            "0|11|gene|3043"
+          ],
+          "pmcid": "PMC11664401"
+        },
+        {
+          "pmid": 39444160,
+          "section": "METHODS",
+          "score": 0.7208160758018494,
+          "text": "To test for independence of association signals at the beta-globin gene locus, we performed conditional logistic regression, including one of the following variants as covariates in the model: 1KG-based dosages for rs334 (lead signal in 1KG imputation total sample), or 1KG- or TOPMed-based dosages for rs2226952 (lead signal in the TOPMed imputation).",
+          "annotations": [
+            "215|5|mutation|rs334",
+            "303|9|mutation|rs2226952",
+            "55|11|gene|3043"
+          ],
+          "pmcid": "PMC11664401"
+        },
+        {
+          "pmid": 39444160,
+          "section": "RESULTS",
+          "score": 0.7165130972862244,
+          "text": "Thus, in the genotyping-matched subset there was no evidence that conditioning on rs334 was more effective than rs2226952 in accounting for other beta-globin locus signals, potentially because of the less significant associations signals for both variants in the genotyping-matched subset compared with the total sample or because rs2226952 has a higher observed imputation r2 than rs334 (r2 = 0.97 compared with 0.",
+          "annotations": [
+            "382|5|mutation|rs334",
+            "146|11|gene|3043",
+            "112|9|mutation|rs2226952",
+            "331|9|mutation|rs2226952",
+            "82|5|mutation|rs334"
+          ],
+          "pmcid": "PMC11664401"
+        },
+        {
+          "pmid": 29523850,
+          "section": "RESULTS",
+          "score": 0.7089326977729797,
+          "text": "In regression models conditioned on genotype at rs334 (Supplementary Fig. 5), the observed association at rs13390936 with NTS bacteraemia persists when conditioned on HbAS (OR 7.16, 95% CI, 2.68-17.41) and HbSS (OR 8.08, 95% CI, 2.71-21.89).",
+          "annotations": [
+            "48|5|mutation|rs334",
+            "122|15|disease|MESH:C531821",
+            "106|10|mutation|rs13390936"
+          ],
+          "pmcid": "PMC5844948"
+        },
+        {
+          "pmid": 29381699,
+          "section": "RESULTS",
+          "score": 0.7032772302627563,
+          "text": "Controlling for HbS status through a complementary conditional GWAS demonstrated our top associations as robust against linkage with rs334 (Table 2, S1 Table).",
+          "annotations": [
+            "133|5|mutation|rs334"
+          ],
+          "pmcid": "PMC5806895"
+        },
+        {
+          "pmid": 40196241,
+          "section": "RESULTS",
+          "score": 0.6892158687114716,
+          "text": "rs334 and rs4426157 are in moderate linkage disequilibrium, and a conditional logistic regression analysis accounting for the genotype at rs4426157 markedly reduced genetic association in the region (Supplemental Dataset 4).",
+          "annotations": [
+            "0|5|mutation|rs334",
+            "138|9|mutation|rs4426157",
+            "10|9|mutation|rs4426157"
+          ],
+          "pmcid": "PMC11974803"
+        },
+        {
+          "pmid": 39444160,
+          "section": "DISCUSS",
+          "score": 0.6819295585155487,
+          "text": "After conditioning on rs334 in the TOPMed and 1KG imputed data, the most significantly associated variant on chromosome 11 was rs33930165.",
+          "annotations": [
+            "22|5|mutation|rs334",
+            "127|10|mutation|rs33930165"
+          ],
+          "pmcid": "PMC11664401"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=What+is+rs334+and+what+condition+is+it+associated+with%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-025",
+    "question": "What does the MTHFR C677T variant do, and what is the evidence quality around it?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 1.1229605420376174,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 10794488,
+          "annotations": [
+            "76|30|disease|MESH:D003111",
+            "11|5|mutation|rs1801133",
+            "4|5|gene|4524",
+            "149|5|gene|4524"
+          ],
+          "text": "The MTHFR (C677T) variant genotype does not appear to be related to risk of colorectal hyperplastic polyps, and there is no convincing evidence that MTHFR shows a different relation to risk, dependent on dietary intakes of nutrients related to its pathway.",
+          "score": 0.8975614607334137,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 23523621,
+          "annotations": [
+            "208|2|disease|MESH:D009103",
+            "87|5|mutation|rs1801133",
+            "183|6|mutation|rs1801131",
+            "81|5|gene|4524",
+            "106|2|disease|MESH:D009103",
+            "177|5|gene|4524"
+          ],
+          "text": "CONCLUSION: Although our preliminary findings suggest no association between the MTHFR C677T variants and MS, there is evidence to suggest a significant association between the MTHFR A1298C polymorphisms and MS.",
+          "score": 0.8962328433990479,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 39339754,
+          "annotations": [
+            "188|5|mutation|rs1801133",
+            "154|2|chemical|MESH:D005492",
+            "182|5|gene|4524",
+            "75|5|species|9606"
+          ],
+          "text": "In view of the evidence, scientific societies, including the CDC, urge all women of childbearing age who may become pregnant to consume 400 microg/day of FA, including those with an MTHFR C677T variant.",
+          "score": 0.8838481903076172,
+          "pmcid": "PMC11435031",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 36520012,
+          "annotations": [
+            "51|5|gene|4524",
+            "57|5|mutation|rs1801133",
+            "204|5|gene|4524",
+            "175|5|gene|4524"
+          ],
+          "text": "This was most evident in participants carrying the MTHFR C677T variant suggesting a stronger influence of the biosynthesis pathway on the overall placental DNA methylation in MTHFR TT individuals than in MTHFR CC individuals.",
+          "score": 0.881511390209198,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 35995050,
+          "annotations": [
+            "146|4|disease|MESH:D009436",
+            "78|5|mutation|rs1801133",
+            "135|2|chemical|MESH:D005492",
+            "72|5|gene|4524"
+          ],
+          "text": "Supporting evidence comes from studies in areas with very high rates of MTHFR C677T variants, such as northern China and Mexico, where FA reduces NTDs even when the variant is the major allele.",
+          "score": 0.8759094178676605,
+          "pmcid": "PMC9875360",
+          "section": null
+        },
+        {
+          "pmid": 34789805,
+          "annotations": [
+            "105|5|species|9606",
+            "102|2|disease|MESH:D004314",
+            "36|4|gene|4552",
+            "70|5|mutation|rs1801133",
+            "41|4|mutation|rs1801394",
+            "64|5|gene|4524"
+          ],
+          "text": "Further, an association between the MTRR A66G genotype with the MTHFR C677T variant as risk factor of DS child birth was evident while such association remains unidentified in Sicilian population.",
+          "score": 0.8757655322551727,
+          "pmcid": "PMC8599692",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 25101272,
+          "annotations": [
+            "60|5|gene|4524",
+            "66|5|mutation|rs1801133"
+          ],
+          "text": "In conclusion, the present study provides evidence that the MTHFR C677T variants may influence the risk of developing BD and schizophrenia.",
+          "score": 0.8745277523994446,
+          "pmcid": "PMC4101969",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 28938654,
+          "annotations": [
+            "105|5|mutation|rs1801133",
+            "168|4|disease|MESH:D011085",
+            "123|4|disease|MESH:D011085",
+            "99|5|gene|4524"
+          ],
+          "text": "Our up-to-date meta-analysis summarizes the evidence to date regarding the association between the MTHFR C677T variant and PCOS using a total of 1628 controls and 1478 PCOS cases, the largest to date by far.",
+          "score": 0.8740599453449249,
+          "pmcid": "PMC5601750",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 16177213,
+          "annotations": [
+            "57|5|gene|4524",
+            "248|21|mutation|tmVar:c|SUB|C||T",
+            "63|5|mutation|rs1801133"
+          ],
+          "text": "Consistent with evidence on the phenotypic effect of the MTHFR C677T variant, we hypothesize that this relation may be explained by modestly reduced genomic DNA methylation, resulting in a lower probability of spontaneous deamination of methylated cytosine to thymidine.",
+          "score": 0.8541899919509888,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 18070159,
+          "annotations": [
+            "80|5|disease|MESH:C564133",
+            "55|5|mutation|rs1801133",
+            "98|6|disease|MESH:D001249",
+            "87|7|disease|MESH:D004342",
+            "49|5|gene|4524"
+          ],
+          "text": "We found no evidence of associations between the MTHFR C677T variant allele and atopy, allergy or asthma in mothers or children.",
+          "score": 0.813066691160202,
+          "pmcid": null,
+          "section": "abstract"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=What+does+the+MTHFR+C677T+variant+do%2C+and+what+is+the+evidence+quality+around+it%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-028",
+    "question": "What is the evidence linking APOE to late-onset Alzheimer disease?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 1.5604435419663787,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 23119149,
+          "section": null,
+          "score": 0.926900178194046,
+          "text": "Several lines of evidence link apoE with late-onset Alzheimer's disease, the most common cause of dementia in the elderly.",
+          "annotations": [
+            "31|4|gene|348",
+            "52|19|disease|MESH:D000544",
+            "98|8|disease|MESH:D003704"
+          ],
+          "pmcid": "PMC3483652"
+        },
+        {
+          "pmid": 25682154,
+          "section": null,
+          "score": 0.9257893860340118,
+          "text": "Epidemiology studies reveal the link between apoE with late-onset Alzheimer's disease.",
+          "annotations": [
+            "45|4|gene|348",
+            "66|19|disease|MESH:D000544"
+          ],
+          "pmcid": "PMC4383754"
+        },
+        {
+          "pmid": 40462904,
+          "section": "abstract",
+          "score": 0.9239453673362732,
+          "text": "Age and APOE genotype are the strongest known risk factors for late-onset Alzheimer's disease (AD), but the mechanisms linking them to neuronal loss remain incompletely defined.",
+          "annotations": [
+            "95|2|disease|MESH:D000544",
+            "74|19|disease|MESH:D000544",
+            "135|13|disease|MESH:D009410",
+            "8|4|gene|348"
+          ],
+          "pmcid": "PMC12132299"
+        },
+        {
+          "pmid": 40307479,
+          "section": "abstract",
+          "score": 0.9228594601154327,
+          "text": "ApoE-epsilon4 is the strongest genetic risk factor for late-onset Alzheimer's disease (AD), linked to increased amyloid-beta (Abeta) deposition in the brain.",
+          "annotations": [
+            "0|4|gene|348",
+            "66|19|disease|MESH:D000544",
+            "126|5|gene|11820",
+            "87|2|disease|MESH:D000544"
+          ],
+          "pmcid": "PMC12044155"
+        },
+        {
+          "pmid": 35456392,
+          "section": "INTRO",
+          "score": 0.919110894203186,
+          "text": "The major genetic risk factor linked to Late-Onset Alzheimer's Disease (LOAD) is the presence of one or two copies of the epsilon4 allele in the APOE gene, but this is neither a necessary nor sufficient condition for developing the disease.",
+          "annotations": [
+            "145|4|gene|348"
+          ],
+          "pmcid": "PMC9026506"
+        },
+        {
+          "pmid": 40109561,
+          "section": "DISCUSS",
+          "score": 0.91524937748909,
+          "text": "SNP of APOE is the currently known strongest genetic risk factor for late-onset Alzheimer's disease, linked to BBB dysfunction.",
+          "annotations": [
+            "111|15|disease|MESH:C536830",
+            "7|4|gene|348",
+            "80|19|disease|MESH:D000544"
+          ],
+          "pmcid": "PMC11920868"
+        },
+        {
+          "pmid": 28800603,
+          "section": "DISCUSS",
+          "score": 0.9048661887645721,
+          "text": "Taken together, although rs2075650, in the TOMM40 region, associates with rDR level in our study, and with episodic memory (p<5.0x10-08) and late-onset Alzheimer disease (LOAD) in other studies, that effect on verbal information retrieval detected through GWAS is primarily driven by linked APOE variants.",
+          "annotations": [
+            "152|17|disease|MESH:D000544",
+            "171|4|disease|None",
+            "25|9|mutation|rs2075650",
+            "291|4|gene|348",
+            "43|6|gene|10452"
+          ],
+          "pmcid": "PMC5553750"
+        },
+        {
+          "pmid": 38048316,
+          "section": "INTRO",
+          "score": 0.901759922504425,
+          "text": "The APOE-epsilon4 allele has been linked with substantial increases in the risk of developing late-onset Alzheimer's disease.",
+          "annotations": [
+            "4|4|gene|348",
+            "105|19|disease|MESH:D000544"
+          ],
+          "pmcid": "PMC10695383"
+        },
+        {
+          "pmid": 10970893,
+          "section": "abstract",
+          "score": 0.8877532184123993,
+          "text": "Human apolipoprotein E (apoE) exists as three main isoforms, differing by single amino acid substitutions, with the apoE4 isoform strongly linked to the incidence of late onset Alzheimer's disease.",
+          "annotations": [
+            "24|4|gene|348",
+            "0|5|species|9606",
+            "116|5|gene|348",
+            "6|16|gene|348",
+            "177|19|disease|MESH:D000544"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 40092369,
+          "section": "DISCUSS",
+          "score": 0.8801620006561279,
+          "text": "Nevertheless, genomics studies found that the combined effect of alleles in the RPS6KB1 gene, along with other genes in the tau kinase pathway, is linked to an increased risk of late-onset Alzheimer's disease in without APOE epsilon4 allele.",
+          "annotations": [
+            "80|7|gene|6198",
+            "189|19|disease|MESH:D000544",
+            "220|4|gene|348"
+          ],
+          "pmcid": "PMC11906402"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=What+is+the+evidence+linking+APOE+to+late-onset+Alzheimer+disease%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-030",
+    "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 2.0981849579839036,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 25806291,
+          "annotations": [
+            "215|9|chemical|MESH:D000069347",
+            "281|4|gene|1956",
+            "93|32|gene|1956",
+            "236|26|disease|MESH:D002289",
+            "264|5|disease|MESH:D002289",
+            "127|4|gene|1956"
+          ],
+          "text": "BACKGROUND: Activation of bypass signaling pathways, impairment of apoptosis and mutation of epidermal growth factor receptor (EGFR) to a drug-resistant state are well known mechanisms of resistance to single-agent erlotinib therapy in non-small-cell lung cancer (NSCLC) driven by EGFR mutations.",
+          "score": 0.8882100284099579,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 33522139,
+          "annotations": [
+            "61|4|gene|1956",
+            "0|32|gene|1956",
+            "33|15|gene|7294",
+            "101|8|species|9606",
+            "152|5|disease|MESH:D002289",
+            "169|4|gene|1956",
+            "124|26|disease|MESH:D002289"
+          ],
+          "text": "Epidermal growth factor receptor-tyrosine kinase inhibitors (EGFR-TKIs) are known to be effective in patients with advanced non-small cell lung cancer (NSCLC) harboring EGFR mutations.",
+          "score": 0.8858165442943573,
+          "pmcid": "PMC7952801",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 28521408,
+          "annotations": [
+            "208|4|gene|1956",
+            "177|11|chemical|MESH:D000068878",
+            "115|5|gene|2064",
+            "284|9|chemical|MESH:D000069347",
+            "271|9|chemical|MESH:D000077156",
+            "64|8|species|9606"
+          ],
+          "text": "Data from clinical trials have demonstrated that gastric cancer patients with well known tumor biomarkers, such as HER-2, benefit from improved survival rates when treated with trastuzumab, as can those with EGFR mutation-positive non-small cell lung cancer treated with gefitinib or erlotinib.",
+          "score": 0.8817477524280548,
+          "pmcid": "PMC5431275",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 19671843,
+          "annotations": [
+            "113|9|chemical|MESH:D000069347",
+            "19|8|species|9606",
+            "79|4|gene|1956",
+            "126|9|chemical|MESH:D000077156",
+            "42|26|disease|MESH:D002289"
+          ],
+          "text": "Chemotherapy-naive patients with advanced non-small cell lung cancer and known EGFR mutation status treated with erlotinib or gefitinib monotherapy as part of a clinical trial were eligible for inclusion.",
+          "score": 0.8762039542198181,
+          "pmcid": "PMC3219530",
+          "section": "abstract"
+        },
+        {
+          "pmid": 26727163,
+          "annotations": [
+            "134|8|species|9606",
+            "257|4|gene|4582",
+            "180|26|disease|MESH:D002289",
+            "234|4|gene|1956"
+          ],
+          "text": "METHODS: In this phase 2b part of a randomised, double-blind, placebo-controlled, phase 2b/3 trial, we recruited previously untreated patients aged 18 years or older with stage IV non-small-cell lung cancer without a known activating EGFR mutation and with MUC1 expression in at least 50% of tumoural cells.",
+          "score": 0.8627679646015167,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 25404271,
+          "annotations": [
+            "33|8|species|9606",
+            "78|5|disease|MESH:D002289",
+            "50|26|disease|MESH:D002289",
+            "90|4|gene|1956"
+          ],
+          "text": "METHODS: The study recruited 113 patients who had non-small cell lung cancer (NSCLC) with EGFR mutations.",
+          "score": 0.858993411064148,
+          "pmcid": "PMC6000356",
+          "section": "abstract"
+        },
+        {
+          "pmid": 32010586,
+          "annotations": [
+            "148|26|disease|MESH:D002289",
+            "116|4|gene|1956"
+          ],
+          "text": "METHODS: In this single arm, prospective, open-label, multicenter, phase II trial, 40 subjects aged >=75 years with EGFR mutation-positive advanced non-small-cell-lung cancer will be recruited.",
+          "score": 0.8559236526489258,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 36245625,
+          "annotations": [
+            "86|22|disease|MESH:D065311",
+            "123|4|gene|1956",
+            "37|5|disease|MESH:D002289",
+            "44|8|species|9606",
+            "9|26|disease|MESH:D002289",
+            "71|11|disease|MESH:D062706",
+            "110|3|disease|MESH:D065311"
+          ],
+          "text": "Methods: Non-small cell lung cancer (NSCLC) patients with pathological stage I-III or adenocarcinoma in situ (AIS) who had EGFR mutations identified in next-generation sequencing (NGS) testing were recruited.",
+          "score": 0.8489498794078827,
+          "pmcid": "PMC9562547",
+          "section": "abstract"
+        },
+        {
+          "pmid": 36212398,
+          "annotations": [
+            "21|4|gene|1956"
+          ],
+          "text": "Currently recruiting EGFR mutation non-small-cell lung cancer trials.",
+          "score": 0.8391834795475006,
+          "pmcid": "PMC9533094",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 38346752,
+          "annotations": [
+            "145|3|gene|925",
+            "46|26|disease|MESH:D002289",
+            "96|14|disease|MESH:D013274",
+            "28|4|gene|1956",
+            "78|4|gene|387"
+          ],
+          "text": "We have recently shown that EGFR mutations in non-small cell lung cancer) and RHOA mutations in gastric cancer are associated with inhibition of CD8+ T-cell infiltration) through recruitment and activation of Treg cells in the TME.",
+          "score": 0.8349941968917847,
+          "pmcid": "PMC10978970",
+          "section": null
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=What+is+known+about+EGFR+mutations+in+non-small+cell+lung+cancer%2C+and+what+trials+are+recruiting%3F&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "G-033",
+    "question": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+    "mode": "plain",
+    "result": {
+      "ok": true,
+      "latency_s": 1.310667458048556,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 40073395,
+          "annotations": [
+            "30|14|disease|MESH:D003123",
+            "9|4|gene|4436",
+            "57|17|disease|MESH:D015179",
+            "0|4|gene|4292"
+          ],
+          "text": "MLH1 and MSH2 mutations cause Lynch syndrome, increasing colorectal cancer risk.",
+          "score": 0.934715747833252,
+          "pmcid": "PMC11947629",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 21145788,
+          "annotations": [
+            "56|4|gene|4436",
+            "188|4|gene|4436",
+            "75|17|disease|MESH:D015179",
+            "160|18|disease|MESH:D016889",
+            "224|33|disease|MESH:D016889",
+            "267|4|gene|4292",
+            "276|4|gene|2956",
+            "24|14|disease|MESH:D003123"
+          ],
+          "text": "Indeed in our cohort of Lynch syndrome families with an MSH2 mutation, the colorectal cancer risk appeared somewhat higher than reported by others, whereas the endometrial cancer risk for MSH2 mutation carriers and both the colorectal and endometrial cancer risks of MLH1 and MSH6 mutation carriers were in conformity with that reported by others.",
+          "score": 0.923402726650238,
+          "pmcid": "PMC3670774",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 33030277,
+          "annotations": [
+            "56|17|disease|MESH:D015179",
+            "85|14|disease|MESH:D003123",
+            "151|4|gene|2956",
+            "142|4|gene|4436",
+            "136|4|gene|4292"
+          ],
+          "text": "We apply this approach to quantify the heterogeneity of colorectal cancer risk among Lynch syndrome families who carry mutations of the MLH1, MSH2, or MSH6 genes.",
+          "score": 0.9132936596870422,
+          "pmcid": "PMC7902332",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 35190302,
+          "annotations": [
+            "0|14|disease|MESH:D003123",
+            "146|4|gene|4436",
+            "50|17|disease|MESH:D015179",
+            "138|4|gene|4292"
+          ],
+          "text": "Lynch syndrome, the most common form of inherited colorectal cancer risk, arises from germline mutations in the DNA mismatch repair genes MLH1 or MSH2.",
+          "score": 0.9107209742069244,
+          "pmcid": "PMC8930612",
+          "section": null
+        },
+        {
+          "pmid": 25391773,
+          "annotations": [
+            "168|4|gene|673",
+            "181|12|gene|1499",
+            "174|6|gene|1499",
+            "281|4|gene|2956",
+            "431|17|disease|MESH:D015179",
+            "331|5|gene|4595",
+            "0|17|disease|MESH:D015179",
+            "162|4|gene|3845",
+            "195|6|gene|5290",
+            "139|4|gene|7157",
+            "97|5|disease|MESH:D009369",
+            "275|4|gene|4436",
+            "203|3|gene|6714",
+            "269|4|gene|4292",
+            "236|5|gene|55294",
+            "134|3|gene|324",
+            "324|4|gene|4968",
+            "287|4|gene|5395"
+          ],
+          "text": "Colorectal cancer risk is attributable to rare germline and or somatic mutations in a variety of tumor suppressor genes, that include APC, TP53; proto-oncogenes, KRAS, BRAF, CTNNB1/beta-catenin, PIK3CA, SRC; cell cycle regulatory genes FBXW7; DNA mismatch repair genes MLH1, MSH2, MSH6, PMS2, DNA base excision repair genes OGG1 , MUTYH; and many other common, low-penetrant genetic variants, which together may be associated with colorectal cancer development.",
+          "score": 0.8998211324214935,
+          "pmcid": "PMC4330403",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 36088367,
+          "annotations": [
+            "84|4|gene|4292",
+            "45|17|disease|MESH:D015179",
+            "141|4|gene|4436",
+            "176|4|gene|2956",
+            "0|6|disease|MESH:D009369"
+          ],
+          "text": "Tumour specific risks of disease reveal that colorectal cancer risk is greatest for MLH1 PV carriers (~ 45% by 70 years of age), followed by MSH2 (~ 35% at 70 years of age and MSH6 (20% by 70 years of age).",
+          "score": 0.8908094763755798,
+          "pmcid": "PMC9463843",
+          "section": null
+        },
+        {
+          "pmid": 19698169,
+          "annotations": [
+            "152|4|gene|4292",
+            "27|17|disease|MESH:D015179",
+            "158|4|gene|4436"
+          ],
+          "text": "Estimated hazard ratios of colorectal cancer risk at ages 30, 50 and 70 (and corresponding 95% confidence interval) in gene mutation carriers (any MMR, MLH1, MSH2) compared with that in the general population, based on the segregation analysis.",
+          "score": 0.8738378882408142,
+          "pmcid": "PMC2744657",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 24056992,
+          "annotations": [
+            "13|4|gene|4436",
+            "4|4|gene|4292",
+            "68|17|disease|MESH:D015179"
+          ],
+          "text": "For MLH1 and MSH2 carriers, the risk profile is similar to that for colorectal cancer, with a risk to age 70 of 20-50%.",
+          "score": 0.8713637888431549,
+          "pmcid": "PMC3775889",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 34111421,
+          "annotations": [
+            "17|12|disease|MESH:D015179",
+            "106|4|gene|4292",
+            "115|4|gene|4436",
+            "163|17|disease|MESH:D015179"
+          ],
+          "text": "A study from the Colon Cancer Family Registry has reported that, depending on the gene and sex, 16-23% of MLH1 and MSH2 pathogenic variant carriers had a lifetime colorectal cancer risk of less than 10% (i.e., their risk is close to the average risk for the general population); yet 10-17% of carriers had a lifetime risk of more than 90% (i.e., these carriers are almost certain to develop the disease).",
+          "score": 0.8561360538005829,
+          "pmcid": "PMC8934577",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 29904935,
+          "annotations": [
+            "217|17|disease|MESH:D015179",
+            "57|4|gene|4436",
+            "48|4|gene|4292"
+          ],
+          "text": "One previous study of a Taiwanese cohort of 301 MLH1 and MSH2 mutation carriers, reported the association between vigorous leisure time physical activity (obtained by self-report over the year prior to interview) and colorectal cancer risk.",
+          "score": 0.8396074175834656,
+          "pmcid": "PMC6195467",
+          "section": "DISCUSS"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=Compare+what+is+known+about+MLH1+and+MSH2+in+colorectal+cancer+risk.&rerank=true&limit=10"
+    }
+  },
+  {
+    "id": "PMID-RESTRICT-TEST",
+    "question": "param=pmids",
+    "mode": "pmid_restrict_probe",
+    "result": {
+      "ok": true,
+      "latency_s": 1.732811458001379,
+      "n": 5,
+      "results": [
+        {
+          "pmid": 33945566,
+          "annotations": null,
+          "text": "We sample a MeSH term sequence from each set of MeSH terms in the corpus data source via uniform random sampling following previous approaches, and will focus on transforming the ontology graph Go and the semantic predications graph Gs into MeSH term sequences.",
+          "score": 0.7743909336683452,
+          "pmcid": "PMC8096083",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 33994670,
+          "annotations": null,
+          "text": "The BioWordVec system combines sub-word information from biomedical texts with MeSH terms in two steps: firstly, it constructs MeSH graph data and samples the MeSH term sequences and, secondly, it employs the FastText sub-word embedding model to learn the distributed word embeddings based on text sequences and MeSH term sequences.",
+          "score": 0.7537590839025676,
+          "pmcid": "PMC8111057",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 32823315,
+          "annotations": null,
+          "text": "The selection was performed by querying MEDLINE via PubMed (from NCBI, National Center for Biotechnology Information, NLM, NIH) with a set of predefined MeSH descriptors along with free terms: \"Translational informatics\", \"Translational bioinformatics\", \"Bioinformatics\", \"Computational molecular biology\", \"Computing Methodologies\", \"Information storage and retrieval\", \"Pattern recognition\", \"automated\", \"Medical informatics, Algorithms\", \"Translational medical Research\", \"Genetics, Medical\", \"Precision Medicine\", \"Personalized medicine\", \"Molecular Medicine\", \"Genomic medicine\", \"Medical genetics\", \"Medical genomics\", \"Clinical genomics\", \"Genetics\", \"Genomics\", \"Next-generation sequencing\", \"High throughput sequencing\", \"Transcriptome\", \"Transcriptomics\", \"Proteome\", \"Proteomics\", \"Proteogenomics\", \"Epigenomics\", \"Metabolomics\", \"Metagenomics\", \"Large-scale datasets\", \"Big data\", \"Omics\", and \"Multi-omics\".",
+          "score": 0.7385915793535411,
+          "pmcid": "PMC7442509",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 37065902,
+          "annotations": [
+            "23|4|disease|MESH:D012652",
+            "189|12|species|9606",
+            "216|7|species|4097",
+            "241|7|species|4097",
+            "370|13|disease|MESH:D019966",
+            "307|11|species|None",
+            "275|27|species|None",
+            "203|5|species|None"
+          ],
+          "text": "There are few data for NSSI high-throughput sequencing studies, so we searched the NCBI-GEO public database (NCBI-GEO) with \"alcoholism [MeSH Terms] OR Alcohol addiction [ALL Fields]\" and \"Homo sapiens [porgn]\" and \"tobacco\"[MeSH Terms] OR \"tobacco products\"[MeSH Terms] OR \"Nicotiana tabacum\"[Organism] OR Tobacco[All Fields]) AND (\"behavior, addictive\"[MeSH Terms] OR addiction[All Fields].",
+          "score": 0.730232445156306,
+          "pmcid": "PMC10102595",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 27658571,
+          "annotations": null,
+          "text": "MH-molecular-sequence-data (MH prefix indicates a Medical Subject Headings [MeSH] term)",
+          "score": 0.6892071940061748,
+          "pmcid": "PMC5054236",
+          "section": "RESULTS"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=MeSH+terms+sequence+data&rerank=true&limit=5&pmids=11237011"
+    }
+  },
+  {
+    "id": "PMID-RESTRICT-TEST",
+    "question": "param=pmid",
+    "mode": "pmid_restrict_probe",
+    "result": {
+      "ok": true,
+      "latency_s": 1.6642489999649115,
+      "n": 5,
+      "results": [
+        {
+          "pmid": 28577935,
+          "annotations": null,
+          "text": "Besides, OmniSearch also provided us with a rich set of additional data for each target mRNA, including GO annotations, PubMed publications, relevant MeSH terms, involved pathways, and ncRNA sequences.",
+          "score": 0.7771370868447183,
+          "pmcid": "PMC5540768",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 31393404,
+          "annotations": null,
+          "text": "Its core MeSH terms were all related to genetic techniques such as \"pedigree,\" \"missense mutation,\" \"high-throughput nucleotide sequencing,\" \"molecular sequence data,\" \"exome,\" \"exons,\" and \"DNA mutational analysis.\"",
+          "score": 0.7501640777352212,
+          "pmcid": "PMC6709143",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 32823315,
+          "annotations": null,
+          "text": "The selection was performed by querying MEDLINE via PubMed (from NCBI, National Center for Biotechnology Information, NLM, NIH) with a set of predefined MeSH descriptors along with free terms: \"Translational informatics\", \"Translational bioinformatics\", \"Bioinformatics\", \"Computational molecular biology\", \"Computing Methodologies\", \"Information storage and retrieval\", \"Pattern recognition\", \"automated\", \"Medical informatics, Algorithms\", \"Translational medical Research\", \"Genetics, Medical\", \"Precision Medicine\", \"Personalized medicine\", \"Molecular Medicine\", \"Genomic medicine\", \"Medical genetics\", \"Medical genomics\", \"Clinical genomics\", \"Genetics\", \"Genomics\", \"Next-generation sequencing\", \"High throughput sequencing\", \"Transcriptome\", \"Transcriptomics\", \"Proteome\", \"Proteomics\", \"Proteogenomics\", \"Epigenomics\", \"Metabolomics\", \"Metagenomics\", \"Large-scale datasets\", \"Big data\", \"Omics\", and \"Multi-omics\".",
+          "score": 0.7385915793535411,
+          "pmcid": "PMC7442509",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 32274464,
+          "annotations": [
+            "64|4|gene|2099",
+            "112|4|gene|2099",
+            "217|4|chemical|MESH:D000143",
+            "279|5|disease|MESH:D009369"
+          ],
+          "text": "Combined with another article that is also manually tagged with ESR1 and a few overlapping MeSH terms, the gene ESR1 now has two articles that support a relationship to the MeSH term \"Molecular Sequence Data\", \"Amino Acid Sequence\", \"Receptors, Estrogen\", \"RNA, Messenger\", and \"Tumor Cells, Cultured\" (Figure 3).",
+          "score": 0.7308691601517556,
+          "pmcid": "PMC7144681",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 27658571,
+          "annotations": null,
+          "text": "MH-molecular-sequence-data (MH prefix indicates a Medical Subject Headings [MeSH] term)",
+          "score": 0.6892071940061748,
+          "pmcid": "PMC5054236",
+          "section": "RESULTS"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=MeSH+terms+sequence+data&rerank=true&limit=5&pmid=11237011"
+    }
+  },
+  {
+    "id": "PMID-RESTRICT-TEST",
+    "question": "param=pmid_list",
+    "mode": "pmid_restrict_probe",
+    "result": {
+      "ok": true,
+      "latency_s": 1.3649629580322653,
+      "n": 5,
+      "results": [
+        {
+          "pmid": 28577935,
+          "annotations": null,
+          "text": "Besides, OmniSearch also provided us with a rich set of additional data for each target mRNA, including GO annotations, PubMed publications, relevant MeSH terms, involved pathways, and ncRNA sequences.",
+          "score": 0.7771370868447183,
+          "pmcid": "PMC5540768",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 31393404,
+          "annotations": null,
+          "text": "Its core MeSH terms were all related to genetic techniques such as \"pedigree,\" \"missense mutation,\" \"high-throughput nucleotide sequencing,\" \"molecular sequence data,\" \"exome,\" \"exons,\" and \"DNA mutational analysis.\"",
+          "score": 0.7501640777352212,
+          "pmcid": "PMC6709143",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 32823315,
+          "annotations": null,
+          "text": "The selection was performed by querying MEDLINE via PubMed (from NCBI, National Center for Biotechnology Information, NLM, NIH) with a set of predefined MeSH descriptors along with free terms: \"Translational informatics\", \"Translational bioinformatics\", \"Bioinformatics\", \"Computational molecular biology\", \"Computing Methodologies\", \"Information storage and retrieval\", \"Pattern recognition\", \"automated\", \"Medical informatics, Algorithms\", \"Translational medical Research\", \"Genetics, Medical\", \"Precision Medicine\", \"Personalized medicine\", \"Molecular Medicine\", \"Genomic medicine\", \"Medical genetics\", \"Medical genomics\", \"Clinical genomics\", \"Genetics\", \"Genomics\", \"Next-generation sequencing\", \"High throughput sequencing\", \"Transcriptome\", \"Transcriptomics\", \"Proteome\", \"Proteomics\", \"Proteogenomics\", \"Epigenomics\", \"Metabolomics\", \"Metagenomics\", \"Large-scale datasets\", \"Big data\", \"Omics\", and \"Multi-omics\".",
+          "score": 0.7385915793535411,
+          "pmcid": "PMC7442509",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 32274464,
+          "annotations": [
+            "64|4|gene|2099",
+            "112|4|gene|2099",
+            "217|4|chemical|MESH:D000143",
+            "279|5|disease|MESH:D009369"
+          ],
+          "text": "Combined with another article that is also manually tagged with ESR1 and a few overlapping MeSH terms, the gene ESR1 now has two articles that support a relationship to the MeSH term \"Molecular Sequence Data\", \"Amino Acid Sequence\", \"Receptors, Estrogen\", \"RNA, Messenger\", and \"Tumor Cells, Cultured\" (Figure 3).",
+          "score": 0.7308691601517556,
+          "pmcid": "PMC7144681",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 27658571,
+          "annotations": null,
+          "text": "MH-molecular-sequence-data (MH prefix indicates a Medical Subject Headings [MeSH] term)",
+          "score": 0.6892071940061748,
+          "pmcid": "PMC5054236",
+          "section": "RESULTS"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=MeSH+terms+sequence+data&rerank=true&limit=5&pmid_list=11237011"
+    }
+  },
+  {
+    "id": "PMID-RESTRICT-TEST",
+    "question": "param=restrict_pmid",
+    "mode": "pmid_restrict_probe",
+    "result": {
+      "ok": true,
+      "latency_s": 1.6089541250257753,
+      "n": 5,
+      "results": [
+        {
+          "pmid": 28577935,
+          "section": "METHODS",
+          "score": 0.7771370868447183,
+          "text": "Besides, OmniSearch also provided us with a rich set of additional data for each target mRNA, including GO annotations, PubMed publications, relevant MeSH terms, involved pathways, and ncRNA sequences.",
+          "annotations": null,
+          "pmcid": "PMC5540768"
+        },
+        {
+          "pmid": 31393404,
+          "section": "DISCUSS",
+          "score": 0.7501640777352212,
+          "text": "Its core MeSH terms were all related to genetic techniques such as \"pedigree,\" \"missense mutation,\" \"high-throughput nucleotide sequencing,\" \"molecular sequence data,\" \"exome,\" \"exons,\" and \"DNA mutational analysis.\"",
+          "annotations": null,
+          "pmcid": "PMC6709143"
+        },
+        {
+          "pmid": 32823315,
+          "section": "METHODS",
+          "score": 0.7385915793535411,
+          "text": "The selection was performed by querying MEDLINE via PubMed (from NCBI, National Center for Biotechnology Information, NLM, NIH) with a set of predefined MeSH descriptors along with free terms: \"Translational informatics\", \"Translational bioinformatics\", \"Bioinformatics\", \"Computational molecular biology\", \"Computing Methodologies\", \"Information storage and retrieval\", \"Pattern recognition\", \"automated\", \"Medical informatics, Algorithms\", \"Translational medical Research\", \"Genetics, Medical\", \"Precision Medicine\", \"Personalized medicine\", \"Molecular Medicine\", \"Genomic medicine\", \"Medical genetics\", \"Medical genomics\", \"Clinical genomics\", \"Genetics\", \"Genomics\", \"Next-generation sequencing\", \"High throughput sequencing\", \"Transcriptome\", \"Transcriptomics\", \"Proteome\", \"Proteomics\", \"Proteogenomics\", \"Epigenomics\", \"Metabolomics\", \"Metagenomics\", \"Large-scale datasets\", \"Big data\", \"Omics\", and \"Multi-omics\".",
+          "annotations": null,
+          "pmcid": "PMC7442509"
+        },
+        {
+          "pmid": 32274464,
+          "section": "METHODS",
+          "score": 0.7308691601517556,
+          "text": "Combined with another article that is also manually tagged with ESR1 and a few overlapping MeSH terms, the gene ESR1 now has two articles that support a relationship to the MeSH term \"Molecular Sequence Data\", \"Amino Acid Sequence\", \"Receptors, Estrogen\", \"RNA, Messenger\", and \"Tumor Cells, Cultured\" (Figure 3).",
+          "annotations": [
+            "64|4|gene|2099",
+            "112|4|gene|2099",
+            "217|4|chemical|MESH:D000143",
+            "279|5|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC7144681"
+        },
+        {
+          "pmid": 27658571,
+          "section": "RESULTS",
+          "score": 0.6892071940061748,
+          "text": "MH-molecular-sequence-data (MH prefix indicates a Medical Subject Headings [MeSH] term)",
+          "annotations": null,
+          "pmcid": "PMC5054236"
+        }
+      ],
+      "url": "https://www.ncbi.nlm.nih.gov/research/litsense-api/api/?query=MeSH+terms+sequence+data&rerank=true&limit=5&restrict_pmid=11237011"
+    }
+  }
+]

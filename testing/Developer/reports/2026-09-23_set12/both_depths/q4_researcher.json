@@ -1,0 +1,22 @@
+{
+  "depth": "researcher",
+  "question": "papers on the effects of caffeine on exercise performance",
+  "outcome": "answer",
+  "words": 762,
+  "paragraphs": 1,
+  "headings": 2,
+  "list_items": 75,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 2 sources",
+  "sources": [
+    "11583104",
+    "25355191",
+    "32589582",
+    "33388079",
+    "36615805"
+  ],
+  "notes": [],
+  "errors": [],
+  "key": "q4"
+}

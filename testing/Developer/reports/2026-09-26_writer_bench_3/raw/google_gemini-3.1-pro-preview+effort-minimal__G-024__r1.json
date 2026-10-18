@@ -1,0 +1,658 @@
+{
+ "record": {
+  "model": "google/gemini-3.1-pro-preview+effort-minimal",
+  "model_id": "google/gemini-3.1-pro-preview",
+  "synth_effort": "minimal",
+  "question_id": "G-024",
+  "run": 1,
+  "question": "What is rs334 and what condition is it associated with?",
+  "trace_id": "trace-wb3-G-024-r1-f31d9fd5ff884a8a",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T23:09:08Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 6,
+  "must_cite_total": 3,
+  "must_cite_hits": 1,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 5,
+  "prose_kept": [
+   "The variant record clinical_significance is not-provided, protective, likely-benign, pathogenic, other [1].",
+   "One literature variant name is c.20A>T [2].",
+   "A second literature variant name is rs334348 [3].",
+   "A third literature variant name is rs334353 [4].",
+   "Another literature variant name is c.-50T>C [5]."
+  ],
+  "prose_text": "Literature Variant Names One literature variant name is c.20A>T [1].",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   6.269150249998347,
+   15.305852292000054
+  ],
+  "writer_completion_tokens": [
+   703,
+   1904
+  ],
+  "writer_reasoning_tokens": [
+   695,
+   1775
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 28.656,
+  "done_elapsed_s": 28.623,
+  "metered_cost_usd": 0.07537979976,
+  "done_cost_usd": 0.07537979976,
+  "openrouter_cost_usd": 0.075401,
+  "writer_openrouter_cost_usd": 0.075144,
+  "writer_metered_cost_usd": 0.075144,
+  "answer_text": "Found 5 literature variant records for rs334: c.20A>T [1], rs334348 [3], rs334353 [4], c.-50T>C [5] and rs334773 [6]. \n\nLiterature Variant Names\n\nOne literature variant name is c.20A>T [1]. \n\nVariant record records found\n\nVariant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [2]. \n\nLiterature variant records found\n\nLiterature variant name: rs334348 [3]. Literature variant name: rs334353 [4]. Literature variant name: c.-50T>C [5]. Literature variant name: rs334773 [6]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.65,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 802,
+    "completion_tokens": 40,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 7.526e-05,
+    "reply": null,
+    "dur": 0.719
+   },
+   {
+    "t": 1.374,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1014,
+    "completion_tokens": 85,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00013922,
+    "reply": null,
+    "dur": 0.672
+   },
+   {
+    "t": 2.746,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1134,
+    "completion_tokens": 47,
+    "cached_tokens": 1032,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.2028e-05,
+    "reply": null,
+    "dur": 3.808
+   },
+   {
+    "t": 7.043,
+    "model": "openrouter/google/gemini-3.1-pro-preview",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 10865,
+    "completion_tokens": 703,
+    "cached_tokens": 0,
+    "reasoning_tokens": 695,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.030166,
+    "reply": "I could not find information on this.",
+    "dur": 6.269
+   },
+   {
+    "t": 13.317,
+    "model": "openrouter/google/gemini-3.1-pro-preview",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11065,
+    "completion_tokens": 1904,
+    "cached_tokens": 0,
+    "reasoning_tokens": 1775,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.044978,
+    "reply": "I could not find information on the condition associated with this variant. The variant record clinical_significance is not-provided, protective, likely-benign, pathogenic, other [1].\n\n## Literature Variant Names\nOne literature variant name is c.20A>T [2]. A second literature variant name is rs334348 [3]. A third literature variant name is rs334353 [4].\n\n## Additional Literature Identifiers\nAnother literature variant name is c.-50T>C [5]. The final literature variant name is rs334773 [6].",
+    "dur": 15.306
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.639,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 0.7188321250032459,
+    "prompt_tokens": 802,
+    "completion_tokens": 40,
+    "cost_usd": 4.148928e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 0.73
+   },
+   {
+    "t": 1.374,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 0.6721846250002272,
+    "prompt_tokens": 1014,
+    "completion_tokens": 85,
+    "cost_usd": 5.569536e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 0.672
+   },
+   {
+    "t": 2.746,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 3.807683041999553,
+    "prompt_tokens": 1134,
+    "completion_tokens": 47,
+    "cost_usd": 5.776512000000001e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 3.808
+   },
+   {
+    "t": 7.04,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 6.269150249998347,
+    "prompt_tokens": 10865,
+    "completion_tokens": 703,
+    "cost_usd": 0.030166,
+    "model": "google/gemini-3.1-pro-preview",
+    "dur": 6.273
+   },
+   {
+    "t": 13.317,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 15.305852292000054,
+    "prompt_tokens": 11065,
+    "completion_tokens": 1904,
+    "cost_usd": 0.044978000000000004,
+    "model": "google/gemini-3.1-pro-preview",
+    "dur": 15.306
+   }
+  ],
+  "grounding": [
+   {
+    "t": 13.315,
+    "dur": 0.0006,
+    "narrative_chars": 37,
+    "narrative": "I could not find information on this.",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 1,
+    "refused": true
+   },
+   {
+    "t": 28.624,
+    "dur": 0.0013,
+    "narrative_chars": 426,
+    "narrative": "I could not find information on the condition associated with this variant. The variant record clinical_significance is not-provided, protective, likely-benign, pathogenic, other [1]. One literature variant name is c.20A>T [2]. A second literature variant name is rs334348 [3]. A third literature variant name is rs334353 [4]. Another literature variant name is c.-50T>C [5]. The final literature variant name is rs334773 [6].",
+    "sentences": [
+     "The variant record clinical_significance is not-provided, protective, likely-benign, pathogenic, other [1].",
+     "One literature variant name is c.20A>T [2].",
+     "A second literature variant name is rs334348 [3].",
+     "A third literature variant name is rs334353 [4].",
+     "Another literature variant name is c.-50T>C [5]."
+    ],
+    "claims": 5,
+    "claim_ids": [
+     "db-b951a550648c-1",
+     "lv-5ecbb40cb9a9-2",
+     "lv-5ecbb40cb9a9-3",
+     "lv-5ecbb40cb9a9-4",
+     "lv-5ecbb40cb9a9-5"
+    ],
+    "claim_detail": [
+     {
+      "text": "The variant record clinical_significance is not-provided, protective, likely-benign, pathogenic, other",
+      "quote": "",
+      "ref": 1,
+      "field": "clinical_significance",
+      "value": "not-provided, protective, likely-benign, pathogenic, other"
+     },
+     {
+      "text": "One literature variant name is c.20A>T",
+      "quote": "",
+      "ref": 2,
+      "field": "name",
+      "value": "c.20A>T"
+     },
+     {
+      "text": "A second literature variant name is rs334348",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "rs334348"
+     },
+     {
+      "text": "A third literature variant name is rs334353",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "rs334353"
+     },
+     {
+      "text": "Another literature variant name is c.-50T>C",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "c.-50T>C"
+     }
+    ],
+    "stripped": 2,
+    "refused": false
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "clinical_significance",
+    "value": "not-provided, protective, likely-benign, pathogenic, other",
+    "url": "https://www.ncbi.nlm.nih.gov/snp/rs334"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "c.20A>T",
+    "url": "https://www.ncbi.nlm.nih.gov/snp/rs334"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "rs334348",
+    "url": "https://www.ncbi.nlm.nih.gov/snp/rs334348"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "rs334353",
+    "url": "https://www.ncbi.nlm.nih.gov/snp/rs334353"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "c.-50T>C",
+    "url": "https://www.ncbi.nlm.nih.gov/snp/rs334558"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "rs334773",
+    "url": "https://www.ncbi.nlm.nih.gov/snp/rs334773"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.369,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.37,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 2.704,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.704,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 2.711,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 2.711,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 2.713,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 2.713,
+   "step": null,
+   "tool": "ncbi_dbsnp"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 2.713,
+   "step": null,
+   "tool": "litvar2_lookup"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 2.896,
+   "step": null,
+   "tool": "litvar2_lookup"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 3.054,
+   "step": null,
+   "tool": "ncbi_dbsnp"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.035,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "step",
+   "emitted": 7.039,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.628,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 28.629,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.07537979976,
+  "total_tool_calls": 3,
+  "elapsed_ms": 28623,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "layer_calls_used": 6,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 317
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.98,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 289
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 297
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 301
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/snp/rs334",
+  "https://www.ncbi.nlm.nih.gov/snp/rs334",
+  "https://www.ncbi.nlm.nih.gov/snp/rs334348",
+  "https://www.ncbi.nlm.nih.gov/snp/rs334353",
+  "https://www.ncbi.nlm.nih.gov/snp/rs334558",
+  "https://www.ncbi.nlm.nih.gov/snp/rs334773"
+ ]
+}

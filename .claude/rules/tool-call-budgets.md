@@ -1,3 +1,15 @@
+---
+paths:
+  - "src/system_03_search_agent/tools/**/*"
+  - "src/system_03_search_agent/harness/call_budget.py"
+  - "services/graph_query_service/**/*"
+  - "tests/system_03_search_agent/tools/**/*"
+  - "tests/system_03_search_agent/harness/test_call_budget*.py"
+  - "tests/services/graph_query_service/**/*"
+  - ".github/gates/gate05_integration.sh"
+  - "docs/ncbi/Tool_implementation_mechanics.md"
+---
+
 ## Tool call budgets
 
 Every tool in the seven-tool roster (`requirements/Technical_specification.md` Section 6) carries a locked per-call timeout, and several carry a rate-limit pool they must respect. A tool without a declared timeout is not finished. A timeout that exists in the spec but not in the code is a defect, not a detail: the multi-agent pipeline gate in `production-standards` requires a schema for every tool, and a timeout is as load-bearing as `maxLength` or a host-pinned `source_url` regex. Apply this rule whenever writing, reviewing, or reasoning about any tool in `system_03_search_agent/tools/`, the read-only HTTPS graph query service, or the integration test suite that exercises live APIs.
@@ -20,7 +32,7 @@ Two conflicting E-utilities rate-limit figures exist in the source material: a 2
 
 ### Provisional throttle for undocumented APIs
 
-The Datasets API v2 and each of the four enrichment APIs (PubTator3, LitVar2, LitSense, ClinicalTrials.gov v2) have no published numeric rate limit in the capability sheet. Until a published figure is confirmed, treat each as an interactive HTTPS API and apply the same provisional throttle used for PubChem: about 5 requests per second (Section 21.1). A tool for one of these APIs that ships with no throttle at all is not honoring this rule, even though no vendor-published number exists yet to violate.
+The Datasets API v2 and each of the three enrichment APIs (PubTator3, LitVar2, ClinicalTrials.gov v2) have no published numeric rate limit in the capability sheet. Until a published figure is confirmed, treat each as an interactive HTTPS API and apply the same provisional throttle used for PubChem: about 5 requests per second (Section 21.1). A tool for one of these APIs that ships with no throttle at all is not honoring this rule, even though no vendor-published number exists yet to violate.
 
 ### Wait queues and fail-fast
 

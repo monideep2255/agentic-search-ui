@@ -1,0 +1,67 @@
+▶
+recent papers on BRCA1
+0 tool calls · 0 sources cited
+Researcher
+Show answer
+Recent papers on BRCA1 from the last 5 years?
+New search
+
+✓ Answered17.7s · 13 tool calls · 17 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 4 pubmed records for BRCA1: BRCA1: An Endocrine and Metabolic Regulator., EXO1 protects BRCA1-deficient cells against toxic DNA lesions., BRCA1, BRCA2, and Associated Cancer Risks and Management for Male Patients: A Review. and BRCA1 and BRCA2: from cancer susceptibility to synthetic lethality..⁠1–4
+
+The same work links BRCA1 to peptide and steroid hormones and identifies complex interactions between the insulin/IGF1 signaling axis and BRCA1.⁠19
+
+MALE CARRIERS AND CLINICAL ACTIONABILITY
+
+Male carriers face increased risk for prostate, pancreatic, and breast cancers, and PARP inhibitors have received FDA approval for BRCA1/2-associated cancers at these sites.⁠20
+
+The BRCA1 gene encodes a 190 kD nuclear phosphoprotein that maintains genomic stability and acts as a tumor suppressor, with mutations responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠21
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+BRCA1: An Endocrine and Metabolic Regulator.	PMID:35432218	⁠1
+EXO1 protects BRCA1-deficient cells against toxic DNA lesions.	PMID:38266640	⁠2
+BRCA1, BRCA2, and Associated Cancer Risks and Management for Male Patients: A Review.	PMID:39052257	⁠3
+BRCA1 and BRCA2: from cancer susceptibility to synthetic lethality.	PMID:39510841	⁠4
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1	NCBIGene:672	⁠5, 8
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.5243_5277+2788del	VCV000267740	⁠6
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	VCV000267741	⁠11
+NG_005905.2:g.(147057_150288)_(160933_166866)del	VCV000373892	⁠13
+GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3	VCV004823850	⁠15
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)	VCV004848411	⁠17
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠7
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	NCT00590109	COMPLETED	⁠9
+BRCA1 Haploinsufficiency and Gene Expression	NCT00597987	COMPLETED	⁠12
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	NCT00617656	TERMINATED	⁠14
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	NCT00673335	COMPLETED	⁠16
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	NCT00700778	TERMINATED	⁠18
+PUBLICATION RECORDS FOUND
+PAPER	IDENTIFIER	
+20301425	PMID:20301425	⁠10
+▶
+SOURCES
+17
+Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

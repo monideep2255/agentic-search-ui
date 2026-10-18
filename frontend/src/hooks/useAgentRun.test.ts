@@ -5,7 +5,7 @@ import { consumeEventStream, parseSseFrame, splitSseFrames, useAgentRun } from "
 
 /**
  * Builds one SSE frame exactly as `sse_starlette.event.ServerSentEvent`
- * (installed version 3.4.6, this repo's venv) encodes it:
+ * (installed version 3.4.6, this repository's venv) encodes it:
  * `event: <type><sep>data: <json><sep><sep>` with `<sep>` defaulting to
  * `"\r\n"`. See `useAgentRun.ts`'s module docstring for the citation.
  */

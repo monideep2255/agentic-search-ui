@@ -1,0 +1,174 @@
+{
+ "q": "recent-onset diabetes treatment",
+ "seconds": 5.8,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "d943dc59-6c04-4fc3-b3be-446e37245021",
+   "seq": 0,
+   "ts": "2026-10-05T16:30:50.494994Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "d943dc59-6c04-4fc3-b3be-446e37245021",
+   "seq": 3,
+   "ts": "2026-10-05T16:30:54.751346Z",
+   "payload": {
+    "narrative": "the ask-back classifier read a one-to-three-word opening question and decided it names a subject rather than a request, so the answer asks which aspect is meant before any search",
+    "query_class": "lookup",
+    "resolved_entities": [],
+    "clarifying_question": "What aspect of recent-onset diabetes treatment would you like to explore?",
+    "clarifying_options": [
+     "What clinical trials are investigating treatments for recent-onset diabetes?",
+     "What does recent biomedical literature say about treatment options for recent-onset diabetes?",
+     "Are there genetic variants associated with response to treatment in recent-onset diabetes?",
+     "What guidelines or conditions are linked to recent-onset diabetes treatment?"
+    ]
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "d943dc59-6c04-4fc3-b3be-446e37245021",
+   "seq": 4,
+   "ts": "2026-10-05T16:30:54.753329Z",
+   "payload": {
+    "narrative": "no tool selected; the answer asks a question back before any search",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "d943dc59-6c04-4fc3-b3be-446e37245021",
+   "seq": 5,
+   "ts": "2026-10-05T16:30:54.754535Z",
+   "payload": {
+    "text": "What aspect of recent-onset diabetes treatment would you like to explore?",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "d943dc59-6c04-4fc3-b3be-446e37245021",
+   "seq": 6,
+   "ts": "2026-10-05T16:30:54.754636Z",
+   "payload": {
+    "outcome": "refuse",
+    "risk_tier": "unknown",
+    "grounded": false,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": "What aspect of recent-onset diabetes treatment would you like to explore?",
+    "fallback_link": "https://www.ncbi.nlm.nih.gov/search/all/?term=recent-onset%20diabetes%20treatment"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "d943dc59-6c04-4fc3-b3be-446e37245021",
+   "seq": 7,
+   "ts": "2026-10-05T16:30:54.754675Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 5617,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 128
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.93,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 121
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 127
+     },
+     {
+      "name": "think.ask_back",
+      "options": [
+       "ask_back",
+       "proceed"
+      ],
+      "chosen": "ask_back",
+      "decided_by": "jev",
+      "jev_choice": "ask_back",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 144
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 280
+     }
+    ]
+   }
+  }
+ ]
+}

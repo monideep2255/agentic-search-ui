@@ -65,6 +65,44 @@ Field lifecycle:
             exists until phase 2.1+).
         findings_count: set by `act`, the length of the `Finding` list
             `coordinator_worker_execute` returns.
+        coordinate_window: set by `think` when the question gives a
+            chromosome window with a named assembly (fix-plan item 1,
+            2026-09-22), the parsed `CoordinateWindow`; `plan` reads it to
+            add the dbVar and ClinVar overlap calls. Absent otherwise, and
+            absent when the assembly is missing, since Think then asks
+            which assembly instead of searching.
+        accession_plan: set by `think` when the question names an NCBI
+            accession (a BioProject, BioSample, SRA or assembly identifier)
+            that NCBI has (fix-plan item 2, 2026-09-22): the parsed
+            accession, its uid and the ids it links to; `plan` plans the
+            summaries from it and no graph call, since the graph holds no
+            such records. Absent otherwise.
+        isolate_question: set by `think` when the question asks for the
+            Pathogen Detection isolates of an organism carrying a resistance
+            gene or family (golden question G-035, 2026-09-22), with both the
+            organism and the gene prefixes read; `plan` plans the isolate
+            search and the organism's Taxonomy summary from it and no graph
+            call, and `write` puts the count and the cut under the answer.
+            Absent otherwise, and absent when the shape asks which organism
+            or which gene instead of searching.
+        organism_records: set by `think` when the question's subject is an
+            organism NCBI Taxonomy confirmed and the classifier read that it
+            asks for the organism's SRA records or genome assemblies, with
+            nothing else resolved (card 56, 2026-10-05); `plan` plans the
+            organism's record search and its Taxonomy summary from it and no
+            graph call. Absent otherwise.
+        topic_search_term: set by `plan` when the question named no gene,
+            variant or disease, so the published literature was searched
+            for its own words instead of the graph (fix-plan item 12.7,
+            2026-09-23). The AND-joined PubMed term, empty otherwise.
+        failed_searches: set by `act`, one small mapping per planned call
+            whose outcome was `status == "error"`: `tool`, `layer` and the
+            tool's own `reason`. Decided from the user's chair on
+            2026-09-22 after the L-01 cause was read: `write` turns these
+            into one plain sentence, so a reader is told when a background
+            search did not finish, or that the question named nothing the
+            product could look up, instead of a quieter or emptier answer
+            with no reason attached.
         findings: set by `act`, the real `Finding` list itself (T-2.1
             rework, findings A5/F-02). `write` reads this to classify
             what Act actually found (no tool selected, a real result, an
@@ -185,6 +223,27 @@ class GraphState(TypedDict, total=False):
     # `write` asks the question instead of refusing or guessing.
     clarification_needed: str
     layer2_raw_outputs: dict[str, Any]
+    failed_searches: list[dict[str, str]]
+    coordinate_window: Any
+    accession_plan: Any
+    # Golden question G-035 (2026-09-22): set by `think` when the question is
+    # a Pathogen Detection isolate question with its organism and gene
+    # prefixes both read (`core.isolate_search.IsolateQuestion`); `plan`
+    # plans the isolate search and the organism's Taxonomy record from it,
+    # no graph call, and `write` states the count under the answer. Absent
+    # otherwise, and absent when the shape still needs a clarification.
+    isolate_question: Any
+    # Card 56 (2026-10-05): set by `think` for an organism-anchored record
+    # question (`core.graph._OrganismRecords`: the Taxonomy-confirmed
+    # organism and the record kind); `plan` plans the organism's SRA or
+    # assembly search and its Taxonomy record from it, no graph call.
+    organism_records: Any
+    # Card 74 (2026-10-05): set by `plan` when the question anchors on one
+    # PubMed paper and asks for the data records NCBI links to it
+    # (`core.graph._PaperLinkPlan`: the PMID and the explicit ELink target
+    # databases). `write` reads it to say plainly which kinds NCBI links no
+    # record of. Absent for every other question.
+    paper_link_plan: Any
     # UI fix set 8 (2026-09-13): set by `act`, the typed output of each
     # dispatched ncbi_dbsnp, pubtator_annotate, litvar2_lookup or
     # clinicaltrials_search call, keyed by call_id, for the same reason
@@ -205,3 +264,14 @@ class GraphState(TypedDict, total=False):
     # `DonePayload.next_step_query`.
     deferred_record_ids: list[str]
     next_step_entity_label: str
+    # Fix-plan item 12.7 (2026-09-23): set by `plan`, the AND-joined PubMed
+    # term it built from the question's own words when the question named
+    # no gene, variant or disease and the published literature was searched
+    # instead of the graph. Empty on every other turn. `write` reads it for
+    # exactly two things: the refusal that says what was searched and found
+    # nothing, and the synthesis directive that keeps the answer to what
+    # has been published rather than a verdict.
+    topic_search_term: str
+    # Card 77: set by `plan` when a disease resolved but its name lookup
+    # failed, so no literature or trials search was planned; `write` says so.
+    disease_lookup_failed: bool

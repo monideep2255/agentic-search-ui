@@ -1,0 +1,36 @@
+pairs: [('reflux is', 'Gastroesophageal reflux is common in young children and usually resolves without treatment.'), ('is common', 'Gastroesophageal reflux is common in young children and usually resolves without treatment.'), ('common in', 'Gastroesophageal reflux is common in young children and usually resolves without treatment.'), ('in young', 'Gastroesophageal reflux is common in young children and usually resolves without treatment.'), ('young children', 'Gastroesophageal reflux is common in young children and usually resolves without treatment.'), ('and usually', 'Gastroesophageal reflux is common in young children and usually resolves without treatment.')]
+PAIR 1
+PHRASE: "reflux is"
+QUOTE: "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SENTENCE: "In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed"
+
+PAIR 2
+PHRASE: "is common"
+QUOTE: "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SENTENCE: "In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed"
+
+PAIR 3
+PHRASE: "common in"
+QUOTE: "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SENTENCE: "In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed"
+
+PAIR 4
+PHRASE: "in young"
+QUOTE: "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SENTENCE: "In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed"
+
+PAIR 5
+PHRASE: "young children"
+QUOTE: "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SENTENCE: "In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed"
+
+PAIR 6
+PHRASE: "and usually"
+QUOTE: "Gastroesophageal reflux is common in young children and usually resolves without treatment."
+SENTENCE: "In children, GERD symptoms are varied and nonspecific, so a careful diagnostic evaluation is needed"
+LIVE md2 'most common' | asked with: According to genotyping, R202Q (n = 1567, 39.2%) was the most common mutation. | also in: The most common co-variant was the R202Q/M694V genotype (n = 507, 16.98%).
+LIVE md3 'most common' | asked with: Glucose-6-phosphate dehydrogenase deficiency, the most common enzyme deficiency worldwide, causes a spectrum of disease  | also in: This X-linked inherited disorder most commonly affects persons of African, Asian, Mediterranean, or Middle-Eastern desce
+LIVE cm4 'the most' | asked with: African, Asian, and Mediterranean populations and their descendants being amongst the most affected | also in: Hemoglobinopathies are the most common single-gene disorders in humans
+LIVE cp3 'the lower' | asked with: abnormal transient relaxations of the lower esophageal sphincter | also in: anatomical defects of the lower esophageal reflux barrier such as hiatal hernia
+EVAL w-cp3-c2-i5 B 'the lower'
+live items 304 phrase-in-two-quotes hits 4

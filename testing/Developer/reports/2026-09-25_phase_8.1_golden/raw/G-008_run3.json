@@ -1,0 +1,82 @@
+{
+ "record": {
+  "id": "G-008",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "ask",
+  "question": "334",
+  "session_id": "c103-456aa6ed2bfe",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:05:43+00:00",
+  "run_id": "7a3bf376-947d-49d6-9b70-fd22041f0b45",
+  "outcome": "refused_offtopic",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "off_topic",
+  "guard_reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 0.813,
+  "seconds": 1.5,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7a3bf376-947d-49d6-9b70-fd22041f0b45",
+   "seq": 0,
+   "ts": "2026-09-25T10:04:08.899710Z",
+   "payload": {
+    "passed": false,
+    "category": "off_topic",
+    "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7a3bf376-947d-49d6-9b70-fd22041f0b45",
+   "seq": 2,
+   "ts": "2026-09-25T10:04:08.899854Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 813,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": ""
+}

@@ -1,0 +1,77 @@
++ New search
+
+YOUR SEARCHES
+
+Which genes are associated with reflux disease?
+8 tools · 17 sources from 2 layers
+reflux disease
+0 tools · 0 sources
+What is GERD?
+14 sources · Sep 29
+GERD
+0 sources · Sep 29
+What MeSH terms are assigned to PMID 11237011?
+26 sources · Sep 29
+What MeSH terms are assigned to PMID 11237011?
+26 sources · Sep 29
+What MeSH terms are assigned to PMID 11237011?
+26 sources · Sep 29
+s3-retest-b-20260929@example.com
+No search limit in effect yet
+▶
+reflux disease
+0 tools · 0 sources
+Show answer
+Which genes are associated with reflux disease?
+New search
+
+? Answered28.6s · 8 tools · 17 sources from 2 layers
+
+Show work ▾
+
+Found 5 pubmed records, 1 medgen record, 1 literature entity record and 5 clinical trial records for reflux disease.⁠2 +11
+
+GERD is a gastrointestinal motility disorder arising from reflux of stomach contents into the esophagus or oral cavity, with heartburn and regurgitation as typical symptoms.⁠1 It may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.⁠1
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Gastroesophageal Reflux Disease.	PMID:29132520	⁠2
+Gastroesophageal Reflux Disease.	PMID:33351044	⁠10
+Gastroesophageal reflux disease and oral health: A narrative review.	PMID:35605234	⁠12
+Gastroesophageal Reflux Disease.	PMID:36170502	⁠14
+Gastroesophageal Reflux Disease.	PMID:37516506	⁠16
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Gastroesophageal reflux disease	medgen 6553	⁠3
+CLINICAL FEATURES MEDGEN LISTS FOR GASTROESOPHAGEAL REFLUX DISEASE
+CLINICAL FEATURE	IDENTIFIER	
+Barrett esophagus	HP:0100580	⁠4
+Neoplasm of esophagus	HP:0100751	⁠5
+Esophagitis	HP:0100633	⁠6
+Gastroesophageal reflux	HP:0002020	⁠7
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Gastroesophageal Reflux	@DISEASE_Gastroesophageal_Reflux	⁠8
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	NCT00141960	COMPLETED	⁠9
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	NCT00163306	COMPLETED	⁠11
+On Demand Treatment of Reflux Disease	NCT00184522	COMPLETED	⁠13
+A Study To Investigate The Effectiveness Of AH234844 (Lavoltidine) Compared With NEXIUM And Ranitidine.	NCT00405119	COMPLETED	⁠15
+Open-label Comparison of 24hr Gastric pH on Days 1, 2, 7 With Once-daily Administration of Lavoltidine 40 mg.	NCT00551473	COMPLETED	⁠17
+NOTES
+Note: this answer does not address the following entities named in the question: Gastroesophageal reflux disease, Alkaline reflux disease, Gastroesophageal reflux disease without esophagitis, Gastro-esophageal reflux disease with esophagitis, Gastro-esophageal reflux disease with ulceration, Gastroesophageal reflux disease with apnea, Non-Erosive Reflux Disease, History of gastroesophageal reflux disease. Ask about them individually for a complete answer.
+▶
+SOURCES
+12
+Based on 12 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

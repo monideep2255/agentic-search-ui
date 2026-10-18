@@ -9,7 +9,7 @@ it is a guarantee about how a real Postgres row lock resolves two
 transactions racing the same UPDATE.
 
 Skips cleanly (does not fail) when USER_DB_URL is unreachable, matching
-every other live-database suite in this repo.
+every other live-database suite in this repository.
 
 What this file covers: `create_guest_session`'s shape, `spend_one_run`'s
 four states (spent, exhausted, attempts-exhausted, revoked-or-unknown), its

@@ -1,0 +1,178 @@
+NCBI Agentic Search
+Search
+Integrations
+About
+Working as Nightingale
+Log in
+Architecture
+
+Three data layers feed one search agent: the pipelines and the knowledge graph they build, the live NCBI APIs, and the enrichment APIs. This page names what each layer holds, where it is pulled from, and what the agent is allowed to spend reading it.
+
+1
+Layer 1, the data pipelines and the knowledge graph
+
+Five NCBI databases are downloaded in full from NCBI's FTP servers, parsed, mapped to the BioLink 4.x model, validated against that schema, and written out as KGX files. Every row keeps the source it came from and a link back to its NCBI record, which is what lets a finished answer cite one.
+
+THE PIPELINE, THE SAME FIVE STEPS FOR EVERY DATABASE
+
+Download
+→
+Parse
+→
+Map to BioLink
+→
+Validate
+→
+Export KGX
+
+What this app queries is not a live feed of those databases. It is the snapshot that run finished on 22 April 2026, and every graph fact in an answer is as current as that date. Anything that has to be newer comes from layer 2 instead.
+
+THE 22 APRIL 2026 SNAPSHOT
+
+115,406,761
+
+nodes
+
+693,295,991
+
+edges
+
+11
+
+vertex labels
+
+14
+
+edge labels
+
+THE FIVE SOURCE DATABASES, AND WHAT EACH CONTRIBUTES
+
+NCBI Gene
+
+67,536,325 nodes
+
+Gene · NCBIGene:672
+
+PubMed
+
+40,387,670 nodes
+
+Article · PMID:1088347
+
+ClinVar
+
+4,467,468 nodes
+
+SequenceVariant · ClinVar:17660
+
+NCBI Taxonomy
+
+2,736,611 nodes
+
+OrganismTaxon · NCBITaxon:9606
+
+MedGen
+
+200,845 nodes
+
+Disease · MedGen:C0031485
+
+The counts above are what is loaded in the graph, which is why they do not always match a database's own published record count. Roughly 78,000 further nodes sit under six smaller labels: Gene Ontology terms, MeSH headings and phenotypes that arrive with the five databases above, plus a small number of stub records the merge left behind where an edge pointed at something no pipeline had produced.
+
+Those KGX files are merged and loaded into one graph, named ncbi_kg, running on PostgreSQL 15 with the Apache AGE extension on a single Hetzner server. This app reads it through a read-only credential, so nothing a question does can change it, and nothing else writes to it either.
+
+A query names a starting node by its identifier and the labelled edge to follow, then returns whatever sits on the other end. That is the whole shape of it.
+
+MATCH (g:Gene {id: 'NCBIGene:672'})-[:gene_associated_with_condition]->(d:Disease)
+RETURN d.id, d.name
+
+Two things make that fast on a graph this size. Every node identifier is indexed, so finding the starting point is a lookup rather than a scan of 67 million rows, and both ends of every edge are indexed too, so following one is a lookup as well. Naming the edge label is the other half: the first version of this exact query took 4 minutes and 17 seconds without it, and 229 milliseconds with it.
+
+The search agent gives one graph query 30 seconds and asks it for at most 100 rows. A query that would exceed either says so rather than leaving you waiting.
+
+WHAT THE SEARCH AGENT CALLS TO READ IT
+
+Knowledge graph
+
+L1
+
+The snapshot above, read over an authenticated HTTPS query service on a read-only credential. Broad and fast, and as current as the snapshot date.
+
+cypher_query
+
+Calls the ncbi_kg graph, PostgreSQL with Apache AGE.
+
+30 seconds, at most 100 rows
+
+2
+Layer 2, live NCBI APIs
+
+Not everything belongs in a snapshot. A record that has changed since April, and every NCBI database the graph deliberately leaves out, is fetched from NCBI at the moment you ask. Three tools cover that, and what they return is current by definition.
+
+Live NCBI APIs
+
+L2
+
+Called at the moment you ask, so the answer carries today's record rather than the snapshot's. Narrower than the graph, and always current.
+
+ncbi_efetch
+
+Calls E-utilities ESearch, ESummary, EFetch and ELink, NCBI Datasets v2, and PubChem.
+
+15 seconds, one retry
+
+ncbi_dbsnp
+
+Calls NCBI Variation Services, then the dbSNP record.
+
+15 seconds per call, two calls in sequence
+
+pathogen_detection
+
+Calls the NCBI Pathogen Detection bulk snapshot over FTP.
+
+120 seconds
+
+3
+Layer 3, enrichment
+
+Three further tools add evidence around the gene, disease or variant a question names. PubTator3 looks the name up in its index of the genes and diseases found in published papers, LitVar2 finds a named variant and counts the papers that mention it, and ClinicalTrials.gov lists the trials registered under the name. ClinicalTrials.gov is the one source here that is not an NCBI host.
+
+Plan decides which of them a question gets, from what Think found in it: PubTator3 and ClinicalTrials.gov for a gene named by its symbol or, when no gene was found, for a disease, and LitVar2 for up to two rs variant ids. Not every question gets them. A gene named only by an identifier, a question about bacterial isolates, and a question with no gene that a classifier reads as asking for papers are each searched another way.
+
+Enrichment
+
+L3
+
+Literature and trial evidence about the gene, disease or variant a question names. Plan decides whether a question gets it, and not every question does.
+
+pubtator_annotate
+
+Calls PubTator3.
+
+15 seconds
+
+litvar2_lookup
+
+Calls LitVar2.
+
+15 seconds
+
+clinicaltrials_search
+
+Calls ClinicalTrials.gov API v2.
+
+15 seconds
+
+4
+All three layers feed the search agent
+
+The agent reads all three layers at once: the calls Plan chose go out together, so the graph query and the live layer 2 and 3 calls run in parallel. A call that needs another call's result, such as the abstracts of the papers a PubMed search found or PubTator3's markup of those papers, goes out in a second round once the first has returned, and the answer waits for both rounds.
+
+Seven tools cover the three layers, each one reaching exactly one of them. Each carries its own time limit in code rather than one the model chooses.
+
+Whichever layer a fact came from, it arrives with a link to the record behind it. A graph row carries the source URL that was stored on the node or edge when the pipeline wrote it, so it opens the NCBI record the pipeline read. A live result links to the record page for the identifier it just came back with, such as the NCBI Gene page for gene 672. A claim with no such link is not cited, and an answer with nothing citeable behind it is refused rather than written.
+
+To see one question travel through all three, open About, which follows a single BRCA1 question from the moment you press send.
+
+NCBI Agentic Search

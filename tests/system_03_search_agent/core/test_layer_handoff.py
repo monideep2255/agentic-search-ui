@@ -223,7 +223,13 @@ def _install_tools(
     trials: ClinicalTrialsSearchOutput | None = None,
     pubtator: PubtatorAnnotateOutput | None = None,
 ) -> None:
-    async def _cypher(harness: Any, cypher_input: Any) -> CypherQueryOutput:
+    # Accepts the `template` keyword the real tool takes for a breadth
+    # follow-up, like the sibling stubs below. Without it the follow-up
+    # graph call raised inside the stub and closed as a disclosed error,
+    # which was silent until 2026-09-22, when a failed search started to
+    # downgrade the answer to "not yet confirmed" and the arm at the
+    # bottom of this file, which expects "answer", went red in CI.
+    async def _cypher(harness: Any, cypher_input: Any, **kwargs: Any) -> CypherQueryOutput:
         return _cypher_output()
 
     async def _efetch(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
@@ -695,7 +701,7 @@ async def test_the_fallback_arm_goes_red_when_the_extractor_is_emptied(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Mutation: with no candidates the GCK question resolves nothing."""
-    monkeypatch.setattr(graph_module, "_gene_shaped_fallback_candidates", lambda text, exact: [])
+    monkeypatch.setattr(graph_module, "_gene_shaped_fallback_candidates", lambda text, exact, organisms=(): [])
     _ModelSpy(monkeypatch, [])
     asked = _install_lookup(monkeypatch)
     _install_tools(monkeypatch)

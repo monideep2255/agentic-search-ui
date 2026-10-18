@@ -77,6 +77,8 @@ import time
 import pytest
 
 from system_03_search_agent.contracts.events import PAYLOAD_MODEL_BY_TYPE, Event
+from system_03_search_agent.contracts.query import RequestContext
+from system_03_search_agent.contracts.token_order import LISTING, placement_of
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.core.run import run, run_streaming
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -346,9 +348,12 @@ async def test_w3_the_live_path_yields_the_same_write_events_in_the_same_order_a
     Volatile fields (`elapsed_ms`, costs) are excluded by comparing only the
     write event payloads plus the full type sequence."""
     _install_tool_spy(monkeypatch)
-    buffered = [event async for event in run(_query(), _context())]
+    # The web bundle built with build phase 8.7 asks for `placement`, so its
+    # run sends the listing early (fix round, F-8.7-A14).
+    web = RequestContext(surface="web_ui", reads_placement=True)
+    buffered = [event async for event in run(_query(), web)]
     _install_tool_spy(monkeypatch)
-    live = [event async for event in run_streaming(_query(), _context())]
+    live = [event async for event in run_streaming(_query(), web)]
 
     assert any(event.type == "token" for event in buffered), (
         "populate-check failed: the buffered run produced no answer token."
@@ -377,13 +382,39 @@ async def test_w3_the_live_path_yields_the_same_write_events_in_the_same_order_a
             "here means a live-written event escaped that guard."
         )
 
-    # The Section 8 order a consuming surface relies on, unchanged: every
-    # token before the first citation, every citation before the first
-    # trust signal, the answer-scope verdict last among them.
+    # The Section 8 order a consuming surface relies on. Build phase 8.7
+    # changed one part of it on purpose: the record listing and its
+    # citations now go out BEFORE the summary's tokens, so "every token
+    # before the first citation" no longer holds on the wire. What a
+    # surface relies on, and what is asserted instead:
+    #
+    # - ARRIVAL ORDER (this arm is about the stream): the listing arrives
+    #   first, and a citation never arrives before a token that carries its
+    #   marker, so no chip is ever shown for a row or sentence not yet on
+    #   screen. Every citation before the first trust signal, the
+    #   answer-scope verdict last among them, as before.
+    # - READING ORDER, the summary above the listing, is the join every
+    #   surface makes through `contracts/token_order.py`; it is pinned there
+    #   (`tests/.../contracts/test_token_order.py`) and on each surface
+    #   (`tests/.../adapters/test_token_placement_surfaces.py`), not here.
     types = [event.type for event in live]
-    assert max(i for i, t in enumerate(types) if t == "token") < min(
-        i for i, t in enumerate(types) if t == "citation"
-    ), "a token followed a citation."
+    tokens = [event for event in live if event.type == "token"]
+    assert placement_of(tokens[0].payload) == LISTING, (
+        "populate-check failed: the listing did not arrive first, so this "
+        "arm is not grading the early send."
+    )
+    assert any(placement_of(event.payload) != LISTING for event in tokens), (
+        "populate-check failed: no summary token followed the listing."
+    )
+    marked_so_far: set[str] = set()
+    for event in live:
+        if event.type == "token":
+            marked_so_far.update(event.payload["marker_ids"])
+        elif event.type == "citation":
+            assert event.payload["citation_id"] in marked_so_far, (
+                f"citation {event.payload['citation_id']} arrived before any "
+                "token that carries its marker."
+            )
     assert max(i for i, t in enumerate(types) if t == "citation") < min(
         i for i, t in enumerate(types) if t == "trust_signal"
     ), "a citation followed a trust signal."

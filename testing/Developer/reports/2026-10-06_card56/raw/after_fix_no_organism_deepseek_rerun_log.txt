@@ -1,0 +1,6 @@
+model call point=guardrail.injection trace=probe56-66a62b2d kind=jev elapsed_ms=324 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-66a62b2d kind=guard elapsed_ms=1456 outcome=ok attempt=1 provider=Parasail
+model call point=think.asks_features trace=probe56-66a62b2d kind=jev elapsed_ms=216 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-66a62b2d kind=jev elapsed_ms=330 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-66a62b2d kind=jev elapsed_ms=394 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named no organism (trace probe56-66a62b2d); asked once more, kept the first reply: the second still names no organism, in 2521 ms

@@ -290,6 +290,33 @@ def _compliant_think_classification(messages: list[dict[str, str]]) -> str:
     )
 
 
+def _classify_as(monkeypatch: pytest.MonkeyPatch, query_class: str) -> None:
+    """Make the stand-in Think classification return `query_class`.
+
+    2026-09-22: `select_template` now sends a gene question with no
+    recognisable shape to the record template on every class but
+    `aggregate` (the exploratory class in the morning, the two hop classes
+    in the evening, fix-plan item 1), so the fixture's default class no
+    longer exercises cypher_query's generated-Cypher path and its two
+    plan-tier generation calls. The arms that pin that path classify the
+    same question as `aggregate`, where the model path is still the
+    deliberate behaviour for a question asking for a count (a count is
+    something a record cannot give; see the 2026-09-22 consistency run,
+    G-034; since 2026-10-05 an `aggregate` gene question with no count
+    request takes the record too).
+    """
+    import sys
+
+    original = _compliant_think_classification
+
+    def _with_class(messages: list[dict[str, str]]) -> str:
+        payload = json.loads(original(messages))
+        payload["query_class"] = query_class
+        return json.dumps(payload)
+
+    monkeypatch.setattr(sys.modules[__name__], "_compliant_think_classification", _with_class)
+
+
 @pytest.fixture(autouse=True)
 def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
@@ -336,8 +363,27 @@ def _mock_litellm(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return mock_acompletion
 
 
+#: How every `harness.decide` guard-tier call's system message begins
+#: (`harness/decide.py`'s `_build_guard_messages`). Build phase 8.2 wires
+#: decisions into the loop, and each one is a guard-tier call of its own,
+#: so this file's exact counts of the LOOP's node-level calls exclude them
+#: and `test_decision_calls_are_separate_and_carry_no_stable_prefix` pins
+#: them on their own.
+_DECISION_SYSTEM_PREFIX = "Answer with exactly one of the offered options and nothing else."
+
+
+def _is_decision_call(call: object) -> bool:
+    first = call.kwargs["messages"][0]  # type: ignore[attr-defined]
+    return str(first.get("content") or "").startswith(_DECISION_SYSTEM_PREFIX)
+
+
+def _loop_calls(mock: AsyncMock) -> list[object]:
+    """Every model call but the classifier seam's own decisions."""
+    return [call for call in mock.call_args_list if not _is_decision_call(call)]
+
+
 def _valid_query(**overrides: object) -> Query:
-    """The shared query fixture. Its default text ("hello") is
+    """The shared query fixture. Its default text ("what can you do") is
     deliberately one of `graph_module._NO_TOOL_QUERY_TEXTS` (T-2.1-08),
     so plan_node selects no tool and act_node's dispatch loop never runs,
     leaving every pre-existing stub-era test in this file (event
@@ -347,9 +393,18 @@ def _valid_query(**overrides: object) -> Query:
     real cypher_query dispatch override `text=` to a substantive query
     explicitly (see the "plan selects cypher_query" / "act executes it"
     tests below).
+
+    FOUR WORDS, NOT ONE ("hello", changed 2026-09-24), since fix-plan item
+    12.3, REDESIGNED the same day: a one-to-three-word opening question
+    now makes its OWN guard-tier classifier call before any of this
+    (`core.graph._clarify_or_proceed`), which "hello" would have
+    triggered, inserting an extra model call and cost event ahead of this
+    file's own fixed call counts and event sequences. Four words is past
+    that trigger, so this fixture tests exactly what it always tested, one
+    no-tool stub, with no dependency on item 12.3 at all.
     """
     base: dict[str, object] = {
-        "text": "hello",
+        "text": "what can you do",
         "session_id": "session-1",
         "trace_id": "trace-graph-1",
         "user_id": None,
@@ -373,7 +428,7 @@ async def _run_graph(query: Query, context: RequestContext) -> list[Event]:
     """Invoke the compiled graph directly (not via `core.run.run()`).
 
     Wrapped in `tracing_context(enabled=False)` for the same reason
-    `core.run.run()` itself is (see its module docstring): this repo's
+    `core.run.run()` itself is (see its module docstring): this repository's
     `.env` sets `LANGCHAIN_TRACING_V2=true` ahead of the real phase
     5.0/5.1 tracing integration, and invoking a compiled LangGraph graph
     without disabling tracing makes a real, noisy, failing outbound call
@@ -608,6 +663,28 @@ async def test_plan_calls_the_plan_tier_model_when_a_tool_runs(_mock_litellm: As
         for call in _mock_litellm.call_args_list
         if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
     ]
+    # 2026-09-22: the fixture's exploratory class now takes the record
+    # template, so only Think's classification resolves to the plan tier.
+    # The generated-Cypher path's three calls are pinned by the sibling below.
+    assert len(plan_tier_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_plan_calls_the_plan_tier_model_three_times_on_the_model_path(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The arm above on the path it was written for: an `aggregate`
+    classification with no matched shape still runs cypher_query's two
+    internal generate_cypher attempts after Think's own call, three
+    plan-tier calls in all."""
+    _classify_as(monkeypatch, "aggregate")
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    plan_tier_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if call.kwargs["model"] == f"openrouter/{_PLAN_MODEL}"
+    ]
     assert len(plan_tier_calls) == 3
 
 
@@ -690,10 +767,16 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
 
-    assert _mock_litellm.call_count == 5
+    # 2026-09-22: three on the record-template path the fixture's exploratory
+    # class now takes; the model-path sibling below asserts five. Counted
+    # without the classifier seam's own decision calls (build phase 8.2),
+    # which `test_decision_calls_are_separate_and_carry_no_stable_prefix`
+    # pins on their own.
+    loop_calls = _loop_calls(_mock_litellm)
+    assert len(loop_calls) == 3
     prefixed_calls = [
         call
-        for call in _mock_litellm.call_args_list
+        for call in loop_calls
         if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
     ]
     # One since 2026-09-14, two since 2026-09-13, four before: the guardrail
@@ -706,12 +789,32 @@ async def test_every_model_call_carries_the_stable_prefix_as_its_leading_message
         assert call.kwargs["messages"][0]["role"] == "system"
     from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
 
-    assert _mock_litellm.call_args_list[0].kwargs["messages"][0]["content"] == (
+    assert loop_calls[0].kwargs["messages"][0]["content"] == (
         GUARD_SYSTEM_INSTRUCTION
     )
-    assert _mock_litellm.call_args_list[1].kwargs["messages"][0]["content"] == (
+    assert loop_calls[1].kwargs["messages"][0]["content"] == (
         graph_module._THINK_SYSTEM_INSTRUCTION
     )
+
+
+@pytest.mark.asyncio
+async def test_exactly_one_of_five_model_path_calls_carries_the_stable_prefix(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The arm above on the generated-Cypher path: five calls in total, and
+    still exactly one, Write's, carrying the stable prefix, since the two
+    generate_cypher calls never do (F-06)."""
+    _classify_as(monkeypatch, "aggregate")
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    loop_calls = _loop_calls(_mock_litellm)
+    assert len(loop_calls) == 5
+    prefixed_calls = [
+        call
+        for call in loop_calls
+        if call.kwargs["messages"][0].get("content") == graph_module._STABLE_PREFIX
+    ]
+    assert len(prefixed_calls) == 1
 
 
 @pytest.mark.asyncio
@@ -731,15 +834,71 @@ async def test_exactly_three_model_calls_fire_on_the_happy_path(
 
 
 @pytest.mark.asyncio
-async def test_five_model_calls_fire_when_a_tool_runs(_mock_litellm: AsyncMock) -> None:
-    """T-2.1 rework: on the tool path, the three node-level calls
-    (guardrail, think, write) plus cypher_query's two internal
-    generate_cypher attempts (F-06's documented gap) total five, not three.
-    Six until 2026-09-14, when plan_node's discarded call was deleted.
+async def test_three_model_calls_fire_when_a_tool_runs_on_the_template_path(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """2026-09-22: on the record-template path the fixture's exploratory
+    class now takes, the three node-level calls (guardrail, think, write)
+    are the whole run; the template makes no model call. The five-call
+    shape of the generated-Cypher path is pinned by the sibling below.
+    Counted without the classifier seam's decision calls (build phase 8.2).
     """
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     await _run_graph(query, _valid_context())
-    assert _mock_litellm.call_count == 5
+    assert len(_loop_calls(_mock_litellm)) == 3
+
+
+@pytest.mark.asyncio
+async def test_five_model_calls_fire_when_a_tool_runs_on_the_model_path(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T-2.1 rework: on the tool path, the three node-level calls
+    (guardrail, think, write) plus cypher_query's two internal
+    generate_cypher attempts (F-06's documented gap) total five, not three.
+    Six until 2026-09-14, when plan_node's discarded call was deleted; on an
+    `aggregate` classification since 2026-09-22, when the exploratory one
+    moved to the record template in the morning and the two hop classes
+    followed it for a gene anchor in the evening (fix-plan item 1).
+    Counted without the classifier seam's decision calls (build phase 8.2).
+    """
+    _classify_as(monkeypatch, "aggregate")
+    query = _valid_query(text=_GENE_COUNT_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    assert len(_loop_calls(_mock_litellm)) == 5
+
+
+@pytest.mark.asyncio
+async def test_decision_calls_are_separate_and_carry_no_stable_prefix(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Build phase 8.2: the classifier seam's decisions are guard-tier
+    calls of their own, with their own messages. None of them may carry
+    the loop's stable prefix (`.claude/rules/prompt-cache-discipline.md`):
+    a decision is not a Think, Plan or Write call and must never reorder or
+    re-send the prefix those three share. And each is a DESCRIBED decision:
+    its system message carries the point's own instruction.
+
+    Populate check: a search question does make decision calls, so an
+    empty list cannot pass.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    await _run_graph(query, _valid_context())
+    decision_calls = [c for c in _mock_litellm.call_args_list if _is_decision_call(c)]
+    assert decision_calls, "a search question made no decision call"
+    for call in decision_calls:
+        assert call.kwargs["model"] == f"openrouter/{_GUARD_MODEL}"
+        contents = [m.get("content") for m in call.kwargs["messages"]]
+        assert graph_module._STABLE_PREFIX not in contents
+    systems = [c.kwargs["messages"][0]["content"] for c in decision_calls]
+    assert any(graph_module._RECENT_YEARS.instructions in s for s in systems), systems
+    assert any(graph_module._LITERATURE.instructions in s for s in systems), systems
+
+
+@pytest.mark.asyncio
+async def test_small_talk_makes_no_decision_call(_mock_litellm: AsyncMock) -> None:
+    """A greeting plans no search, so it is never asked how recent."""
+    await _run_graph(_valid_query(), _valid_context())
+    assert not [c for c in _mock_litellm.call_args_list if _is_decision_call(c)]
 
 
 # ---------------------------------------------------------------------------
@@ -836,10 +995,61 @@ async def test_done_event_trust_outcome_is_refuse_when_the_tool_call_errors() ->
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert done_event.payload["total_tool_calls"] == 5
+    assert done_event.payload["total_tool_calls"] == 6
 
     citation_events = [event for event in events if event.type == "citation"]
     assert citation_events == [], "an errored tool call must never produce a citation"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_graph_search_tells_the_reader_to_retry() -> None:
+    """Decided from the user's chair, 2026-09-22. The generic mock makes the
+    one graph search fail (a generation error, not a no-entity one), so the
+    run refuses; the refusal must now say a search did not finish and invite
+    a retry, on both the token stream and the trust signal, instead of the
+    original "I could not find grounded evidence", which a reader takes as
+    "there is nothing on this". Fails against the pre-change code, where the
+    token text starts with the original wording.
+    """
+    from system_03_search_agent.synthesis.refuse import FAILED_SEARCH_MESSAGE
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+    text = "".join(e.payload["text"] for e in events if e.type == "token")
+    assert text.startswith(FAILED_SEARCH_MESSAGE), text[:200]
+    signal = [e.payload for e in events if e.type == "trust_signal"][-1]
+    assert signal["outcome"] == "refuse"
+    assert signal["message"] == FAILED_SEARCH_MESSAGE
+
+
+@pytest.mark.asyncio
+async def test_an_errored_cypher_call_reports_its_reason_in_the_tool_result_summary() -> None:
+    """L-01, 2026-09-22. The consistency run found 24 of 150 runs carrying a
+    cypher_query result with status "error" whose summary read only
+    "0 row(s) of 0": `_execute_planned_call` built the summary from row
+    counts and dropped `output.error`, so the reason reached neither the
+    stream, the instrument nor the log. The same generic mock response as
+    the test above makes cypher_query return status="error" with a
+    generation message; the tool_result summary must now carry it.
+    Against the pre-fix code this arm fails because the summary equals
+    "0 row(s) of 0" exactly.
+    """
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    events = await _run_graph(query, _valid_context())
+    errored = [
+        event.payload
+        for event in events
+        if event.type == "tool_result"
+        and event.payload["tool"] == "cypher_query"
+        and event.payload["status"] == "error"
+    ]
+    assert errored, "the generic mock must still make cypher_query error"
+    for payload in errored:
+        summary = payload["summary"]
+        assert summary.startswith("0 row(s) of 0: "), summary
+        reason = summary[len("0 row(s) of 0: "):]
+        assert reason.strip(), "an errored call must carry its reason, not only a row count"
+        assert len(summary) <= 1000
 
 
 @pytest.mark.asyncio
@@ -913,7 +1123,7 @@ async def test_done_event_trust_outcome_is_answer_with_a_real_citation_when_the_
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert done_event.payload["total_tool_calls"] == 5
+    assert done_event.payload["total_tool_calls"] == 6
 
 
 # ---------------------------------------------------------------------------
@@ -1363,15 +1573,121 @@ def test_truncated_answer_note_is_one_sentence_opening_with_note(
     assert ";" not in note, f"an interior semicolon fragments the note into uncited claims: {note!r}"
 
 
+@pytest.mark.asyncio
+async def test_truncation_note_and_more_to_show_count_record_pages_not_citations(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Card 22 fix round (2026-10-06, A-22-04): "truncated to N records" and
+    the "more to show" count both said records and counted numbered
+    citations, while every other total on the screen counts distinct pages.
+
+    150 rows past the display cap, where rows 0 and 1 cite one gene page,
+    once without and once with a trailing slash (the graph's and the live
+    Datasets builder's spellings of one link). The note's N and the offer's
+    remaining count must both count that page once. Mutation: pass
+    `len(citations)` again at either call site and its arm fails.
+    """
+    harness = harness_module.Harness(trace_id="test-trace-truncation-pages")
+    call = ToolCall(tool="cypher_query", call_id="call-truncation-pages", layer="layer_1_graph")
+    row_count = 150
+    rows = [_unique_citeable_row(i) for i in range(row_count)]
+    rows[1]["source_url"] = f"{rows[0]['source_url']}/"
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": rows,
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    citations = [event.payload for event in events if event.type == "citation"]
+    urls = [citation["source_url"] for citation in citations]
+    assert rows[0]["source_url"] in urls and rows[1]["source_url"] in urls, (
+        "populate-check: both spellings of the one gene page must be cited, "
+        "or a citation count and a page count cannot be told apart"
+    )
+    pages = len({url.rstrip("/") for url in urls})
+    assert pages == len(citations) - 1
+
+    note = next(
+        event.payload["text"]
+        for event in events
+        if event.type == "token" and "truncated to" in event.payload["text"]
+    )
+    assert f"truncated to {pages} of the {row_count} records" in note, note
+
+    done = next(event.payload for event in events if event.type == "done")
+    offer = done["next_step"]
+    assert offer is not None and str(row_count - pages) in offer, offer
+    assert str(row_count - len(citations)) not in offer, offer
+
+
+@pytest.mark.asyncio
+async def test_the_trust_line_is_computed_from_the_cited_claims_only(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Card 22 last round (V-22-01, V-22-03): "Confirmed by N independent
+    databases" may count only records the reader can open, so the write
+    step hands `answer_trust_line` the grounded claims, exactly the records
+    its citation events list, and no findings pool. 150 rows past the
+    display cap leave findings that are prepared but not cited, so a call
+    that passes the pool, or claims built from it, fails here.
+    """
+    seen: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    real = graph_module.answer_trust_line
+
+    def spy(*args: object, **kwargs: object) -> str | None:
+        seen.append((args, kwargs))
+        return real(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(graph_module, "answer_trust_line", spy)
+    harness = harness_module.Harness(trace_id="test-trace-trust-line-wiring")
+    call = ToolCall(tool="cypher_query", call_id="call-trust-line-wiring", layer="layer_1_graph")
+    row_count = 150
+    structured_fields = {
+        "status": "ok",
+        "row_count": row_count,
+        "total_available": row_count,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(row_count)],
+        "error": None,
+    }
+    result = ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=structured_fields)
+    findings = await coordinator_worker_execute(harness, [call], [result])
+
+    query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
+    write_result = await graph_module.write_node(_write_state(query, findings))
+    events = write_result["events"]
+
+    assert len(seen) == 1, f"one trust line per answer, got {len(seen)} calls"
+    args, kwargs = seen[0]
+    assert kwargs == {}, f"no findings pool may reach the trust line: {sorted(kwargs)}"
+    assert len(args) == 3
+    claims = args[2]
+    cited_ids = {event.payload["citation_id"] for event in events if event.type == "citation"}
+    claim_ids = {claim.finding.citation_id for claim in claims}  # type: ignore[attr-defined]
+    assert cited_ids and claim_ids == cited_ids
+    assert len(cited_ids) < row_count, "populate-check: some prepared rows must go uncited"
+
+
 # ---------------------------------------------------------------------------
 # Answer quality fix (2026-09-20): the prompt bound (how many findings a
 # Synth model call may see) and the display bound (how many code-built rows
 # the citation list, the table and the findings tail may carry) are now two
-# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (20, unchanged) and
-# `_MAX_FINDINGS_FOR_DISPLAY` (100, bounded by the tool's own `row_limit`).
-# Before this split, one shared cap of 20 meant a table could never carry
-# more rows than a model prompt could safely hold, even though every row is
-# built entirely in code and a model never reads or writes it.
+# different constants, `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30 as of T-8.1-02,
+# 2026-09-25; 20 at the time of this split) and `_MAX_FINDINGS_FOR_DISPLAY`
+# (100, bounded by the tool's own `row_limit`, unaffected by T-8.1-02 since
+# 100 already exceeds the new 30). Before the 2026-09-20 split, one shared
+# cap of 20 meant a table could never carry more rows than a model prompt
+# could safely hold, even though every row is built entirely in code and a
+# model never reads or writes it.
 # ---------------------------------------------------------------------------
 
 
@@ -1458,6 +1774,514 @@ async def test_the_model_prompt_never_grows_past_the_prompt_bound(
     citation_events = [event for event in events if event.type == "citation"]
     assert len(citation_events) > graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
     assert len(citation_events) <= graph_module._MAX_FINDINGS_FOR_DISPLAY
+
+
+_MARFAN_FEATURE_NAMES = [f"Clinical feature number {n}" for n in range(70)]
+
+
+async def _marfan_researcher_findings() -> tuple[list[object], list[object]]:
+    """Round 1's live researcher-depth shape (F-8.1-A12): a graph answer of
+    43 rows, the question's lead call, and the disease's MedGen record with
+    70 clinical features, the first five carrying HPO ids."""
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    harness = harness_module.Harness(trace_id="test-trace-marfan")
+    graph_call = ToolCall(tool="cypher_query", call_id="cy-marfan", layer="layer_1_graph")
+    graph_fields = {
+        "status": "ok",
+        "row_count": 43,
+        "total_available": 43,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(43)],
+        "error": None,
+    }
+    features = [
+        {"name": name, "hpo_id": f"HP:{n:07d}"} if n < 5 else {"name": name}
+        for n, name in enumerate(_MARFAN_FEATURE_NAMES)
+    ]
+    medgen_output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[
+            NcbiEfetchRecord(
+                id="44287",
+                db="medgen",
+                fields={
+                    "title": "Marfan syndrome",
+                    "clinical_features": features,
+                    "clinical_features_total": 70,
+                },
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/44287",
+            )
+        ],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    medgen_call = ToolCall(tool="ncbi_efetch", call_id="ne-medgen", layer="layer_2_api")
+    medgen_fields = graph_module._ncbi_efetch_output_to_structured_fields(
+        medgen_output, "medgen_summary"
+    )
+    findings = await coordinator_worker_execute(
+        harness,
+        [graph_call, medgen_call],
+        [
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=graph_fields),
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=medgen_fields),
+        ],
+    )
+    planned = [
+        SimpleNamespace(tool_call=graph_call, context_only=False),
+        SimpleNamespace(tool_call=medgen_call, context_only=False),
+    ]
+    return findings, planned
+
+
+@pytest.mark.asyncio
+async def test_a_long_graph_answer_keeps_its_prompt_slots_from_clinical_features(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-8.1-V01 (round 2): reserving prompt slots for a disease's clinical
+    features took 11 of the 30 on every disease-anchored question, phenotype
+    or not, and could push a definition out of `What is Marfan syndrome?`.
+    The lead withdrew the reservation, so a long graph answer keeps all 30
+    slots and the features reach the reader through the code-built listing
+    (the test below). Re-enabling the unconditional reservation turns this
+    red. Build phase 8.6 re-enabled it behind the `think.asks_features`
+    decision only; this Write is reached with no decision at all, which
+    reads as not asked (the T-8.6-06 arms below pin each pick)."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="researcher",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    await graph_module.write_node(state)
+
+    synth_calls = [
+        call
+        for call in _mock_litellm.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system"
+            in (message.get("content") or "")
+            for message in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls
+    prompt = "\n".join(m.get("content") or "" for m in synth_calls[0].kwargs["messages"])
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert len(lines) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    feature_lines = [line for line in lines if " clinical_features: " in line]
+    assert feature_lines == []
+    # The question's own answer rows lead the prompt and fill it.
+    assert lines[0].startswith("Gene ")
+
+
+@pytest.mark.asyncio
+async def test_the_listing_names_the_disease_and_lists_its_features_beneath(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """F-8.1-A04, J13, J09 (fix-and-verify round): the code-built listing
+    keeps the disease's own name as its MedGen entry, lists each feature
+    beneath it under a heading that names the disease, shows HPO ids at
+    researcher depth, and says how many of how many are shown when a cap
+    cut the list."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="researcher",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    result = await graph_module.write_node(state)
+    tokens = [event.payload for event in result["events"] if event.type == "token"]
+
+    record_rows = [
+        t for t in tokens if t["kind"] in ("list_item", "table_row") and t["cells"]
+    ]
+    assert any(t["cells"][0] == "Marfan syndrome" for t in record_rows)
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    feature_heading = next(h for h in headings if h.startswith("Clinical features MedGen lists"))
+    assert feature_heading.startswith("Clinical features MedGen lists for Marfan syndrome")
+    feature_rows = [
+        t for t in record_rows if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)
+    ]
+    assert len(feature_rows) >= 10
+    shown = len(feature_rows)
+    if shown < 70:
+        assert feature_heading.endswith(f"({shown} of 70 shown)"), feature_heading
+    else:
+        assert "shown)" not in feature_heading
+    # Researcher depth: a table whose second cell is the HPO id when known.
+    first = next(t for t in feature_rows if t["cells"][0] == _MARFAN_FEATURE_NAMES[0])
+    assert first["kind"] == "table_row" and first["cells"][1] == "HP:0000000"
+    # No feature ever stands in for the disease's own entry.
+    assert not any(
+        t["cells"][0].startswith("MedGen lists no clinical features") for t in record_rows
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_plain_language_listing_keeps_features_beneath_the_one_list(
+    _mock_litellm: AsyncMock,
+) -> None:
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="What phenotypic features are associated with Marfan syndrome?",
+        audience_depth="plain_language",
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    result = await graph_module.write_node(state)
+    tokens = [event.payload for event in result["events"] if event.type == "token"]
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert headings.index("Where this answer comes from") < next(
+        i for i, h in enumerate(headings) if h.startswith("Clinical features MedGen lists for")
+    )
+    items = [t for t in tokens if t["kind"] == "list_item"]
+    assert any(t["cells"] == ["Marfan syndrome"] for t in items)
+    assert sum(1 for t in items if t["cells"][0] in set(_MARFAN_FEATURE_NAMES)) >= 10
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-06: what is said about a condition's clinical
+# features follows the `think.asks_features` decision. These arms hand Write
+# the decision Think would have started (`_RunDecisions.features_task`), so
+# each path of the decision is pinned without a model: asked, not asked, no
+# usable pick from either model, and a decision still running when Write
+# needs it.
+# ---------------------------------------------------------------------------
+
+_NO_FEATURES_TITLE = "Condition with no listed features"
+
+
+def _features_record(pick: str | None) -> object:
+    """What `decide` returns for `think.asks_features`: Jev's pick, or, for
+    None, the record when NEITHER model made a usable pick."""
+    from system_03_search_agent.contracts.events import DecisionRecord
+
+    options = ["asks_features", "not_applicable"]
+    if pick is None:
+        return DecisionRecord(
+            name="think.asks_features",
+            options=options,
+            chosen="not_applicable",
+            decided_by="guard",
+            fallback_reason="no_usable_pick:timeout",
+        )
+    return DecisionRecord(
+        name="think.asks_features",
+        options=options,
+        chosen=pick,
+        decided_by="jev",
+        jev_choice=pick,
+    )
+
+
+def _hand_write_the_features_decision(state: dict[str, object], pick: str | None) -> None:
+    import asyncio
+
+    record = _features_record(pick)
+
+    async def _decided() -> object:
+        return record
+
+    graph_module._run_decisions(state["harness"]).features_task = asyncio.get_running_loop().create_task(
+        _decided()
+    )
+
+
+def _synth_prompt(mock: AsyncMock) -> str:
+    synth_calls = [
+        call
+        for call in mock.call_args_list
+        if any(
+            "You write the final answer for a biomedical search system" in (m.get("content") or "")
+            for m in (call.kwargs.get("messages") or [])
+        )
+    ]
+    assert synth_calls, "the write step must have made a synth call"
+    return "\n".join(m.get("content") or "" for m in synth_calls[0].kwargs["messages"])
+
+
+async def _no_features_findings(
+    title: str = _NO_FEATURES_TITLE, semantic_type: str = "Disease or Syndrome"
+) -> tuple[list[object], list[object]]:
+    """A question's graph answer beside a MedGen record that was read and
+    lists no clinical features, the shape behind the stray sentence.
+
+    `semantic_type` is the record's own MedGen type, wrapped as ESummary
+    returns it; a disease record by default, since only a disease record
+    may be said to list no clinical features (F-8.6-A11)."""
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    harness = harness_module.Harness(trace_id="test-trace-no-features")
+    graph_call = ToolCall(tool="cypher_query", call_id="cy-nofeat", layer="layer_1_graph")
+    graph_fields = {
+        "status": "ok",
+        "row_count": 3,
+        "total_available": 3,
+        "truncated": False,
+        "rows": [_unique_citeable_row(i) for i in range(3)],
+        "error": None,
+    }
+    medgen_output = NcbiEfetchOutput(
+        status="ok",
+        action="summary",
+        records=[
+            NcbiEfetchRecord(
+                id="1633554",
+                db="medgen",
+                fields={
+                    "title": title,
+                    "semantictype": {"value": semantic_type},
+                    "clinical_features": [],
+                    "clinical_features_total": 0,
+                },
+                source_url="https://www.ncbi.nlm.nih.gov/medgen/1633554",
+            )
+        ],
+        record_count=1,
+        total_available=1,
+        truncated=False,
+    )
+    medgen_call = ToolCall(tool="ncbi_efetch", call_id="ne-nofeat", layer="layer_2_api")
+    medgen_fields = graph_module._ncbi_efetch_output_to_structured_fields(
+        medgen_output, "medgen_summary"
+    )
+    findings = await coordinator_worker_execute(
+        harness,
+        [graph_call, medgen_call],
+        [
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=graph_fields),
+            ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=medgen_fields),
+        ],
+    )
+    planned = [
+        SimpleNamespace(tool_call=graph_call, context_only=False),
+        SimpleNamespace(tool_call=medgen_call, context_only=False),
+    ]
+    return findings, planned
+
+
+def _everything_the_reader_sees(events: list[object]) -> str:
+    """Every token's text and cells, and every citation's claim, joined."""
+    parts: list[str] = []
+    for event in events:
+        payload = event.payload  # type: ignore[attr-defined]
+        if event.type == "token":  # type: ignore[attr-defined]
+            parts.append(payload.get("text") or "")
+            parts.extend(str(cell) for cell in payload.get("cells") or [])
+        elif event.type == "citation":  # type: ignore[attr-defined]
+            parts.append(str(payload.get("claim_text") or ""))
+    return "\n".join(parts)
+
+
+@pytest.mark.asyncio
+async def test_a_features_question_reserves_the_diseases_features_in_the_prompt(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Asked: F-8.1-A12's reservation is back, behind the decision only. The
+    record's title and `_ANCHOR_FEATURE_PROMPT_SLOTS` features sit inside the
+    30-finding prompt behind a 43-row graph answer, and the model is told
+    how a feature can be cited. Deleting the reservation call, or reading
+    the decision as never asked, turns this red."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(
+        text="Which features does this condition show?", audience_depth="researcher"
+    )
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, "asks_features")
+    await graph_module.write_node(state)
+
+    prompt = _synth_prompt(_mock_litellm)
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert len(lines) == graph_module._MAX_FINDINGS_FOR_MODEL_PROMPT
+    feature_lines = [line for line in lines if " clinical_features: " in line]
+    assert len(feature_lines) == graph_module._ANCHOR_FEATURE_PROMPT_SLOTS == 10
+    assert feature_lines[0].endswith(_MARFAN_FEATURE_NAMES[0])
+    assert "medgen title: Marfan syndrome" in lines
+    # The question's own answer rows still lead the prompt.
+    assert lines[0].startswith("Gene ")
+    assert "CLINICAL FEATURES:" in prompt
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["not_applicable", None])
+async def test_a_question_not_about_features_keeps_every_prompt_slot_and_no_feature_directive(
+    _mock_litellm: AsyncMock, pick: str | None
+) -> None:
+    """Not asked, and no usable pick from either model, read the same way:
+    no reservation (F-8.1-V01) and no line steering the model into a feature
+    list. The features stay in the code-built listing."""
+    findings, planned = await _marfan_researcher_findings()
+    query = _valid_query(text="Which records name this condition?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, pick)
+    result = await graph_module.write_node(state)
+
+    prompt = _synth_prompt(_mock_litellm)
+    lines = [body for _, body in _FINDING_LINE.findall(prompt)]
+    assert [line for line in lines if " clinical_features: " in line] == []
+    assert "CLINICAL FEATURES:" not in prompt
+    headings = [
+        event.payload["text"].strip()
+        for event in result["events"]
+        if event.type == "token" and event.payload["kind"] == "heading"
+    ]
+    assert any(h.startswith("Clinical features MedGen lists for Marfan syndrome") for h in headings)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["not_applicable", None])
+async def test_a_record_with_no_features_is_never_spoken_of_unless_the_question_asks(
+    _mock_litellm: AsyncMock, pick: str | None
+) -> None:
+    """The stray sentence (product review PR-8.1-07): "MedGen lists no
+    clinical features for ..." appeared in 15 golden answers that never asked
+    about features. Not asked, it is in no token, no cell, no citation and
+    not in the model's prompt. Removing the drop turns this red."""
+    findings, planned = await _no_features_findings()
+    query = _valid_query(text="Which records name this condition?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, pick)
+    result = await graph_module.write_node(state)
+
+    seen = _everything_the_reader_sees(result["events"])
+    assert "MedGen lists no clinical features" not in seen, seen
+    assert "MedGen lists no clinical features" not in _synth_prompt(_mock_litellm)
+    # The record itself is still listed, by its own title.
+    assert _NO_FEATURES_TITLE in seen
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("semantic_type", ["Disease or Syndrome", "Neoplastic Process"])
+async def test_a_features_question_about_a_record_with_none_is_told_so(
+    _mock_litellm: AsyncMock, semantic_type: str
+) -> None:
+    """Asked about a disease record that lists none, the statement is the
+    honest answer, and it stays (F-8.6-A11 keeps it for a disease record:
+    breast cancer's MedGen record, "Neoplastic Process", lists none)."""
+    findings, planned = await _no_features_findings(semantic_type=semantic_type)
+    query = _valid_query(text="Which features does this condition show?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, "asks_features")
+    result = await graph_module.write_node(state)
+
+    seen = _everything_the_reader_sees(result["events"])
+    assert f"MedGen lists no clinical features for {_NO_FEATURES_TITLE}" in seen, seen
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("semantic_type", ["Finding", "Sign or Symptom"])
+async def test_a_clinical_feature_record_is_never_said_to_list_no_features(
+    _mock_litellm: AsyncMock, semantic_type: str
+) -> None:
+    """F-8.6-A11, the reverse lookup: "Which syndromes feature
+    arachnodactyly?" resolved to MedGen's Arachnodactyly record, a clinical
+    feature concept typed "Finding" (C0003706, read live on 2026-09-26),
+    and with the features decision picking asks_features the answer said
+    "MedGen lists no clinical features for Arachnodactyly". The record's
+    own type decides now, whatever the decision picked: a feature concept
+    is never said to list no features. The record itself is still listed.
+
+    MUTATION PROOF: dropping `_is_medgen_disease_record` from the rule
+    turns both cases red.
+    """
+    findings, planned = await _no_features_findings("Arachnodactyly", semantic_type)
+    query = _valid_query(text="Which syndromes feature arachnodactyly?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    _hand_write_the_features_decision(state, "asks_features")
+    result = await graph_module.write_node(state)
+
+    seen = _everything_the_reader_sees(result["events"])
+    assert "MedGen lists no clinical features" not in seen, seen
+    assert "MedGen lists no clinical features" not in _synth_prompt(_mock_litellm)
+    assert "Arachnodactyly" in seen
+
+
+@pytest.mark.asyncio
+async def test_a_features_decision_still_running_at_write_is_not_waited_on(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A decision still running when Write needs it is Jev failing over; the
+    person does not wait on it. Past the grace it is stopped and read as not
+    asked."""
+    import asyncio
+
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
+    cancelled = asyncio.Event()
+
+    async def _slow() -> object:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return _features_record("asks_features")
+
+    findings, planned = await _no_features_findings()
+    query = _valid_query(text="Which features does this condition show?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    state["tool_calls"] = planned
+    graph_module._run_decisions(state["harness"]).features_task = asyncio.get_running_loop().create_task(
+        _slow()
+    )
+    started = time.monotonic()
+    result = await graph_module.write_node(state)
+    await asyncio.sleep(0)
+
+    assert time.monotonic() - started < 5.0
+    assert cancelled.is_set()
+    assert "MedGen lists no clinical features" not in _everything_the_reader_sees(result["events"])
+
+
+@pytest.mark.asyncio
+async def test_a_write_that_ends_early_stops_the_features_decision(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """A step error ends the run in Write without reading the decision, so
+    it is stopped rather than left spending."""
+    import asyncio
+
+    cancelled = asyncio.Event()
+
+    async def _slow() -> object:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return _features_record("asks_features")
+
+    query = _valid_query(text="Which features does this condition show?")
+    state = _write_state(query, [])
+    state["step_error"] = {
+        "fatal": True,
+        "scope": "step",
+        "source": "plan",
+        "error_class": "recoverable",
+        "message": "a stand-in step error",
+        "retry_after_s": 0,
+    }
+    task = asyncio.get_running_loop().create_task(_slow())
+    graph_module._run_decisions(state["harness"]).features_task = task
+    await asyncio.sleep(0)
+    await graph_module.write_node(state)
+    await asyncio.sleep(0)
+    assert cancelled.is_set() and task.cancelled()
 
 
 @pytest.mark.asyncio
@@ -1568,6 +2392,13 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
     second, isolated-reader-bound tool_call/result pair
     (`contains_untrusted_free_text=True`) for whatever future
     entity-extraction use that reader pass serves.
+
+    Build phase 8.7, step 8 (card 50, option K): that pair is still
+    assembled and counted, but `act_node` no longer hands it to the reader
+    on the answer path, so it yields no Finding and no model reads the
+    hostile title at all. Every assertion about the title never reaching a
+    field, a citation or an event holds unchanged: that protection is
+    `_sanitized_citeable_row`, never the reader.
     """
     output = CypherQueryOutput(
         status="ok",
@@ -1621,9 +2452,19 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
     act_result = await graph_module.act_node(act_state)
 
     findings = act_result["findings"]
-    assert len(findings) == 2, "the Article row's free text is still quarantined into its own Finding"
+    assert len(findings) == 1, "the reader pass ran on the answer path (phase 8.7, step 8)"
+    assert act_result["findings_count"] == 2, (
+        "the Article row's free text is still quarantined into its own pair, and counted"
+    )
+    for call in _mock_litellm.call_args_list:
+        prompt = "\n".join(
+            m.get("content") or "" for m in (call.kwargs.get("messages") or [])
+        )
+        assert _HOSTILE_ARTICLE_TITLE not in prompt, (
+            "a model was handed the hostile title on the answer path"
+        )
 
-    structured_finding, reader_finding = findings
+    (structured_finding,) = findings
     assert structured_finding.source == "structured_pass_through"
     assert structured_finding.structured_fields["status"] == "ok"
     assert structured_finding.structured_fields["row_count"] == 2, (
@@ -1639,12 +2480,6 @@ async def test_article_rows_keep_their_record_but_never_their_raw_title(
         "the Article row's own field content must never reach structured_fields"
     )
     assert _HOSTILE_ARTICLE_TITLE not in str(structured_finding.structured_fields)
-
-    assert reader_finding.source == "reader"
-    assert reader_finding.structured_fields is None
-    assert _HOSTILE_ARTICLE_TITLE not in str(reader_finding.extracted_entities)
-    assert _HOSTILE_ARTICLE_TITLE not in str(reader_finding.normalized_ids)
-    assert _HOSTILE_ARTICLE_TITLE not in str(reader_finding.evidence_summary)
 
     query = _valid_query(text=_GRAPH_ANSWERABLE_QUERY_TEXT)
     write_result = await graph_module.write_node(_write_state(query, findings))
@@ -2242,10 +3077,10 @@ async def test_flagship_disease_row_hedges_its_citation_and_flags_its_payload_fi
 async def test_act_node_calls_coordinator_worker_execute_with_empty_lists_for_a_no_tool_query(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With no tool selected (the default "hello" query), act_node still
-    calls coordinator_worker_execute with paired empty lists, proving the
-    integration point remains wired even when there is nothing to fan
-    out over.
+    """With no tool selected (the default "what can you do" query),
+    act_node still calls coordinator_worker_execute with paired empty
+    lists, proving the integration point remains wired even when there is
+    nothing to fan out over.
     """
     calls: list[tuple] = []
     original = graph_module.coordinator_worker_execute
@@ -2265,6 +3100,10 @@ async def test_act_node_calls_coordinator_worker_execute_with_empty_lists_for_a_
 # ---------------------------------------------------------------------------
 
 _GRAPH_ANSWERABLE_QUERY_TEXT = "What gene is associated with BRCA1?"
+# A Gene count request with no shape: the one `aggregate` question that still
+# takes the model path (2026-10-05, card 91; a count is something a record
+# cannot give).
+_GENE_COUNT_QUERY_TEXT = "How many records does BRCA1 have?"
 
 
 @pytest.mark.asyncio
@@ -2279,26 +3118,33 @@ async def test_plan_selects_cypher_query_for_a_graph_answerable_query() -> None:
     # test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query below
     # for the dedicated test of that behavior. UI fix set 8 (R29): the same
     # gene also earns the two Layer 3 calls, so a gene question plans four.
-    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
-    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
-    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
-    # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 10
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): thirteen
+    # planned calls now. The four above plus three searches (PubMed, ClinVar,
+    # OMIM), four follow-ups declared at Plan (abstracts, PubTator3
+    # publications, ClinVar summary, OMIM summary), the Gene ESummary and the
+    # context-only GO graph call; see test_breadth_wiring.py for the per-call
+    # arms, including the one proving an OMIM record for another gene is
+    # dropped before it can be cited.
+    assert len(tool_calls) == 13
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
     assert tool_calls[1]["layer"] == "layer_2_api"
-    # UI fix 11.21 wiring (2026-09-20): the tail is set 8's two Layer 3 calls,
-    # then the breadth plan in its fixed order: the PubMed and ClinVar
-    # searches, the abstract fetch, the PubTator3 publications, the ClinVar
-    # summary, and the context-only GO graph call.
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): the tail
+    # is set 8's two Layer 3 calls, then the breadth plan in its fixed
+    # order, the PubMed, ClinVar and OMIM searches followed by the abstract
+    # fetch, the PubTator3 publications, the ClinVar summary and the OMIM
+    # summary, then item 11.31's Gene ESummary and the context-only GO graph
+    # call.
     assert [c["tool"] for c in tool_calls[2:]] == [
         "pubtator_annotate", "clinicaltrials_search", "ncbi_efetch", "ncbi_efetch",
-        "ncbi_efetch", "pubtator_annotate", "ncbi_efetch", "cypher_query",
+        "ncbi_efetch", "ncbi_efetch", "pubtator_annotate", "ncbi_efetch",
+        "ncbi_efetch", "ncbi_efetch", "cypher_query",
     ]
     assert [c["layer"] for c in tool_calls[2:]] == [
         "layer_3_enrichment", "layer_3_enrichment", "layer_2_api", "layer_2_api",
-        "layer_2_api", "layer_3_enrichment", "layer_2_api", "layer_1_graph",
+        "layer_2_api", "layer_2_api", "layer_3_enrichment", "layer_2_api",
+        "layer_2_api", "layer_2_api", "layer_1_graph",
     ]
 
 
@@ -2338,12 +3184,18 @@ async def test_act_executes_the_selected_cypher_query_call(
     # calls and the follow-ups closed `empty` by the stubs contribute no pair;
     # the GO graph call contributes one (the two-argument stand-in here does
     # not take the template keyword, so it closes as a disclosed error).
-    assert len(tool_calls) == 5
-    assert len(results) == 5
-    assert tool_calls[0].tool == "ncbi_efetch"
-    assert {tool_calls[1].tool, tool_calls[2].tool} == {"pubtator_annotate", "clinicaltrials_search"}
-    assert tool_calls[3].tool == "cypher_query"
-    assert tool_calls[4].tool == "cypher_query"
+    assert len(tool_calls) == 6
+    assert len(results) == 6
+    # Item 11.31 (2026-09-21) added the Gene ESummary call, so Layer 2 now
+    # contributes two `ncbi_efetch` pairs rather than one. Asserted as a
+    # multiset per layer rather than by index, because the exact interleave
+    # within a layer is not a property this test is pinning and pinning it
+    # made the arm fail on an ordering change that broke nothing.
+    assert [c.tool for c in tool_calls].count("ncbi_efetch") == 2
+    assert [c.tool for c in tool_calls].count("cypher_query") == 2
+    assert {c.tool for c in tool_calls} == {
+        "ncbi_efetch", "pubtator_annotate", "clinicaltrials_search", "cypher_query",
+    }
     for result in results:
         assert result.contains_untrusted_free_text is False  # structured data, never free text
 
@@ -2561,6 +3413,403 @@ async def test_step_failure_on_think_routes_to_write_as_a_refusal(
 
 
 # ---------------------------------------------------------------------------
+# Card 85 (F-73-J06): a step failure leaves one log line that says which
+# search, which step and why, and never the exception's message.
+# ---------------------------------------------------------------------------
+
+
+def _step_failure(secret: str) -> harness_module.HarnessCallError:
+    try:
+        try:
+            raise TimeoutError(secret)
+        except TimeoutError as cause:
+            raise harness_module.HarnessCallError(
+                f"model call failed: {secret}", error_class="transient"
+            ) from cause
+    except harness_module.HarnessCallError as caught:
+        return caught
+
+
+def test_a_step_failure_logs_one_warning_with_the_trace_id_step_and_both_classes(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from system_03_search_agent.observability.audit import trace_id_scope
+
+    with (
+        caplog.at_level("WARNING", logger=graph_module.logger.name),
+        trace_id_scope("trace-card85"),
+    ):
+        kwargs = graph_module._step_error_kwargs("think", _step_failure("x"))
+
+    lines = [r.getMessage() for r in caplog.records if "step failed" in r.getMessage()]
+    assert lines == [
+        "step failed trace_id=trace-card85 step=think error_class=transient cause_class=TimeoutError"
+    ]
+    assert kwargs["error_class"] == "transient"  # the event the person gets is unchanged
+
+
+def test_a_step_failure_log_line_never_carries_the_exceptions_message(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    secret = "what is my private diagnosis SECRET-TEXT-123"
+    with caplog.at_level("DEBUG", logger=graph_module.logger.name):
+        graph_module._step_error_kwargs("write", _step_failure(secret))
+
+    assert caplog.records, "the failure must be logged"
+    for record in caplog.records:
+        assert secret not in record.getMessage()
+        assert "SECRET-TEXT-123" not in record.getMessage()
+        assert record.exc_info is None  # a traceback would print the message
+
+
+def _wrapped(cause: BaseException | None, *, context: BaseException | None = None, suppress: bool = False):
+    """A HarnessCallError built with the given explicit cause, implicit
+    context and `from None` choice, the way Python itself would build it."""
+    try:
+        try:
+            if context is not None:
+                raise context
+        except BaseException:  # noqa: BLE001
+            if suppress:
+                raise harness_module.HarnessCallError("m", error_class="transient") from None
+            raise harness_module.HarnessCallError("m", error_class="transient") from cause
+        raise harness_module.HarnessCallError("m", error_class="transient") from cause
+    except harness_module.HarnessCallError as caught:
+        return caught
+
+
+def _logged_cause_class(exc: harness_module.HarnessCallError, caplog) -> str:
+    with caplog.at_level("WARNING", logger=graph_module.logger.name):
+        graph_module._step_error_kwargs("think", exc)
+    (line,) = [r.getMessage() for r in caplog.records if "step failed" in r.getMessage()]
+    return line.rsplit("cause_class=", 1)[1]
+
+
+class _FalsyCause(Exception):
+    def __bool__(self) -> bool:
+        return False
+
+
+def test_a_cause_raised_from_none_is_not_named(caplog: pytest.LogCaptureFixture) -> None:
+    exc = _wrapped(None, context=KeyError("x"), suppress=True)
+    assert _logged_cause_class(exc, caplog) == "none"
+
+
+def test_a_falsy_explicit_cause_is_still_the_cause(caplog: pytest.LogCaptureFixture) -> None:
+    exc = _wrapped(_FalsyCause("real"), context=ValueError("ctx"))
+    assert _logged_cause_class(exc, caplog) == "_FalsyCause"
+
+
+def test_the_implicit_context_is_named_when_nothing_suppresses_it(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    try:
+        try:
+            raise KeyError("x")
+        except KeyError:
+            raise harness_module.HarnessCallError("m", error_class="transient")
+    except harness_module.HarnessCallError as caught:
+        exc = caught
+    assert _logged_cause_class(exc, caplog) == "KeyError"
+
+
+def test_a_cause_class_name_cannot_forge_a_second_log_line(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    odd = type("Timeout\nWARNING core.graph step failed trace_id=OTHER\x1b[31m" + "C" * 400, (Exception,), {})
+    exc = _wrapped(odd("boom"))
+    cause = _logged_cause_class(exc, caplog)
+    assert "\n" not in cause and "\x1b" not in cause and " " not in cause
+    assert len(cause) <= 60
+    (record,) = [r for r in caplog.records if "step failed" in r.getMessage()]
+    assert "\n" not in record.getMessage()
+
+
+# ---------------------------------------------------------------------------
+# T-8.1-01: a Think reply that is well-formed JSON but uses a synonym key
+# for `narrative` ("why", "reason", ...) instead of failing outright, is
+# repaired deterministically, and a genuinely unusable reply still never
+# becomes a fabricated classification. Replays the exact shapes measured
+# live on develop, `testing/Developer/reports/2026-09-23_user_feedback/
+# q5_coffee_exercise.txt` and `.../2026-09-23_set12/breadth_runs/
+# q5_coffee_exercise.txt`.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "raw_reply",
+    [
+        # Measured live, attempt 1 of the coffee/exercise repro.
+        (
+            '{"query_class": "exploratory", "why": "Broad open-ended question '
+            "about a lifestyle/dietary factor's effect on exercise efficacy "
+            'with no single obvious database path; requires evidence assembly '
+            'across", "entities": []}'
+        ),
+        # Measured live, a second repro run: the same substitution wrapped
+        # in a markdown fence, both cosmetic deviations at once.
+        (
+            '```json\n{"query_class": "exploratory", "why": "Broad, open-ended '
+            "question about a lifestyle intervention across potentially many "
+            'biological mechanisms and study types with no single obvious path '
+            'or s", "entities": []}\n```'
+        ),
+        # Measured live, attempt 2 of the same repro: a different synonym.
+        (
+            '{"query_class": "exploratory", "reason": "Broad open-ended '
+            "question about lifestyle interaction (coffee + exercise "
+            'effectiveness) with no single database path; requires evidence '
+            'synthesis across multi", "entities": []}'
+        ),
+    ],
+    ids=["why-key", "why-key-fenced", "reason-key"],
+)
+def test_parse_think_classification_repairs_narrative_synonym(raw_reply: str) -> None:
+    """T-8.1-01: the exact malformed shapes seen live parse cleanly now."""
+    result = graph_module._parse_think_classification(raw_reply)
+    assert result.query_class == "exploratory"
+    assert result.narrative  # the value under the alias key was kept
+    assert result.entities == []
+
+
+def test_repair_think_narrative_key_leaves_a_genuine_extra_key_alone() -> None:
+    """A `why` key does not license coercing an UNRELATED unknown key too.
+
+    `extra="forbid"` must still fire on `bogus_field`: the repair only ever
+    renames the one key that stands in for `narrative`, never launders a
+    reply that is malformed for some other reason as well.
+    """
+    parsed = {"query_class": "lookup", "why": "some reasoning", "bogus_field": 1}
+    repaired = graph_module._repair_think_narrative_key(parsed)
+    assert repaired is parsed  # untouched: an unknown key besides the alias
+
+
+def test_repair_think_narrative_key_prefers_existing_narrative() -> None:
+    """When `narrative` is already present, no alias is ever consulted,
+    even if one also happens to be in the reply (nothing to repair)."""
+    parsed = {"query_class": "lookup", "narrative": "real", "why": "decoy"}
+    repaired = graph_module._repair_think_narrative_key(parsed)
+    assert repaired is parsed
+
+
+def test_parse_think_classification_still_raises_on_unrepairable_reply() -> None:
+    """T-4.7-04 holds under the new repair path too: a reply missing
+    `narrative` under ANY known alias, or invalid for an unrelated reason,
+    is still rejected outright, never coerced into a classification, and
+    the raised message now names which field failed and why.
+    """
+    with pytest.raises(
+        graph_module.ThinkClassificationUnavailableError
+    ) as excinfo:
+        graph_module._parse_think_classification(
+            '{"query_class": "not_a_real_shape", "narrative": "x"}'
+        )
+    assert "query_class" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_think_retry_feeds_back_the_validation_error(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """T-8.1-01: when repair alone cannot save attempt 1 (a reply missing
+    `narrative` under any alias AND carrying a genuinely unknown key), the
+    second attempt is no longer a blind resend. It must carry attempt 1's
+    bad reply and a description of what was wrong, and the loop must
+    recover to a real classification, never a step_error, when the second
+    reply is well-formed.
+    """
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    bad_reply = '{"query_class": "exploratory", "bogus_field": 1}'
+    think_calls: list[list[dict[str, str]]] = []
+
+    def _carries_feedback(messages: list[dict[str, str]]) -> bool:
+        """True only when the messages hold attempt 1's reply echoed back as
+        the assistant's turn AND a user turn naming the exact field
+        failures ("narrative" missing, "bogus_field" not permitted). The
+        system instruction also contains the word "narrative", so a check
+        on that word alone is vacuous (F-8.1-J05); "bogus_field" appears
+        nowhere except in the reply and in the feedback built from it."""
+        echoed = any(
+            message.get("role") == "assistant" and message.get("content") == bad_reply
+            for message in messages
+        )
+        complained = any(
+            message.get("role") == "user"
+            and "did not match the required schema" in (message.get("content") or "")
+            and "bogus_field" in (message.get("content") or "")
+            and "narrative: Field required" in (message.get("content") or "")
+            for message in messages
+        )
+        return echoed and complained
+
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+        from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            think_calls.append(list(messages))  # type: ignore[arg-type]
+            # Models the live failure: a model with a systematic key habit
+            # repeats the same bad reply on a byte-identical resend, and
+            # corrects it only when told what was wrong. So without the
+            # feedback exchange this fake NEVER recovers, and the run ends
+            # as a Think step_error: removing the feedback turns this red.
+            if _carries_feedback(messages):  # type: ignore[arg-type]
+                return _fake_response(_compliant_think_classification(messages))
+            # Unrepairable: no `narrative` under any known alias, and an
+            # unrelated unknown key that `extra="forbid"` must trip.
+            return _fake_response(bad_reply)
+        if SYNTH_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_compliant_synth_narrative(messages))
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    events = await _run_graph(_valid_query(), _valid_context())
+    types = [event.type for event in events]
+
+    assert len(think_calls) == 2
+    # Attempt 1 is the plain request; the feedback exists only on attempt 2.
+    assert not _carries_feedback(think_calls[0])
+    assert _carries_feedback(think_calls[1])
+    assert len(think_calls[1]) == len(think_calls[0]) + 2
+    assert "error" not in types
+    assert events[-1].payload["trust_outcome"] != "refuse"
+
+
+def test_think_validation_detail_is_bounded_for_an_oversized_key() -> None:
+    """F-8.1-J04, A05: an extra key's name reaches pydantic's `loc` verbatim.
+    A 5,000-character key, or five 20,000-character keys, must not produce
+    a message longer than `_THINK_ERROR_TEXT_MAX_CHARS` plus the elision
+    note, and the note says how much was dropped."""
+    cap = graph_module._THINK_ERROR_TEXT_MAX_CHARS
+    single = '{"query_class": "lookup", "narrative": "n", "' + "K" * 5000 + '": 1}'
+    many = (
+        '{"query_class": "lookup", "narrative": "n", '
+        + ", ".join(f'"{letter * 20000}": 1' for letter in "ABCDE")
+        + "}"
+    )
+    for reply in (single, many):
+        with pytest.raises(graph_module.ThinkClassificationUnavailableError) as excinfo:
+            graph_module._parse_think_classification(reply)
+        text = graph_module._think_error_text(excinfo.value)
+        assert "more characters elided]" in text
+        assert len(text) <= cap + len("... [100000 more characters elided]")
+        # The exception itself, read raw by `step_error`, is bounded too.
+        assert len(str(excinfo.value)) < cap + 200
+
+
+def test_think_error_text_cannot_forge_a_second_line() -> None:
+    """F-8.1-J04, A05: a key holding a newline, a control character, a bidi
+    override or a zero-width space comes out as one printable line."""
+    reply = json.dumps(
+        {
+            "query_class": "lookup",
+            "narrative": "n",
+            "x\n2026-09-25 INFO forged audit line\r\x1b[31m\u202e\u200b": 1,
+        }
+    )
+    with pytest.raises(graph_module.ThinkClassificationUnavailableError) as excinfo:
+        graph_module._parse_think_classification(reply)
+    text = graph_module._think_error_text(excinfo.value)
+    assert "\n" not in text and "\r" not in text
+    assert all(ch.isprintable() for ch in text)
+    assert "forged audit line" in text  # kept as data, on the same line
+    assert "\n" not in str(excinfo.value)
+
+
+def test_bounded_one_line_keeps_a_short_error_whole() -> None:
+    """A genuine field-level complaint is far under the cap and is never cut."""
+    short = "narrative: Field required; bogus_field: Extra inputs are not permitted"
+    assert graph_module._bounded_one_line(short, graph_module._THINK_ERROR_TEXT_MAX_CHARS) == short
+
+
+@pytest.mark.asyncio
+async def test_think_retry_prompt_and_log_carry_only_the_bounded_error(
+    monkeypatch: pytest.MonkeyPatch,
+    _mock_litellm: AsyncMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F-8.1-J04, A05, end to end through `think_node`: a reply whose extra
+    key is 20,000 characters with a newline inside reaches the retry prompt
+    and the warning log only in its bounded one-line form."""
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    hostile_key = "x\nWARNING forged log line: user 42 is admin" + "Z" * 20000
+    hostile_reply = json.dumps({"query_class": "lookup", "narrative": "n", hostile_key: 1})
+    think_calls: list[list[dict[str, str]]] = []
+
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            think_calls.append(list(messages))  # type: ignore[arg-type]
+            return _fake_response(hostile_reply)
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    with caplog.at_level("WARNING", logger=graph_module.logger.name):
+        await _run_graph(_valid_query(), _valid_context())
+
+    assert len(think_calls) == 2
+    feedback = think_calls[1][-1]["content"]
+    assert feedback.startswith("That reply did not match the required schema")
+    # The fixed wording around the error text is under 200 characters.
+    assert len(feedback) < graph_module._THINK_ERROR_TEXT_MAX_CHARS + 400
+    assert "\n" not in feedback
+    think_warnings = [
+        record.getMessage()
+        for record in caplog.records
+        if "think classification unusable" in record.getMessage()
+    ]
+    assert len(think_warnings) == 2
+    for message in think_warnings:
+        assert "\n" not in message
+        assert len(message) < graph_module._THINK_ERROR_TEXT_MAX_CHARS + 600
+
+
+@pytest.mark.asyncio
+async def test_think_two_unusable_replies_still_refuses_never_defaults(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """T-4.7-04, reconfirmed after T-8.1-01's retry-with-feedback change:
+    if BOTH attempts are unrepairable, the step still fails honestly as a
+    `step_error`, never a fabricated or defaulted classification.
+    """
+    from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
+
+    async def _dispatch(*args: object, **kwargs: object):
+        messages = kwargs.get("messages") or []
+        joined = "\n".join(message.get("content") or "" for message in messages)  # type: ignore[union-attr]
+        from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
+
+        if GUARD_SYSTEM_INSTRUCTION in joined:
+            return _fake_response(_COMPLIANT_GUARD_CLASSIFICATION)
+        if _THINK_SYSTEM_INSTRUCTION in joined:
+            return _fake_response('{"query_class": "exploratory", "bogus_field": 1}')
+        return _fake_response()
+
+    monkeypatch.setattr(_mock_litellm, "side_effect", _dispatch)
+
+    events = await _run_graph(_valid_query(), _valid_context())
+    types = [event.type for event in events]
+
+    assert types[-2:] == ["error", "done"]
+    error_event = next(event for event in events if event.type == "error")
+    assert error_event.payload["source"] == "think"
+    assert events[-1].payload["trust_outcome"] == "refuse"
+
+
+# ---------------------------------------------------------------------------
 # Daily caps: declined before any per-query model call fires at all.
 # ---------------------------------------------------------------------------
 
@@ -2677,6 +3926,12 @@ async def test_malformed_user_id_declines_gracefully_instead_of_crashing(
         "OMIM included",
         "OMIM Phenotypic Series",
         '[stub] MedGen:C1419385',
+        # Measured on the live graph 2026-09-23. EVERY `OntologyClass` vertex
+        # carries this shape, and it reached golden question G-019's 26 rows as
+        # if it were a genuine MeSH term. Red against the pre-2026-09-23 filter,
+        # which tested only `startswith("[stub]")` and let this through.
+        "[MeSH] D000818",
+        "[MeSH] D000001",
     ],
 )
 def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None:
@@ -2684,7 +3939,7 @@ def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None
 
     They are source-vocabulary abbreviations that leaked into MedGen's name
     column during ingest. The data defect belongs to Layer 1; the confidence
-    signal this repo staples to it is ours, and asserting full confidence in
+    signal this repository staples to it is ours, and asserting full confidence in
     a value that names a vocabulary rather than a disease is the trust-signal
     defect F-2.1-B07 filed.
     """
@@ -2711,6 +3966,12 @@ def test_leaked_vocabulary_names_are_recognised_as_artifacts(value: str) -> None
         "Gardner syndrome",
         "hereditary breast ovarian cancer syndrome",
         "Marfan syndrome",
+        # THE CONTROL FOR THE BRACKETED RULE ADDED 2026-09-23, and the reason
+        # that rule tests the TOKEN rather than the bracket. PubMed gives
+        # translated articles bracketed titles, so a blanket "starts with a
+        # bracket" rule would strip the confidence from genuine records.
+        "[Studies on the effect of interferon on hepatitis B]",
+        "[Analysis of the human genome]",
     ],
 )
 def test_genuine_disease_names_keep_their_confidence(value: str) -> None:
@@ -2728,6 +3989,34 @@ def test_genuine_disease_names_keep_their_confidence(value: str) -> None:
         f"{value!r} is a genuine name and was flagged as a vocabulary "
         "artifact, which downgrades a correct record's confidence"
     )
+
+
+def test_bracketed_vocabulary_token_is_identified_by_name() -> None:
+    """`_bracketed_vocabulary_token` says WHICH vocabulary leaked, not just that one did.
+
+    Measured against the live graph on 2026-09-23 (`testing/Developer/reports/
+    2026-09-23_overnight/probe_ontology_names.py`, committed): zero
+    `OntologyClass` names anywhere in the graph contain a lowercase run of four
+    or more letters, and zero contain "neoplasm", so the `name` field holds
+    identifiers for that label everywhere rather than patchily. `Article.name`
+    and `Gene.name` are correct, which is why this is a per-label mapping
+    defect rather than a generally empty graph.
+
+    POPULATE CHECK: the two negative cases below are what make the positive
+    ones mean something. A rule that flagged every bracketed string would pass
+    the positives and destroy genuine translated-article titles, so this arm
+    fails if the function ever stops distinguishing them.
+    """
+    from system_03_search_agent.core.graph import _bracketed_vocabulary_token
+
+    assert _bracketed_vocabulary_token("[MeSH] D000818") == "MeSH"
+    assert _bracketed_vocabulary_token("[stub] HP:0000002") == "stub"
+    assert _bracketed_vocabulary_token("[MONDO] 0007947") == "MONDO"
+
+    assert _bracketed_vocabulary_token("[Studies on hepatitis B]") is None
+    assert _bracketed_vocabulary_token("Marfan syndrome") is None
+    assert _bracketed_vocabulary_token("[") is None
+    assert _bracketed_vocabulary_token("[] D000818") is None
 
 
 # ---------------------------------------------------------------------------
@@ -3024,11 +4313,14 @@ async def test_plan_also_selects_ncbi_efetch_for_a_gene_anchored_query() -> None
     tool_calls = plan_event.payload["tool_calls"]
     # UI fix set 8 (R29): four now, the two Layer 3 calls behind these two.
     # The dedicated per-layer selection tests live in test_layer_handoff.py.
-    # UI fix 11.21 wiring (2026-09-20): ten planned calls now. The four above
-    # plus two searches (PubMed, ClinVar), three follow-ups declared at Plan
-    # (abstracts, PubTator3 publications, ClinVar summary) and the context-only
-    # GO graph call; see test_breadth_wiring.py for the per-call arms.
-    assert len(tool_calls) == 10
+    # UI fix 11.21 wiring (2026-09-20), then item 2b (2026-09-22): thirteen
+    # planned calls now. The four above plus three searches (PubMed, ClinVar,
+    # OMIM), four follow-ups declared at Plan (abstracts, PubTator3
+    # publications, ClinVar summary, OMIM summary), the Gene ESummary and the
+    # context-only GO graph call; see test_breadth_wiring.py for the per-call
+    # arms, including the one proving an OMIM record for another gene is
+    # dropped before it can be cited.
+    assert len(tool_calls) == 13
     assert tool_calls[0]["tool"] == "cypher_query"
     assert tool_calls[0]["layer"] == "layer_1_graph"
     assert tool_calls[1]["tool"] == "ncbi_efetch"
@@ -3309,13 +4601,26 @@ def test_layer2_citation_falls_back_gracefully_when_the_raw_output_is_missing() 
 # ---------------------------------------------------------------------------
 
 
-def test_layer2_citation_returns_none_rather_than_crash_on_an_omim_source_url() -> None:
-    """F-3.4-T05-04: an OMIM-sourced ncbi_efetch record is schema-valid at
-    the tool level (NcbiEfetchRecord.source_url's pattern allows
-    omim.org), but CitationPayload's own NCBI_SOURCE_URL_PATTERN does not.
-    Neither the primary build_layer2_citation attempt nor this function's
-    own fallback can honestly cite it, and both must fail closed to
-    `None`, never an uncaught pydantic.ValidationError.
+def test_layer2_citation_now_cites_an_omim_source_url() -> None:
+    """REVERSED 2026-09-21, and reversed deliberately rather than deleted.
+
+    This arm used to assert the OPPOSITE: that an OMIM-sourced record fails
+    closed to `None`, because `CitationPayload`'s `NCBI_SOURCE_URL_PATTERN`
+    admitted only NCBI and clinicaltrials.gov hosts while the tool schema
+    allowed `omim.org`. That was F-3.4-T05-04, and failing closed was the
+    honest behaviour while OMIM could not be cited at all.
+
+    The product owner reversed that constraint on 2026-09-20 (DECISIONS.md,
+    "widen the citation host rule so OMIM can be cited"), and `omim.org` is
+    now an exact additional host. So the record IS citeable and failing
+    closed would now DROP a citation the product is meant to show.
+
+    The fail-closed property this arm used to carry has not been retired
+    with it: `test_layer2_citation_still_fails_closed_on_a_host_the_
+    citation_contract_rejects` below holds it against a host that is still
+    rejected. Deleting this arm when its premise flipped would have retired
+    the only check standing between a rejected URL and an uncaught
+    `pydantic.ValidationError`, which is why it is rewritten in pairs.
     """
     from system_03_search_agent.harness.coordinator_worker import Finding
     from system_03_search_agent.synthesis.findings import SynthFinding
@@ -3375,9 +4680,62 @@ def test_layer2_citation_returns_none_rather_than_crash_on_an_omim_source_url() 
         "the gene is BRCA1",
     )
 
+    assert citation is not None, (
+        "an OMIM-sourced record must now be cited: the citation host rule "
+        "was widened on 2026-09-20 so OMIM records could stop shipping "
+        "uncited"
+    )
+    assert citation.source_url == "https://omim.org/entry/113705"
+    assert citation.layer == "layer_2_api"
+
+
+def test_layer2_citation_still_fails_closed_on_a_host_the_citation_contract_rejects() -> None:
+    """The half of F-3.4-T05-04 that survives the OMIM reversal.
+
+    A `source_url` the citation contract rejects must still produce `None`
+    rather than an uncaught `pydantic.ValidationError`. Only the example
+    changed: OMIM is admitted now, so the arm is retargeted at a host that
+    is genuinely still rejected.
+    """
+    from system_03_search_agent.harness.coordinator_worker import Finding
+    from system_03_search_agent.synthesis.findings import SynthFinding
+
+    rejected_url = "https://example.org/entry/113705"
+    synth_finding = SynthFinding(
+        ref_index=1,
+        citation_id="ne-bad-1",
+        layer="layer_2_api",
+        tool="ncbi_efetch",
+        field="title",
+        field_value="BREAST CANCER 1 GENE; BRCA1",
+        source_url=rejected_url,
+    )
+    ncbi_finding = Finding(
+        call_id="ne-bad",
+        tool="ncbi_efetch",
+        layer="layer_2_api",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok",
+            "rows": [{
+                "curie": "",
+                "node_or_edge_type": "omim",
+                "fields": {"title": "BREAST CANCER 1 GENE; BRCA1"},
+                "source_url": rejected_url,
+            }],
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+
+    citation = graph_module._layer2_citation_for_synth_finding(
+        synth_finding, [ncbi_finding], {}, "ne-bad-1", 1, "the gene is BRCA1",
+    )
+
     assert citation is None, (
-        "an OMIM-sourced record must fail closed to no citation, never "
-        f"crash or fabricate one; got {citation!r}"
+        "a host the citation contract rejects must fail closed to no "
+        f"citation, never crash or fabricate one; got {citation!r}"
     )
 
 
@@ -3893,7 +5251,7 @@ def test_live_wins_for_currency_is_a_no_op_with_only_one_layer() -> None:
 # ---------------------------------------------------------------------------
 # T-3.4-06, Section 7.4: staleness auto-cross-verify
 # (_apply_layer1_staleness_notes). F-3.4-T06-01 (live-confirmed against the
-# real graph, 2026-08-09): no real Layer 1 field this repo's ingest returns
+# real graph, 2026-08-09): no real Layer 1 field this repository's ingest returns
 # matches VOLATILE_FIELD_EXAMPLES/STABLE_FIELD_EXAMPLES today (every vertex
 # label carries the identical generic id/name/xrefs/source/agent_type/
 # source_url/knowledge_level property set; see `_field_class_for_layer1_
@@ -4041,7 +5399,7 @@ def test_layer1_staleness_note_does_not_fire_when_fresh() -> None:
 
 def test_layer1_staleness_note_does_not_fire_on_an_unresolved_field_class() -> None:
     """F-3.4-T06-01: this is the real, live production shape today. Every
-    Layer 1 citation this repo can build carries a generic field name
+    Layer 1 citation this repository can build carries a generic field name
     ("name" among the fixed seven generic keys), never a VOLATILE_FIELD_
     EXAMPLES/STABLE_FIELD_EXAMPLES member, so this must never fire against
     real data, confirmed here with a snapshot old enough that it would
@@ -4360,6 +5718,59 @@ def test_citations_from_grounded_claims_leaves_both_none_when_absent(
     assert len(citations) == 1
     assert citations[0].snapshot_date is None
     assert citations[0].entity_name is None
+
+
+def test_a_record_cited_by_two_sentences_shows_the_words_behind_each() -> None:
+    """Card 57 (F-8.10-A11): "about 40% of inherited breast cancers [7]"
+    showed citation 7 as "The encoded protein participates in transcription",
+    the sentence before it, because the first clause won. Each sentence's
+    checked words must be on the citation it binds to: the copied sentence's
+    own text, and the reworded sentence's quote, numbers included."""
+    from system_03_search_agent.synthesis.findings import SynthFinding
+    from system_03_search_agent.synthesis.grounding import GroundedClaim, GroundingResult
+
+    source_url = "https://www.ncbi.nlm.nih.gov/gene/672"
+    summary = SynthFinding(
+        ref_index=1, citation_id="cq-1-1", layer="layer_1_graph", tool="cypher_query",
+        field="summary",
+        field_value=(
+            "The encoded protein participates in transcription, DNA repair of "
+            "double-stranded breaks, and recombination. Mutations in this gene are "
+            "responsible for approximately 40% of inherited breast cancers."
+        ),
+        source_url=source_url, curie="NCBIGene:672", entity_type="Gene",
+    )
+    first = "The encoded protein participates in transcription"
+    quote = "responsible for approximately 40% of inherited breast cancers"
+    grounding = GroundingResult(
+        narrative=f"{first} [1]. Changes in this gene cause about 40% of inherited breast cancers [1].",
+        claims=[
+            GroundedClaim(claim_text=first, finding=summary),
+            GroundedClaim(
+                claim_text="Changes in this gene cause about 40% of inherited breast cancers",
+                finding=summary, evidence_quote=quote,
+            ),
+        ],
+        stripped_count=0,
+        refused=False,
+    )
+    findings = [
+        _layer1_finding_with_row(call_id="cq-1", source_url=source_url, fields={"summary": "x"})
+    ]
+
+    citations = graph_module._citations_from_grounded_claims(grounding, findings)
+
+    assert len(citations) == 1
+    assert first in citations[0].claim_text
+    assert quote in citations[0].claim_text
+    assert "40%" in citations[0].claim_text
+
+
+def test_joined_checked_words_keep_each_entry_whole_within_the_bound() -> None:
+    long_entry = "a" * 990
+    assert graph_module._joined_checked_words([long_entry, "about 40% of cases"]) == long_entry
+    assert graph_module._joined_checked_words(["one", "two"]) == "one two"
+    assert len(graph_module._joined_checked_words(["b" * 1200])) == 1000
 
 
 def test_field_class_for_layer1_field_matches_real_graph_data_today() -> None:
@@ -5842,3 +7253,428 @@ class TestThePlanEventReportsTheMention:
             "which is what session memory then records for every later turn "
             f"in the session: {resolved}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.2 fix round, F-8.2-A04 and F-8.2-J13: when no model makes a
+# pick, the record carried on the `done` event names what the run actually
+# did (the spec's fail-open option) and no pick nobody made. Before the fix
+# it named the FIRST option, so a failed ask_back, recent_years and
+# literature decision each read as an ask-back, a "how far back" ask and a
+# papers question that never happened.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("spec_name", "acted_on"),
+    [
+        ("_RELEVANCY", "on_topic"),
+        ("_ASK_BACK", "proceed"),
+        ("_RECENT_YEARS", "not_applicable"),
+        ("_LITERATURE", "not_literature"),
+    ],
+)
+async def test_a_decision_nobody_made_is_recorded_as_what_the_run_did(
+    monkeypatch: pytest.MonkeyPatch, spec_name: str, acted_on: str
+) -> None:
+    monkeypatch.delenv("CLASSIFIER_PROVIDER", raising=False)
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "acompletion",
+        AsyncMock(return_value=_fake_response("I think the person wants something recent.")),
+    )
+    monkeypatch.setattr(
+        harness_module.litellm,
+        "get_model_info",
+        lambda model: {"input_cost_per_token": 1e-6, "output_cost_per_token": 2e-6},
+    )
+    spec = getattr(graph_module, spec_name)
+    harness = harness_module.Harness("t-nobody-decided")
+
+    record = await graph_module._decide_point(harness, "t-nobody-decided", spec, "recent papers on statins")
+
+    assert record is not None
+    assert graph_module._usable_choice(record) is None, "no model made a pick"
+    assert record.jev_choice is None and record.guard_choice is None
+    assert record.chosen == acted_on == spec.fail_open
+    assert record.fallback_reason == "no_usable_pick"
+    assert graph_module._done_decisions(harness) == [record]
+
+
+def test_ask_back_spec_says_a_subject_plus_a_wanted_kind_is_a_request() -> None:
+    """Card 87: a short message that names a subject and the kind of thing
+    wanted (including therapy options) is answered, not asked back.
+
+    This pins the spec text only. Which way the classifier picks is checked
+    by live runs against it (testing/Developer/reports/2026-10-05_wave1/
+    card87.md), which a unit test cannot do.
+    """
+    spec = graph_module._ASK_BACK
+    proceed = spec.criteria["proceed"]
+    ask_back = spec.criteria["ask_back"]
+
+    assert "therapy options" in proceed
+    assert "variants" in proceed, "the old example must not be dropped"
+    assert "followed by a word that names the wanted kind of information" in proceed
+    assert "is a request, not a bare subject" in proceed
+    assert "no word saying what to find out" in ask_back
+    assert spec.fail_open == "proceed"
+
+
+# ---------------------------------------------------------------------------
+# F-8.5-J07: the two non-timing controls the deleted
+# test_write_streaming_premise.py's W4 pinned. W4 was removed with the rest
+# of that file (build phase 8.5, card 37, the streaming-timing test set),
+# but it was the only test proving the unresolved-entity refusal (T-3.1-13,
+# see test_unresolved_gene_symbol_refuses_before_reaching_the_graph above)
+# spends no synth-tier call and never announces that Write has started.
+# Those two properties are cost and refusal-path behaviour, not timing, so
+# they are pinned here as ordinary unit tests rather than lost with the
+# timing arms. Both were proven red against an in-memory mutant of
+# write_node and green against the unmutated source (phase 8.5 fix round
+# report, testing/Developer/reports/2026-09-25_phase_8.5/fix_round.md).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_unresolved_gene_symbol_refusal_spends_no_synth_tier_call(
+    monkeypatch: pytest.MonkeyPatch, _mock_litellm: AsyncMock
+) -> None:
+    """F-8.5-J07, property one. The unresolved-entity refusal returns from
+    `write_node` before its normal answer path begins, so it must spend no
+    synth-tier call: there is nothing for Synth to honestly write about a
+    query that was never sent to the graph.
+
+    MUTATION THAT TURNS THIS RED: call `_dispatch_tier_call(harness,
+    trace_id, "synth", "write", ...)` inside `write_node`'s
+    `if unresolved_entity_symbols:` branch, before the refusal is emitted.
+    """
+    from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+
+    async def _always_unresolved(symbol: str, **kwargs: object) -> str | None:
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _always_unresolved)
+
+    query = _valid_query(text="What is ZZQXWV?")
+    events = await _run_graph(query, _valid_context())
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse", (
+        "populate-check failed: the run did not refuse, so it never took "
+        "the branch this test pins"
+    )
+
+    for call in _mock_litellm.call_args_list:
+        messages = call.kwargs.get("messages") or []
+        joined = "\n".join(
+            message.get("content") or "" for message in messages  # type: ignore[union-attr]
+        )
+        assert SYNTH_SYSTEM_INSTRUCTION not in joined, (
+            "the unresolved-entity refusal path spent a synth-tier call, "
+            "the exact regression the deleted W4 test existed to catch"
+        )
+
+
+@pytest.mark.asyncio
+async def test_unresolved_gene_symbol_refusal_never_announces_write_started(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-8.5-J07, property two. A refusal decided before Write's normal
+    answer path begins must never emit the `step` event
+    (`StepPayload(step="write", status="started")`) that announces Write
+    has started: that event tells the reader "writing your answer" ahead
+    of a refusal that never reaches synthesis.
+
+    MUTATION THAT TURNS THIS RED: emit the `step` / write-started marker
+    unconditionally at the top of `write_node`, live, before checking
+    `unresolved_entity_symbols`.
+    """
+
+    async def _always_unresolved(symbol: str, **kwargs: object) -> str | None:
+        return None
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _always_unresolved)
+
+    query = _valid_query(text="What is ZZQXWV?")
+    events = await _run_graph(query, _valid_context())
+
+    done_event = next(event for event in events if event.type == "done")
+    assert done_event.payload["trust_outcome"] == "refuse", (
+        "populate-check failed: the run did not refuse, so it never took "
+        "the branch this test pins"
+    )
+
+    assert not any(event.type == "step" for event in events), (
+        "a refusal that never began the answer path announced that Write "
+        "had started"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Card 30 (owner decision D15, 2026-10-16): the `think.asks_classification`
+# decision floors the answer's verdict at "ask" when the variants listed carry
+# no ClinVar classification. These arms hand Write the decision Think would
+# have started (`_RunDecisions.classification_task`), so no model is needed.
+# ---------------------------------------------------------------------------
+
+
+def _classification_record(pick: str | None) -> object:
+    from system_03_search_agent.contracts.events import DecisionRecord
+
+    options = ["asks_classification", "not_applicable"]
+    if pick is None:
+        return DecisionRecord(
+            name="think.asks_classification",
+            options=options,
+            chosen="not_applicable",
+            decided_by="guard",
+            fallback_reason="no_usable_pick:timeout",
+        )
+    return DecisionRecord(
+        name="think.asks_classification",
+        options=options,
+        chosen=pick,
+        decided_by="jev",
+        jev_choice=pick,
+    )
+
+
+def _hand_write_the_classification_decision(state: dict[str, object], pick: str | None) -> None:
+    import asyncio
+
+    record = _classification_record(pick)
+
+    async def _decided() -> object:
+        return record
+
+    graph_module._run_decisions(state["harness"]).classification_task = (
+        asyncio.get_running_loop().create_task(_decided())
+    )
+
+
+async def _unclassified_variant_findings() -> list[object]:
+    """A gene's variants from the graph, none carrying a classification."""
+    harness = harness_module.Harness(trace_id="test-trace-classification")
+    call = ToolCall(tool="cypher_query", call_id="cy-class", layer="layer_1_graph")
+    fields = {
+        "status": "ok",
+        "row_count": 3,
+        "total_available": 3,
+        "truncated": False,
+        "rows": [
+            {
+                "node_or_edge_type": "SequenceVariant",
+                "curie": f"ClinVar:{index}",
+                "fields": {"name": f"c.{index}A>G (p.Xaa{index}Yaa)"},
+                "source_url": f"https://www.ncbi.nlm.nih.gov/clinvar/variation/{index}",
+                "graph_snapshot_version": "v1",
+            }
+            for index in range(1, 4)
+        ],
+        "error": None,
+    }
+    return await coordinator_worker_execute(
+        harness,
+        [call],
+        [ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=fields)],
+    )
+
+
+async def _classification_write(pick: str | None, *, hand: bool = True) -> dict[str, object]:
+    findings = await _unclassified_variant_findings()
+    query = _valid_query(text="Which variants of this gene matter?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    if hand:
+        _hand_write_the_classification_decision(state, pick)
+    return await graph_module.write_node(state)
+
+
+def _answer_scope_outcome(result: dict[str, object]) -> str:
+    done = next(e for e in result["events"] if e.type == "done")
+    return done.payload["trust_outcome"]
+
+
+def _claim_outcomes(result: dict[str, object]) -> list[str]:
+    return [
+        e.payload["outcome"]
+        for e in result["events"]
+        if e.type == "trust_signal" and e.payload.get("scope") == "claim"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_card30_a_classification_question_over_unclassified_variants_is_ask(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """The decision picked, and the variants carry no classification: the
+    answer is "ask". Each claim's own trust is exactly what it was without
+    the decision, so only the answer-level outcome moves."""
+    baseline = await _classification_write(None, hand=False)
+    assert _answer_scope_outcome(baseline) == "answer", "populate-check: otherwise an answer"
+    result = await _classification_write("asks_classification")
+    assert _answer_scope_outcome(result) == "ask"
+    assert _claim_outcomes(result) == _claim_outcomes(baseline)
+    assert "classification of these variants" in _everything_the_reader_sees(result["events"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pick", ["not_applicable", None])
+async def test_card30_no_floor_without_the_decision(
+    _mock_litellm: AsyncMock, pick: str | None
+) -> None:
+    """Not asked, no usable pick and no decision at all leave the verdict as
+    computed; the line still shows, since it is true on every such list."""
+    result = await _classification_write(pick)
+    assert _answer_scope_outcome(result) == "answer"
+    assert "classification of these variants" in _everything_the_reader_sees(result["events"])
+    none_at_all = await _classification_write(None, hand=False)
+    assert _answer_scope_outcome(none_at_all) == "answer"
+
+
+@pytest.mark.asyncio
+async def test_card30_a_decision_still_running_past_the_grace_is_not_a_floor(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.05)
+
+    async def _slow() -> object:
+        await asyncio.sleep(30)
+        return _classification_record("asks_classification")
+
+    findings = await _unclassified_variant_findings()
+    query = _valid_query(text="Which variants of this gene matter?", audience_depth="researcher")
+    state = _write_state(query, findings)
+    graph_module._run_decisions(state["harness"]).classification_task = (
+        asyncio.get_running_loop().create_task(_slow())
+    )
+    result = await graph_module.write_node(state)
+    assert _answer_scope_outcome(result) == "answer"
+
+
+@pytest.mark.asyncio
+async def test_card30_a_write_that_ends_early_stops_the_classification_decision(
+    _mock_litellm: AsyncMock,
+) -> None:
+    import asyncio
+
+    cancelled = asyncio.Event()
+
+    async def _slow() -> object:
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return _classification_record("asks_classification")
+
+    query = _valid_query(text="Which variants of this gene matter?")
+    state = _write_state(query, [])
+    state["step_error"] = {
+        "fatal": True,
+        "scope": "step",
+        "source": "plan",
+        "error_class": "recoverable",
+        "message": "a stand-in step error",
+        "retry_after_s": 0,
+    }
+    task = asyncio.get_running_loop().create_task(_slow())
+    graph_module._run_decisions(state["harness"]).classification_task = task
+    await asyncio.sleep(0)
+    await graph_module.write_node(state)
+    await asyncio.sleep(0)
+    assert cancelled.is_set() and task.cancelled()
+
+
+@pytest.mark.asyncio
+async def test_card30_two_late_decisions_share_one_grace(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Both Think decisions still running at Write cost one grace together,
+    not two (develop's worst case is one). Red when the reads run one after
+    the other."""
+    import asyncio
+
+    monkeypatch.setattr(graph_module, "_LATE_DECISION_GRACE_S", 0.5)
+
+    async def _slow(record: object) -> object:
+        await asyncio.sleep(30)
+        return record
+
+    async def _timed(hang: bool) -> float:
+        findings = await _unclassified_variant_findings()
+        query = _valid_query(text="Which variants matter?", audience_depth="researcher")
+        state = _write_state(query, findings)
+        if hang:
+            entry = graph_module._run_decisions(state["harness"])
+            loop = asyncio.get_running_loop()
+            entry.features_task = loop.create_task(_slow(_features_record("asks_features")))
+            entry.classification_task = loop.create_task(
+                _slow(_classification_record("asks_classification"))
+            )
+        started = time.monotonic()
+        await graph_module.write_node(state)
+        return time.monotonic() - started
+
+    baseline = await _timed(False)
+    both_late = await _timed(True)
+    added = both_late - baseline
+    assert 0.3 < added < 0.8, added
+
+
+@pytest.mark.asyncio
+async def test_card30_no_floor_when_the_answer_shows_a_classification(
+    _mock_litellm: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The classifier picked asks_classification, but the variants listed
+    carry a classification field, so the line and the floor both stand down.
+    Red when the floor ignores the record-shape check."""
+    findings = await _unclassified_variant_findings()
+    harness = harness_module.Harness(trace_id="test-trace-classified")
+    call = ToolCall(tool="cypher_query", call_id="cy-classed", layer="layer_1_graph")
+    classified = {
+        "status": "ok",
+        "row_count": 1,
+        "total_available": 1,
+        "truncated": False,
+        "rows": [
+            {
+                "node_or_edge_type": "SequenceVariant",
+                "curie": "ClinVar:99",
+                "fields": {"clinical_significance": "Pathogenic"},
+                "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/99",
+                "graph_snapshot_version": "v1",
+            }
+        ],
+        "error": None,
+    }
+    findings += await coordinator_worker_execute(
+        harness,
+        [call],
+        [ToolExecutionResult(contains_untrusted_free_text=False, structured_fields=classified)],
+    )
+    query = _valid_query(text="Which variants are pathogenic?", audience_depth="researcher")
+    # A classified claim is already "ask" by its own trust, so the outcome
+    # cannot tell the floor from no floor. Count the floors applied instead.
+    floors: list[int] = [0]
+    real_aggregate = graph_module.aggregate
+
+    def _counting(outcomes: list[str]) -> str:
+        if len(outcomes) == 2 and outcomes[1] == "ask":
+            floors[0] += 1
+        return real_aggregate(outcomes)
+
+    monkeypatch.setattr(graph_module, "aggregate", _counting)
+    await graph_module.write_node(_write_state(query, findings))
+    floors_without_the_decision = floors[0]
+    floors[0] = 0
+    state = _write_state(query, findings)
+    _hand_write_the_classification_decision(state, "asks_classification")
+    result = await graph_module.write_node(state)
+    seen = _everything_the_reader_sees(result["events"])
+    assert "Pathogenic" in seen, "populate-check: the classification is on the page"
+    assert "classification of these variants" not in seen
+    assert floors[0] == floors_without_the_decision

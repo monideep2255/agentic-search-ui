@@ -8,7 +8,13 @@
 # What a commit MEANS is decided in `.github/release/commit_lib.sh`, which is
 # also where the version reader asks. Findings F-4.15-A-01, A-03 and A-07 were
 # one class, two scripts disagreeing about what a Conventional Commit is, so
-# the two readers became one.
+# the two readers became one. The same reader leaves out the release job's own
+# changelog commit, which reaches `production` one release late through
+# `develop`, so it is never listed as a change.
+#
+# THIS SCRIPT WRITES A FILE AND NOTHING ELSE. It changes CHANGELOG.md in the
+# working tree. tag_and_release.sh commits it, locally, and the back-merge
+# pull request is the only way that commit leaves the job.
 #
 # EVERY COMMIT IN THE RANGE APPEARS EXACTLY ONCE. The previous version tested
 # each commit against five hardcoded patterns and silently dropped whatever
@@ -34,7 +40,14 @@ set -euo pipefail
 version="${RELEASE_VERSION:?RELEASE_VERSION is required}"
 previous="${PREVIOUS_TAG:-}"
 today="$(date -u +%Y-%m-%d)"
-range="${previous:+${previous}..HEAD}"
+# The commits up to RELEASE_SHA, the production commit derive_version.sh read,
+# rather than up to HEAD. HEAD can be ahead of it by then: when the previous
+# release's back-merge was never merged, carry_previous_changelog.sh merges
+# that release's changelog commit into this checkout so the file below keeps
+# its section, and those commits belong to the previous release, not this one.
+# Unset, as in a hand run, it is HEAD, which is what this script always read.
+release_sha="${RELEASE_SHA:-HEAD}"
+range="${previous:+${previous}..}${release_sha}"
 
 work="$(mktemp -d)"
 section="${work}/section.md"
@@ -121,7 +134,7 @@ if [ -n "$shas" ]; then
 fi
 
 if [ "$total" -eq 0 ]; then
-  echo "no commits in range ${range:-<whole history>}; nothing to write" >&2
+  echo "no commits in range ${range}; nothing to write" >&2
   exit 1
 fi
 
@@ -217,7 +230,8 @@ if [ ! -f CHANGELOG.md ]; then
     echo
     echo "Every release of System 3, newest first. Generated on each push to"
     echo "\`production\` by \`.github/workflows/release.yml\` from the Conventional"
-    echo "Commit subjects since the previous tag. Do not hand-edit a released"
+    echo "Commit subjects since the previous tag, and carried into \`develop\` by"
+    echo "that release's back-merge pull request. Do not hand-edit a released"
     echo "section: correct the commit history or add a new entry instead."
     echo
   } > CHANGELOG.md

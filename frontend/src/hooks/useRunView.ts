@@ -25,7 +25,9 @@
 
 import { useMemo } from "react";
 
-import type { AgentEvent, GuardPayload, Layer } from "../lib/events";
+import type { AgentEvent, CitationPayload, GuardPayload } from "../lib/events";
+import { layerNumber } from "../lib/events";
+import { riskTagLabel } from "../lib/riskTag";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -77,17 +79,52 @@ const SYSTEM_NOTE_PREFIXES = [
   // (`TokenPayload.kind === "note"`), which is the classification this list
   // could never be. These stay for a producer that sends no `kind`.
   "Note: one further",
-  "Note: the written summary of these records could not be verified",
+  "Note: no written summary could be checked against the records",
+  "Note: this question reached its resource limit before it finished",
   "This is a research summary, not medical advice",
 ];
 
 /** The findings-tail note's opening words, `_FINDINGS_TAIL_NOTE` in core/graph.py. */
 export const FINDINGS_TAIL_NOTE_PREFIX = "Note: the records below were retrieved for this question";
 
+/**
+ * The opening words of the line under the variant-to-disease table,
+ * `VARIANT_TO_DISEASE_SOURCE_NOTE` in `synthesis/answer_layout.py`.
+ *
+ * Card 23's second part (J-23-01, A-23-01, 2026-10-07): the line describes one
+ * table, so it sits directly under that table in every case. A note otherwise
+ * attaches to the claim AFTER it, and when the table ended the answer there was
+ * none, so the line fell into the answer-wide Notes list. Matched by its words
+ * because nothing else on the wire tells it apart from an answer-wide note that
+ * also follows a table (the findings-tail note, "no written summary"); those
+ * keep their places. `test_answer_layout.py` holds this prefix to the backend
+ * constant, so a reworded line fails a test rather than moving silently.
+ */
+export const VARIANT_TABLE_SOURCE_NOTE_PREFIX = "Each row lists the conditions the variant's ClinVar record names";
+
 const isSystemNote = (text: string) =>
   SYSTEM_NOTE_PREFIXES.some((prefix) => text.trimStart().startsWith(prefix));
 import type { ReasoningStep, StepName, ToolCall } from "../components/screens/RunScreen";
 import type { Claim, Source, TrustSignal } from "../components/screens/AnswerScreen";
+import { citedSourceCounts } from "../components/screens/AnswerScreen";
+
+/**
+ * Whether `later` is `earlier` sent again (F-8.7-A04, card 57): the same
+ * citation id and every field equal except `claim_text`, the record words the
+ * citation was checked against, which grow once the summary is checked. The
+ * server's rule, `contracts.token_order.updates_citation`.
+ */
+export function updatesCitation(earlier: CitationPayload, later: CitationPayload): boolean {
+  if (!earlier.citation_id || earlier.citation_id !== later.citation_id) return false;
+  const before = earlier as unknown as Record<string, unknown>;
+  const after = later as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  keys.delete("claim_text");
+  for (const key of keys) {
+    if ((before[key] ?? null) !== (after[key] ?? null)) return false;
+  }
+  return true;
+}
 
 /**
  * How a source reads on a citation chip and a source card.
@@ -141,18 +178,6 @@ export function sourceDisplayName(source: string, sourceId: string): string {
   return `${source} ${deduped}`.trim();
 }
 
-/** The wire's layer strings, mapped to the design system's 1, 2, 3. */
-export function layerNumber(layer: Layer): 1 | 2 | 3 {
-  switch (layer) {
-    case "layer_1_graph":
-      return 1;
-    case "layer_2_api":
-      return 2;
-    default:
-      return 3;
-  }
-}
-
 /**
  * The short neutral label a refusal leads with, per guard category.
  *
@@ -181,6 +206,7 @@ export const GUARD_REFUSAL_LABEL: Record<GuardPayload["category"], string> = {
   rate_limited: "Daily question limit reached",
   cost_capped: "System at capacity",
   write_seeking: "Read-only system",
+  compute_request: "Capability not in this product",
 };
 
 /**
@@ -307,6 +333,19 @@ export interface RunView {
    */
   clarification: string | null;
   /**
+   * The four ready-made questions to pick from, or an empty array (UI fix
+   * plan item 12.3).
+   *
+   * Read from the SAME `think` event as `clarification` above, never
+   * computed independently, so the two can never name different runs.
+   * Populated only for a bare one-to-three-word topic that opens a
+   * conversation ("reflux disease", "GERD"); item 7.5's own clarification
+   * ("which gene, variant or condition do you mean") sends no options, so
+   * this stays empty for that shape, exactly as it does for every run
+   * before this field existed.
+   */
+  clarificationOptions: string[];
+  /**
    * The refusal's short neutral label, or null (R13, R44).
    *
    * SEPARATE FROM `refusal` rather than prepended to it, because the two
@@ -342,9 +381,15 @@ export interface RunView {
   /**
    * Whether Stop should still be offered.
    *
-   * Reuses `StopButton`'s `deriveStopEnabled`, which has 19 tests behind it and
-   * disables on any terminal event. The first version of the new run screen
-   * offered Stop unconditionally, including after the run had finished.
+   * Reuses `StopButton`'s `deriveStopEnabled`, which disables on `done` or a
+   * fatal error. The first version of the new run screen offered Stop
+   * unconditionally, including after the run had finished.
+   *
+   * This hook sees one event list, so it cannot know what the screen has
+   * shown. `App` therefore replaces this value with `deriveStopOffered`,
+   * computed after the reveal (card 58): Stop stays offered until the first
+   * answer sentence is on screen, even when the server has already
+   * finished.
    */
   stopEnabled: boolean;
 }
@@ -375,6 +420,7 @@ export const EMPTY_RUN_VIEW: RunView = {
   failure: null,
   refusal: null,
   clarification: null,
+  clarificationOptions: [],
   refusalLabel: null,
   refusalLink: null,
   capMessage: null,
@@ -404,9 +450,13 @@ export function useRunView(events: AgentEvent[]): RunView {
      * that whole gap and "is writing the answer" never appeared once.
      *
      * So Write is entered as soon as the run's own events say Act is over:
-     *   - every tool call the run opened (by `tool_start`, or by the plan's
-     *     own `tool_calls`) has a matching `tool_result`, and at least one
-     *     result arrived; or
+     *   - every tool call that has STARTED (a `tool_start`) has a matching
+     *     `tool_result`, and at least one result arrived. A planned call
+     *     that never started, because act_node skipped it, does not hold Act
+     *     open. This rests on the backend writing every `tool_start` of a
+     *     run before any `tool_result`, pinned by
+     *     test_every_tool_start_comes_before_the_first_tool_result in
+     *     tests/system_03_search_agent/core/test_breadth_wiring.py; or
      *   - the plan selected no tool and none started (a no-data refusal
      *     path, where Write follows Plan directly).
      * A later `tool_start` reopens Act, which is the honest reading.
@@ -417,7 +467,6 @@ export function useRunView(events: AgentEvent[]): RunView {
       planEvent && planEvent.type === "plan" && Array.isArray(planEvent.payload.tool_calls)
         ? planEvent.payload.tool_calls
         : [];
-    const plannedIds = plannedCalls.map((call) => call.call_id);
     const openedIds = new Set<string>();
     const closedIds = new Set<string>();
     for (const event of events) {
@@ -428,10 +477,11 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
     }
     const startedAnyTool = openedIds.size > 0;
-    // Planned ids count only once any of them has appeared on a tool frame:
-    // a plan whose ids never reach the wire must not hold Write back forever.
-    const plannedOnWire = plannedIds.some((id) => openedIds.has(id));
-    const idsToClose = new Set([...openedIds, ...(plannedOnWire ? plannedIds : [])]);
+    // 2026-10-09, card 19: Act is over when every call that STARTED has a result.
+    // A planned call that never started (skipped at the 20-call limit or the cost
+    // cap) has no start frame and never will: `act_node` writes every start before
+    // any call runs, so waiting on it would hold Act through the whole writing wait.
+    const idsToClose = openedIds;
     const actComplete =
       startedAnyTool && closedIds.size > 0 && [...idsToClose].every((id) => closedIds.has(id));
     const planSelectedNoTool =
@@ -519,12 +569,27 @@ export function useRunView(events: AgentEvent[]): RunView {
     //
     // One index map, built once, used by both. A citation that cannot be
     // numbered is not usable as a citation anywhere.
+    //
+    // F-8.7-A04, card 57: one citation per id, and the same citation sent
+    // again takes the first one's place. The server sends the listing's
+    // citations before the summary is written, then sends again each one the
+    // summary also cites, with the same id, number and record and the words
+    // each summary sentence was checked against joined into `claim_text`
+    // (`updatesCitation`). Any other repeat of an id is ignored: the first
+    // stays, since its number may already be on screen.
     const usableIndexes = new Set<number>();
     const citationById = new Map<string, (typeof events)[number]>();
     for (const event of events) {
       if (event.type !== "citation") continue;
       const index = event.payload.display_index;
       if (!Number.isInteger(index) || index < 1) continue;
+      const earlier = citationById.get(event.payload.citation_id);
+      if (earlier !== undefined) {
+        if (earlier.type === "citation" && updatesCitation(earlier.payload, event.payload)) {
+          citationById.set(event.payload.citation_id, event);
+        }
+        continue;
+      }
       if (usableIndexes.has(index)) continue;
       usableIndexes.add(index);
       citationById.set(event.payload.citation_id, event);
@@ -532,13 +597,14 @@ export function useRunView(events: AgentEvent[]): RunView {
 
     const emitted = new Set<number>();
     const sources: Source[] = [];
-    for (const event of events) {
+    // The kept citations, in the order their ids first arrived (a Map keeps
+    // a key's first position when its value is replaced).
+    for (const event of citationById.values()) {
       if (event.type !== "citation") continue;
       const payload = event.payload;
       const index = payload.display_index;
-      // Same rule as the chips above, and deliberately the same set membership:
-      // a citation is either usable everywhere or nowhere.
-      if (!citationById.has(payload.citation_id)) continue;
+      // Same rule as the chips above, and deliberately the same map: a
+      // citation is either usable everywhere or nowhere.
       if (emitted.has(index)) continue;
       emitted.add(index);
       sources.push({
@@ -639,24 +705,65 @@ export function useRunView(events: AgentEvent[]): RunView {
      * render as notes, never first). A token with no `kind` comes from an
      * older producer and is classified exactly as before.
      */
-    let paragraph = 0;
-    let claimsInParagraph = 0;
-    let pendingHeading: string | null = null;
-    let pendingNotes: string[] = [];
-    let pendingTableHeader: string[] | null = null;
     /*
-     * 2026-09-14: true after the findings-tail note, until a heading. Every
-     * claim in that span is a code-built record line ("Disease name: X"), so
-     * the answer screen groups them into a record block instead of prose.
-     * Set for a typed note and a kind-less one alike.
+     * Build phase 8.7, T-8.7-03 (card 50): TWO REGIONS, EACH WITH ITS OWN
+     * STRUCTURE STATE. The server now sends the code-built record listing
+     * (`placement: "listing"`) the moment the searches end, and the count
+     * line and the written summary (`placement: "summary"`) later; the
+     * notes under the listing (a cost limit, a writer failure) are placed
+     * "listing" too. The screen shows the summary above the
+     * listing, so each region is classified as if the other were not there:
+     * a listing that ends inside its findings tail or a table must not turn
+     * the summary's first sentence into a record line, and a summary heading
+     * must not attach itself to the listing. A token with no placement is
+     * the summary, so an older producer's answer runs through one region
+     * exactly as before.
+     *
+     * `claims` stays in ARRIVAL order, each listing claim tagged
+     * `placement: "listing"`. That is deliberate: a claim's index is its
+     * identity on screen (its React key, its `claim-text-N` hook, the key of
+     * the records table it opens), so a summary that lands after the listing
+     * is appended rather than inserted, and no record row already on screen
+     * changes identity when it lands. `AnswerBody` does the placing.
      */
-    let inFindingsTail = false;
+    interface Region {
+      /*
+       * Card 23's second part: the last table row, while nothing but
+       * paragraph breaks has come after it. The variant-to-disease source
+       * line arriving then belongs under that table, whatever follows it,
+       * or nothing. Per region, so a listing row never takes a summary's note.
+       */
+      openTableRow: Claim | null;
+      paragraph: number;
+      claimsInParagraph: number;
+      pendingHeading: string | null;
+      pendingNotes: string[];
+      pendingTableHeader: string[] | null;
+      /*
+       * 2026-09-14: true after the findings-tail note, until a heading.
+       * Every claim in that span is a code-built record line ("Disease name:
+       * X"), so the answer screen groups them into a record block instead of
+       * prose. Set for a typed note and a kind-less one alike.
+       */
+      inFindingsTail: boolean;
+    }
+    const newRegion = (): Region => ({
+      openTableRow: null,
+      paragraph: 0,
+      claimsInParagraph: 0,
+      pendingHeading: null,
+      pendingNotes: [],
+      pendingTableHeader: null,
+      inFindingsTail: false,
+    });
+    const summaryRegion = newRegion();
+    const listingRegion = newRegion();
     const isFindingsTailNote = (text: string) =>
       text.trimStart().startsWith(FINDINGS_TAIL_NOTE_PREFIX);
-    const nextParagraph = () => {
-      if (claimsInParagraph > 0) {
-        paragraph += 1;
-        claimsInParagraph = 0;
+    const nextParagraph = (region: Region) => {
+      if (region.claimsInParagraph > 0) {
+        region.paragraph += 1;
+        region.claimsInParagraph = 0;
       }
     };
     for (const event of events) {
@@ -667,29 +774,39 @@ export function useRunView(events: AgentEvent[]): RunView {
       // below, from the trust_signal's own `message` and `fallback_link`
       // fields, never from this token's text.
       if (answerRefusalSignal) continue;
+      const listing = event.payload.placement === "listing";
+      const region = listing ? listingRegion : summaryRegion;
       const kind = event.payload.kind ?? null;
       if (kind === "paragraph_break") {
-        nextParagraph();
+        nextParagraph(region);
         continue;
       }
       if (kind === "heading") {
-        nextParagraph();
-        inFindingsTail = false;
+        nextParagraph(region);
+        region.openTableRow = null;
+        region.inFindingsTail = false;
         const heading = event.payload.text.trim();
-        if (heading) pendingHeading = heading;
+        if (heading) region.pendingHeading = heading;
         continue;
       }
       if (kind === "table_header") {
         const cells = event.payload.cells ?? [];
         // 2026-09-14: any column count; the Researcher table carries a third.
-        pendingTableHeader = cells.length > 0 ? cells : null;
+        region.pendingTableHeader = cells.length > 0 ? cells : null;
+        region.openTableRow = null;
         continue;
       }
       if (kind === "note") {
-        nextParagraph();
-        inFindingsTail = isFindingsTailNote(event.payload.text);
+        nextParagraph(region);
+        region.inFindingsTail = isFindingsTailNote(event.payload.text);
         const note = event.payload.text.trim();
-        if (note) pendingNotes.push(note);
+        const openRow = region.openTableRow;
+        if (note && openRow !== null && note.startsWith(VARIANT_TABLE_SOURCE_NOTE_PREFIX)) {
+          openRow.noteAfter = openRow.noteAfter ? `${openRow.noteAfter} ${note}` : note;
+        } else if (note) {
+          region.pendingNotes.push(note);
+        }
+        region.openTableRow = null;
         continue;
       }
       // R-08: a repeated marker_id must not produce a repeated chip.
@@ -758,7 +875,7 @@ export function useRunView(events: AgentEvent[]): RunView {
         kind === null &&
         (isSystemNote(text) || (cited.length === 0 && text.startsWith("Note:")))
       ) {
-        inFindingsTail = isFindingsTailNote(text);
+        region.inFindingsTail = isFindingsTailNote(text);
         systemNotes.push(text);
         continue;
       }
@@ -777,32 +894,35 @@ export function useRunView(events: AgentEvent[]): RunView {
         ),
       };
       if (unresolved > 0) claim.pendingCitations = unresolved;
-      if (inFindingsTail) claim.findingsTail = true;
+      if (region.inFindingsTail) claim.findingsTail = true;
+      if (listing) claim.placement = "listing";
       if (kind !== null) {
         claim.kind = kind === "list_item" || kind === "table_row" ? kind : "claim";
-        claim.paragraph = paragraph;
-        if (pendingHeading !== null) {
-          claim.heading = pendingHeading;
-          pendingHeading = null;
+        claim.paragraph = region.paragraph;
+        if (region.pendingHeading !== null) {
+          claim.heading = region.pendingHeading;
+          region.pendingHeading = null;
         }
-        if (pendingNotes.length > 0) {
-          claim.noteBefore = pendingNotes.join(" ");
-          pendingNotes = [];
+        if (region.pendingNotes.length > 0) {
+          claim.noteBefore = region.pendingNotes.join(" ");
+          region.pendingNotes = [];
         }
         const cells = event.payload.cells;
         if (cells && cells.length > 0) claim.cells = cells;
         const emphasis = event.payload.emphasis;
         if (emphasis && emphasis.length > 0) claim.emphasis = emphasis;
-        if (kind === "table_row" && pendingTableHeader !== null) {
-          claim.tableHeader = pendingTableHeader;
-          pendingTableHeader = null;
+        if (kind === "table_row" && region.pendingTableHeader !== null) {
+          claim.tableHeader = region.pendingTableHeader;
+          region.pendingTableHeader = null;
         }
-        claimsInParagraph += 1;
+        region.claimsInParagraph += 1;
       }
+      region.openTableRow = kind === "table_row" ? claim : null;
       claims.push(claim);
     }
-    // Notes with no claim after them are disclosures about the whole answer.
-    systemNotes.push(...pendingNotes);
+    // Notes with no claim after them are disclosures about the whole answer,
+    // the summary's first since it reads first.
+    systemNotes.push(...summaryRegion.pendingNotes, ...listingRegion.pendingNotes);
 
     // Trust signals. Worst-wins is the server's job; this only renders what
     // arrived, and never manufactures a positive verdict from nothing.
@@ -896,12 +1016,10 @@ export function useRunView(events: AgentEvent[]): RunView {
       if (summary !== null) {
         if (!payload.grounded) trust.push({ kind: "risk", label: "Not fully grounded" });
         trust.push({ kind: summary.startsWith("Confirmed") ? "good" : "plain", label: summary });
-        if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
-          trust.push({
-            kind: "risk",
-            label: payload.risk_tier === "high" ? "High-risk claim" : `${payload.risk_tier} risk claim`,
-          });
-        }
+        // Card 71: the tag's words come from `riskTagLabel`, the one source
+        // the reopened answer's tag uses too.
+        const summaryRiskLabel = riskTagLabel(payload.risk_tier);
+        if (summaryRiskLabel !== null) trust.push({ kind: "risk", label: summaryRiskLabel });
       } else {
       trust.push(
         payload.grounded
@@ -922,9 +1040,10 @@ export function useRunView(events: AgentEvent[]): RunView {
       // it here restores the pre-existing display for a refusal (only
       // "Not fully grounded") while still over-reporting, unchanged, for
       // any OTHER unrecognised string a future backend value might send.
-      if (payload.risk_tier && payload.risk_tier !== "low" && payload.risk_tier !== "unknown") {
-        trust.push({ kind: "risk", label: `${payload.risk_tier} risk claim` });
-      }
+      // Card 71: `riskTagLabel` holds this exclusion and the words, shared
+      // with the summary branch above and with the reopened answer.
+      const pillRiskLabel = riskTagLabel(payload.risk_tier);
+      if (pillRiskLabel !== null) trust.push({ kind: "risk", label: pillRiskLabel });
       // R-01: "agreed" needs at least two things to agree. The A-05 fix moved
       // the nonsense rather than removing it, so "0 layers agreed" was still
       // reachable, now from a run that queried layers and cited nothing.
@@ -1133,19 +1252,30 @@ export function useRunView(events: AgentEvent[]): RunView {
       }
     }
     /*
-     * Each figure NAMES what it counts (F-4.9-R-02).
+     * Each figure NAMES what it counts (F-4.9-R-02, card 22).
      *
      * The tools figure counts calls the run made; the layers figure counts
      * layers the answer actually rests on. Those are different bases, and the
      * old wording put them side by side as bare nouns, so "4 tools · 2 layers"
      * read as a contradiction of the reasoning log directly above it. Saying
      * "from N layers" ties the layer count to the sources it describes.
+     *
+     * Card 22 (owner, 2026-10-06): "18 sources" here counted numbered
+     * citations while "Based on 17 sources" and the Sources heading counted
+     * pages, on one screen. Every "sources" number now counts distinct pages
+     * under one key, read off the same grouping the Sources list renders
+     * (`citedSourceCounts`), so this reads "13 tool calls · 16 sources cited
+     * from 3 layers" and agrees with the list and the trust line. The layers
+     * figure counts every layer any cited page came from, which is the
+     * number of groups that list shows: a page cited from the graph and from
+     * a live fetch is one card, and both of its layers keep their group.
      */
+    const cited = citedSourceCounts(sources);
     const meta = landed
-      ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool" : "tools"} · ` +
-        `${sources.length} ${sources.length === 1 ? "source" : "sources"}` +
-        (sources.length > 0
-          ? ` from ${layerCount} ${layerCount === 1 ? "layer" : "layers"}`
+      ? `${toolCalls.length} ${toolCalls.length === 1 ? "tool call" : "tool calls"} · ` +
+        `${cited.pages} ${cited.pages === 1 ? "source" : "sources"} cited` +
+        (cited.pages > 0
+          ? ` from ${cited.layers} ${cited.layers === 1 ? "layer" : "layers"}`
           : "")
       : "";
 
@@ -1177,9 +1307,52 @@ export function useRunView(events: AgentEvent[]): RunView {
       recoverable: "This run could not be completed. Try asking again, or rephrase the question.",
       unexpected: "This run could not be completed. Try asking again, or rephrase the question.",
     };
+    /*
+     * Guardrail failures get their own words (cards 84 and 72, step 1 of the
+     * guardrail design, accepted by the owner on 2026-10-08). When the check
+     * every question passes first could not finish, nothing was searched and
+     * nothing was wrong with the question, so "rephrase the question" and "in
+     * a moment" were both wrong.
+     *
+     * Decided by category, from `source` and `error_class` alone (fix round,
+     * A-GR-10): only a fatal error whose `source` is the guardrail AND whose
+     * class is "transient", the check not finishing on our side, reads these
+     * words. The backend sends a double timeout and two unreadable guard
+     * replies as "transient". A "recoverable" guardrail failure is one the
+     * question caused, a provider's content-policy refusal or a 400, and keeps
+     * "rephrase the question"; an "unexpected" one, a 401 among them, is not
+     * fixed by asking again, and keeps its own line; a stopped run keeps its
+     * own line. Every other failure keeps `FATAL_COPY`. `source`,
+     * `error_class` and `retry_after_s` are a fixed step name, a closed enum
+     * and a number on the wire, never free text, so the backend's `message`
+     * is still never rendered (F-4.8-A-15).
+     *
+     * A wait the provider named arrives in `retry_after_s`: seconds up to two
+     * minutes, whole minutes past that (F-84-A02, F-72-V05). A wait of 0, one
+     * that has passed or none named, reads the plain "Try asking again.", so a
+     * person is never told to wait when no wait is known (F-84-A01, A09).
+     */
+    const GUARDRAIL_FAILURE =
+      "We could not finish checking your question, so nothing was searched. " +
+      "This was a problem on our side, not with your question.";
+    const guardrailFailure = (retryAfterS: number): string => {
+      const seconds =
+        Number.isFinite(retryAfterS) && retryAfterS > 0 ? Math.ceil(retryAfterS) : 0;
+      if (seconds === 0) return `${GUARDRAIL_FAILURE} Try asking again.`;
+      if (seconds <= 120) {
+        return (
+          `${GUARDRAIL_FAILURE} Try asking again in about ${seconds} ` +
+          `${seconds === 1 ? "second" : "seconds"}.`
+        );
+      }
+      return `${GUARDRAIL_FAILURE} Try asking again in about ${Math.ceil(seconds / 60)} minutes.`;
+    };
     const failure =
       fatalError && fatalError.type === "error"
-        ? (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
+        ? fatalError.payload.source === "guardrail" &&
+          fatalError.payload.error_class === "transient"
+          ? guardrailFailure(fatalError.payload.retry_after_s)
+          : (FATAL_COPY[fatalError.payload.error_class] ?? FATAL_COPY.unexpected)
         : null;
 
     const failedGuard = events.find(
@@ -1248,6 +1421,23 @@ export function useRunView(events: AgentEvent[]): RunView {
       clarifyingThink !== undefined
         ? (clarifyingThink.payload.clarifying_question as string).trim()
         : null;
+
+    /*
+     * THE FOUR OPTIONS TO PICK FROM (UI fix plan item 12.3).
+     *
+     * Read from the SAME `clarifyingThink` event found above, never a
+     * separate search, so this can never name a different run's options.
+     * `clarifying_options` is optional and nullable on the wire; absent,
+     * null, or (defensively) a non-array all resolve to the same empty
+     * array a run with no options already returns.
+     */
+    const clarificationOptions =
+      clarifyingThink !== undefined && Array.isArray(clarifyingThink.payload.clarifying_options)
+        ? clarifyingThink.payload.clarifying_options
+            .filter((option): option is string => typeof option === "string")
+            .map((option) => option.trim())
+            .filter((option) => option.length > 0)
+        : [];
 
     /*
      * PRECEDENCE, stated rather than left to the order of the ternaries.
@@ -1360,6 +1550,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       failure,
       refusal,
       clarification,
+      clarificationOptions,
       refusalLabel,
       refusalLink,
       capMessage,

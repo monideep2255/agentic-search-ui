@@ -1,3 +1,23 @@
+---
+paths:
+  - "src/system_03_search_agent/harness/**/*"
+  - "src/system_03_search_agent/orchestrator/**/*"
+  - "src/system_03_search_agent/core/graph.py"
+  - "src/system_03_search_agent/core/run.py"
+  - "src/system_03_search_agent/core/clarify.py"
+  - "src/system_03_search_agent/core/session_memory.py"
+  - "src/system_03_search_agent/guardrail/classifier.py"
+  - "src/system_03_search_agent/synthesis/findings.py"
+  - "src/system_03_search_agent/feedback/promotion.py"
+  - "src/system_03_search_agent/tools/cypher_generation.py"
+  - "src/system_03_search_agent/tools/cypher_query.py"
+  - "src/system_03_search_agent/tools/schema_slice.py"
+  - "src/system_03_search_agent/tools/catalogue.py"
+  - "src/system_03_search_agent/tools/graph_schema_constants.py"
+  - "tests/system_03_search_agent/harness/**/*"
+  - "tests/system_03_search_agent/synthesis/test_prompt_cache_prefix.py"
+---
+
 ## Prompt-cache discipline
 
 The three-tier harness (Guard, Plan, Synth) makes many model calls per query, and provider-side prompt caching is how the per-query cost cap in `system-design-patterns.md` pattern 4 stays affordable. A provider caches on an exact prefix match: system instructions, then tool schemas, then the static graph and BioLink schema, in that order. Rewrite a single byte anywhere in that prefix and the cache misses, so the whole prompt re-bills at the uncached rate. Nothing errors. The bill just climbs. This rule exists so that fact is known before the harness code is written, not discovered later in a cost dashboard.
@@ -29,7 +49,7 @@ Obligation 2: tool schemas are sorted alphabetically and fixed in code.
 
 Obligation 3: the few-shot pool loads once at process start from a versioned file.
 
-- The v1 few-shot pool (the seven or eight must-pass moat questions, seeded from the evaluation playbook) lives as a versioned file in the repo, loaded once into memory at process start.
+- The v1 few-shot pool (the seven or eight must-pass moat questions, seeded from the evaluation playbook) lives as a versioned file in the repository, loaded once into memory at process start.
 - Never read the pool from a live database on every request. The pool sits inside the stable prefix precisely because it does not change within a session, and a per-request database read defeats that: a changing prefix source, even one that happens to return the same content, is a liveness risk the caching design does not tolerate.
 - A promoted competency question is appended to the pool file at the weekly review cadence and takes effect on the next deploy, never a live hot reload mid-session.
 

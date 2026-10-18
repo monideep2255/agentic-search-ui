@@ -25,7 +25,11 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from system_03_search_agent.adapters.cli.render import Renderer, render_client_error
+from system_03_search_agent.adapters.cli.render import (
+    Renderer,
+    address_for_display,
+    render_client_error,
+)
 from system_03_search_agent.contracts.events import (
     CitationPayload,
     CostPayload,
@@ -249,7 +253,14 @@ class TestRefusalPath:
                 _event("done", 3, DonePayload(total_cost_usd=0.01, total_tool_calls=1, elapsed_ms=90, trust_outcome=outcome))
             )
             assert renderer.finish() == 0, f"outcome={outcome!r} should still exit 0"
-            assert f"[{outcome}]" in out.getvalue()
+            # Card 62, PR-8.10-01: a finished `ask` answer is tagged
+            # `[answer]` with the web's caution under it, since `[ask]` on
+            # this surface means a question back with options to pick. The
+            # signal's `high` tier adds the web's risk mark (F-62-A02).
+            tag = "[flag]\nHigh-risk claim\n" if outcome == "flag" else (
+                "[answer]\nSingle source, not independently confirmed · High-risk claim\n"
+            )
+            assert tag in out.getvalue()
 
 
 class TokenPayloadEventBuilder:
@@ -282,6 +293,7 @@ class TestGuardRejected:
     def test_every_guard_category_has_copy_and_none_of_it_leaks_to_stdout(self) -> None:
         for category in (
             "off_topic", "medical_advice", "injection", "rate_limited", "cost_capped", "write_seeking",
+            "compute_request",
         ):
             out, err = io.StringIO(), io.StringIO()
             renderer = Renderer(out, err, operator=False)
@@ -1195,7 +1207,7 @@ class TestGuardRejectionSuppressesLaterTrustOutput:
         exit_code = renderer.finish()
         assert exit_code != 0
         # Mutation: drop the `_guard_rejected` check in
-        # `_write_trust_prefix` -> "[answer]" would appear on stdout.
+        # `_write_verdict` -> "[answer]" would appear on stdout.
         assert out.getvalue() == ""
 
 
@@ -1261,6 +1273,10 @@ class TestTrustPrefixOwnLine:
                     citation_id=None, scope="answer",
                 ),
             )
+        )
+        # Card 62's fix round (F-62-A05): the tag is printed from `done`.
+        renderer.handle(
+            _event("done", 4, DonePayload(total_cost_usd=0.0, total_tool_calls=1, elapsed_ms=5, trust_outcome="answer"))
         )
         rendered = out.getvalue()
         idx = rendered.index("[answer]")
@@ -1510,6 +1526,39 @@ class TestDepthReviewRoundFourFixes:
         assert "\\x1b" in rendered
         assert rendered.count("[answer]") == 0
         assert "[\\answer]" in rendered
+
+
+
+class TestABaseUrlIsShownByItsHostAlone:
+    """Build phase 8.10's fix round, F-8.10-A05: a base URL written with a
+    `user:pass@` put the password on stdout and stderr. Mutation that turns
+    this red: return the URL as given, or drop only the path."""
+
+    @pytest.mark.parametrize(
+        ("url", "shown"),
+        [
+            ("https://alice:hunter2@example.test/api?key=s3cret#frag", "https://example.test"),
+            ("https://alice@example.test", "https://example.test"),
+            ("https://al:ice:hun@ter2@example.test:8443/", "https://example.test:8443"),
+            ("http://127.0.0.1:8000/", "http://127.0.0.1:8000"),
+            ("http://[::1]:8000", "http://[::1]:8000"),
+            (
+                "https://search-agent-api-production.up.railway.app",
+                "https://search-agent-api-production.up.railway.app",
+            ),
+        ],
+    )
+    def test_only_the_scheme_host_and_port_are_shown(self, url: str, shown: str) -> None:
+        assert address_for_display(url) == shown
+
+    @pytest.mark.parametrize("url", ["not a url", "https://alice:hunter2@example.test:99999", ""])
+    def test_an_address_it_cannot_read_is_named_without_its_text(self, url: str) -> None:
+        shown = address_for_display(url)
+        assert "hunter2" not in shown and "alice" not in shown
+        assert shown == "the server s3 login used"
+
+    def test_a_control_byte_in_the_host_is_escaped(self) -> None:
+        assert "\x1b" not in address_for_display("https://ex\x1b[2Jample.test")
 
 
 if __name__ == "__main__":

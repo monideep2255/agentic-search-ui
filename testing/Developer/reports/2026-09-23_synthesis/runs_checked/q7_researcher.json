@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "What positive and negative genes do ashkenazi jewish people have?",
+  "outcome": "answer",
+  "words": 188,
+  "paragraphs": 2,
+  "headings": 2,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "10926794",
+    "19690183",
+    "34870614",
+    "35944511",
+    "42753012"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 6 pubmed records: The 6q22.33 locus and breast cancer susceptibility. [1], Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients. [2], The 6q22.33 locus and breast cancer susceptibility. [3], Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis. [4], Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study. [5] and An update on APC I1307K homozygosity: observations from a large multigene panel testing cohort. [6]. \n\n## 6q22.33 Breast Cancer Susceptibility Locus\nA genome-wide association study in the Ashkenazi Jewish genetic isolate identified a novel breast cancer susceptibility locus at 6q22.33 (rs2180341), confirmed in replication cohorts with a per-allele OR of 1.18 (95% CI 1.04\u20131.33, P = 0.0083) and strengthened in aggregate meta-analysis (OR 1.24, P = 3.85 \u00d7 10\u207b\u2077) [1]. \n\n## Pubmed records found\n\n- Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients.\n- The 6q22.33 locus and breast cancer susceptibility.\n- Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis.\n- Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study.\n- An update on APC I1307K homozygosity: observations from a large multigene panel testing cohort.\n",
+  "key": "q7"
+}

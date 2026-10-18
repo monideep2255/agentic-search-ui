@@ -1,0 +1,2193 @@
+{
+ "record": {
+  "model": "anthropic/claude-sonnet-5",
+  "model_id": "anthropic/claude-sonnet-5",
+  "synth_effort": "none",
+  "question_id": "G-016",
+  "run": 1,
+  "question": "What are the known orthologs of TP53 in other species?",
+  "trace_id": "trace-wb3-G-016-r1-30b9a570ff1c4def",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T22:30:50Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 58,
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 30,
+  "prose_kept": [
+   "The graph lists gene record NCBIGene:100009292 with name tumor protein p53 [1].",
+   "It also lists gene record NCBIGene:100049321 with name tumor protein p53 [2].",
+   "It also lists gene record NCBIGene:100062044 with name tumor protein p53 [3].",
+   "It also lists gene record NCBIGene:100092821 with name tumor protein p53 [4].",
+   "It also lists gene record NCBIGene:100136737 with name tumor protein p53 [5].",
+   "It also lists gene record NCBIGene:100304476 with name tumor protein p53 [6].",
+   "It also lists gene record NCBIGene:100379269 with name tumor protein p53 [7].",
+   "It also lists gene record NCBIGene:100415710 with name tumor protein p53 [8].",
+   "It also lists gene record NCBIGene:100435218 with name tumor protein p53 [9].",
+   "It also lists gene record NCBIGene:100468516 with name tumor protein p53 [10].",
+   "It also lists gene record NCBIGene:100583326 with name tumor protein p53 [11].",
+   "It also lists gene record NCBIGene:100663725 with name tumor protein p53 [12].",
+   "It also lists gene record NCBIGene:100682525 with name tumor protein p53 [13].",
+   "It also lists gene record NCBIGene:100702587 with name tumor protein p53 [14].",
+   "It also lists gene record NCBIGene:100922473 with name tumor protein p53 [15].",
+   "It also lists gene record NCBIGene:100963622 with name tumor protein p53 [16].",
+   "It also lists gene record NCBIGene:100973941 with name tumor protein p53 [17].",
+   "It also lists gene record NCBIGene:101006608 with name tumor protein p53 [18].",
+   "It also lists gene record NCBIGene:101043647 with name tumor protein p53 [19].",
+   "It also lists gene record NCBIGene:101133524 with name tumor protein p53 [20].",
+   "It also lists gene record NCBIGene:101285670 with name tumor protein p53 [21].",
+   "It also lists gene record NCBIGene:101319146 with name tumor protein p53 [22].",
+   "It also lists gene record NCBIGene:101351852 with name tumor protein p53 [23].",
+   "It also lists gene record NCBIGene:101362427 with name tumor protein p53 [24].",
+   "It also lists gene record NCBIGene:101399576 with name tumor protein p53 [25].",
+   "It also lists gene record NCBIGene:101416069 with name tumor protein p53 [26].",
+   "It also lists gene record NCBIGene:101480650 with name tumor protein p53 [27].",
+   "It also lists gene record NCBIGene:101528346 with name tumor protein p53 [28].",
+   "It also lists gene record NCBIGene:101558045 with name tumor protein p53 [29].",
+   "It also lists gene record NCBIGene:101589830 with name tumor protein p53 [30]."
+  ],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   8.24203120799939,
+   9.490743834001478
+  ],
+  "writer_completion_tokens": [
+   684,
+   1094
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 34.104,
+  "done_elapsed_s": 34.061,
+  "metered_cost_usd": 0.08544272168,
+  "done_cost_usd": 0.08544272168,
+  "openrouter_cost_usd": 0.085353,
+  "writer_openrouter_cost_usd": 0.085268,
+  "writer_metered_cost_usd": 0.085268,
+  "answer_text": "Found 40 gene records for TP53, of 715 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40]. \n\nGene records found\n\nGene NCBIGene:100009292, name: tumor protein p53 [1]. Gene NCBIGene:100049321, name: tumor protein p53 [2]. Gene NCBIGene:100062044, name: tumor protein p53 [3]. Gene NCBIGene:100092821, name: tumor protein p53 [4]. Gene NCBIGene:100136737, name: tumor protein p53 [5]. Gene NCBIGene:100304476, name: tumor protein p53 [6]. Gene NCBIGene:100379269, name: tumor protein p53 [7]. Gene NCBIGene:100415710, name: tumor protein p53 [8]. Gene NCBIGene:100435218, name: tumor protein p53 [9]. Gene NCBIGene:100468516, name: tumor protein p53 [10]. Gene NCBIGene:100583326, name: tumor protein p53 [11]. Gene NCBIGene:100663725, name: tumor protein p53 [12]. Gene NCBIGene:100682525, name: tumor protein p53 [13]. Gene NCBIGene:100702587, name: tumor protein p53 [14]. Gene NCBIGene:100922473, name: tumor protein p53 [15]. Gene NCBIGene:100963622, name: tumor protein p53 [16]. Gene NCBIGene:100973941, name: tumor protein p53 [17]. Gene NCBIGene:101006608, name: tumor protein p53 [18]. Gene NCBIGene:101043647, name: tumor protein p53 [19]. Gene NCBIGene:101133524, name: tumor protein p53 [20]. Gene NCBIGene:101285670, name: tumor protein p53 [21]. Gene NCBIGene:101319146, name: tumor protein p53 [22]. Gene NCBIGene:101351852, name: tumor protein p53 [23]. Gene NCBIGene:101362427, name: tumor protein p53 [24]. Gene NCBIGene:101399576, name: tumor protein p53 [25]. Gene NCBIGene:101416069, name: tumor protein p53 [26]. Gene NCBIGene:101480650, name: tumor protein p53 [27]. Gene NCBIGene:101528346, name: tumor protein p53 [28]. Gene NCBIGene:101558045, name: tumor protein p53 [29]. Gene NCBIGene:101589830, name: tumor protein p53 [30]. Gene NCBIGene:101609339, name: tumor protein p53 [31]. Gene NCBIGene:101632504, name: tumor protein p53 [32]. Gene NCBIGene:101656530, name: tumor protein p53 [33]. Gene NCBIGene:101677794, name: tumor protein p53 [34]. Gene NCBIGene:101701769, name: tumor protein p53 [35]. Gene NCBIGene:101833915, name: tumor protein p53 [36]. Gene NCBIGene:101942845, name: tumor protein p53 [37]. Gene NCBIGene:101957738, name: tumor protein p53 [38]. Gene NCBIGene:101978980, name: tumor protein p53 [39]. Gene NCBIGene:102005455, name: tumor protein p53 [40]. Gene symbol: TP53 [41]. Gene name: TP53 [45]. \n\nPubmed records found\n\nPubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data [42]. Pubmed title: Integrated Analysis of TP53 Gene and Pathway Alterations in The Cancer Genome Atlas [47]. Pubmed title: Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants [50]. Pubmed title: The Role of TP53 in Adaptation and Evolution [53]. Pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms [56]. \n\nClinvar records found\n\nClinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [43]. Clinvar title: NC_000017.11:g.7666193C>T [48]. Clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [51]. Clinvar title: NM_000546.6(TP53):c.1101-73G>C [54]. Clinvar title: NM_000546.6(TP53):c.-28-3132T>C [57]. \n\nOmim records found\n\nTUMOR PROTEIN p53 [44]. TP53 [44]. \n\nClinical trial records found\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [46]. Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [49]. Clinical trial name: The p53 Colorectal Cancer Trial [52]. Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [55]. Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [58]. \n\nNote: this answer was truncated because only 159 of the 715 records that matched this question in the graph were retrieved"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.135,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 798,
+    "completion_tokens": 44,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.167744e-05,
+    "reply": null,
+    "dur": 1.762
+   },
+   {
+    "t": 1.913,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 996,
+    "completion_tokens": 55,
+    "cached_tokens": 907,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.3758e-05,
+    "reply": null,
+    "dur": 3.512
+   },
+   {
+    "t": 16.27,
+    "model": "openrouter/anthropic/claude-sonnet-5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 16590,
+    "completion_tokens": 684,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.04002,
+    "reply": "The knowledge graph returns a large set of gene records annotated as tumor protein p53, each carrying its own distinct NCBI Gene identifier, consistent with TP53 orthologs being catalogued separately per species. No species labels or orthology-edge details are included in these findings, so the specific organism for each entry cannot be stated.\n\n## Ortholog Gene Records\n\nThe findings list gene records including NCBIGene:100009292, NCBIGene:100049321, NCBIGene:100062044, NCBIGene:100092821, NCBIGene:100136737, NCBIGene:100304476, NCBIGene:100379269, NCBIGene:100415710, NCBIGene:100435218, NCBIGene:100468516, NCBIGene:100583326, NCBIGene:100663725, NCBIGene:100682525, NCBIGene:100702587, NCBIGene:100922473, NCBIGene:100963622, NCBIGene:100973941, NCBIGene:101006608, NCBIGene:101043647, NCBIGene:101133524, NCBIGene:101285670, NCBIGene:101319146, NCBIGene:101351852, NCBIGene:101362427, NCBIGene:101399576, NCBIGene:101416069, NCBIGene:101480650, NCBIGene:101528346, NCBIGene:101558045, and NCBIGene:101589830 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Shared Gene Name\n\nEvery one of these records shares the identical gene name tumor protein p53 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Limitations\n\nNone of the returned records specify the organism, taxon, or orthology relationship type linking these genes to human TP53, so a species-by-species ortholog mapping cannot be provided from these findings alone.",
+    "dur": 8.242
+   },
+   {
+    "t": 24.518,
+    "model": "openrouter/anthropic/claude-sonnet-5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17154,
+    "completion_tokens": 1094,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.045248,
+    "reply": "The knowledge graph returns a large set of gene records annotated as tumor protein p53 across different species, consistent with these being TP53 orthologs, though the findings themselves carry no species labels or orthology-edge detail beyond the gene identifiers and shared name.\n\n## Ortholog Gene Records\n\nThe graph lists gene record NCBIGene:100009292 with name tumor protein p53 [1]. It also lists gene record NCBIGene:100049321 with name tumor protein p53 [2]. It also lists gene record NCBIGene:100062044 with name tumor protein p53 [3]. It also lists gene record NCBIGene:100092821 with name tumor protein p53 [4]. It also lists gene record NCBIGene:100136737 with name tumor protein p53 [5]. It also lists gene record NCBIGene:100304476 with name tumor protein p53 [6]. It also lists gene record NCBIGene:100379269 with name tumor protein p53 [7]. It also lists gene record NCBIGene:100415710 with name tumor protein p53 [8].\n\n## Additional Records, First Set\n\nIt also lists gene record NCBIGene:100435218 with name tumor protein p53 [9]. It also lists gene record NCBIGene:100468516 with name tumor protein p53 [10]. It also lists gene record NCBIGene:100583326 with name tumor protein p53 [11]. It also lists gene record NCBIGene:100663725 with name tumor protein p53 [12]. It also lists gene record NCBIGene:100682525 with name tumor protein p53 [13]. It also lists gene record NCBIGene:100702587 with name tumor protein p53 [14]. It also lists gene record NCBIGene:100922473 with name tumor protein p53 [15]. It also lists gene record NCBIGene:100963622 with name tumor protein p53 [16].\n\n## Additional Records, Second Set\n\nIt also lists gene record NCBIGene:100973941 with name tumor protein p53 [17]. It also lists gene record NCBIGene:101006608 with name tumor protein p53 [18]. It also lists gene record NCBIGene:101043647 with name tumor protein p53 [19]. It also lists gene record NCBIGene:101133524 with name tumor protein p53 [20]. It also lists gene record NCBIGene:101285670 with name tumor protein p53 [21]. It also lists gene record NCBIGene:101319146 with name tumor protein p53 [22]. It also lists gene record NCBIGene:101351852 with name tumor protein p53 [23]. It also lists gene record NCBIGene:101362427 with name tumor protein p53 [24].\n\n## Additional Records, Third Set\n\nIt also lists gene record NCBIGene:101399576 with name tumor protein p53 [25]. It also lists gene record NCBIGene:101416069 with name tumor protein p53 [26]. It also lists gene record NCBIGene:101480650 with name tumor protein p53 [27]. It also lists gene record NCBIGene:101528346 with name tumor protein p53 [28]. It also lists gene record NCBIGene:101558045 with name tumor protein p53 [29]. It also lists gene record NCBIGene:101589830 with name tumor protein p53 [30].",
+    "dur": 9.491
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.123,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.7617747499971301,
+    "prompt_tokens": 798,
+    "completion_tokens": 44,
+    "cost_usd": 4.167744e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.773
+   },
+   {
+    "t": 1.913,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 3.512470958998165,
+    "prompt_tokens": 996,
+    "completion_tokens": 55,
+    "cost_usd": 5.202624e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 3.513
+   },
+   {
+    "t": 16.266,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 8.24203120799939,
+    "prompt_tokens": 16590,
+    "completion_tokens": 684,
+    "cost_usd": 0.04002,
+    "model": "anthropic/claude-sonnet-5",
+    "dur": 8.246
+   },
+   {
+    "t": 24.518,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 9.490743834001478,
+    "prompt_tokens": 17154,
+    "completion_tokens": 1094,
+    "cost_usd": 0.045248,
+    "model": "anthropic/claude-sonnet-5",
+    "dur": 9.491
+   }
+  ],
+  "grounding": [
+   {
+    "t": 24.515,
+    "dur": 0.0018,
+    "narrative_chars": 1503,
+    "narrative": "The knowledge graph returns a large set of gene records annotated as tumor protein p53, each carrying its own distinct NCBI Gene identifier, consistent with TP53 orthologs being catalogued separately per species. No species labels or orthology-edge details are included in these findings, so the specific organism for each entry cannot be stated. The findings list gene records including NCBIGene:100009292, NCBIGene:100049321, NCBIGene:100062044, NCBIGene:100092821, NCBIGene:100136737, NCBIGene:100304476, NCBIGene:100379269, NCBIGene:100415710, NCBIGene:100435218, NCBIGene:100468516, NCBIGene:100583326, NCBIGene:100663725, NCBIGene:100682525, NCBIGene:100702587, NCBIGene:100922473, NCBIGene:100963622, NCBIGene:100973941, NCBIGene:101006608, NCBIGene:101043647, NCBIGene:101133524, NCBIGene:101285670, NCBIGene:101319146, NCBIGene:101351852, NCBIGene:101362427, NCBIGene:101399576, NCBIGene:101416069, NCBIGene:101480650, NCBIGene:101528346, NCBIGene:101558045, and NCBIGene:101589830 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. Every one of these records shares the identical gene name tumor protein p53 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. None of the returned records specify the organism, taxon, or orthology relationship type linking these genes to human TP53, so a species-by-species ortholog mapping cannot be provided from these findings alone.",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 5,
+    "refused": true
+   },
+   {
+    "t": 34.01,
+    "dur": 0.0039,
+    "narrative_chars": 2644,
+    "narrative": "The knowledge graph returns a large set of gene records annotated as tumor protein p53 across different species, consistent with these being TP53 orthologs, though the findings themselves carry no species labels or orthology-edge detail beyond the gene identifiers and shared name. The graph lists gene record NCBIGene:100009292 with name tumor protein p53 [1]. It also lists gene record NCBIGene:100049321 with name tumor protein p53 [2]. It also lists gene record NCBIGene:100062044 with name tumor protein p53 [3]. It also lists gene record NCBIGene:100092821 with name tumor protein p53 [4]. It also lists gene record NCBIGene:100136737 with name tumor protein p53 [5]. It also lists gene record NCBIGene:100304476 with name tumor protein p53 [6]. It also lists gene record NCBIGene:100379269 with name tumor protein p53 [7]. It also lists gene record NCBIGene:100415710 with name tumor protein p53 [8]. It also lists gene record NCBIGene:100435218 with name tumor protein p53 [9]. It also lists gene record NCBIGene:100468516 with name tumor protein p53 [10]. It also lists gene record NCBIGene:100583326 with name tumor protein p53 [11]. It also lists gene record NCBIGene:100663725 with name tumor protein p53 [12]. It also lists gene record NCBIGene:100682525 with name tumor protein p53 [13]. It also lists gene record NCBIGene:100702587 with name tumor protein p53 [14]. It also lists gene record NCBIGene:100922473 with name tumor protein p53 [15]. It also lists gene record NCBIGene:100963622 with name tumor protein p53 [16]. It also lists gene record NCBIGene:100973941 with name tumor protein p53 [17]. It also lists gene record NCBIGene:101006608 with name tumor protein p53 [18]. It also lists gene record NCBIGene:101043647 with name tumor protein p53 [19]. It also lists gene record NCBIGene:101133524 with name tumor protein p53 [20]. It also lists gene record NCBIGene:101285670 with name tumor protein p53 [21]. It also lists gene record NCBIGene:101319146 with name tumor protein p53 [22]. It also lists gene record NCBIGene:101351852 with name tumor protein p53 [23]. It also lists gene record NCBIGene:101362427 with name tumor protein p53 [24]. It also lists gene record NCBIGene:101399576 with name tumor protein p53 [25]. It also lists gene record NCBIGene:101416069 with name tumor protein p53 [26]. It also lists gene record NCBIGene:101480650 with name tumor protein p53 [27]. It also lists gene record NCBIGene:101528346 with name tumor protein p53 [28]. It also lists gene record NCBIGene:101558045 with name tumor protein p53 [29]. It also lists gene record NCBIGene:101589830 with name tumor protein p53 [30].",
+    "sentences": [
+     "The graph lists gene record NCBIGene:100009292 with name tumor protein p53 [1].",
+     "It also lists gene record NCBIGene:100049321 with name tumor protein p53 [2].",
+     "It also lists gene record NCBIGene:100062044 with name tumor protein p53 [3].",
+     "It also lists gene record NCBIGene:100092821 with name tumor protein p53 [4].",
+     "It also lists gene record NCBIGene:100136737 with name tumor protein p53 [5].",
+     "It also lists gene record NCBIGene:100304476 with name tumor protein p53 [6].",
+     "It also lists gene record NCBIGene:100379269 with name tumor protein p53 [7].",
+     "It also lists gene record NCBIGene:100415710 with name tumor protein p53 [8].",
+     "It also lists gene record NCBIGene:100435218 with name tumor protein p53 [9].",
+     "It also lists gene record NCBIGene:100468516 with name tumor protein p53 [10].",
+     "It also lists gene record NCBIGene:100583326 with name tumor protein p53 [11].",
+     "It also lists gene record NCBIGene:100663725 with name tumor protein p53 [12].",
+     "It also lists gene record NCBIGene:100682525 with name tumor protein p53 [13].",
+     "It also lists gene record NCBIGene:100702587 with name tumor protein p53 [14].",
+     "It also lists gene record NCBIGene:100922473 with name tumor protein p53 [15].",
+     "It also lists gene record NCBIGene:100963622 with name tumor protein p53 [16].",
+     "It also lists gene record NCBIGene:100973941 with name tumor protein p53 [17].",
+     "It also lists gene record NCBIGene:101006608 with name tumor protein p53 [18].",
+     "It also lists gene record NCBIGene:101043647 with name tumor protein p53 [19].",
+     "It also lists gene record NCBIGene:101133524 with name tumor protein p53 [20].",
+     "It also lists gene record NCBIGene:101285670 with name tumor protein p53 [21].",
+     "It also lists gene record NCBIGene:101319146 with name tumor protein p53 [22].",
+     "It also lists gene record NCBIGene:101351852 with name tumor protein p53 [23].",
+     "It also lists gene record NCBIGene:101362427 with name tumor protein p53 [24].",
+     "It also lists gene record NCBIGene:101399576 with name tumor protein p53 [25].",
+     "It also lists gene record NCBIGene:101416069 with name tumor protein p53 [26].",
+     "It also lists gene record NCBIGene:101480650 with name tumor protein p53 [27].",
+     "It also lists gene record NCBIGene:101528346 with name tumor protein p53 [28].",
+     "It also lists gene record NCBIGene:101558045 with name tumor protein p53 [29].",
+     "It also lists gene record NCBIGene:101589830 with name tumor protein p53 [30]."
+    ],
+    "claims": 30,
+    "claim_ids": [
+     "cq-89612de33548-1",
+     "cq-89612de33548-10",
+     "cq-89612de33548-11",
+     "cq-89612de33548-12",
+     "cq-89612de33548-13",
+     "cq-89612de33548-14",
+     "cq-89612de33548-15",
+     "cq-89612de33548-16",
+     "cq-89612de33548-17",
+     "cq-89612de33548-18",
+     "cq-89612de33548-19",
+     "cq-89612de33548-2",
+     "cq-89612de33548-20",
+     "cq-89612de33548-21",
+     "cq-89612de33548-22",
+     "cq-89612de33548-23",
+     "cq-89612de33548-24",
+     "cq-89612de33548-25",
+     "cq-89612de33548-26",
+     "cq-89612de33548-27",
+     "cq-89612de33548-28",
+     "cq-89612de33548-29",
+     "cq-89612de33548-3",
+     "cq-89612de33548-30",
+     "cq-89612de33548-4",
+     "cq-89612de33548-5",
+     "cq-89612de33548-6",
+     "cq-89612de33548-7",
+     "cq-89612de33548-8",
+     "cq-89612de33548-9"
+    ],
+    "claim_detail": [
+     {
+      "text": "The graph lists gene record NCBIGene:100009292 with name tumor protein p53",
+      "quote": "",
+      "ref": 1,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100049321 with name tumor protein p53",
+      "quote": "",
+      "ref": 2,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100062044 with name tumor protein p53",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100092821 with name tumor protein p53",
+      "quote": "",
+      "ref": 4,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100136737 with name tumor protein p53",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100304476 with name tumor protein p53",
+      "quote": "",
+      "ref": 6,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100379269 with name tumor protein p53",
+      "quote": "",
+      "ref": 7,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100415710 with name tumor protein p53",
+      "quote": "",
+      "ref": 8,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100435218 with name tumor protein p53",
+      "quote": "",
+      "ref": 9,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100468516 with name tumor protein p53",
+      "quote": "",
+      "ref": 10,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100583326 with name tumor protein p53",
+      "quote": "",
+      "ref": 11,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100663725 with name tumor protein p53",
+      "quote": "",
+      "ref": 12,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100682525 with name tumor protein p53",
+      "quote": "",
+      "ref": 13,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100702587 with name tumor protein p53",
+      "quote": "",
+      "ref": 14,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100922473 with name tumor protein p53",
+      "quote": "",
+      "ref": 15,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100963622 with name tumor protein p53",
+      "quote": "",
+      "ref": 16,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:100973941 with name tumor protein p53",
+      "quote": "",
+      "ref": 17,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101006608 with name tumor protein p53",
+      "quote": "",
+      "ref": 18,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101043647 with name tumor protein p53",
+      "quote": "",
+      "ref": 19,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101133524 with name tumor protein p53",
+      "quote": "",
+      "ref": 20,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101285670 with name tumor protein p53",
+      "quote": "",
+      "ref": 21,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101319146 with name tumor protein p53",
+      "quote": "",
+      "ref": 22,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101351852 with name tumor protein p53",
+      "quote": "",
+      "ref": 23,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101362427 with name tumor protein p53",
+      "quote": "",
+      "ref": 24,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101399576 with name tumor protein p53",
+      "quote": "",
+      "ref": 25,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101416069 with name tumor protein p53",
+      "quote": "",
+      "ref": 26,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101480650 with name tumor protein p53",
+      "quote": "",
+      "ref": 27,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101528346 with name tumor protein p53",
+      "quote": "",
+      "ref": 28,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101558045 with name tumor protein p53",
+      "quote": "",
+      "ref": 29,
+      "field": "name",
+      "value": "tumor protein p53"
+     },
+     {
+      "text": "It also lists gene record NCBIGene:101589830 with name tumor protein p53",
+      "quote": "",
+      "ref": 30,
+      "field": "name",
+      "value": "tumor protein p53"
+     }
+    ],
+    "stripped": 1,
+    "refused": false
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100009292"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100049321"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100062044"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100092821"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100136737"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100304476"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100379269"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100415710"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100435218"
+   },
+   {
+    "ref": 10,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100468516"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100583326"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100663725"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100682525"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100702587"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100922473"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100963622"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/100973941"
+   },
+   {
+    "ref": 18,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101006608"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101043647"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101133524"
+   },
+   {
+    "ref": 21,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101285670"
+   },
+   {
+    "ref": 22,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101319146"
+   },
+   {
+    "ref": 23,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101351852"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101362427"
+   },
+   {
+    "ref": 25,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101399576"
+   },
+   {
+    "ref": 26,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101416069"
+   },
+   {
+    "ref": 27,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101480650"
+   },
+   {
+    "ref": 28,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101528346"
+   },
+   {
+    "ref": 29,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101558045"
+   },
+   {
+    "ref": 30,
+    "field": "name",
+    "value": "tumor protein p53",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/101589830"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.901,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.902,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 5.711,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.711,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 5.72,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.72,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.722,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.993,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.055,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.171,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.183,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.194,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.297,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.009,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.141,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.797,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.083,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.188,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.193,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 16.206,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 16.251,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.054,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.055,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.056,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.057,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.058,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.059,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 34.061,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 34.062,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 34.062,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.08544272168,
+  "total_tool_calls": 10,
+  "elapsed_ms": 34061,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 58 sources",
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 318
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 312
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 385
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.99,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 497
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/gene/100009292",
+  "https://www.ncbi.nlm.nih.gov/gene/100049321",
+  "https://www.ncbi.nlm.nih.gov/gene/100062044",
+  "https://www.ncbi.nlm.nih.gov/gene/100092821",
+  "https://www.ncbi.nlm.nih.gov/gene/100136737",
+  "https://www.ncbi.nlm.nih.gov/gene/100304476",
+  "https://www.ncbi.nlm.nih.gov/gene/100379269",
+  "https://www.ncbi.nlm.nih.gov/gene/100415710",
+  "https://www.ncbi.nlm.nih.gov/gene/100435218",
+  "https://www.ncbi.nlm.nih.gov/gene/100468516",
+  "https://www.ncbi.nlm.nih.gov/gene/100583326",
+  "https://www.ncbi.nlm.nih.gov/gene/100663725",
+  "https://www.ncbi.nlm.nih.gov/gene/100682525",
+  "https://www.ncbi.nlm.nih.gov/gene/100702587",
+  "https://www.ncbi.nlm.nih.gov/gene/100922473",
+  "https://www.ncbi.nlm.nih.gov/gene/100963622",
+  "https://www.ncbi.nlm.nih.gov/gene/100973941",
+  "https://www.ncbi.nlm.nih.gov/gene/101006608",
+  "https://www.ncbi.nlm.nih.gov/gene/101043647",
+  "https://www.ncbi.nlm.nih.gov/gene/101133524",
+  "https://www.ncbi.nlm.nih.gov/gene/101285670",
+  "https://www.ncbi.nlm.nih.gov/gene/101319146",
+  "https://www.ncbi.nlm.nih.gov/gene/101351852",
+  "https://www.ncbi.nlm.nih.gov/gene/101362427",
+  "https://www.ncbi.nlm.nih.gov/gene/101399576",
+  "https://www.ncbi.nlm.nih.gov/gene/101416069",
+  "https://www.ncbi.nlm.nih.gov/gene/101480650",
+  "https://www.ncbi.nlm.nih.gov/gene/101528346",
+  "https://www.ncbi.nlm.nih.gov/gene/101558045",
+  "https://www.ncbi.nlm.nih.gov/gene/101589830",
+  "https://www.ncbi.nlm.nih.gov/gene/101609339",
+  "https://www.ncbi.nlm.nih.gov/gene/101632504",
+  "https://www.ncbi.nlm.nih.gov/gene/101656530",
+  "https://www.ncbi.nlm.nih.gov/gene/101677794",
+  "https://www.ncbi.nlm.nih.gov/gene/101701769",
+  "https://www.ncbi.nlm.nih.gov/gene/101833915",
+  "https://www.ncbi.nlm.nih.gov/gene/101942845",
+  "https://www.ncbi.nlm.nih.gov/gene/101957738",
+  "https://www.ncbi.nlm.nih.gov/gene/101978980",
+  "https://www.ncbi.nlm.nih.gov/gene/102005455",
+  "https://www.ncbi.nlm.nih.gov/gene/7157/",
+  "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/",
+  "https://omim.org/entry/191170",
+  "https://www.ncbi.nlm.nih.gov/gene/7157",
+  "https://clinicaltrials.gov/study/NCT02289326",
+  "https://pubmed.ncbi.nlm.nih.gov/31365877/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/",
+  "https://clinicaltrials.gov/study/NCT02612285",
+  "https://pubmed.ncbi.nlm.nih.gov/33300245/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/",
+  "https://clinicaltrials.gov/study/NCT03149679",
+  "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/",
+  "https://clinicaltrials.gov/study/NCT03466034",
+  "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/",
+  "https://clinicaltrials.gov/study/NCT03645200"
+ ]
+}

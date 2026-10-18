@@ -1,0 +1,7 @@
+before activate: s3-not-found
+after . s3-env/bin/activate: <scratch>/s3-env/bin/s3
+usage: s3 login [-h] [--base-url BASE_URL] [email]
+
+positional arguments:
+  email                the account email; asked for when left off
+

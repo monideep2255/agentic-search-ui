@@ -1,0 +1,1340 @@
+[
+  {
+    "question": "Which diseases are associated with BRCA1?",
+    "run": 1,
+    "run_id": "a522056d-f43c-4508-8306-08215a670d40",
+    "outcome": "ask",
+    "elapsed": 14.9,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-9aff55eef7fb",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4",
+        "truncated": false
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-c2fd2939f4b7",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40",
+        "truncated": false
+      }
+    ],
+    "source_count": 61,
+    "l1_citation_count": 40,
+    "all_tool_results": [
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "Which diseases are associated with BRCA1?",
+    "run": 2,
+    "run_id": "042bd449-e3d7-4e8a-8413-417b534c46c8",
+    "outcome": "ask",
+    "elapsed": 14.3,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-b1dc17616fb6",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4",
+        "truncated": false
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-7586ce07378a",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40",
+        "truncated": false
+      }
+    ],
+    "source_count": 61,
+    "l1_citation_count": 40,
+    "all_tool_results": [
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "Which diseases are associated with BRCA1?",
+    "run": 3,
+    "run_id": "c1b83b10-dbaf-45cc-9ea8-539f427035ba",
+    "outcome": "ask",
+    "elapsed": 16.7,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-269b88df1f5e",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4",
+        "truncated": false
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-670a6c650c30",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40",
+        "truncated": false
+      }
+    ],
+    "source_count": 61,
+    "l1_citation_count": 40,
+    "all_tool_results": [
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "Which diseases are associated with BRCA1?",
+    "run": 4,
+    "run_id": "5c429ee2-0cae-46be-9f90-e48d0b0a872d",
+    "outcome": "ask",
+    "elapsed": 11.6,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-c59df04565e6",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4",
+        "truncated": false
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-98bd1a3b6912",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40",
+        "truncated": false
+      }
+    ],
+    "source_count": 61,
+    "l1_citation_count": 40,
+    "all_tool_results": [
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "Which diseases are associated with BRCA1?",
+    "run": 5,
+    "run_id": "3e86024f-8095-43a1-933a-8245371fb1f6",
+    "outcome": "ask",
+    "elapsed": 13.7,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-c7868eeae5e5",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4",
+        "truncated": false
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-d6774c24ba0d",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40",
+        "truncated": false
+      }
+    ],
+    "source_count": 61,
+    "l1_citation_count": 40,
+    "all_tool_results": [
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "Which diseases are associated with BRCA1?",
+    "run": 6,
+    "run_id": "7151633f-5c5e-40d3-9169-f839497290ff",
+    "outcome": "ask",
+    "elapsed": 25.9,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-56d7ca662059",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4",
+        "truncated": false
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-ffff70a20c03",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40",
+        "truncated": false
+      }
+    ],
+    "source_count": 61,
+    "l1_citation_count": 40,
+    "all_tool_results": [
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 4,
+        "summary": "4 row(s) of 4"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 40,
+        "summary": "40 row(s) of 40"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "run": 1,
+    "outcome": "transport_error",
+    "exception": "The read operation timed out",
+    "elapsed": 1206.5
+  },
+  {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "run": 2,
+    "run_id": "da6fab36-5e3f-42fb-9ce1-b7093fd9933a",
+    "outcome": "flag",
+    "elapsed": 19.3,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-93437d46c660",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100",
+        "truncated": true
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-c3e1bc64ca4d",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25",
+        "truncated": false
+      }
+    ],
+    "source_count": 86,
+    "l1_citation_count": 63,
+    "all_tool_results": [
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "run": 3,
+    "run_id": "67483f5f-b269-4078-a580-f2b739ecac76",
+    "outcome": "flag",
+    "elapsed": 22.3,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-c72f65da2531",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100",
+        "truncated": true
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-03ef240bdaaf",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25",
+        "truncated": false
+      }
+    ],
+    "source_count": 86,
+    "l1_citation_count": 63,
+    "all_tool_results": [
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "run": 4,
+    "run_id": "ea6ed612-bc5f-419f-98ea-89ea82c95909",
+    "outcome": "ask",
+    "elapsed": 18.9,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-d366c32b3706",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100",
+        "truncated": true
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-fe5d97e35b41",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25",
+        "truncated": false
+      }
+    ],
+    "source_count": 86,
+    "l1_citation_count": 63,
+    "all_tool_results": [
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "run": 5,
+    "run_id": "114fb992-5aaf-4ed9-8be3-e7f5c9fdbfe1",
+    "outcome": "flag",
+    "elapsed": 10.3,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-6e26645ad502",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100",
+        "truncated": true
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-a971d5732d8d",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25",
+        "truncated": false
+      }
+    ],
+    "source_count": 86,
+    "l1_citation_count": 63,
+    "all_tool_results": [
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  },
+  {
+    "question": "What diseases are caused by variants in the HNF1A gene?",
+    "run": 6,
+    "run_id": "1c69f0cb-c2cd-4c20-89c9-48f758dc67f2",
+    "outcome": "flag",
+    "elapsed": 24.2,
+    "error_payload": null,
+    "layer_1_slots": [
+      {
+        "slot": 0,
+        "call_id": "cq-44db85903f9a",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100",
+        "truncated": true
+      },
+      {
+        "slot": 1,
+        "call_id": "cq-db3ea9743392",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25",
+        "truncated": false
+      }
+    ],
+    "source_count": 86,
+    "l1_citation_count": 63,
+    "all_tool_results": [
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "ok: 1 record(s)"
+      },
+      {
+        "tool": "clinicaltrials_search",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "dataset_report: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "search: 5 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "search: 10 id(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 25,
+        "summary": "25 row(s) of 25"
+      },
+      {
+        "tool": "cypher_query",
+        "layer": "layer_1_graph",
+        "status": "ok",
+        "result_count": 100,
+        "summary": "100 row(s) of 100"
+      },
+      {
+        "tool": "pubtator_annotate",
+        "layer": "layer_3_enrichment",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "ok: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 5,
+        "summary": "summary: 5 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 1,
+        "summary": "summary: 1 record(s)"
+      },
+      {
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "status": "ok",
+        "result_count": 10,
+        "summary": "fetch: 10 record(s)"
+      }
+    ]
+  }
+]

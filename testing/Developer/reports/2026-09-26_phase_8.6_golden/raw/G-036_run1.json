@@ -1,0 +1,190 @@
+{
+ "record": {
+  "id": "G-036",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Which Mycobacterium tuberculosis genome assemblies are available, and how do I retrieve them?",
+  "session_id": "c103-8772f4fb263d",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:08:00+00:00",
+  "run_id": "5e1bae44-f3d4-47b5-9fca-5153c235c536",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 31,
+  "answer_start": "One more detail is needed: which gene, variant or condition do you mean? Ask again naming it, for example \"Which variants cause disease in BRCA1?\", and the foll",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 2.83,
+  "seconds": 3.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  },
+  "first_word_s": 3.015,
+  "first_token_ts": "2026-09-26T17:06:23.882094Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "5e1bae44-f3d4-47b5-9fca-5153c235c536",
+   "seq": 0,
+   "ts": "2026-09-26T17:06:22.421267Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "5e1bae44-f3d4-47b5-9fca-5153c235c536",
+   "seq": 2,
+   "ts": "2026-09-26T17:06:23.877062Z",
+   "payload": {
+    "narrative": "The query asks broadly about available genome assemblies for a specific pathogen and how to retrieve them, requiring exploration across multiple sources and no single predefined API path.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": "One more detail is needed: which gene, variant or condition do you mean? Ask again naming it, for example \"Which variants cause disease in BRCA1?\", and the follow-up will use it.",
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "5e1bae44-f3d4-47b5-9fca-5153c235c536",
+   "seq": 4,
+   "ts": "2026-09-26T17:06:23.879688Z",
+   "payload": {
+    "narrative": "no tool selected; the question refers to something no earlier turn resolved, so the answer asks which",
+    "tool_calls": [],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "5e1bae44-f3d4-47b5-9fca-5153c235c536",
+   "seq": 5,
+   "ts": "2026-09-26T17:06:23.882094Z",
+   "payload": {
+    "text": "One more detail is needed: which gene, variant or condition do you mean? Ask again naming it, for example \"Which variants cause disease in BRCA1?\", and the follow-up will use it.",
+    "marker_ids": [],
+    "kind": null,
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "5e1bae44-f3d4-47b5-9fca-5153c235c536",
+   "seq": 7,
+   "ts": "2026-09-26T17:06:23.882318Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 2830,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 1,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 234
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 131
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 142
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "One more detail is needed: which gene, variant or condition do you mean? Ask again naming it, for example \"Which variants cause disease in BRCA1?\", and the follow-up will use it."
+}

@@ -44,6 +44,13 @@ export const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
   // capacity or by policy.
   write_seeking:
     "This system only reads from NCBI records. It cannot add, change, or remove data.",
+  // Added 2026-09-22 with the `compute_request` guard category. Section
+  // 12.6's table has no row for it, exactly as it has none for
+  // `write_seeking`: the locked section predates both categories. The
+  // copy names what is missing and what to ask instead, since a person
+  // who pasted a sequence needs a next step, not a policy statement.
+  compute_request:
+    "This product cannot run a sequence search or read a variant file. Ask about a specific gene, variant, or paper and I can assemble cited evidence.",
 };
 
 /**

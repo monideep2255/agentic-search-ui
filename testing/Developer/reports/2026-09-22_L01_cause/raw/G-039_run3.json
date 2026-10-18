@@ -1,0 +1,1542 @@
+{
+ "record": {
+  "id": "G-039",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-l01-local-20260922@example.com",
+  "category": "discovery",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "I am a student. Explain in plain terms what the BRCA1 gene does and why it matters, with sources.",
+  "session_id": "c103-3304779cca5f",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "local-l01-summary",
+  "started_at": "2026-09-22T18:31:42+00:00",
+  "run_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:672"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 69,
+  "distinct_sources": 57,
+  "citations_by_layer": {
+   "layer_1_graph": 41,
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 40,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   40,
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1802,
+  "answer_start": "Found 1 gene record for BRCA1: BRCA1 DNA repair associated [1]. \n\nGene records found\n\nGene NCBIGene:672, name: BRCA1 DNA repair associated [1]. gene symbol: BRC",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 9,
+  "server_elapsed_s": 17.334,
+  "seconds": 33.9,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 131,
+   "citation": 69,
+   "trust_signal": 70,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 0,
+   "ts": "2026-09-22T18:31:44.881655Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 2,
+   "ts": "2026-09-22T18:31:53.332294Z",
+   "payload": {
+    "narrative": "Broad, open-ended request for explanatory text about BRCA1 function and significance with sources; no single database lookup answers this directly",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 4,
+   "ts": "2026-09-22T18:31:53.347022Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-3d5944d3e8df",
+      "layer": "layer_1_graph",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fe9d99068af9",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-5b034cd362de",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-0f975b3b919e",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a2569d92f04d",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-c211270abf80",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2aa194a7170f",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-aa062d5f14ab",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0a1b774f1c58",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-670da4f45b58",
+      "layer": "layer_2_api",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-a8ec50ad04a1",
+      "layer": "layer_1_graph",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 6,
+   "ts": "2026-09-22T18:31:53.357939Z",
+   "payload": {
+    "call_id": "cq-3d5944d3e8df",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 7,
+   "ts": "2026-09-22T18:31:53.358064Z",
+   "payload": {
+    "call_id": "ne-fe9d99068af9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 8,
+   "ts": "2026-09-22T18:31:53.358098Z",
+   "payload": {
+    "call_id": "pa-5b034cd362de",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 9,
+   "ts": "2026-09-22T18:31:53.358125Z",
+   "payload": {
+    "call_id": "ct-0f975b3b919e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 10,
+   "ts": "2026-09-22T18:31:53.358151Z",
+   "payload": {
+    "call_id": "ne-a2569d92f04d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 11,
+   "ts": "2026-09-22T18:31:53.358176Z",
+   "payload": {
+    "call_id": "ne-c211270abf80",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 12,
+   "ts": "2026-09-22T18:31:53.358201Z",
+   "payload": {
+    "call_id": "ne-2aa194a7170f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 13,
+   "ts": "2026-09-22T18:31:53.358231Z",
+   "payload": {
+    "call_id": "pa-aa062d5f14ab",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 14,
+   "ts": "2026-09-22T18:31:53.358256Z",
+   "payload": {
+    "call_id": "ne-0a1b774f1c58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 15,
+   "ts": "2026-09-22T18:31:53.358281Z",
+   "payload": {
+    "call_id": "ne-670da4f45b58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 16,
+   "ts": "2026-09-22T18:31:53.358305Z",
+   "payload": {
+    "call_id": "cq-a8ec50ad04a1",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 17,
+   "ts": "2026-09-22T18:31:53.837977Z",
+   "payload": {
+    "call_id": "pa-5b034cd362de",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 18,
+   "ts": "2026-09-22T18:31:53.845070Z",
+   "payload": {
+    "call_id": "ne-fe9d99068af9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 19,
+   "ts": "2026-09-22T18:31:53.845112Z",
+   "payload": {
+    "call_id": "ne-a2569d92f04d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 20,
+   "ts": "2026-09-22T18:31:53.876450Z",
+   "payload": {
+    "call_id": "ct-0f975b3b919e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 21,
+   "ts": "2026-09-22T18:31:54.015399Z",
+   "payload": {
+    "call_id": "ne-670da4f45b58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 22,
+   "ts": "2026-09-22T18:31:54.016682Z",
+   "payload": {
+    "call_id": "ne-c211270abf80",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 23,
+   "ts": "2026-09-22T18:31:54.016998Z",
+   "payload": {
+    "call_id": "cq-a8ec50ad04a1",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "40 row(s) of 40",
+    "result_count": 40,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 24,
+   "ts": "2026-09-22T18:32:00.171340Z",
+   "payload": {
+    "call_id": "cq-3d5944d3e8df",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 25,
+   "ts": "2026-09-22T18:32:00.351583Z",
+   "payload": {
+    "call_id": "pa-aa062d5f14ab",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 26,
+   "ts": "2026-09-22T18:32:00.419817Z",
+   "payload": {
+    "call_id": "ne-0a1b774f1c58",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 27,
+   "ts": "2026-09-22T18:32:00.472903Z",
+   "payload": {
+    "call_id": "ne-2aa194a7170f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 28,
+   "ts": "2026-09-22T18:32:00.507072Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "BRCA1 DNA repair associated",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27381626",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27381626/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267740",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00590109",
+    "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27381626",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27381626/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000724",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "double-strand break repair via homologous recombination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267741",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00597987",
+    "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006281",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "373892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00617656",
+    "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006282",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39261728",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4822953",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4822953/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00673335",
+    "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39261728",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006301",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage tolerance",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4823850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00700778",
+    "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006302",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "double-strand break repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27381626",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27381626/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006338",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chromatin remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006974",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39261728",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007059",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chromosome segregation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007095",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mitotic G2 DNA damage checkpoint signaling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007549",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "sex-chromosome dosage compensation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008630",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to DNA damage",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010575",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of vascular endothelial growth factor production",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010628",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of gene expression",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0016567",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein ubiquitination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030308",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell growth",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033147",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of intracellular estrogen receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035825",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "homologous recombination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043009",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chordate embryonic development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0044027",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of gene expression via chromosomal CpG island methylation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0044818",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mitotic G2/M transition checkpoint",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045717",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of fatty acid biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045739",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045766",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of angiogenesis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045786",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell cycle",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045893",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045944",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0046600",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of centriole replication",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051726",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of cell cycle",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051865",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein autoubiquitination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071356",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to tumor necrosis factor",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071479",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071681",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to indole-3-methanol",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0085020",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein K6-linked ubiquitination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0110025",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA strand resection involved in replication fork processing",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1902042",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of extrinsic apoptotic signaling pathway via death domain receptors",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:2000001",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of DNA damage checkpoint",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:2000378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of reactive oxygen species metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "a0ae9b5a-96b4-4b9b-96dd-bbdfd6e830e2",
+   "seq": 300,
+   "ts": "2026-09-22T18:32:16.637402Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 17334,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for BRCA1: BRCA1 DNA repair associated [1]. \n\nGene records found\n\nGene NCBIGene:672, name: BRCA1 DNA repair associated [1]. gene symbol: BRCA1 [2]. gene name: BRCA1 [5]. This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor [11]. The BRCA1 gene contains 22 exons spanning about 110 kb of DNA [11]. The encoded protein combines with other tumor suppressors, DNA damage sensors, and signal transducers to form a large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex (BASC) [11]. This gene product associates with RNA polymerase II, and through the C-terminal domain, also interacts with histone deacetylase complexes [11]. This protein thus plays a role in transcription, DNA repair of double-stranded breaks, and recombination [11]. Mutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [11]. Alternative splicing plays a role in modulating the subcellular localization and physiological function of this gene [11]. Many alternatively spliced transcript variants, some of which are disease-associated mutations, have been described for this gene, but the full-length natures of only some of these variants has been described [11]. A related pseudogene, which is also located on chromosome 17, has been identified [11]. [provided by RefSeq, May 2020] [11]. \n\nPubmed records found\n\npubmed title: Mechanisms of Therapy Resistance in Patient-Derived Xenograft Models of BRCA1-Deficient Breast Cancer [3]. pubmed title: BRCA1: An Endocrine and Metabolic Regulator [9]. pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [15]. pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [20]. pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [25]. Although BRCA1-deficient tumors are extremely sensitive to DNA-damaging drugs and poly(ADP-ribose) polymerase (PARP) inhibitors, recurrences do occur and, consequently, resistance to therapy remains a serious clinical problem [30]. To study the underlying mechanisms, we induced therapy resistance in patient-derived xenograft (PDX) models of BRCA1-mutated and BRCA1-methylated triple-negative breast cancer [30]. A cohort of 75 mice carrying BRCA1-deficient breast PDX tumors was treated with cisplatin, melphalan, nimustine, or olaparib, and treatment sensitivity was determined [30]. In tumors that acquired therapy resistance, BRCA1 expression was investigated using quantitative real-time polymerase chain reaction and immunoblotting [30]. Next-generation sequencing, methylation-specific multiplex ligation-dependent probe amplification (MLPA) and Target Locus Amplification (TLA)-based sequencing were used to determine mechanisms of BRCA1 re-expression in therapy-resistant tumors [30]. BRCA1 protein was not detected in therapy-sensitive tumors but was found in 31 out of 42 resistant cases [30]. Apart from previously described mechanisms involving BRCA1-intragenic deletions and loss of BRCA1 promoter hypermethylation, a novel resistance mechanism was identified in four out of seven BRCA1-methylated PDX tumors that re-expressed BRCA1 but retained BRCA1 promoter hypermethylation [30]. In these tumors, we found de novo gene fusions that placed BRCA1 under the transcriptional control of a heterologous promoter, resulting in re-expression of BRCA1 and acquisition of therapy resistance [30]. In addition to previously described clinically relevant resistance mechanisms in BRCA1-deficient tumors, we describe a novel resistance mechanism in BRCA1-methylated PDX tumors involving de novo rearrangements at the BRCA1 locus, demonstrating that BRCA1-methylated breast cancers may acquire therapy resistance via both epigenetic and genetic mechanisms [30]. The breast and ovarian cancer susceptibility gene (BRCA1) is a tumor suppressor whose mutation has been associated with the development of breast, ovarian and, probably, other malignancies at young ages [32]. The BRCA1 gene product participates in multiple biological pathways including the DNA damage response, transcriptional control, cell growth and apoptosis [32]. Inactivating germline mutations of the BRCA1 gene can be detected in a substantial portion of families with inherited breast and/or ovarian cancer [32]. While the genomic and cancer-related actions of BRCA1 have been extensively investigated, not much information exists regarding the cellular and circulating factors involved in regulation of BRCA1 expression and action [32]. The present review article dissects the emerging role of BRCA1 as an important regulator of various endocrine and metabolic axes [32]. Experimental and clinical evidence links BRCA1 with a number of peptide and steroid hormones [32]. Furthermore, comprehensive analyses identified complex interactions between the insulin/insulin-like growth factor-1 (IGF1) signaling axis and BRCA1 [32]. The correlation between metabolic disorders, including diabetes and the metabolic syndrome, and BRCA1 mutations, are discussed in this article [32]. Women with germline BRCA1 mutations (BRCA1+/mut) have increased risk for hereditary breast cancer [34]. Cancer initiation in BRCA1+/mut is associated with premalignant changes in breast epithelium [34]. however, the role of the epithelium-associated stromal niche during BRCA1-driven tumor initiation remains unclear [34]. Here we show that the premalignant stromal niche promotes epithelial proliferation and mutant BRCA1-driven tumorigenesis in trans [34]. Using single-cell RNA sequencing analysis of human preneoplastic BRCA1+/mut and noncarrier breast tissues, we show distinct changes in epithelial homeostasis including increased proliferation and expansion of basal-luminal intermediate progenitor cells [34]. Additionally, BRCA1+/mut stromal cells show increased expression of pro-proliferative paracrine signals [34]. In particular, we identify pre-cancer-associated fibroblasts (pre-CAFs) that produce protumorigenic factors including matrix metalloproteinase 3 (MMP3), which promotes BRCA1-driven tumorigenesis in vivo [34]. Together, our findings demonstrate that precancerous stroma in BRCA1+/mut may elevate breast cancer risk through the promotion of epithelial proliferation and an accumulation of luminal progenitor cells with altered differentiation [34]. DNA double-strand break (DSB) repair by homologous recombination is initiated by DNA end resection, a process involving the controlled degradation of the 5'-terminated strands at DSB sites1,2 [36]. The breast cancer suppressor BRCA1-BARD1 not only promotes resection and homologous recombination, but it also protects DNA upon replication stress1,3-9 [36]. BRCA1-BARD1 counteracts the anti-resection and pro-non-homologous end-joining factor 53BP1, but whether it functions in resection directly has been unclear10-16 [36]. Using purified recombinant proteins, we show here that BRCA1-BARD1 directly promotes long-range DNA end resection pathways catalysed by the EXO1 or DNA2 nucleases [36]. In the DNA2-dependent pathway, BRCA1-BARD1 stimulates DNA unwinding by the Werner or Bloom helicase [36]. Together with MRE11-RAD50-NBS1 and phosphorylated CtIP, BRCA1-BARD1 forms the BRCA1-C complex17,18, which stimulates resection synergistically to an even greater extent [36]. A mutation in phosphorylated CtIP (S327A), which disrupts its binding to the BRCT repeats of BRCA1 and hence the integrity of the BRCA1-C complex19-21, inhibits resection, showing that BRCA1-C is a functionally integrated ensemble [36]. We show that in the presence of RAD51, BRCA1-BARD1 instead inhibits DNA degradation [36]. On the basis of our data, the presence and local concentration of RAD51 might determine the balance between the pronuclease and the DNA protection functions of BRCA1-BARD1 in various physiological contexts [36]. BRCA1 is one of the most frequently-mutated tumor suppressor genes in ovarian and breast cancers [38]. Loss of BRCA1 triggers homologous recombination (HR) repair deficiency, consequently leading to genomic instability and PARP inhibitors (PARPi)-associated synthetic lethality [38]. Although, the roles of BRCA1 in DNA repair and replication have been extensively investigated, its tumor suppressive functions beyond genome safeguard remain poorly understood [38]. Here, we report that BRCA1 promotes ferroptosis susceptibility through catalyzing K6-linked polyubiquitination of GPX4 and subsequently accelerating GPX4 degradation [38]. Depletion of BRCA1 induces ferroptosis resistance in ovarian cancer cells due to elevated GPX4 protein, and silence of GPX4 significantly suppresses the growth of BRCA1-deficient ovarian cancer xenografts [38]. Importantly, we found that PARPi triggers ferroptosis in ovarian cancer cells, inhibition of GPX4 markedly increase PARPi-induced ferroptosis in BRCA1-deficient ovarian cancer cells [38]. Combined treatment of GPX4 inhibitor and PARPi produces synergistic anti-tumor efficacy in BRCA1-deficient ovarian cancer cells, patient derived organoid (PDO) and xenografts [38]. Thus, our study uncovers a novel mechanism via which BRCA1 exerts tumor suppressive function through regulating ferroptosis, and demonstrates the potential of GPX4 as a therapeutic target for BRCA1-mutant cancers [38]. \n\nClinvar records found\n\nclinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [4]. clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [10]. clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [16]. clinvar title: NM_007294.4(BRCA1):c.544T>C (p.Leu182=) [21]. clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [26]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [6]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [12]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [17]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [22]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [27]. \n\nPublication records found\n\nPublication pmid: 27381626 [7]. Publication pmid: 35432218 [13]. Publication pmid: 36914836 [18]. Publication pmid: 39261728 [23]. Publication pmid: 39265497 [28]. \n\nBiological process records found\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [8]. BiologicalProcess GO:0006281, name: DNA repair [14]. BiologicalProcess GO:0006282, name: regulation of DNA repair [19]. BiologicalProcess GO:0006301, name: DNA damage tolerance [24]. BiologicalProcess GO:0006302, name: double-strand break repair [29]. BiologicalProcess GO:0006338, name: chromatin remodeling [31]. BiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II [33]. BiologicalProcess GO:0006974, name: DNA damage response [35]. BiologicalProcess GO:0007059, name: chromosome segregation [37]. BiologicalProcess GO:0007095, name: mitotic G2 DNA damage checkpoint signaling [39]. BiologicalProcess GO:0007549, name: sex-chromosome dosage compensation [40]. BiologicalProcess GO:0008630, name: intrinsic apoptotic signaling pathway in response to DNA damage [41]. BiologicalProcess GO:0010212, name: response to ionizing radiation [42]. BiologicalProcess GO:0010575, name: positive regulation of vascular endothelial growth factor production [43]. BiologicalProcess GO:0010628, name: positive regulation of gene expression [44]. BiologicalProcess GO:0016567, name: protein ubiquitination [45]. BiologicalProcess GO:0030308, name: negative regulation of cell growth [46]. BiologicalProcess GO:0033147, name: negative regulation of intracellular estrogen receptor signaling pathway [47]. BiologicalProcess GO:0035825, name: homologous recombination [48]. BiologicalProcess GO:0043009, name: chordate embryonic development [49]. BiologicalProcess GO:0044027, name: negative regulation of gene expression via chromosomal CpG island methylation [50]. BiologicalProcess GO:0044818, name: mitotic G2/M transition checkpoint [51]. BiologicalProcess GO:0045717, name: negative regulation of fatty acid biosynthetic process [52]. BiologicalProcess GO:0045739, name: positive regulation of DNA repair [53]. BiologicalProcess GO:0045766, name: positive regulation of angiogenesis [54]. BiologicalProcess GO:0045786, name: negative regulation of cell cycle [55]. BiologicalProcess GO:0045892, name: negative regulation of DNA-templated transcription [56]. BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription [57]. BiologicalProcess GO:0045944, name: positive regulation of transcription by RNA polymerase II [58]. BiologicalProcess GO:0046600, name: negative regulation of centriole replication [59]. BiologicalProcess GO:0051726, name: regulation of cell cycle [60]. BiologicalProcess GO:0051865, name: protein autoubiquitination [61]. BiologicalProcess GO:0071356, name: cellular response to tumor necrosis factor [62]. BiologicalProcess GO:0071479, name: cellular response to ionizing radiation [63]. BiologicalProcess GO:0071681, name: cellular response to indole-3-methanol [64]. BiologicalProcess GO:0085020, name: protein K6-linked ubiquitination [65]. BiologicalProcess GO:0110025, name: DNA strand resection involved in replication fork processing [66]. BiologicalProcess GO:1902042, name: negative regulation of extrinsic apoptotic signaling pathway via death domain receptors [67]. BiologicalProcess GO:2000001, name: regulation of DNA damage checkpoint [68]. BiologicalProcess GO:2000378, name: negative regulation of reactive oxygen species metabolic process [69]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query"
+}

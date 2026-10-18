@@ -1,0 +1,248 @@
+{
+ "record": {
+  "id": "G-026",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with cystic fibrosis?",
+  "session_id": "c103-1b491b033c73",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:15:31+00:00",
+  "run_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0010674"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 4,
+  "distinct_sources": 4,
+  "citations_by_layer": {
+   "layer_1_graph": 3,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 80,
+  "answer_start": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [3] and transforming growth factor beta 1 [4], linke",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 15.827,
+  "seconds": 19.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 12,
+   "citation": 4,
+   "trust_signal": 5,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 0,
+   "ts": "2026-09-22T17:14:12.066252Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 2,
+   "ts": "2026-09-22T17:14:13.657074Z",
+   "payload": {
+    "narrative": "Asks which genes are linked to a specific disease, requires one API call to a disease-gene association database. (cystic fibrosis: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 4,
+   "ts": "2026-09-22T17:14:13.659115Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-3f3c26f001cb",
+      "layer": "layer_1_graph",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 6,
+   "ts": "2026-09-22T17:14:13.660005Z",
+   "payload": {
+    "call_id": "cq-3f3c26f001cb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 7,
+   "ts": "2026-09-22T17:14:14.131764Z",
+   "payload": {
+    "call_id": "cq-3f3c26f001cb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 8,
+   "ts": "2026-09-22T17:14:14.132898Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "CF transmembrane conductance regulator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0010674",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0010674",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2212",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "Fc gamma receptor IIa",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7040",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7040",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "2f993f47-c917-43cf-bfd1-632f12b43771",
+   "seq": 31,
+   "ts": "2026-09-22T17:14:17.441864Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 15827,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [3] and transforming growth factor beta 1 [4], linked to 1 disease: Cystic fibrosis [2]. \n\nThe gene NCBIGene:1080, named \"CF transmembrane conductance regulator,\" is associated with cystic fibrosis [1]. \n\nDisease records found\n\nDisease name: Cystic fibrosis [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1080, name: CF transmembrane conductance regulator [1]. Gene NCBIGene:2212, name: Fc gamma receptor IIa [3]. Gene NCBIGene:7040, name: transforming growth factor beta 1 [4]. "
+}

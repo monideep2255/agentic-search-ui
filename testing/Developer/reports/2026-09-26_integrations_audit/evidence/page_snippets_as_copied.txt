@@ -1,0 +1,33 @@
+== REST_EXAMPLE
+curl -X POST https://search-agent-api-develop-43b3.up.railway.app/v1/query \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Which diseases are associated with BRCA1?", "session_id": "demo-1"}'
+
+== GRAPHQL_EXAMPLE
+curl -X POST https://search-agent-api-develop-43b3.up.railway.app/graphql \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "mutation { ask(input: { text: \"Which diseases are associated with BRCA1?\", sessionId: \"demo-1\" }) { answer citations { source sourceUrl } } }"}'
+
+== MCP_CONFIG
+{
+  "mcpServers": {
+    "ncbi-search": {
+      "url": "https://search-agent-api-develop-43b3.up.railway.app/mcp/"
+    }
+  }
+}
+
+== CLI_EXAMPLE
+s3 login
+s3 ask "diseases linked to BRCA1"
+
+== KGX_EXAMPLE
+s3-kgx-export NCBIGene:672 \
+  --hops 1 --output-dir ./kgx-out
+
+== EVENT_STREAM_EXAMPLE
+id: 1
+event: guard
+data: {"type":"guard","version":"v1","trace_id":"7c1e2a","seq":1,"ts":"2026-09-13T09:00:00Z","payload":{"passed":true,"category":"ok","reason":null}}

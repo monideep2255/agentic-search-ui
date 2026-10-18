@@ -30,25 +30,279 @@ from __future__ import annotations
 from typing import Any
 
 from system_03_search_agent.contracts.events import (
+    CitationPayload,
     CostPayload,
     DonePayload,
     Event,
     PlanPayload,
     ThinkPayload,
+    TokenPayload,
 )
 from system_03_search_agent.contracts.query import Query
+from system_03_search_agent.contracts.token_order import in_reading_order, one_per_citation_id
 from system_03_search_agent.core.session_memory import _account_uuid, session_row_key
-from system_03_search_agent.feedback.contracts import InteractionRow
+from system_03_search_agent.feedback.contracts import (
+    MAX_CITATIONS_PER_ANSWER,
+    MAX_RISK_TIER_CHARS,
+    InteractionRow,
+)
 from system_03_search_agent.feedback.coverage import coverage_tags_for
 from system_03_search_agent.feedback.rubric import rubric_outcome_for
 
 # Section 15's per-row cap on `normalized_entities`
 # (`InteractionRow.normalized_entities`, `max_length=20`) and on `citations`
-# (`max_length=50`). Enforced here too, not only left to the model
+# (`MAX_CITATIONS_PER_ANSWER`). Enforced here too, not only left to the model
 # validator, so a run that resolved or cited more than the cap is
 # truncated deterministically rather than raising at construction.
 _MAX_NORMALIZED_ENTITIES = 20
-_MAX_CITATIONS = 50
+_MAX_CITATIONS = MAX_CITATIONS_PER_ANSWER
+
+#: The stored bound on a saved answer, measured rather than picked. See
+#: `alembic/versions/0010_interactions_saved_answer.py`'s docstring for the
+#: measurement; the short form is that the longest answer in 150 live runs
+#: was about 8,900 characters of prose, a table-bearing answer renders about
+#: 2.1 times its prose, and 32000 clears the product of those with headroom.
+#: An answer OVER this bound is stored as None, never truncated: the person
+#: is offered Run again instead of being shown a different answer from the
+#: one they saw.
+MAX_ANSWER_MARKDOWN = 32000
+
+#: The three outcomes that put an answer on screen: `answer`, `flag` and
+#: `ask`. Only `refuse` is not saved.
+#:
+#: `ask` WAS LEFT OUT UNTIL CARD 63 (2026-09-27), on a false premise: this
+#: comment called it "a clarifying question". It is not one. The locked
+#: specification's Section 8.3.3 defines `ask` as a high-stakes claim resting
+#: on a single independent-origin source, the web renders the whole `ask`
+#: answer with its "not yet confirmed" trust line, and an answer that lost a
+#: background search is floored to `ask` too. A clarifying question ends
+#: `trust_outcome="refuse"` (`core/graph.py`, `write_node`'s
+#: `clarification_needed` branch). About six answered searches in ten end
+#: `ask`, and none of them could be reopened from history or through MCP's
+#: `reopen_past_answer`.
+#: The product owner's decision of 2026-09-27: save every one of them, and
+#: change nothing about what counts as confirmed.
+#:
+#: A refusal, and so a clarifying question, is still deliberately NOT saved.
+#: The answer screen renders it from other events entirely (`useRunView.ts`
+#: strips a no-data refusal's own tokens from the claims list and renders
+#: the refusal message off the `trust_signal` payload instead), so saving
+#: its tokens would produce a stored view that differs from the screen the
+#: person saw. It falls back to today's behaviour, which costs that person
+#: nothing: someone who was refused wants to ask again anyway.
+_SAVEABLE_OUTCOMES = ("answer", "flag", "ask")
+
+
+def _cell(value: str) -> str:
+    """One markdown table cell: pipes escaped, whitespace flattened.
+
+    A raw `|` would end the cell early and silently reshape the table, and a
+    raw newline would end the row. Both are escaped or flattened rather than
+    dropped, so no character of the value is lost.
+    """
+    return value.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").strip()
+
+
+def _markers_for(marker_ids: list[str], display_index_by_id: dict[str, int]) -> str:
+    """The `[1][2]` markers a row or list item cites, in the screen's own numbers.
+
+    Built from the run's `citation` events rather than from the token text,
+    because a `table_row` token's `text` is the grounded sentence and its
+    VISIBLE content is `cells`, which carries no marker at all. A marker id
+    with no citation event is skipped rather than guessed a number for.
+    """
+    numbers = [display_index_by_id[mid] for mid in marker_ids if mid in display_index_by_id]
+    return "".join(f"[{n}]" for n in numbers)
+
+
+def answer_markdown_from(events: list[Event]) -> str | None:
+    """The finished answer as it stood on screen, as markdown, or None.
+
+    MEASURED BEFORE IT WAS WRITTEN, and the measurement is the reason this
+    function exists at all rather than a one-line join. From a real run
+    (`testing/Developer/reports/2026-09-22_isolate_search/round2/
+    tokens_G-035.json`, 31 live `token` events):
+
+    - A `table_header` token has `text: ""` and its whole visible content in
+      `cells: ["Isolate", "AMR genes"]`.
+    - A `table_row` token's visible content is `cells: ["C236-11", "acrF,
+      aph(3'')-Ib, blaCTX-M-15, ..."]`, while its `text` is the grounded
+      sentence "Pathogen Detection isolate name: C236-11 [1]. ".
+
+    So `"".join(token.text)`, which is what the 150-run measurement harness
+    does (`run_consistency.py:208`) and what "the answer text" sounds like it
+    means, turns a twenty-row table into twenty repetitive sentences and
+    drops every AMR gene the person actually read. Measured on that run: 1448
+    characters joined against 3095 of markdown, so more than half the answer
+    is in `cells`. DO NOT SIMPLIFY THIS BACK INTO A JOIN.
+
+    Returns None, never a partial answer, when the run emitted no tokens or
+    when the result exceeds `MAX_ANSWER_MARKDOWN`. None means "there is no
+    saved answer for this row", and the surface falls back to re-asking,
+    which is exactly what it does today.
+
+    ## What this deliberately does not carry
+
+    `TokenPayload.emphasis` is read by the answer screen but is NOT rendered
+    as bold here. That is fidelity, not laziness: UI fix 11.27 (product
+    owner, 2026-09-14, "There is too much bold") made the screen bold exactly
+    one emphasis term in the lead summary and render every other one at
+    regular weight. Bolding all of them in the saved answer would rebuild the
+    wall of bold that fix removed, so the saved answer would look MORE
+    emphasised than the one the person saw. The words are identical either
+    way.
+    """
+    display_index_by_id: dict[str, int] = {}
+    for event in events:
+        if event.type != "citation":
+            continue
+        payload = CitationPayload.model_validate(event.payload)
+        display_index_by_id.setdefault(payload.citation_id, payload.display_index)
+
+    blocks: list[str] = []
+    prose: list[str] = []
+    table: list[str] = []
+
+    def flush_prose() -> None:
+        text = "".join(prose).strip()
+        prose.clear()
+        if text:
+            blocks.append(text)
+
+    def flush_table() -> None:
+        if table:
+            blocks.append("\n".join(table))
+            table.clear()
+
+    def flush_all() -> None:
+        flush_prose()
+        flush_table()
+
+    # Build phase 8.7: the saved answer reads summary first, then the record
+    # listing, whatever order the two arrived in. No placement reads as summary.
+    token_payloads = in_reading_order(
+        TokenPayload.model_validate(event.payload)
+        for event in events
+        if event.type == "token"
+    )
+    for payload in token_payloads:
+        kind = payload.kind
+        cells = payload.cells or []
+        markers = _markers_for(payload.marker_ids, display_index_by_id)
+
+        if kind == "paragraph_break":
+            flush_all()
+            continue
+        if kind == "heading":
+            flush_all()
+            heading = payload.text.strip()
+            if heading:
+                blocks.append(f"## {heading}")
+            continue
+        if kind == "note":
+            flush_all()
+            note = payload.text.strip()
+            if note:
+                blocks.append(note)
+            continue
+        if kind == "table_header":
+            flush_all()
+            if cells:
+                table.append("| " + " | ".join(_cell(c) for c in cells) + " |")
+                table.append("| " + " | ".join("---" for _ in cells) + " |")
+            continue
+        if kind == "table_row":
+            flush_prose()
+            if not cells:
+                continue
+            if not table:
+                # A row with no header before it. Rendered as a list item
+                # rather than given an invented header row: markdown has no
+                # headerless table, and making up column labels would put
+                # words on screen that no run produced. Not a shape any
+                # measured run emits; `write_node` always sends the header
+                # first.
+                label = ": ".join(_cell(c) for c in cells)
+                blocks.append(f"- {label}{markers}".rstrip())
+                continue
+            rendered = [_cell(c) for c in cells]
+            # The markers go on the FIRST cell, where the record's own name
+            # is and where the screen puts the citation chip for the row.
+            rendered[0] = f"{rendered[0]} {markers}".strip() if markers else rendered[0]
+            table.append("| " + " | ".join(rendered) + " |")
+            continue
+        if kind == "list_item":
+            flush_all()
+            label = _cell(cells[0]) if cells else payload.text.strip()
+            if label:
+                blocks.append(f"- {label}{markers}".rstrip())
+            continue
+
+        # `claim`, and a token from a producer that sends no `kind` at all.
+        # Its text already carries its own `[1][2]` markers inline and its
+        # own trailing space, so consecutive claims join into one paragraph
+        # exactly as they read on screen.
+        flush_table()
+        prose.append(payload.text)
+
+    flush_all()
+
+    markdown = "\n\n".join(block for block in blocks if block)
+    if not markdown:
+        return None
+    if len(markdown) > MAX_ANSWER_MARKDOWN:
+        return None
+    return markdown
+
+
+#: The order the live answer ranks risk tiers in
+#: (`frontend/src/hooks/useRunView.ts`, `RISK_ORDER`). A tier not in this
+#: list outranks every known one there, so it does here: the safe direction
+#: for a risk label is to over-report, never to vanish.
+_RISK_ORDER = ("low", "moderate", "high", "critical")
+
+
+def worst_risk_tier_from(events: list[Event]) -> str | None:
+    """The worst `risk_tier` over the run's `trust_signal` events, or None.
+
+    The live answer's reduction, step for step (`frontend/src/hooks/
+    useRunView.ts`, `worstRisk`), so a reopened answer shows what the live
+    one showed:
+
+    - Every `trust_signal` takes part, whatever its tier holds. Nothing is
+      filtered out first: live does not filter, so an empty tier ranks as
+      unrecognised there and here (J-71T-01, A-71T-01).
+    - A tier not in `_RISK_ORDER` outranks every known one.
+    - The first event starts the reduction and a later one replaces it only
+      when it ranks strictly higher, so of two unrecognised tiers the
+      earlier wins, as `reduce` without a seed does.
+
+    Stored as found, an empty string included (live shows no tag for it,
+    and neither does the saved screen). None when the run emitted no
+    `trust_signal`, and None when the worst tier is not a string of at most
+    `MAX_RISK_TIER_CHARS`: such a tier cannot come from a validated event,
+    and storing None loses only the tag, never the saved answer
+    (A-71T-03).
+    """
+    tiers = [
+        event.payload.get("risk_tier") for event in events if event.type == "trust_signal"
+    ]
+    if not tiers:
+        return None
+
+    def rank(tier: object) -> int:
+        for index, known in enumerate(_RISK_ORDER):
+            if tier == known:
+                return index
+        return len(_RISK_ORDER)
+
+    worst = tiers[0]
+    for tier in tiers[1:]:
+        if rank(tier) > rank(worst):
+            worst = tier
+    if not isinstance(worst, str) or len(worst) > MAX_RISK_TIER_CHARS:
+        return None
+    return worst
 
 
 def _last_of_type(events: list[Event], event_type: str) -> Event | None:
@@ -217,9 +471,13 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
 
     think_event = _last_of_type(events, "think")
     plan_events = [event for event in events if event.type == "plan"]
-    citations = [event.payload for event in events if event.type == "citation"][
-        :_MAX_CITATIONS
-    ]
+    # F-8.7-A04, card 57: one row per citation id. A citation the listing
+    # sent early is sent again once the summary is checked, its checked
+    # words grown; the saved answer keeps that one in the earlier one's
+    # place, so it never lists one source twice.
+    citations = one_per_citation_id(
+        event.payload for event in events if event.type == "citation"
+    )[:_MAX_CITATIONS]
 
     query_class = _query_class_from(think_event)
     route = _route_from(plan_events, events)
@@ -243,6 +501,28 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
     # Reached only once `session_row_key` above did not raise, so `owner_id`
     # is guaranteed a valid non-empty string at this point.
     user_id = _account_uuid(owner_id)  # type: ignore[arg-type]
+
+    # Fix-plan item 10.2. The saved answer, so clicking a past search shows
+    # the answer they already got instead of paying for a second search.
+    #
+    # THE GUEST EXCLUSION IS HERE, at the write, and nowhere else is enough.
+    # `owner_id` is the namespaced principal, so `user:` is an account and
+    # `guest:` is not. A guest run never builds the markdown at all, which
+    # is cheaper than building it and discarding it and, more importantly,
+    # means no guest answer ever exists in memory long enough to be written
+    # by accident. `InteractionRow` refuses the pairing anyway and the
+    # database refuses it again (alembic 0010), so this is the first of
+    # three statements of one rule, not the only one.
+    answer_markdown: str | None = None
+    audience_depth: str | None = None
+    answer_trust_line: str | None = None
+    risk_tier: str | None = None
+    if owner_id.startswith("user:") and trust_signal in _SAVEABLE_OUTCOMES:
+        answer_markdown = answer_markdown_from(events)
+        if answer_markdown is not None:
+            audience_depth = query.audience_depth
+            answer_trust_line = done_payload.trust_line
+            risk_tier = worst_risk_tier_from(events)
 
     return InteractionRow(
         trace_id=done_event.trace_id,
@@ -270,4 +550,8 @@ def assemble_interaction(query: Query, events: list[Event]) -> InteractionRow | 
         user_feedback=None,
         cost_usd=done_payload.total_cost_usd,
         latency_ms=done_payload.elapsed_ms,
+        answer_markdown=answer_markdown,
+        audience_depth=audience_depth,  # type: ignore[arg-type]
+        answer_trust_line=answer_trust_line,
+        risk_tier=risk_tier,
     )

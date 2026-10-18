@@ -181,16 +181,18 @@ export const TOUR_STEPS: TourStep[] = [
     // info card (`ANSWER_MODE_EXPLAINER` in `controls/DepthControl.tsx`).
     title: "Answer mode",
     body: [
-      "Plain language, the default, is a short answer of about 250 words in three paragraphs, in everyday words. Researcher is a full page under short topic headings, with the records found listed.",
+      "Plain language, the default, gives the answer in simple terms, easy to understand. Researcher gives it in technical terms, with the specifics and the records listed or in tables.",
       "The sources stay the same in both modes, and every claim is cited. A change applies to your next question.",
     ],
     targets: ["depth"],
   },
   {
     id: "seeds",
-    title: "Seed questions",
+    // F-8.10-J05: named example questions, with no claim about where they
+    // came from. None of the four is one of the 50 golden questions whole.
+    title: "Example questions",
     body: [
-      "Not sure where to start? These four are real questions from the evaluation set.",
+      "Not sure where to start? Try one of these four example questions.",
       "Click one and it runs as written, at the depth you chose.",
     ],
     targets: ["seeds"],
@@ -208,7 +210,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: "nav",
     title: "The app bar",
     body: [
-      "Integrations lists the other ways in: the API, GraphQL, the command line and the export. About explains how the system works.",
+      "Integrations lists the other ways in: the API, GraphQL, the MCP server, and the command line and the export. About explains how the system works.",
       "Log in keeps your search history across reloads. On a phone the history opens as a drawer from the bar.",
     ],
     targets: ["nav", "login"],

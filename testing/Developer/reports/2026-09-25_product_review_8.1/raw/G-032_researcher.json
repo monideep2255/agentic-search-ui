@@ -1,0 +1,2478 @@
+{
+ "record": {
+  "label": "G-032",
+  "question": "Which pathways does PTEN participate in?",
+  "audience_depth": "researcher",
+  "session_id": "pr81-a804010d1756",
+  "started_at": "2026-09-25T10:35:20Z",
+  "run_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+  "seconds": 28.3,
+  "first_token_seconds": 28.3,
+  "timed_out": false,
+  "guard": {
+   "passed": true,
+   "category": "ok",
+   "reason": null
+  },
+  "trust_outcome": "answer",
+  "trust_line": "Based on 18 sources",
+  "citations": 24,
+  "distinct_sources": 17,
+  "rate_limit_signals": 0
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 0,
+   "ts": "2026-09-25T10:33:45.605065Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 2,
+   "ts": "2026-09-25T10:33:50.531128Z",
+   "payload": {
+    "narrative": "The query asks for pathways involving a single gene, PTEN, which requires one direct lookup to retrieve pathway information.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "PTEN",
+      "curie": "NCBIGene:5728",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 4,
+   "ts": "2026-09-25T10:33:50.533402Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:5728. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-1c549ee1d3bc",
+      "layer": "layer_1_graph",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-26d6a1326bfa",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-5f792923539b",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-9afe71dac023",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ffa084a46add",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-453df2106b96",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f46315e4ce5c",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-c0d4aefa3f2a",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-adbef8a8d1ee",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cc8d42dc5ebe",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-953ec7c9ced3",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-bb43691a993b",
+      "layer": "layer_2_api",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PTEN",
+      "curie": "NCBIGene:5728",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 6,
+   "ts": "2026-09-25T10:33:50.534413Z",
+   "payload": {
+    "call_id": "cq-1c549ee1d3bc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 7,
+   "ts": "2026-09-25T10:33:50.534444Z",
+   "payload": {
+    "call_id": "ne-26d6a1326bfa",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 8,
+   "ts": "2026-09-25T10:33:50.534454Z",
+   "payload": {
+    "call_id": "pa-5f792923539b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 9,
+   "ts": "2026-09-25T10:33:50.534462Z",
+   "payload": {
+    "call_id": "ct-9afe71dac023",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 10,
+   "ts": "2026-09-25T10:33:50.534469Z",
+   "payload": {
+    "call_id": "ne-ffa084a46add",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 11,
+   "ts": "2026-09-25T10:33:50.534476Z",
+   "payload": {
+    "call_id": "ne-453df2106b96",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 12,
+   "ts": "2026-09-25T10:33:50.534484Z",
+   "payload": {
+    "call_id": "ne-f46315e4ce5c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 13,
+   "ts": "2026-09-25T10:33:50.534492Z",
+   "payload": {
+    "call_id": "ne-c0d4aefa3f2a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 14,
+   "ts": "2026-09-25T10:33:50.534500Z",
+   "payload": {
+    "call_id": "pa-adbef8a8d1ee",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 15,
+   "ts": "2026-09-25T10:33:50.534508Z",
+   "payload": {
+    "call_id": "ne-cc8d42dc5ebe",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 16,
+   "ts": "2026-09-25T10:33:50.534515Z",
+   "payload": {
+    "call_id": "ne-953ec7c9ced3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 17,
+   "ts": "2026-09-25T10:33:50.534523Z",
+   "payload": {
+    "call_id": "ne-bb43691a993b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 18,
+   "ts": "2026-09-25T10:33:50.683191Z",
+   "payload": {
+    "call_id": "pa-5f792923539b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 19,
+   "ts": "2026-09-25T10:33:50.746555Z",
+   "payload": {
+    "call_id": "ne-26d6a1326bfa",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 20,
+   "ts": "2026-09-25T10:33:50.818118Z",
+   "payload": {
+    "call_id": "ne-ffa084a46add",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 21,
+   "ts": "2026-09-25T10:33:50.872282Z",
+   "payload": {
+    "call_id": "ne-f46315e4ce5c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 22,
+   "ts": "2026-09-25T10:33:50.905458Z",
+   "payload": {
+    "call_id": "ne-453df2106b96",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 23,
+   "ts": "2026-09-25T10:33:50.948965Z",
+   "payload": {
+    "call_id": "ct-9afe71dac023",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 24,
+   "ts": "2026-09-25T10:33:50.970532Z",
+   "payload": {
+    "call_id": "ne-bb43691a993b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 25,
+   "ts": "2026-09-25T10:33:51.194423Z",
+   "payload": {
+    "call_id": "cq-1c549ee1d3bc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 26,
+   "ts": "2026-09-25T10:33:51.333188Z",
+   "payload": {
+    "call_id": "pa-adbef8a8d1ee",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 27,
+   "ts": "2026-09-25T10:33:51.439980Z",
+   "payload": {
+    "call_id": "ne-cc8d42dc5ebe",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 28,
+   "ts": "2026-09-25T10:33:51.530108Z",
+   "payload": {
+    "call_id": "ne-953ec7c9ced3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 29,
+   "ts": "2026-09-25T10:33:51.535083Z",
+   "payload": {
+    "call_id": "ne-c0d4aefa3f2a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 30,
+   "ts": "2026-09-25T10:33:51.537430Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 31,
+   "ts": "2026-09-25T10:34:12.592953Z",
+   "payload": {
+    "text": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record and 5 clinical trial records for PTEN [7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24]. ",
+    "marker_ids": [
+     "ne-26d6a1326bfa-1",
+     "ne-c0d4aefa3f2a-2",
+     "ne-cc8d42dc5ebe-3",
+     "ne-953ec7c9ced3-4",
+     "ne-bb43691a993b-5",
+     "ct-9afe71dac023-6",
+     "ne-c0d4aefa3f2a-8",
+     "ne-cc8d42dc5ebe-9",
+     "ct-9afe71dac023-11",
+     "ne-c0d4aefa3f2a-13",
+     "ne-cc8d42dc5ebe-14",
+     "ct-9afe71dac023-15",
+     "ne-c0d4aefa3f2a-17",
+     "ne-cc8d42dc5ebe-18",
+     "ct-9afe71dac023-19",
+     "ne-c0d4aefa3f2a-21",
+     "ne-cc8d42dc5ebe-22",
+     "ct-9afe71dac023-23"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 32,
+   "ts": "2026-09-25T10:34:12.593012Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 33,
+   "ts": "2026-09-25T10:34:12.593021Z",
+   "payload": {
+    "text": "PTEN is a tumor suppressor whose encoded protein functions as a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase, directly opposing the PI3K/AKT/mTOR signaling network by dephosphorylating PIP3 [1] [2]. ",
+    "marker_ids": [
+     "ne-bb43691a993b-10",
+     "ne-c0d4aefa3f2a-25"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 34,
+   "ts": "2026-09-25T10:34:12.593028Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 35,
+   "ts": "2026-09-25T10:34:12.593034Z",
+   "payload": {
+    "text": "PI3K/AKT Pathway Regulation\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 36,
+   "ts": "2026-09-25T10:34:12.593040Z",
+   "payload": {
+    "text": "With the exceptions of glioblastoma and endometrial cancer, coding-sequence mutations of PTEN are uncommon, below ten percent in most cancers, while the most frequently observed disruptive events are single-copy gene deletion and gene silencing [2]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-25"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 37,
+   "ts": "2026-09-25T10:34:12.593046Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 38,
+   "ts": "2026-09-25T10:34:12.593052Z",
+   "payload": {
+    "text": "Nuclear PTEN and Chromosomal Integrity\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 39,
+   "ts": "2026-09-25T10:34:12.593057Z",
+   "payload": {
+    "text": "In the nucleus, PTEN maintains chromosomal integrity and exhibits tumor-suppressive functions distinct from its cytoplasmic phosphatase activity [3]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-28"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 40,
+   "ts": "2026-09-25T10:34:12.593063Z",
+   "payload": {
+    "text": "Nuclear localization of PTEN is essential for its tumor suppressive role, and loss of nuclear PTEN is more prominent than cytoplasmic loss in many cancer types [4]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-27"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 41,
+   "ts": "2026-09-25T10:34:12.593069Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 42,
+   "ts": "2026-09-25T10:34:12.593075Z",
+   "payload": {
+    "text": "Tumor Microenvironment and Stromal Signaling\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 43,
+   "ts": "2026-09-25T10:34:12.593081Z",
+   "payload": {
+    "text": "PTEN inactivation within the stroma is correlated with worse outcomes in human cancers, and stromal PTEN participates in intracellular communication across tumor microenvironment compartments [5]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-26"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 44,
+   "ts": "2026-09-25T10:34:12.593087Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 45,
+   "ts": "2026-09-25T10:34:12.593092Z",
+   "payload": {
+    "text": "Antitumor Immune Activation\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 46,
+   "ts": "2026-09-25T10:34:12.593099Z",
+   "payload": {
+    "text": "PTEN can be secreted through the TMED10-channeled protein secretion pathway and binds to PLXDC2 on macrophages, triggering JAK2-STAT1 signaling that switches tumor-associated macrophages from an immunosuppressive to an inflammatory phenotype [6]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-29"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 47,
+   "ts": "2026-09-25T10:34:12.593104Z",
+   "payload": {
+    "text": "This cytokine-like role of PTEN enhances activation of CD8+ T cells and natural killer cells, and PTEN treatment enhances the therapeutic efficacy of anti-PD-1 immunotherapy in mice [6]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-29"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PTEN"
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 48,
+   "ts": "2026-09-25T10:34:12.593110Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 49,
+   "ts": "2026-09-25T10:34:12.593115Z",
+   "payload": {
+    "text": "Gene records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 50,
+   "ts": "2026-09-25T10:34:12.593120Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Gene",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 51,
+   "ts": "2026-09-25T10:34:12.593127Z",
+   "payload": {
+    "text": "Gene symbol: PTEN [7]. ",
+    "marker_ids": [
+     "ne-26d6a1326bfa-1"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "PTEN",
+     "NCBIGene:5728"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 52,
+   "ts": "2026-09-25T10:34:12.593133Z",
+   "payload": {
+    "text": "Gene name: PTEN [11]. ",
+    "marker_ids": [
+     "ne-bb43691a993b-5"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "PTEN",
+     "NCBIGene:5728"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 53,
+   "ts": "2026-09-25T10:34:12.593138Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 54,
+   "ts": "2026-09-25T10:34:12.593144Z",
+   "payload": {
+    "text": "Pubmed records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 55,
+   "ts": "2026-09-25T10:34:12.593149Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Paper",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 56,
+   "ts": "2026-09-25T10:34:12.593154Z",
+   "payload": {
+    "text": "Pubmed title: Mechanisms of PTEN loss in cancer: It's all about diversity [8]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-2"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Mechanisms of PTEN loss in cancer: It's all about diversity.",
+     "PMID:30738865"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 57,
+   "ts": "2026-09-25T10:34:12.593160Z",
+   "payload": {
+    "text": "Pubmed title: PTEN in the Stroma [13]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-8"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "PTEN in the Stroma.",
+     "PMID:31427286"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 58,
+   "ts": "2026-09-25T10:34:12.593166Z",
+   "payload": {
+    "text": "Pubmed title: FBXO22 degrades nuclear PTEN to promote tumorigenesis [16]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-13"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "FBXO22 degrades nuclear PTEN to promote tumorigenesis.",
+     "PMID:32249768"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 59,
+   "ts": "2026-09-25T10:34:12.593172Z",
+   "payload": {
+    "text": "Pubmed title: Neddylation of PTEN regulates its nuclear import and promotes tumor development [19]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-17"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Neddylation of PTEN regulates its nuclear import and promotes tumor development.",
+     "PMID:33299139"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 60,
+   "ts": "2026-09-25T10:34:12.593177Z",
+   "payload": {
+    "text": "Pubmed title: Secreted PTEN binds PLXDC2 on macrophages to drive antitumor immunity and tumor suppression [22]. ",
+    "marker_ids": [
+     "ne-c0d4aefa3f2a-21"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Secreted PTEN binds PLXDC2 on macrophages to drive antitumor immunity and tumor suppression.",
+     "PMID:39197453"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 61,
+   "ts": "2026-09-25T10:34:12.593183Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 62,
+   "ts": "2026-09-25T10:34:12.593189Z",
+   "payload": {
+    "text": "Clinvar records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 63,
+   "ts": "2026-09-25T10:34:12.593194Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Variant",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 64,
+   "ts": "2026-09-25T10:34:12.593200Z",
+   "payload": {
+    "text": "Clinvar title: NM_000314.8(PTEN):c.-193C>G [9]. ",
+    "marker_ids": [
+     "ne-cc8d42dc5ebe-3"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "NM_000314.8(PTEN):c.-193C>G",
+     "VCV004875220"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 65,
+   "ts": "2026-09-25T10:34:12.593206Z",
+   "payload": {
+    "text": "Clinvar title: NM_000314.8(PTEN):c.165-4T>A [14]. ",
+    "marker_ids": [
+     "ne-cc8d42dc5ebe-9"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "NM_000314.8(PTEN):c.165-4T>A",
+     "VCV004882482"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 66,
+   "ts": "2026-09-25T10:34:12.593212Z",
+   "payload": {
+    "text": "Clinvar title: NM_000314.8(PTEN):c.-515G>C [17]. ",
+    "marker_ids": [
+     "ne-cc8d42dc5ebe-14"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "NM_000314.8(PTEN):c.-515G>C",
+     "VCV004882499"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 67,
+   "ts": "2026-09-25T10:34:12.593218Z",
+   "payload": {
+    "text": "Clinvar title: NM_000314.8(PTEN):c.-248C>T [20]. ",
+    "marker_ids": [
+     "ne-cc8d42dc5ebe-18"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "NM_000314.8(PTEN):c.-248C>T",
+     "VCV004882510"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 68,
+   "ts": "2026-09-25T10:34:12.593224Z",
+   "payload": {
+    "text": "Clinvar title: NM_000314.8(PTEN):c.224A>C (p.His75Pro) [23]. ",
+    "marker_ids": [
+     "ne-cc8d42dc5ebe-22"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "NM_000314.8(PTEN):c.224A>C (p.His75Pro)",
+     "VCV004882529"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 69,
+   "ts": "2026-09-25T10:34:12.593230Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 70,
+   "ts": "2026-09-25T10:34:12.593236Z",
+   "payload": {
+    "text": "Omim records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 71,
+   "ts": "2026-09-25T10:34:12.593241Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Record",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 72,
+   "ts": "2026-09-25T10:34:12.593247Z",
+   "payload": {
+    "text": "PHOSPHATASE AND TENSIN HOMOLOG [10]. ",
+    "marker_ids": [
+     "ne-953ec7c9ced3-4"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "PHOSPHATASE AND TENSIN HOMOLOG; PTEN",
+     "omim 601728"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 73,
+   "ts": "2026-09-25T10:34:12.593253Z",
+   "payload": {
+    "text": "PTEN [10]. ",
+    "marker_ids": [
+     "ne-953ec7c9ced3-4"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "PHOSPHATASE AND TENSIN HOMOLOG; PTEN",
+     "omim 601728"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 74,
+   "ts": "2026-09-25T10:34:12.593259Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 75,
+   "ts": "2026-09-25T10:34:12.593265Z",
+   "payload": {
+    "text": "Clinical trial records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 76,
+   "ts": "2026-09-25T10:34:12.593270Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Trial",
+     "Identifier",
+     "Status"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 77,
+   "ts": "2026-09-25T10:34:12.593276Z",
+   "payload": {
+    "text": "Clinical trial name: PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion [12]. ",
+    "marker_ids": [
+     "ct-9afe71dac023-6"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion",
+     "NCT00173407",
+     "WITHDRAWN"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 78,
+   "ts": "2026-09-25T10:34:12.593281Z",
+   "payload": {
+    "text": "Clinical trial name: Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes [15]. ",
+    "marker_ids": [
+     "ct-9afe71dac023-11"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes",
+     "NCT00971789",
+     "COMPLETED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 79,
+   "ts": "2026-09-25T10:34:12.593287Z",
+   "payload": {
+    "text": "Clinical trial name: The Expression of PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia [18]. ",
+    "marker_ids": [
+     "ct-9afe71dac023-15"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "The Expression of PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia",
+     "NCT01010256",
+     "TERMINATED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 80,
+   "ts": "2026-09-25T10:34:12.593292Z",
+   "payload": {
+    "text": "Clinical trial name: Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive [21]. ",
+    "marker_ids": [
+     "ct-9afe71dac023-19"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive?",
+     "NCT01201226",
+     "UNKNOWN"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 81,
+   "ts": "2026-09-25T10:34:12.593298Z",
+   "payload": {
+    "text": "Clinical trial name: Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer [24]. ",
+    "marker_ids": [
+     "ct-9afe71dac023-23"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer",
+     "NCT01277757",
+     "COMPLETED"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 82,
+   "ts": "2026-09-25T10:34:12.593308Z",
+   "payload": {
+    "citation_id": "ne-bb43691a993b-10",
+    "display_index": 1,
+    "source": "gene",
+    "source_id": "5728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5728",
+    "layer": "layer_2_api",
+    "field": "summary",
+    "claim_text": "PTEN is a tumor suppressor whose encoded protein functions as a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase, directly opposing the PI3K/AKT/mTOR signaling network by dephosphorylating PIP3",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 83,
+   "ts": "2026-09-25T10:34:12.593325Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-25",
+    "display_index": 2,
+    "source": "pubmed",
+    "source_id": "30738865",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30738865/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "PTEN is a tumor suppressor whose encoded protein functions as a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase, directly opposing the PI3K/AKT/mTOR signaling network by dephosphorylating PIP3",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 84,
+   "ts": "2026-09-25T10:34:12.593334Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-28",
+    "display_index": 3,
+    "source": "pubmed",
+    "source_id": "33299139",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33299139/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "In the nucleus, PTEN maintains chromosomal integrity and exhibits tumor-suppressive functions distinct from its cytoplasmic phosphatase activity",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 85,
+   "ts": "2026-09-25T10:34:12.593341Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-27",
+    "display_index": 4,
+    "source": "pubmed",
+    "source_id": "32249768",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32249768/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "Nuclear localization of PTEN is essential for its tumor suppressive role, and loss of nuclear PTEN is more prominent than cytoplasmic loss in many cancer types",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 86,
+   "ts": "2026-09-25T10:34:12.593348Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-26",
+    "display_index": 5,
+    "source": "pubmed",
+    "source_id": "31427286",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31427286/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "PTEN inactivation within the stroma is correlated with worse outcomes in human cancers, and stromal PTEN participates in intracellular communication across tumor microenvironment compartments",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 87,
+   "ts": "2026-09-25T10:34:12.593354Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-29",
+    "display_index": 6,
+    "source": "pubmed",
+    "source_id": "39197453",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39197453/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "PTEN can be secreted through the TMED10-channeled protein secretion pathway and binds to PLXDC2 on macrophages, triggering JAK2-STAT1 signaling that switches tumor-associated macrophages from an immunosuppressive to an inflammatory phenotype",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 88,
+   "ts": "2026-09-25T10:34:12.593361Z",
+   "payload": {
+    "citation_id": "ne-26d6a1326bfa-1",
+    "display_index": 7,
+    "source": "gene",
+    "source_id": "5728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5728/",
+    "layer": "layer_2_api",
+    "field": "symbol",
+    "claim_text": "gene symbol: PTEN",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 89,
+   "ts": "2026-09-25T10:34:12.593368Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-2",
+    "display_index": 8,
+    "source": "pubmed",
+    "source_id": "30738865",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30738865/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Mechanisms of PTEN loss in cancer: It's all about diversity",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 90,
+   "ts": "2026-09-25T10:34:12.593375Z",
+   "payload": {
+    "citation_id": "ne-cc8d42dc5ebe-3",
+    "display_index": 9,
+    "source": "clinvar",
+    "source_id": "4875220",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4875220/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000314.8(PTEN):c.-193C>G",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 91,
+   "ts": "2026-09-25T10:34:12.593382Z",
+   "payload": {
+    "citation_id": "ne-953ec7c9ced3-4",
+    "display_index": 10,
+    "source": "omim",
+    "source_id": "601728",
+    "source_url": "https://omim.org/entry/601728",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "PHOSPHATASE AND TENSIN HOMOLOG",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 92,
+   "ts": "2026-09-25T10:34:12.593389Z",
+   "payload": {
+    "citation_id": "ne-bb43691a993b-5",
+    "display_index": 11,
+    "source": "gene",
+    "source_id": "5728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5728",
+    "layer": "layer_2_api",
+    "field": "name",
+    "claim_text": "gene name: PTEN",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 93,
+   "ts": "2026-09-25T10:34:12.593396Z",
+   "payload": {
+    "citation_id": "ct-9afe71dac023-6",
+    "display_index": 12,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT00173407",
+    "source_url": "https://clinicaltrials.gov/study/NCT00173407",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 94,
+   "ts": "2026-09-25T10:34:12.593403Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-8",
+    "display_index": 13,
+    "source": "pubmed",
+    "source_id": "31427286",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31427286/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: PTEN in the Stroma",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 95,
+   "ts": "2026-09-25T10:34:12.593410Z",
+   "payload": {
+    "citation_id": "ne-cc8d42dc5ebe-9",
+    "display_index": 14,
+    "source": "clinvar",
+    "source_id": "4882482",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882482/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000314.8(PTEN):c.165-4T>A",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 96,
+   "ts": "2026-09-25T10:34:12.593417Z",
+   "payload": {
+    "citation_id": "ct-9afe71dac023-11",
+    "display_index": 15,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT00971789",
+    "source_url": "https://clinicaltrials.gov/study/NCT00971789",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 97,
+   "ts": "2026-09-25T10:34:12.593423Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-13",
+    "display_index": 16,
+    "source": "pubmed",
+    "source_id": "32249768",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32249768/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: FBXO22 degrades nuclear PTEN to promote tumorigenesis",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 98,
+   "ts": "2026-09-25T10:34:12.593430Z",
+   "payload": {
+    "citation_id": "ne-cc8d42dc5ebe-14",
+    "display_index": 17,
+    "source": "clinvar",
+    "source_id": "4882499",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882499/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000314.8(PTEN):c.-515G>C",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 99,
+   "ts": "2026-09-25T10:34:12.593436Z",
+   "payload": {
+    "citation_id": "ct-9afe71dac023-15",
+    "display_index": 18,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT01010256",
+    "source_url": "https://clinicaltrials.gov/study/NCT01010256",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: The Expression of PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 100,
+   "ts": "2026-09-25T10:34:12.593443Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-17",
+    "display_index": 19,
+    "source": "pubmed",
+    "source_id": "33299139",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33299139/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Neddylation of PTEN regulates its nuclear import and promotes tumor development",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 101,
+   "ts": "2026-09-25T10:34:12.593449Z",
+   "payload": {
+    "citation_id": "ne-cc8d42dc5ebe-18",
+    "display_index": 20,
+    "source": "clinvar",
+    "source_id": "4882510",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882510/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000314.8(PTEN):c.-248C>T",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 102,
+   "ts": "2026-09-25T10:34:12.593456Z",
+   "payload": {
+    "citation_id": "ct-9afe71dac023-19",
+    "display_index": 21,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT01201226",
+    "source_url": "https://clinicaltrials.gov/study/NCT01201226",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 103,
+   "ts": "2026-09-25T10:34:12.593462Z",
+   "payload": {
+    "citation_id": "ne-c0d4aefa3f2a-21",
+    "display_index": 22,
+    "source": "pubmed",
+    "source_id": "39197453",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39197453/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Secreted PTEN binds PLXDC2 on macrophages to drive antitumor immunity and tumor suppression",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 104,
+   "ts": "2026-09-25T10:34:12.593469Z",
+   "payload": {
+    "citation_id": "ne-cc8d42dc5ebe-22",
+    "display_index": 23,
+    "source": "clinvar",
+    "source_id": "4882529",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4882529/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "clinvar title: NM_000314.8(PTEN):c.224A>C (p.His75Pro)",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 105,
+   "ts": "2026-09-25T10:34:12.593476Z",
+   "payload": {
+    "citation_id": "ct-9afe71dac023-23",
+    "display_index": 24,
+    "source": "clinicaltrials.gov",
+    "source_id": "NCT01277757",
+    "source_url": "https://clinicaltrials.gov/study/NCT01277757",
+    "layer": "layer_3_enrichment",
+    "field": "name",
+    "claim_text": "Clinical trial name: Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer",
+    "evidence_kind": "external_annotation",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 106,
+   "ts": "2026-09-25T10:34:12.593493Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-bb43691a993b-10",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 107,
+   "ts": "2026-09-25T10:34:12.593507Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-25",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 108,
+   "ts": "2026-09-25T10:34:12.593515Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-28",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 109,
+   "ts": "2026-09-25T10:34:12.593522Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-27",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 110,
+   "ts": "2026-09-25T10:34:12.593530Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-26",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 111,
+   "ts": "2026-09-25T10:34:12.593537Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-29",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 112,
+   "ts": "2026-09-25T10:34:12.593545Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-26d6a1326bfa-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 113,
+   "ts": "2026-09-25T10:34:12.593552Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-2",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 114,
+   "ts": "2026-09-25T10:34:12.593559Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-cc8d42dc5ebe-3",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 115,
+   "ts": "2026-09-25T10:34:12.593566Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-953ec7c9ced3-4",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 116,
+   "ts": "2026-09-25T10:34:12.593573Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-bb43691a993b-5",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 117,
+   "ts": "2026-09-25T10:34:12.593580Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-9afe71dac023-6",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 118,
+   "ts": "2026-09-25T10:34:12.593587Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-8",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 119,
+   "ts": "2026-09-25T10:34:12.593594Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-cc8d42dc5ebe-9",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 120,
+   "ts": "2026-09-25T10:34:12.593601Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-9afe71dac023-11",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 121,
+   "ts": "2026-09-25T10:34:12.593608Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-13",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 122,
+   "ts": "2026-09-25T10:34:12.593615Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-cc8d42dc5ebe-14",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 123,
+   "ts": "2026-09-25T10:34:12.593623Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-9afe71dac023-15",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 124,
+   "ts": "2026-09-25T10:34:12.593631Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-17",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 125,
+   "ts": "2026-09-25T10:34:12.593638Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-cc8d42dc5ebe-18",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 126,
+   "ts": "2026-09-25T10:34:12.593645Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-9afe71dac023-19",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 127,
+   "ts": "2026-09-25T10:34:12.593653Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-c0d4aefa3f2a-21",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 128,
+   "ts": "2026-09-25T10:34:12.593660Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-cc8d42dc5ebe-22",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 129,
+   "ts": "2026-09-25T10:34:12.593667Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ct-9afe71dac023-23",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 130,
+   "ts": "2026-09-25T10:34:12.593679Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "f9f62dde-5ebb-4c93-b4c7-a6304254a82a",
+   "seq": 132,
+   "ts": "2026-09-25T10:34:12.593739Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 7044,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 18 sources",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record and 5 clinical trial records for PTEN [7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24]. \n\nPTEN is a tumor suppressor whose encoded protein functions as a phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase, directly opposing the PI3K/AKT/mTOR signaling network by dephosphorylating PIP3 [1] [2]. \n\nPI3K/AKT Pathway Regulation\n\nWith the exceptions of glioblastoma and endometrial cancer, coding-sequence mutations of PTEN are uncommon, below ten percent in most cancers, while the most frequently observed disruptive events are single-copy gene deletion and gene silencing [2]. \n\nNuclear PTEN and Chromosomal Integrity\n\nIn the nucleus, PTEN maintains chromosomal integrity and exhibits tumor-suppressive functions distinct from its cytoplasmic phosphatase activity [3]. Nuclear localization of PTEN is essential for its tumor suppressive role, and loss of nuclear PTEN is more prominent than cytoplasmic loss in many cancer types [4]. \n\nTumor Microenvironment and Stromal Signaling\n\nPTEN inactivation within the stroma is correlated with worse outcomes in human cancers, and stromal PTEN participates in intracellular communication across tumor microenvironment compartments [5]. \n\nAntitumor Immune Activation\n\nPTEN can be secreted through the TMED10-channeled protein secretion pathway and binds to PLXDC2 on macrophages, triggering JAK2-STAT1 signaling that switches tumor-associated macrophages from an immunosuppressive to an inflammatory phenotype [6]. This cytokine-like role of PTEN enhances activation of CD8+ T cells and natural killer cells, and PTEN treatment enhances the therapeutic efficacy of anti-PD-1 immunotherapy in mice [6]. \n\nGene records found\n\nGene symbol: PTEN [7]. Gene name: PTEN [11]. \n\nPubmed records found\n\nPubmed title: Mechanisms of PTEN loss in cancer: It's all about diversity [8]. Pubmed title: PTEN in the Stroma [13]. Pubmed title: FBXO22 degrades nuclear PTEN to promote tumorigenesis [16]. Pubmed title: Neddylation of PTEN regulates its nuclear import and promotes tumor development [19]. Pubmed title: Secreted PTEN binds PLXDC2 on macrophages to drive antitumor immunity and tumor suppression [22]. \n\nClinvar records found\n\nClinvar title: NM_000314.8(PTEN):c.-193C>G [9]. Clinvar title: NM_000314.8(PTEN):c.165-4T>A [14]. Clinvar title: NM_000314.8(PTEN):c.-515G>C [17]. Clinvar title: NM_000314.8(PTEN):c.-248C>T [20]. Clinvar title: NM_000314.8(PTEN):c.224A>C (p.His75Pro) [23]. \n\nOmim records found\n\nPHOSPHATASE AND TENSIN HOMOLOG [10]. PTEN [10]. \n\nClinical trial records found\n\nClinical trial name: PTEN and IGFBP-3 Correlation in Ovarian Carcinoma Invasion [12]. Clinical trial name: Sirolimus to Treat Cowden Syndrome and Other PTEN Hamartomatous Tumor Syndromes [15]. Clinical trial name: The Expression of PTEN Protein and mRNA in Malignant Cells of Chronic Myelomonocytic Leukemia [18]. Clinical trial name: Can Dormant Perimenopausal Ovarian Follicles Become FSH Responsive [21]. Clinical trial name: Akt Inhibitor MK2206 in Treating Patients With Advanced Breast Cancer [24]. "
+}

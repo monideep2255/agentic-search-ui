@@ -1,0 +1,1 @@
+verify capture: testing/Developer/reports/2026-10-15_product_check/run2 already holds 20 file(s). A rerun never overwrites evidence: let the run take its own new folder, or pass --overwrite

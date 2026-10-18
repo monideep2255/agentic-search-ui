@@ -1,0 +1,56 @@
+POPUP TEXT:
+Answer modes
+
+Plain language: the answer in simple terms, easy to understand.
+
+Researcher: the answer in technical terms, with the specifics and the records listed or in tables.
+
+Both modes cite every claim. A change applies to your next question.
+
+BODY:
+NCBI Agentic Search
+Search
+Integrations
+About
+Working as Nightingale
+S3
+s3-retest-a-20260929@example.com
+▾
++ New search
+
+YOUR SEARCHES
+
+Your searches appear here, with their sources attached.
+
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+Ask a biomedical question
+
+Answered from the NCBI knowledge graph and live NCBI APIs. Every claim carries its source.
+
+Answer mode
+Plain language
+Researcher
+
+Answer modes
+
+Plain language: the answer in simple terms, easy to understand.
+
+Researcher: the answer in technical terms, with the specifics and the records listed or in tables.
+
+Both modes cite every claim. A change applies to your next question.
+
+Diseases linked to BRCA1
+Clinical significance of rs334
+Variants in GCK causing MODY
+Trials recruiting for ALS
+
+New here? Take the two-minute tour: every feature, then a real question with its answer.
+
+Start the tour
+Not now
+Take the tour
+Knowledge graph 115M nodes, 693M edges
+Live NCBI APIs queried per question
+Literature and trials layered on top
+NCBI Agentic Search

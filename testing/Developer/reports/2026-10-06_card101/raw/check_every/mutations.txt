@@ -1,0 +1,24 @@
+M1_code_approves_again: 10 failed, 2 passed in 2.57s
+   red: test_the_babies_sentence_becomes_a_check_candidate
+   red: test_the_babies_sentence_shows_only_with_the_checks_approval
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[approves
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[unreadable]
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[call
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[cost
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[too
+   red: test_the_check_approving_it_shows_it
+   red: test_the_repairs_rewording_goes_to_the_check_and_is_hidden_when_it_fails
+   red: test_the_repairs_rewording_shows_when_the_check_approves_it
+M2_copies_go_to_check: 1 failed, 11 passed in 2.19s
+   red: test_a_copied_record_sentence_shows_without_a_call[with
+M3_collect_and_accept: 7 failed, 5 passed in 2.08s
+   red: test_the_babies_sentence_becomes_a_check_candidate
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[approves
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[unreadable]
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[call
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[cost
+   red: test_a_check_that_cannot_approve_shows_none_of_the_moved_sentences[too
+   red: test_the_repairs_rewording_goes_to_the_check_and_is_hidden_when_it_fails
+M4_repair_skips_check: 2 failed, 10 passed in 2.13s
+   red: test_the_repairs_rewording_goes_to_the_check_and_is_hidden_when_it_fails
+   red: test_the_repairs_rewording_shows_when_the_check_approves_it

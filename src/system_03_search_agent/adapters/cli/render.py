@@ -45,9 +45,11 @@ the gate is the one that cannot be edited:
    standalone stdout line (build phase 4.2 review, J-4.2-05: a leading
    `\n` now guarantees the tag never glues to the last token's own text,
    closing the gap between this docstring's earlier "standalone" claim and
-   what the code actually did) at the point the answer-scope `trust_signal`
-   event actually arrives, which in every fixture this ticket read is
-   already immediately before `done`.
+   what the code actually did). Since card 62's fix round (F-62-A05) it is
+   printed when `done` arrives, from `done.trust_outcome`, the server's
+   final verdict, which is also what the web, `--json` and the exit code
+   read; the answer-scope `trust_signal` arrives immediately before `done`
+   on a well-formed stream, so the tag appears at the same moment it did.
 
 3. Untrusted-content sanitization (build phase 4.2 review, F-4.2-A-01,
    critical; hardened at the round-3 fix, F-4.2-RR-01 and F-4.2-RR-02;
@@ -152,8 +154,10 @@ Writes:
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
+import urllib.parse
 from typing import TYPE_CHECKING, TextIO
 
 import httpx
@@ -171,6 +175,13 @@ from system_03_search_agent.contracts.events import (
     ToolResultPayload,
     ToolStartPayload,
     TrustSignalPayload,
+    source_page_key,
+)
+from system_03_search_agent.contracts.token_order import (
+    LISTING,
+    joined_text,
+    names_same_record,
+    updates_citation,
 )
 
 if TYPE_CHECKING:
@@ -186,7 +197,7 @@ _EXIT_FAILURE = 1
 # Section 12.6's `GuardrailBanner` copy table, mirrored here rather than
 # imported: `adapters/cli` does not depend on the web frontend, and
 # `contracts/events.py`'s own `NCBI_SOURCE_URL_PATTERN` comment already
-# establishes this repo's precedent of copying a small fixed table verbatim
+# establishes this repository's precedent of copying a small fixed table verbatim
 # across a module boundary instead of reaching across it. `guard.reason` is
 # model-generated free text (`ThinkPayload`/`GuardPayload` docstrings in
 # `contracts/events.py`); Section 12.6 never renders it raw, choosing copy
@@ -213,6 +224,14 @@ _GUARD_CATEGORY_COPY: dict[str, str] = {
     "write_seeking": (
         "this system only reads from the knowledge graph and NCBI APIs; it "
         "cannot perform a write, update, or delete operation."
+    ),
+    # Added 2026-09-22 with the `compute_request` category. Not in
+    # Section 12.6's table either, for the same reason `write_seeking`
+    # is not: the locked section predates the category.
+    "compute_request": (
+        "this product cannot run a sequence search or read a variant "
+        "file. Ask about a specific gene, variant, or paper and it can "
+        "assemble cited evidence."
     ),
 }
 _GUARD_CATEGORY_FALLBACK = "this question could not be processed."
@@ -250,6 +269,85 @@ _CLI_FATAL_ERROR_DISCLOSURE: dict[str, str] = {
 
 def _error_disclosure(error_class: str) -> str:
     return _CLI_FATAL_ERROR_DISCLOSURE.get(error_class, _CLI_FATAL_ERROR_DISCLOSURE["unexpected"])
+
+
+# Card 62, PR-8.10-01 (`tracker/phase_8.10.md`): the web's own words for an
+# `ask` answer that arrives with no trust line (`frontend/src/hooks/
+# useRunView.ts`, `OUTCOME_BY_TRUST`), copied rather than imported for the
+# same adapter-independence reason as the two tables above. Printed under
+# `[answer]` only when the server's final verdict, `done.trust_outcome`, is
+# `ask` and `done` carries no trust line: it is the web's rendering of that
+# verdict, never a line this renderer composes on its own.
+_UNCONFIRMED_WITHOUT_TRUST_LINE = "Single source, not independently confirmed"
+
+# Card 62's fix round (F-62-A01, F-62-A08, F-62-J04): the web's words for a
+# run that did not finish (`useRunView.ts`, the `fatalError` branch of the
+# trust block). It replaces every verdict there, and it does here: a run
+# that ended on a fatal error, or before `done`, prints this and no tag.
+_RUN_DID_NOT_FINISH = "Not verified · the run did not finish"
+
+# The two cautions the web never drops beside the trust line (F-62-A02,
+# `useRunView.ts`: "Two things are never dropped for it: an ungrounded
+# verdict, and a high-risk tier").
+_NOT_FULLY_GROUNDED = "Not fully grounded"
+_HIGH_RISK_CLAIM = "High-risk claim"
+# Parts of one trust line, joined as the web shows them side by side.
+_TRUST_PART_SEPARATOR = " · "
+# Risk tiers that carry no caution: `low`, and `unknown`, which the core
+# sends for a refusal where no risk assessment ran (T-4.3-05). Every other
+# value is a caution, including one this renderer does not know, since a
+# risk signal should over-report rather than vanish (F-4.8-A-19).
+_RISK_TIERS_WITHOUT_CAUTION = frozenset({"low", "unknown"})
+_KNOWN_RISK_ORDER = ("moderate", "high", "critical")
+
+# Every Unicode general category a one-line server string must not carry:
+# the four `_ESCAPED_UNICODE_CATEGORIES` below (control, format, surrogate,
+# private use) plus `Zl` and `Zp`, the line and paragraph separators. `\n`,
+# `\r`, `\v`, `\f` and U+0085 are all `Cc`, and U+2028 and U+2029 are `Zl`
+# and `Zp`, so no character in any of these categories can start a new line
+# on a terminal or in a redirected file.
+_LINE_BREAKING_OR_CONTROL_CATEGORIES = frozenset({"Cc", "Cf", "Cs", "Co", "Zl", "Zp"})
+_SPACE_RUN = re.compile(" {2,}")
+
+
+def _single_line(text: str) -> str:
+    """Server text that is printed as one line (the trust line, a risk tier),
+    with every character in `_LINE_BREAKING_OR_CONTROL_CATEGORIES` removed,
+    decided by Unicode category rather than by a list of characters.
+
+    F-62-A09: a trust line carrying a newline printed a forged reference row
+    right under the genuine `[answer]` tag. Each removed character becomes a
+    space, runs of spaces collapse to one, and the ends are stripped,
+    which is what the web does to the same text inside one `<span>`. The
+    renderer's own vocabulary (`[answer]`, `References:`) is still escaped by
+    `_escape_forgery_markers`, so the line cannot forge a tag either."""
+    kept = "".join(
+        " " if unicodedata.category(ch) in _LINE_BREAKING_OR_CONTROL_CATEGORIES else ch
+        for ch in text
+    )
+    # Only spaces are collapsed, so the category check above is the one
+    # control that removes a line break.
+    return _escape_forgery_markers(_SPACE_RUN.sub(" ", kept).strip())
+
+
+def _risk_caution(risk_tiers: list[str]) -> str | None:
+    """The web's risk mark for the worst tier any trust signal carried, or
+    None. `high` reads "High-risk claim", as on the web; another cautionary
+    tier reads "<tier> risk claim"; an unrecognised tier outranks every
+    known one. `unknown` is ignored rather than ranked, so it can never hide
+    a `high` beside it."""
+    cautions = [tier for tier in risk_tiers if tier not in _RISK_TIERS_WITHOUT_CAUTION]
+    if not cautions:
+        return None
+
+    def rank(tier: str) -> int:
+        return _KNOWN_RISK_ORDER.index(tier) if tier in _KNOWN_RISK_ORDER else len(_KNOWN_RISK_ORDER)
+
+    worst = max(cautions, key=rank)
+    if worst == "high":
+        return _HIGH_RISK_CLAIM
+    tier_text = _single_line(worst)
+    return f"{tier_text} risk claim" if tier_text else _HIGH_RISK_CLAIM
 
 
 # ----------------------------------------------------------------------
@@ -481,6 +579,71 @@ def _sanitize_untrusted(text: str) -> str:
     return _escape_forgery_markers(_escape_control_bytes(text))
 
 
+def address_for_display(url: str) -> str:
+    """The server a base URL names, as a person should see it: its scheme,
+    host and port, and nothing else.
+
+    Build phase 8.10's fix round, F-8.10-A05: `s3 login` and `s3 mcp` printed
+    the whole base URL, so one written `https://user:pass@host` put the
+    password on stdout, on stderr and in every error the agent read. The
+    userinfo is never shown, and neither is a path, query or fragment, any
+    of which can carry a secret too. Sanitized like any text the person did
+    not write, since the URL can come from `--base-url` or `S3_BASE_URL`.
+    """
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = parts.hostname or ""
+        port = parts.port
+    except ValueError:
+        host, port = "", None
+    if not host:
+        return "the server s3 login used"
+    if ":" in host:
+        host = f"[{host}]"  # an IPv6 address
+    address = f"{parts.scheme}://{host}" if parts.scheme else host
+    if port is not None:
+        address = f"{address}:{port}"
+    return _sanitize_untrusted(address)
+
+
+def _is_ask_back(
+    *,
+    clarifying_question: str | None,
+    guard_rejected: bool,
+    fatal_error_seen: bool,
+    citations_seen: int,
+) -> bool:
+    """Whether this run's answer is a question back, not a refusal.
+
+    Build phase 8.10. The core sends a question back ("GERD" gets "What would
+    you like to know about GERD?" and four options) through the refusal path,
+    so its stream says `refuse`, and every surface tells the two apart. This
+    is the same rule builder Q's MCP fold uses (`adapters/mcp/server.py`,
+    `_is_ask_back`), which says it mirrors the web's
+    (`frontend/src/hooks/useRunView.ts`):
+
+    - a `think` event carried a non-empty clarifying question;
+    - the guardrail did not refuse the question;
+    - no fatal error ended the run;
+    - no citation arrived, so an answer is never relabelled.
+
+    It reads the `think` event, never the refusal's wording.
+    """
+    if clarifying_question is None or guard_rejected or fatal_error_seen:
+        return False
+    return citations_seen == 0
+
+
+def _first_clarification(payload: ThinkPayload) -> tuple[str | None, list[str]]:
+    """The clarifying question a `think` event carries, trimmed, and the
+    options that came with it; `(None, [])` when it carries none."""
+    question = (payload.clarifying_question or "").strip()
+    if not question:
+        return None, []
+    options = [option.strip() for option in payload.clarifying_options or [] if option.strip()]
+    return question, options
+
+
 class Renderer:
     """Renders one run's `Event` stream per Section 13.3's ten rules.
 
@@ -519,15 +682,91 @@ class Renderer:
         # Terminal-state bookkeeping. `_exit_code` is the single source of
         # truth `finish()` reads; every path that can end the run sets it.
         self._exit_code: int | None = None
-        self._printed_trust_prefix = False
         self._printed_references = False
         # F-4.2-A-27: once a guard rejection has fired, never let a later
         # event (a stray `trust_signal`/`done` the server should not send
         # after a rejection, but this renderer does not get to assume that
         # never happens) print `[answer]` or a references block on top of
-        # it. Checked in `_write_trust_prefix` directly, defense in depth
+        # it. Checked in `_write_verdict` directly, defense in depth
         # regardless of what upstream sends.
         self._guard_rejected = False
+
+        # Build phase 8.10, T-8.10-03: a bare topic ("GERD") gets a question
+        # back plus up to four full questions to pick from
+        # (`ThinkPayload.clarifying_options`). The web shows them as chips;
+        # this surface used to print the question and drop the options.
+        # Held from the `think` event and printed, numbered, under the
+        # question text just before the trust tag.
+        self._clarifying_question: str | None = None
+        self._clarifying_options: list[str] = []
+        self._printed_options = False
+        # What `_is_ask_back` needs besides the question and the guard.
+        self._fatal_error_seen = False
+        self._citations_seen = 0
+
+        # Card 62's fix round. The verdict block (the tag and the one trust
+        # line under it) is printed once, from `done`, the server's final
+        # verdict, which is the source the web, `--json` and the exit code
+        # read (F-62-A05). Trust signals only feed the two cautions the web
+        # keeps beside the line (F-62-A02).
+        self._done_seen = False
+        self._printed_verdict = False
+        self._printed_unfinished = False
+        self._trust_signal_seen = False
+        self._all_grounded = True
+        self._risk_tiers: list[str] = []
+        # Whether anything answer-shaped reached stdout, so a run that did
+        # not finish says so under it.
+        self._answer_written = False
+        # Build phase 8.7: listing tokens that arrived before the summary are
+        # held and written after it, at `done` or `finish()`, so the summary
+        # stays above the records. A stream with no placement holds nothing.
+        self._held_listing: list[str] = []
+
+    def _flush_held_listing(self) -> None:
+        if not self._held_listing:
+            return
+        held, self._held_listing = self._held_listing, []
+        for text in held:
+            self._out.write(text)
+        self._out.flush()
+
+    @property
+    def offered_options(self) -> bool:
+        """True once numbered clarifying options were printed, so `main.py`
+        can say how to ask one of them in the same conversation."""
+        return self._printed_options
+
+    def _asked_back(self) -> bool:
+        return _is_ask_back(
+            clarifying_question=self._clarifying_question,
+            guard_rejected=self._guard_rejected,
+            fatal_error_seen=self._fatal_error_seen,
+            citations_seen=self._citations_seen,
+        )
+
+    def _is_question_back(self, verdict: TrustOutcome) -> bool:
+        """Whether the server's final verdict is a question back: the stream
+        labels one `refuse`, and `_is_ask_back` tells it from a refusal. It
+        is its own state, never the server's `ask` verdict, which means a
+        finished answer that is not yet confirmed (F-62-A01)."""
+        return verdict == "refuse" and self._asked_back()
+
+    @staticmethod
+    def _tag_word(verdict: TrustOutcome, question_back: bool) -> str:
+        """The word inside the printed tag, from the server's final verdict.
+
+        `[ask]` on this surface means a question back with options to pick
+        from. The server's `ask` on a finished answer means "answered, not
+        yet confirmed", which the web shows as "Answered" with the trust
+        line under it, so it is tagged `[answer]` here (card 62,
+        PR-8.10-01). `JsonRenderer` still reports `trust_outcome: "ask"`,
+        which is the contract."""
+        if question_back:
+            return "ask"
+        if verdict == "ask":
+            return "answer"
+        return verdict
 
     # ------------------------------------------------------------------
     # Dispatch
@@ -592,6 +831,26 @@ class Renderer:
         narrative = _sanitize_untrusted(payload.narrative)
         self._err.write(f"{self._status_prefix('think')} {narrative}\n")
         self._err.flush()
+        # The first `think` with a question wins, as on the web and over
+        # MCP, and its options are the ones kept: a later event can never
+        # swap in a different question.
+        if self._clarifying_question is None:
+            self._clarifying_question, self._clarifying_options = _first_clarification(payload)
+
+    def _write_clarifying_options(self) -> None:
+        """The numbered options under the question, once, and only for a
+        question back. Each is untrusted text (built from the reader's own
+        words and the server's lookup), so each goes through
+        `_sanitize_untrusted` like every answer token."""
+        if self._printed_options or not self._clarifying_options or not self._asked_back():
+            return
+        self._printed_options = True
+        lines = "".join(
+            f"  {number}. {_sanitize_untrusted(option)}\n"
+            for number, option in enumerate(self._clarifying_options, start=1)
+        )
+        self._out.write(f"\n{lines}")
+        self._out.flush()
 
     def _handle_plan(self, event: Event) -> None:
         payload = PlanPayload.model_validate(event.payload)
@@ -627,14 +886,40 @@ class Renderer:
         # immediately (F-4.2-A-07): an unflushed stream buffers the
         # answer until process exit, which is indistinguishable from not
         # streaming at all from the reader's side of the pipe.
+        self._seen_marker_ids.update(payload.marker_ids)
+        if payload.text:
+            self._answer_written = True
+        if payload.placement == LISTING:
+            # Held until the summary has been written (build phase 8.7).
+            self._held_listing.append(_sanitize_untrusted(payload.text))
+            return
         self._out.write(_sanitize_untrusted(payload.text))
         self._out.flush()
-        self._seen_marker_ids.update(payload.marker_ids)
 
     def _handle_citation(self, event: Event) -> None:
         payload = CitationPayload.model_validate(event.payload)
+        self._citations_seen += 1
         existing = self._citations.get(payload.citation_id)
-        if existing is not None and existing != payload:
+        if existing is not None and updates_citation(existing, payload):
+            # F-8.7-A04, card 57: the same citation sent again once the
+            # summary is checked, only its checked words grown. Its number,
+            # record and link are what is on screen already, so it takes the
+            # earlier one's place, with no warning.
+            self._citations[payload.citation_id] = payload
+            return
+        if (
+            existing is not None
+            and existing.display_index == payload.display_index
+            and names_same_record(existing, payload)
+        ):
+            # A-87F-04: a repeat with the same number naming the same record
+            # (source, id there, link) is that source sent again, never a
+            # conflict, so nothing is printed. Anything else it changes is
+            # not taken: the first payload, which may already be on screen,
+            # is kept. A renumbered repeat still warns below, since its
+            # number is not the one a reader may already see.
+            return
+        if existing is not None:
             # F-4.2-A-19: a second `citation` event citing an id already
             # bound to a DIFFERENT source is a conflicting redefinition.
             # A `[n]` marker for this id may already be visible on
@@ -644,8 +929,8 @@ class Renderer:
             # Reject the redefinition (the first source for this id
             # wins, matching what may already be on screen) and flag it
             # audibly rather than accept the swap silently. A genuine
-            # duplicate (same id, identical fields) is not a conflict
-            # and is not warned about.
+            # duplicate (same id, same record) is not a conflict and is
+            # not warned about (the arm above).
             self._err.write(
                 f"warning: citation {payload.citation_id!r} was redefined "
                 "mid-run; the redefinition was ignored and the first "
@@ -656,34 +941,86 @@ class Renderer:
         self._citations[payload.citation_id] = payload
 
     def _handle_trust_signal(self, event: Event) -> None:
-        payload = TrustSignalPayload.model_validate(event.payload)
-        if payload.scope != "answer":
-            # Per-claim signals (`scope == "claim"`) do not get their own
-            # rendered line: Section 13.3 names one prefix "on the answer
-            # body," singular, not one per claim. The web UI's own
-            # per-citation chip is the only surface that renders the
-            # claim-level signal (Section 12.4); this plain-text surface
-            # has no analogous inline chip to attach it to.
-            return
-        self._write_trust_prefix(payload.outcome)
+        """Records what the web keeps beside the trust line, and prints
+        nothing. Every signal counts, claim and answer scope alike, as on
+        the web (`useRunView.ts` reads every `trust_signal` for the
+        grounded verdict and the worst risk tier).
 
-    def _write_trust_prefix(self, outcome: TrustOutcome) -> None:
-        if self._printed_trust_prefix or self._guard_rejected:
-            # F-4.2-A-27: a guard rejection already printed its own
-            # explanation to stderr and set the exit code; never let a
-            # later `trust_signal`/`done` print `[answer]` (or any other
-            # outcome) on top of a run this renderer already knows was
-            # rejected.
+        Card 62's fix round, F-62-A05: this used to print the tag from the
+        first answer-scope signal, so a later `done` saying otherwise could
+        not change it, and `s3`'s stdout could contradict its own exit code,
+        `--json` and the web. The tag now comes from `done` alone."""
+        payload = TrustSignalPayload.model_validate(event.payload)
+        if self._guard_rejected:
             return
-        # J-4.2-05: a leading `\n` guarantees this tag starts its own
-        # line regardless of whether the last token write ended in a
-        # newline, closing the gap between this module's own docstring
-        # claim ("a standalone stdout line") and what the code used to
-        # do (glue the tag to the end of the last token, verified at
-        # byte index 36 mid-sentence in the judge's own probe).
-        self._out.write(f"\n[{outcome}]\n")
+        self._trust_signal_seen = True
+        if not payload.grounded:
+            self._all_grounded = False
+        self._risk_tiers.append(payload.risk_tier)
+
+    def _trust_line_text(self, verdict: TrustOutcome, trust_line: str | None) -> str:
+        """The one trust line under the tag, as the web shows it: "Not fully
+        grounded" first when any trust signal was ungrounded, then the
+        server's `done.trust_line` (or, for an `ask` verdict with none, the
+        web's words for that verdict), then the risk mark. Empty when there
+        is nothing the server sent to say. Every server string on it goes
+        through `_single_line`."""
+        parts: list[str] = []
+        if self._trust_signal_seen and not self._all_grounded:
+            parts.append(_NOT_FULLY_GROUNDED)
+        line = _single_line(trust_line or "")
+        if not line and verdict == "ask":
+            line = _UNCONFIRMED_WITHOUT_TRUST_LINE
+        if line:
+            parts.append(line)
+        risk = _risk_caution(self._risk_tiers)
+        if risk is not None:
+            parts.append(risk)
+        return _TRUST_PART_SEPARATOR.join(parts)
+
+    def _write_verdict(self, verdict: TrustOutcome, trust_line: str | None) -> None:
+        """The tag and the one trust line under it, printed once, from the
+        server's final verdict (`done`).
+
+        Nothing is printed on a guard rejection (F-4.2-A-27: its own
+        explanation is on stderr), nor after a fatal error: the web shows no
+        outcome for a run that did not finish, and `finish` prints its words
+        for that instead (F-62-A08). A question back reads `[ask]` with no
+        trust line, since it is a question, not an answer; a refusal reads
+        `[refuse]` with none either."""
+        if self._printed_verdict or self._guard_rejected or self._fatal_error_seen:
+            return
+        self._printed_verdict = True
+        question_back = self._is_question_back(verdict)
+        # T-8.10-03: the options belong to the question the tokens just
+        # printed, so they go between it and the tag.
+        self._write_clarifying_options()
+        # J-4.2-05: a leading `\n` guarantees the tag starts its own line
+        # whatever the last token ended with.
+        block = f"\n[{self._tag_word(verdict, question_back)}]\n"
+        # A question back is a `refuse` verdict, so neither carries a line.
+        if verdict != "refuse":
+            line = self._trust_line_text(verdict, trust_line)
+            if line:
+                block += f"{line}\n"
+        self._out.write(block)
         self._out.flush()
-        self._printed_trust_prefix = True
+
+    def _write_unfinished_notice(self) -> None:
+        """The web's words for a run that did not finish, under whatever
+        answer text and citations already reached stdout, so a reader of a
+        redirected file learns what stderr said. Never a verdict: it
+        replaces the tag and the trust line (F-62-A01, F-62-J04)."""
+        if (
+            self._printed_unfinished
+            or self._printed_verdict
+            or self._guard_rejected
+            or not (self._answer_written or self._citations)
+        ):
+            return
+        self._printed_unfinished = True
+        self._out.write(f"\n{_RUN_DID_NOT_FINISH}\n")
+        self._out.flush()
 
     def _handle_cost(self, event: Event) -> None:
         if not self._operator:
@@ -710,6 +1047,8 @@ class Renderer:
         source = _sanitize_untrusted(payload.source)
         self._err.write(f"error [{source}]: {disclosure}{retry_note}\n")
         self._err.flush()
+        if payload.fatal:
+            self._fatal_error_seen = True
 
         # Section 13.3: exits nonzero UNLESS fatal is false AND error_class
         # is transient or recoverable, in which case the retry policy (not
@@ -720,12 +1059,17 @@ class Renderer:
 
     def _handle_done(self, event: Event) -> None:
         payload = DonePayload.model_validate(event.payload)
+        self._done_seen = True
+        self._flush_held_listing()
 
-        # Fallback: if the answer-scope trust_signal never arrived (should
-        # not happen on a well-formed stream, but `done.trust_outcome`
-        # carries the same value regardless per Section 2.3), print the
-        # prefix now rather than lose it.
-        self._write_trust_prefix(payload.trust_outcome)
+        # The tag and the trust line, from the server's final verdict: the
+        # same field the web's outcome, `--json`'s `trust_outcome` and the
+        # exit code below read (F-62-A05).
+        self._write_verdict(payload.trust_outcome, payload.trust_line)
+        if self._fatal_error_seen:
+            # A fatal error then `done` (a declined run, for one): the run
+            # did not finish, and the notice sits where the tag would.
+            self._write_unfinished_notice()
 
         self._write_references_block()
 
@@ -743,8 +1087,14 @@ class Renderer:
         # A guard rejection or a fatal error already set a nonzero exit
         # code; a `done` event does not follow either on a well-formed
         # stream, but if it somehow does, that earlier failure still wins.
+        # Build phase 8.10: the exit code follows the outcome shown, so a
+        # question back exits 0 like any other `[ask]`, and a real refusal
+        # still exits 1.
         if self._exit_code is None:
-            self._exit_code = _EXIT_FAILURE if payload.trust_outcome == "refuse" else _EXIT_OK
+            refused = payload.trust_outcome == "refuse" and not self._is_question_back(
+                payload.trust_outcome
+            )
+            self._exit_code = _EXIT_FAILURE if refused else _EXIT_OK
 
     # ------------------------------------------------------------------
     # References block
@@ -753,7 +1103,7 @@ class Renderer:
     def _write_references_block(self) -> None:
         if self._printed_references or self._guard_rejected:
             # F-4.2-A-27: the same defense-in-depth guard as
-            # `_write_trust_prefix`. A stray `citation`/`done` arriving
+            # `_write_verdict`. A stray `citation`/`done` arriving
             # after a guard rejection must not print a references block
             # on top of it either, or a rejected run would print nothing
             # via the trust tag but still leak a "References:" block.
@@ -780,7 +1130,24 @@ class Renderer:
         # contains.
         if self._citations:
             self._out.write("\nReferences:\n")
+            # Card 22 fix round (2026-10-06, J-22-06, A-22-08): one line per
+            # record PAGE, not per citation. The trust line above says "Based
+            # on 16 sources cited", counting distinct pages under
+            # `source_page_key`; printing one line per citation listed 18
+            # under it, the BRCA1 gene page three times. Every marker that
+            # points at one page now sits on that page's line ("[1][6][9]
+            # NCBIGene - ..."), in the order the page was first cited, so the
+            # numbered lines a person counts are the sources the line names
+            # and every marker in the answer still resolves to a line. The
+            # first citation's source name and link spelling are printed. A
+            # citation with no link is its own line, never merged.
+            pages: dict[str, list[CitationPayload]] = {}
             for citation in sorted(self._citations.values(), key=lambda c: c.display_index):
+                key = source_page_key(citation.source_url) or f"#{citation.display_index}"
+                pages.setdefault(key, []).append(citation)
+            for cited in pages.values():
+                citation = cited[0]
+                markers = "".join(f"[{each.display_index}]" for each in cited)
                 source = _sanitize_untrusted(citation.source)
                 # `source_url` is also constrained by `contracts.events.
                 # NCBI_SOURCE_URL_PATTERN` (build phase 4.2 review, F-4.2-A-01
@@ -793,7 +1160,7 @@ class Renderer:
                 # that `citation.source` (unconstrained beyond `max_length`)
                 # still needs it regardless.
                 source_url = _sanitize_untrusted(citation.source_url)
-                self._out.write(f"[{citation.display_index}] {source} - {source_url}\n")
+                self._out.write(f"{markers} {source} - {source_url}\n")
             self._out.flush()
 
         if unresolved:
@@ -830,6 +1197,7 @@ class Renderer:
     # ------------------------------------------------------------------
 
     def finish(self) -> int:
+        self._flush_held_listing()
         # A run that never reached a terminal `done`, a terminal fatal
         # `error`, or a guard rejection is not a run that finished
         # cleanly, so the safe default on an otherwise-undetermined state
@@ -880,8 +1248,281 @@ class Renderer:
         # already printed it here is a no-op) and honors the
         # guard-rejection suppression internally (F-4.2-A-27), so a
         # rejected run still prints nothing.
+        self._write_clarifying_options()
+        # Card 62's fix round (F-62-J04, F-62-A01, F-62-A08): a run that
+        # ended on a fatal error or before `done` gets no tag and no trust
+        # line, only the web's words for a run that did not finish. Nothing
+        # here composes a verdict.
+        if self._fatal_error_seen or not self._done_seen:
+            self._write_unfinished_notice()
         self._write_references_block()
         return self._exit_code
+
+
+class JsonRenderer:
+    """`s3 ask --json`: the whole answer as one JSON object on stdout.
+
+    Build phase 8.10, T-8.10-03. The Integrations page promised "JSON with
+    --json" and no such flag existed. Same interface as `Renderer`
+    (`handle()` per event, `finish()` once, returning the exit code), and the
+    same exit code for the same stream, so a script can switch modes without
+    re-learning what zero means. Nothing is written until `finish()`: a
+    consumer parsing stdout gets exactly one complete JSON object, never a
+    partial one and never a status line mixed into it.
+
+    Text fields are written as the server sent them rather than through
+    `_sanitize_untrusted`, because a JSON consumer needs the true text and a
+    forged `[answer]` inside a string cannot pass for a structural field.
+    `ensure_ascii=True` is what keeps the output terminal-safe instead: every
+    control character, C1 byte and bidi override is written as a `\\uXXXX`
+    escape, never as the raw character, so printing the object to a terminal
+    executes nothing.
+
+    Keys, all always present:
+        run_id, session_id, persona_name: the run and the conversation to
+            continue with `s3 ask --session-id`.
+        complete: whether a final `done`, a fatal error or a guard
+            rejection reached this client. False means the answer is partial.
+        trust_outcome, trust_line: the verdict and the one plain trust line.
+            A question back reports `ask`, as over MCP, never `refuse`.
+        answer: the answer text, joined as the tokens arrived.
+        citations: every citation, in display order, with its source URL.
+        unresolved_markers: markers the answer used that no citation matched.
+        clarifying_question, clarifying_options: a question back, and the
+            full questions offered to pick from, or null and an empty list.
+        next_step, next_step_query: the offer to go further, when there is one.
+        guard: null, or the category and the plain reason a question was
+            not taken.
+        error: null, or the error class, its source and what to do next.
+        stream: frames skipped as unknown, and whether the stream was cut.
+
+    A run that never streams still gets one object with these keys, from
+    `write_json_failure` (build phase 8.10's fix round, F-8.10-J08).
+    """
+
+    def __init__(
+        self,
+        out: TextIO,
+        err: TextIO,
+        *,
+        session_id: str,
+        run_id: str,
+        persona_name: str | None = None,
+        stream_state: object | None = None,
+    ) -> None:
+        self._out = out
+        self._err = err
+        self._session_id = session_id
+        self._run_id = run_id
+        self._persona_name = persona_name
+        # The `CliClient` whose `stream_skipped_frame_count` and
+        # `stream_truncated` are read once, at `finish()`.
+        self._stream_state = stream_state
+        self._answer_parts: list[TokenPayload] = []
+        self._citations: dict[str, CitationPayload] = {}
+        self._seen_marker_ids: set[str] = set()
+        self._trust_outcome: str | None = None
+        self._trust_line: str | None = None
+        self._next_step: str | None = None
+        self._next_step_query: str | None = None
+        self._clarifying_question: str | None = None
+        self._clarifying_options: list[str] = []
+        self._guard: dict[str, str] | None = None
+        self._error: dict[str, object] | None = None
+        self._exit_code: int | None = None
+        self._written = False
+        # What `_is_ask_back` needs, as in `Renderer`.
+        self._fatal_error_seen = False
+        self._citations_seen = 0
+
+    def _asked_back(self) -> bool:
+        return _is_ask_back(
+            clarifying_question=self._clarifying_question,
+            guard_rejected=self._guard is not None,
+            fatal_error_seen=self._fatal_error_seen,
+            citations_seen=self._citations_seen,
+        )
+
+    def handle(self, event: Event) -> None:
+        handler = getattr(self, f"_handle_{event.type}", None)
+        if handler is not None:
+            handler(event)
+
+    def _handle_guard(self, event: Event) -> None:
+        payload = GuardPayload.model_validate(event.payload)
+        if payload.passed:
+            return
+        self._guard = {
+            "category": payload.category,
+            "message": _GUARD_CATEGORY_COPY.get(payload.category, _GUARD_CATEGORY_FALLBACK),
+        }
+        self._exit_code = _EXIT_FAILURE
+
+    def _handle_think(self, event: Event) -> None:
+        payload = ThinkPayload.model_validate(event.payload)
+        # The first `think` with a question wins, with its own options.
+        if self._clarifying_question is None:
+            self._clarifying_question, self._clarifying_options = _first_clarification(payload)
+
+    def _handle_token(self, event: Event) -> None:
+        payload = TokenPayload.model_validate(event.payload)
+        self._answer_parts.append(payload)
+        self._seen_marker_ids.update(payload.marker_ids)
+
+    def _handle_citation(self, event: Event) -> None:
+        payload = CitationPayload.model_validate(event.payload)
+        self._citations_seen += 1
+        # The first source for an id wins, as in `Renderer` (F-4.2-A-19),
+        # except the same citation sent again with its checked words grown
+        # (F-8.7-A04, card 57), which takes the earlier one's place.
+        existing = self._citations.get(payload.citation_id)
+        if existing is None or updates_citation(existing, payload):
+            self._citations[payload.citation_id] = payload
+
+    def _handle_trust_signal(self, event: Event) -> None:
+        payload = TrustSignalPayload.model_validate(event.payload)
+        if payload.scope == "answer" and self._guard is None:
+            self._trust_outcome = payload.outcome
+
+    def record_failure(self, error_class: str, message: str) -> None:
+        """The stream could not be opened or read to its end, so no event
+        will say why. `s3 ask --json` records it here before `finish()`, so
+        the one object on stdout carries it (F-8.10-J08). A fatal error the
+        stream already sent is kept, since it is the server's own account."""
+        if self._error is not None and self._error.get("fatal"):
+            return
+        self._error = _cli_error(error_class, message)
+
+    def _handle_error(self, event: Event) -> None:
+        payload = ErrorPayload.model_validate(event.payload)
+        self._error = {
+            "fatal": payload.fatal,
+            "error_class": payload.error_class,
+            "source": payload.source,
+            "message": _error_disclosure(payload.error_class),
+            "retry_after_s": payload.retry_after_s,
+        }
+        if payload.fatal:
+            self._fatal_error_seen = True
+        if payload.fatal or payload.error_class not in ("transient", "recoverable"):
+            self._exit_code = _EXIT_FAILURE
+
+    def _handle_done(self, event: Event) -> None:
+        payload = DonePayload.model_validate(event.payload)
+        if self._guard is None:
+            self._trust_outcome = payload.trust_outcome
+        self._trust_line = payload.trust_line
+        self._next_step = payload.next_step
+        self._next_step_query = payload.next_step_query
+        # The exit code follows the outcome shown, as in `Renderer`.
+        if self._exit_code is None:
+            asked_back = payload.trust_outcome == "refuse" and self._asked_back()
+            refused = payload.trust_outcome == "refuse" and not asked_back
+            self._exit_code = _EXIT_FAILURE if refused else _EXIT_OK
+
+    def finish(self) -> int:
+        complete = self._exit_code is not None
+        if self._exit_code is None:
+            if self._error is None:
+                self.record_failure(
+                    "stream_incomplete",
+                    "s3: the event stream ended with no final answer or error. "
+                    "Try again; if it happens again, check the connection to System 3.",
+                )
+            self._exit_code = _EXIT_FAILURE
+        # Build phase 8.10: a question back reports `ask`, as over MCP, and
+        # only a question back carries the clarifying question and options.
+        asked_back = self._asked_back()
+        trust_outcome = self._trust_outcome
+        if trust_outcome == "refuse" and asked_back:
+            trust_outcome = "ask"
+        if not self._written:
+            self._written = True
+            document = {
+                "run_id": self._run_id,
+                "session_id": self._session_id,
+                "persona_name": self._persona_name,
+                "complete": complete,
+                "trust_outcome": trust_outcome,
+                "trust_line": self._trust_line,
+                "answer": joined_text(self._answer_parts),
+                "citations": [
+                    citation.model_dump(mode="json")
+                    for citation in sorted(self._citations.values(), key=lambda c: c.display_index)
+                ],
+                "unresolved_markers": sorted(self._seen_marker_ids - self._citations.keys()),
+                "clarifying_question": self._clarifying_question if asked_back else None,
+                "clarifying_options": self._clarifying_options if asked_back else [],
+                "next_step": self._next_step,
+                "next_step_query": self._next_step_query,
+                "guard": self._guard,
+                "error": self._error,
+                "stream": {
+                    "skipped_frames": int(
+                        getattr(self._stream_state, "stream_skipped_frame_count", 0) or 0
+                    ),
+                    "truncated": bool(getattr(self._stream_state, "stream_truncated", False)),
+                },
+            }
+            self._out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
+            self._out.flush()
+        return self._exit_code
+
+
+#: Bound on the failure text `s3 ask --json` carries, which is the same
+#: words `s3` already wrote to stderr for that failure.
+_MAX_JSON_FAILURE_MESSAGE = 2000
+
+
+def _cli_error(error_class: str, message: str) -> dict[str, object]:
+    """The `error` value for a failure `s3` saw itself, in the same shape as
+    one the event stream reports, with `source` `"s3"`."""
+    return {
+        "fatal": True,
+        "error_class": error_class,
+        "source": "s3",
+        "message": message[:_MAX_JSON_FAILURE_MESSAGE],
+        "retry_after_s": None,
+    }
+
+
+def write_json_failure(
+    out: TextIO,
+    *,
+    session_id: str | None,
+    run_id: str | None,
+    persona_name: str | None,
+    error_class: str,
+    message: str,
+) -> None:
+    """`s3 ask --json` when the run never started streaming: one JSON
+    object on stdout, with every key `JsonRenderer` always writes.
+
+    Build phase 8.10's fix round, F-8.10-J08: a failure before the stream
+    started, "not logged in" for one, wrote only to stderr, so a script
+    parsing stdout got nothing to parse. Now it gets `complete: false`, an
+    empty answer, and `error` naming the class and the same words stderr
+    shows. The exit code is still non-zero; the caller returns it."""
+    document = {
+        "run_id": run_id,
+        "session_id": session_id,
+        "persona_name": persona_name,
+        "complete": False,
+        "trust_outcome": None,
+        "trust_line": None,
+        "answer": "",
+        "citations": [],
+        "unresolved_markers": [],
+        "clarifying_question": None,
+        "clarifying_options": [],
+        "next_step": None,
+        "next_step_query": None,
+        "guard": None,
+        "error": _cli_error(error_class, message),
+        "stream": {"skipped_frames": 0, "truncated": False},
+    }
+    out.write(json.dumps(document, ensure_ascii=True, indent=2) + "\n")
+    out.flush()
 
 
 # ----------------------------------------------------------------------

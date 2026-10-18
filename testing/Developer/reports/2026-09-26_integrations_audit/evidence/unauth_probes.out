@@ -1,0 +1,24 @@
+# Unauthenticated endpoint probes, 2026-09-26T21:30:20Z
+GET /health -> 200 application/json
+GET /docs -> 200 text/html; charset=utf-8
+GET /openapi.json -> 200 application/json
+GET /graphql -> 401 application/json
+GET /v1/history -> 401 application/json
+POST /mcp (no slash, as the 2026-09-20 page printed):
+HTTP/2 307 
+location: https://search-agent-api-develop-43b3.up.railway.app/mcp/
+POST /mcp/ initialize, no Authorization header:
+HTTP/2 200 
+cache-control: no-cache, no-transform
+content-type: text/event-stream
+date: Sat, 26 Sep 2026 21:28:43 GMT
+server: railway-hikari
+vary: Origin
+x-accel-buffering: no
+x-railway-request-id: Sd6xP_6ZQIuKC_d3CYBc-A
+x-railway-edge: iad1
+x-hikari-trace: iad1.trg5
+
+event: message
+data: {"jsonrpc":"2.0","id":1,"result":{"capabilities":{"experimental":{},"prompts":{"listChanged":false},"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":false}},"instructions":"Ask a biomedical research question. Returns a cited answer assembled from the NCBI knowledge graph and live NCBI APIs, or an honest refusal.","protocolVersion":"2025-06-18","serverInfo":{"name":"system3-biomedical-search","version":"1.0.0"}}}
+

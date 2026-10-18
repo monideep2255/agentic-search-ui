@@ -1,0 +1,7 @@
+{
+  "name": "mod-blast-radius",
+  "version": "0.1.0",
+  "description": "Before a risky Bash command (rm -rf, git reset --hard, force push, migrations, and the repository's extra rules) runs, dry-runs it, shows what it would touch in a pane, and asks the person to Proceed or Cancel. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" },
+  "types": "./types/index.d.ts"
+}

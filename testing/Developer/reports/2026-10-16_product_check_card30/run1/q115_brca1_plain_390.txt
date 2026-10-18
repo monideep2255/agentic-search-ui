@@ -1,0 +1,46 @@
+Which BRCA1 variants are pathogenic?
+New search
+
+? Answered20.6s · 13 tool calls · 57 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 40 genetic variants related to BRCA1, out of 15350 available.⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)⁠1
+NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)⁠2
+NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)⁠3
+NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)⁠4
+NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)⁠5
+NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)⁠6
+NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)⁠7
+NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)⁠8
+NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)⁠9
+NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)⁠10
+Showing 1–10 of 57
+‹ Previous
+Page 1 of 6
+Next ›
+NOTES
+ClinVar's classification of these variants (for example pathogenic, benign or uncertain) was not retrieved, so this list does not say which are pathogenic. Each variant's ClinVar record shows its classification.
+Note: this answer was truncated because only 140 of the 15350 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+57
+Based on 57 sources cited, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

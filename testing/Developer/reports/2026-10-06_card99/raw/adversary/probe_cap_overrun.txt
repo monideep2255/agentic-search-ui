@@ -1,0 +1,4 @@
+pre-spent $0.000: calls 5, outcome SentenceCheckUnreadable, spent after $0.050, cap $0.10, guard estimate $0.003
+pre-spent $0.050: calls 5, outcome SentenceCheckUnreadable, spent after $0.100, cap $0.10, guard estimate $0.003
+pre-spent $0.080: calls 5, outcome SentenceCheckUnreadable, spent after $0.130, cap $0.10, guard estimate $0.003
+pre-spent $0.085: calls 5, outcome SentenceCheckUnreadable, spent after $0.135, cap $0.10, guard estimate $0.003

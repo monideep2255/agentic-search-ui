@@ -245,10 +245,11 @@ test.describe("the stored-searches rail collapses", () => {
     });
     const railText = (await railItem.textContent())!.trim();
     // The wording changed in the F-4.9-R-02 fix, from three bare nouns to
-    // "N tools · N sources from N layers", so each figure states what it
-    // counts. The GUARANTEE is untouched: the rail's label must still appear
-    // verbatim inside the answer's own strip.
-    const counts = railText.match(/\d+ tools? · \d+ sources?(?: from \d+ layers?)?/);
+    // "N tools · N sources from N layers", and again for card 22 to
+    // "N tool calls · N sources cited from N layers", so each figure states
+    // what it counts. The GUARANTEE is untouched: the rail's label must still
+    // appear verbatim inside the answer's own strip.
+    const counts = railText.match(/\d+ tool calls? · \d+ sources? cited(?: from \d+ layers?)?/);
     expect(counts, `the rail item carried no counts: ${railText}`).not.toBeNull();
 
     await expect(page.getByTestId("answer-meta")).toContainText(counts![0]);

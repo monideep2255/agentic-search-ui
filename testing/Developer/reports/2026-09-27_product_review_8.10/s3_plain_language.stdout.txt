@@ -1,0 +1,24 @@
+I found 4 conditions related to BRCA1 [1][2][3][4]. 
+
+Where this answer comes from
+
+Disease record MedGen:C0346153 [1]. Disease record MedGen:C2676676 [2]. Disease record MedGen:C3280442 [3]. Disease record MedGen:C4554406 [4]. Gene symbol: BRCA1 [5]. BRCA1 DNA REPAIR-ASSOCIATED PROTEIN [6]. BRCA1 [6]. Gene name: BRCA1 [7]. Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [8]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [9]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [10]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [11]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [12]. 
+
+One of the background searches did not finish, so this answer may be missing sources. Ask again to retry.
+
+This is a research summary, not medical advice.
+[ask]
+
+References:
+[1] MedGen - https://www.ncbi.nlm.nih.gov/medgen/C0346153
+[2] MedGen - https://www.ncbi.nlm.nih.gov/medgen/C2676676
+[3] MedGen - https://www.ncbi.nlm.nih.gov/medgen/C3280442
+[4] MedGen - https://www.ncbi.nlm.nih.gov/medgen/C4554406
+[5] gene - https://www.ncbi.nlm.nih.gov/gene/672/
+[6] omim - https://omim.org/entry/113705
+[7] gene - https://www.ncbi.nlm.nih.gov/gene/672
+[8] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00590109
+[9] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00597987
+[10] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00617656
+[11] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00673335
+[12] clinicaltrials.gov - https://clinicaltrials.gov/study/NCT00700778

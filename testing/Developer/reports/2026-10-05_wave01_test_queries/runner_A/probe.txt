@@ -1,0 +1,30 @@
+QUESTION: GERD
+MODE: researcher
+
+--- ANSWER TEXT ---
+GERD
+New search
+
+3.2s · 0 tools · 0 sources
+
+Show work ▾
+One more detail needed
+What would you like to know about GERD?
+https://www.ncbi.nlm.nih.gov/search/all/?term=GERD
+
+ASK ANOTHER QUESTION
+
+Ask
+What is GERD?
+What genetic factors are linked to GERD?
+Are there clinical trials for GERD treatments?
+What does recent research say about GERD?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- ANSWER META ---
+3.2s · 0 tools · 0 sources
+
+--- LINKS (1) ---
+https://www.ncbi.nlm.nih.gov/search/all/?term=GERD -> https://www.ncbi.nlm.nih.gov/search/all/?term=GERD

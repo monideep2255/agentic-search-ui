@@ -20,11 +20,11 @@ If any check fails, fix the environment before writing new code.
 
 ## 2. Scope discipline
 
-This repo is System 3 (search agent, API, UI) only.
+This repository is System 3 (search agent, API, UI) only.
 
-The knowledge graph (System 1 + System 2) lives in a separate repo, symlinked at `reference/agentic-search-data-engineering`. System 3 connects to the live graph as a read-only client via psycopg2.
+The knowledge graph (System 1 + System 2) lives in a separate repository, symlinked at `reference/agentic-search-data-engineering`. System 3 connects to the live graph as a read-only client via psycopg2.
 
-Never add to this repo:
+Never add to this repository:
 
 - ETL pipeline code (FTP downloads, bulk parsers, KGX exporters)
 - Schema validation or BioLink mapping code
@@ -55,7 +55,7 @@ Every answer must trace back to specific records in NCBI databases. Functions th
 
 ## 4. Commit hygiene
 
-- Work on phase branches, never directly on `develop`. Build phases use `phase/N.M-description` from tech spec Section 25, other work uses a type prefix such as `chore/short-description`. One PR per phase, merged into `develop` after review.
+- Branch by the risk dial (`.claude/skills/bossman-mode/SKILL.md`, "Set the dial first"). Every numbered phase and every change at position three (auth, the graph credential, the event schema, `.claude/`) works on a branch, never directly on `develop`; a card alone at position one or two lands on `develop` directly once its position's steps have run. Build phases use `phase/N.M-description` from tech spec Section 25, other work uses a type prefix such as `chore/short-description`. One PR per phase, merged into `develop` after review.
 - Commit messages in sentence case, descriptive, no emoji.
 - One logical change per commit.
 - Never add `Co-Authored-By` lines. Project rule.
@@ -73,7 +73,7 @@ Every answer must trace back to specific records in NCBI databases. Functions th
 ## 6. Three-state permissions
 
 Allow:
-- Read any file in the repo.
+- Read any file in the repository.
 - Run tests, linters, type checkers.
 - Append to `DECISIONS.md`.
 - Start the dev server locally.
@@ -89,5 +89,5 @@ Deny:
 
 - Edit anything inside `reference/`.
 - Write to the knowledge graph (all connections are read-only).
-- Push to a remote branch other than the current phase branch.
+- Push anywhere the risk dial does not send the change. The Deny entry on pushing to develop in `.claude/rules/bossman-mode.md` names where each position goes: `develop` for a card alone at position one or two once its steps have run, the phase branch for a numbered phase, and a `chore/` or `fix/` branch with a pull request for position three.
 - Add System 1/2 dependencies (linkml, kgx, biopython bulk processing).

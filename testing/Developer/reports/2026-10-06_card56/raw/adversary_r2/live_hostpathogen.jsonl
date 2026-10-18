@@ -1,0 +1,1 @@
+{"run": 1, "model": "deepseek/deepseek-v4-flash", "secs": 3.6, "class": "single_hop", "record_type": "sra", "entities": [["SARS-CoV-2", "organism"], ["human", "organism"]], "resolved": [], "ended": "planned 3 tool calls", "tools": ["?", "?", "?"], "cost": 0.0004, "step_error": "None", "unresolved": null, "clarification": null, "medgen": [], "conditions_not_applied": []}

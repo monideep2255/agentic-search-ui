@@ -1,0 +1,12 @@
+G-013 guard   1.4 think   4.7 plan   4.7 tool1   4.7 toolN   6.1 write   6.1 tok1  17.3 done  17.3 tokens 46 maxlag 0.086 withdrawn False
+G-032 guard   1.7 think   4.7 plan   4.7 tool1   4.7 toolN   5.7 write   5.7 tok1  27.4 done  27.5 tokens 52 maxlag 0.056 withdrawn False
+G-025 guard   2.5 think   6.3 plan   6.3 tool1   6.3 toolN   8.9 write   8.9 tok1  19.9 done  20.1 tokens 100 maxlag 0.245 withdrawn True
+G-021 guard   2.5 think   4.4 plan   4.4 tool1   4.4 toolN  13.3 write  18.6 tok1  27.5 done  27.6 tokens 97 maxlag 0.077 withdrawn False
+G-016 guard   1.2 think   4.2 plan   4.2 tool1   4.3 toolN  14.5 write  14.5 tok1  22.3 done  22.4 tokens 77 maxlag 0.159 withdrawn False
+G-038 guard   1.5 think   3.2 plan   3.2 tool1   3.2 toolN   4.1 write   4.1 tok1  16.3 done  16.3 tokens 15 maxlag 0.014 withdrawn False
+G-022 guard   2.7 think   5.2 plan   5.5 tool1   5.6 toolN   7.6 write   7.6 tok1  14.5 done  14.5 tokens 108 maxlag 0.069 withdrawn False
+G-034 guard   2.9 think   6.2 plan   7.2 tool1   7.2 toolN  10.0 write  10.0 tok1  13.3 done  13.3 tokens 13 maxlag 0.028 withdrawn True
+G-012 guard   1.3 think   3.4 plan   3.8 tool1   3.8 toolN   6.1 write   6.1 tok1  13.3 done  13.3 tokens 19 maxlag 0.042 withdrawn False
+G-035 guard   1.7 think   4.9 plan   4.9 tool1   4.9 toolN  18.7 write  18.7 tok1  25.9 done  25.9 tokens 32 maxlag 0.025 withdrawn True
+G-013 guard   1.2 think  14.4 plan  14.4 tool1  14.5 toolN  17.6 write  17.6 tok1  26.5 done  26.5 tokens 45 maxlag 0.096 withdrawn False
+exit 0

@@ -1,0 +1,6 @@
+model call point=guardrail.injection trace=probe56-cc6270fc kind=jev elapsed_ms=305 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-cc6270fc kind=guard elapsed_ms=477 outcome=ok attempt=1 provider=Relace
+model call point=plan.literature trace=probe56-cc6270fc kind=jev elapsed_ms=208 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-cc6270fc kind=jev elapsed_ms=222 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-cc6270fc kind=jev elapsed_ms=265 outcome=ok attempt=1 provider=unknown
+think classification asked for sra records and named nothing (trace probe56-cc6270fc); asked once more, used the second reply, in 1951 ms

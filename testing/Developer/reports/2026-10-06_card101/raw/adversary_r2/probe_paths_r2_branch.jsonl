@@ -1,0 +1,16 @@
+{"probe": "P1 head cut reverses: 'no evidence that' dropped", "shown_without_check": "Aspirin prevents colorectal cancer in adults [1].", "to_check": []}
+{"probe": "P1 head cut reverses, with the writer's own quote", "shown_without_check": "Aspirin prevents colorectal cancer in adults [1].", "to_check": []}
+{"probe": "P1 head cut reverses: 'earlier studies suggested' dropped", "shown_without_check": "Montelukast improves symptoms [1].", "to_check": []}
+{"probe": "P1 head cut, lowercase (fragment rule control)", "shown_without_check": "", "to_check": []}
+{"probe": "P1 tail cut drops 'only when infection is confirmed'", "shown_without_check": "Antibiotics are effective [1].", "to_check": []}
+{"probe": "P1 tail cut drops 'in healthy infants and children'", "shown_without_check": "Bronchiolitis is a self-limited disease [1].", "to_check": []}
+{"probe": "P1 case changed in a copy", "shown_without_check": "Use Of A High-Flow Nasal Cannula is becoming common for children with severe bronchiolitis [1].", "to_check": []}
+{"probe": "Punctuation changed in a copy (control, expect check)", "shown_without_check": "", "to_check": ["Use of a high flow nasal cannula is becoming common for children with severe bronchiolitis"]}
+{"probe": "Two copied clauses composed into a reversal", "shown_without_check": "Drug X reduces mortality [1] in men [1].", "to_check": []}
+{"probe": "Two records composed: cut of one, cut of another", "shown_without_check": "Use of a high-flow nasal cannula is becoming common [1] in infants with bronchiolitis [2].", "to_check": []}
+{"probe": "Copy joined from two record sentences with 'and'", "shown_without_check": "Bronchiolitis is a self-limited disease in healthy infants and children [1], and treatment is usually symptomatic [1].", "to_check": []}
+{"probe": "P2 title wrapped in question words", "shown_without_check": "Acute bronchiolitis is usually treated in babies [1].", "to_check": []}
+{"probe": "P2 drug name wrapped in an open question's words", "shown_without_check": "Ribavirin can cure bronchiolitis in babies [1].", "to_check": []}
+{"probe": "P2 drug name plus 'all' (function word)", "shown_without_check": "Ribavirin can cure bronchiolitis in all babies [1].", "to_check": []}
+{"probe": "Former P3: babies for children (expect check)", "shown_without_check": "", "to_check": ["For babies with severe bronchiolitis, use of a high-flow nasal cannula is becoming common"]}
+{"probe": "Former P3: dropped 'usually' (expect check)", "shown_without_check": "Bronchiolitis is a self-limited disease in healthy infants and children [1].", "to_check": ["Treatment is symptomatic"]}

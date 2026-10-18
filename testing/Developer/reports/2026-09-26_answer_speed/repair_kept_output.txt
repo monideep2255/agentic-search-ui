@@ -1,0 +1,8 @@
+G-001: prose sentences 0, found in reply 1: 0, in repair reply: 0, only in repair: 0 -> no written prose shipped; repair seconds 5.63
+G-003: prose sentences 0, found in reply 1: 0, in repair reply: 0, only in repair: 0 -> no written prose shipped; repair seconds 3.018
+G-013: prose sentences 3, found in reply 1: 0, in repair reply: 2, only in repair: 2 -> repair reply shipped; repair seconds 3.436
+G-025: prose sentences 0, found in reply 1: 0, in repair reply: 0, only in repair: 0 -> no written prose shipped; repair seconds 11.957
+G-026: prose sentences 2, found in reply 1: 0, in repair reply: 2, only in repair: 2 -> repair reply shipped; repair seconds 1.951
+G-032: prose sentences 4, found in reply 1: 1, in repair reply: 0, only in repair: 0 -> first reply shipped; repair seconds 9.209
+G-034: prose sentences 0, found in reply 1: 0, in repair reply: 0, only in repair: 0 -> no written prose shipped; repair seconds 2.015
+G-038: prose sentences 2, found in reply 1: 0, in repair reply: 0, only in repair: 0 -> first reply shipped; repair seconds 5.604

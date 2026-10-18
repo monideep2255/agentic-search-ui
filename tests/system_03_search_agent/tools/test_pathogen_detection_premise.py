@@ -31,11 +31,13 @@ either a real (possibly wall-clock-truncated) result, or an honest
 
 ## The arms
 
-Two modes: `isolate_lookup` (ok: a real biosample; empty: a nonexistent
-one), `cluster_snp_neighbors` (ok-or-honest-empty per F-3.5-01 above).
-Plus F-3.5-03 (comma-joined AMR/AST fields parse to real lists, not one
-blob string) and snapshot-pinning (the resolved snapshot has all three
-required subdirectories).
+Three modes: `isolate_lookup` (ok: a real biosample; empty: a nonexistent
+one), `cluster_snp_neighbors` (ok-or-honest-empty per F-3.5-01 above), and
+`isolate_search` (G-035, 2026-09-22: a bounded sample of isolates carrying
+a named AMR gene, with the real total behind it). Plus F-3.5-03
+(comma-joined AMR/AST fields parse to real lists, not one blob string) and
+snapshot-pinning (the resolved snapshot has all three required
+subdirectories).
 
 ## Running it
 
@@ -50,12 +52,22 @@ close to the tool's own 60-second-or-more budget.
 ## Coverage, stated per goal-contracts.md ("a verify surface must state its
 own coverage")
 
-Exercises: both modes, the `ok`/`empty` split for `isolate_lookup`, the
-F-3.5-01 bounded-scan disposition for `cluster_snp_neighbors` (asserted as
-"never falsely complete", not "always completes"), the F-3.5-03 comma-join
-and NULL-sentinel parsing on a real row, and live snapshot-pinning
+Exercises: all three modes, the `ok`/`empty` split for `isolate_lookup`,
+the F-3.5-01 bounded-scan disposition for `cluster_snp_neighbors` (asserted
+as "never falsely complete", not "always completes"), the F-3.5-03
+comma-join and NULL-sentinel parsing on a real row, live snapshot-pinning
 correctness (Metadata+Clusters+AMR all present in whichever snapshot the
-tool actually resolves to today). Does NOT exercise: a taxon whose newest
+tool actually resolves to today), and for `isolate_search` a real scan of
+a real Metadata TSV proving that every isolate returned genuinely carries
+the gene asked for, that the total behind the sample is larger than the
+sample, and that `scan_complete` reports the scan reached end of file.
+Does NOT exercise, for `isolate_search`: the deadline-cut disposition
+(this gate cannot force a timeout against a file that fits inside the
+budget, and the cutoff paths are covered by scripted arms in
+`test_pathogen_detection.py`); the boundary-matching rule's negative
+direction (no live isolate is known in advance to carry `blaTEM-11` and
+not `blaTEM-1`, so that rule is pinned offline, arm by arm, in the same
+file). Does NOT exercise: a taxon whose newest
 snapshot is genuinely incomplete at test-run time (this gate cannot force
 that state; `pathogen_detection.py`'s own unit tests cover the trap with a
 scripted directory listing); a `cluster_snp_neighbors` case guaranteed to
@@ -254,3 +266,64 @@ async def test_05_untrusted_metadata_fields_are_inert_never_executed() -> None:
         assert len(isolate.strain) <= 100
     if isolate.geo_loc_name is not None:
         assert len(isolate.geo_loc_name) <= 150
+
+
+# ===========================================================================
+# ARM 3: isolate_search, a bounded sample with the real total behind it.
+# ===========================================================================
+
+
+@premise_gate
+@pytest.mark.asyncio
+async def test_06_isolate_search_returns_isolates_that_really_carry_the_gene() -> None:
+    """Case 6 (G-035, 2026-09-22). A live scan of Salmonella's own Metadata
+    TSV for isolates carrying `blaTEM-1`.
+
+    Asserted on meaning, not on a number that would go stale: the sample
+    is exactly the size asked for, EVERY isolate in it genuinely carries a
+    gene the request named (which is what a fabricated or mis-filtered row
+    would fail), the total behind the sample is larger than the sample
+    (so the count is not silently the sample size again), and
+    `scan_complete` is True because the scan reached end of file, which is
+    what makes that total exact rather than a lower bound.
+
+    No E-utilities call anywhere in this arm: the Pathogen Detection tree
+    is unauthenticated FTP over HTTPS.
+    """
+    output = await _run(
+        {
+            "mode": "isolate_search",
+            "taxon": TAXON,
+            "amr_gene_prefixes": [TEST_BIOSAMPLE_KNOWN_AMR_GENE_SUBSTRING],
+            "max_isolates": 3,
+        }
+    )
+
+    assert output.status == "ok", f"expected ok, got {output.status}: {output.error}"
+    assert output.isolate_count == 3, (
+        f"expected the 3 isolates asked for, got {output.isolate_count}"
+    )
+    assert len(output.isolates) == 3
+    wanted = TEST_BIOSAMPLE_KNOWN_AMR_GENE_SUBSTRING.casefold()
+    for isolate in output.isolates:
+        assert isolate.amr_genotypes, (
+            f"{isolate.biosample_acc} came back with no AMR genotypes at all"
+        )
+        assert any(gene.casefold().startswith(wanted) for gene in isolate.amr_genotypes), (
+            f"{isolate.biosample_acc} does not carry {wanted!r}: {isolate.amr_genotypes!r}"
+        )
+        assert isolate.biosample_acc, "every returned isolate must carry its identity field"
+        assert isolate.source_url and isolate.source_url.startswith(
+            "https://www.ncbi.nlm.nih.gov/pathogens/"
+        ), f"host-pinned source_url required, got {isolate.source_url!r}"
+    assert output.total_available > 3, (
+        "the count must run past the sample cap, not stop at it; got "
+        f"{output.total_available}"
+    )
+    assert output.scan_complete is True, (
+        "the scan must reach end of file for the total to be exact; got "
+        f"scan_complete={output.scan_complete} after {output.rows_scanned} row(s)"
+    )
+    assert output.rows_scanned and output.rows_scanned >= output.total_available
+    assert output.truncated is True, "3 shown out of more than 3 is a truncated sample"
+    assert output.pdg_snapshot, "the pinned snapshot must be reported"

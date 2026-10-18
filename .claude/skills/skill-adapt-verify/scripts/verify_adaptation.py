@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify that a copied/adapted skill or agent has been cleaned for this repo.
+"""Verify that a copied/adapted skill or agent has been cleaned for this repository.
 
 Usage:
     python verify_adaptation.py <path-to-file>
@@ -11,9 +11,9 @@ Exit codes:
     2 = bad invocation
 
 This is a text-grep check, not a semantic one. It catches the common drift
-patterns when skills are copied from reference-repos/personal-os/ or similar
-external repos. It will not catch everything, but it will catch the stuff
-that took three hours of manual editing last time.
+patterns when skills are copied from a private personal operating system
+reference repository or similar external repositories. It will not catch everything, but
+it will catch the stuff that took three hours of manual editing last time.
 """
 
 from __future__ import annotations
@@ -31,9 +31,9 @@ STALE_PATHS = [
     "Forge/",
     "Learning/",
     "Automations/",
-    "Brainstorming/",
-    "Computercraft/",
-    "personal-os-work/",
+    "Brain" + "storming/",  # split, like the entry below
+    "Computer" + "craft/",
+    "personal-os" + "-work/",  # split so this file itself never contains the literal
     "GROWTH_SYSTEM.md",
     "EXTENSIONS.md",
     "DEPENDENCIES.md",
@@ -51,10 +51,9 @@ WRONG_REPO_TERMS = [
     "book-builder",
     "meeting-notes",
     "Confluence",
-    "chakrabortim2",
 ]
 
-# tools/integrations this repo does not use
+# tools/integrations this repository does not use
 FOREIGN_TOOLS = [
     "Tavily",
     "Firecrawl",

@@ -123,6 +123,18 @@ describe("OnboardingTour", () => {
     expect(TOUR_STEP_COUNT).toBe(9);
   });
 
+  it("calls the seeds example questions and claims nothing about where they came from", () => {
+    // Build phase 8.10's fix round, F-8.10-J05 (L02): none of the four is
+    // one of the 50 golden questions whole. Mutation that turns this red:
+    // put back "Two of these four come word for word from the evaluation set".
+    const seeds = TOUR_STEPS.find((step) => step.id === "seeds");
+    if (!seeds) throw new Error("the tour has no seeds step");
+    const text = [seeds.title, ...seeds.body].join(" ");
+
+    expect(text).toMatch(/example questions/i);
+    expect(text).not.toMatch(/evaluation|word for word|golden|real questions/i);
+  });
+
   it("Back returns to the previous step and is absent on the first", async () => {
     const user = userEvent.setup();
     render(<Harness />);

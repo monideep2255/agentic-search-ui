@@ -1,0 +1,39 @@
+Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.
+New search
+
+✓ Answered8.8s · 8 tools · 4 sources from 1 layer
+
+Show work ▾
+
+I found 3 conditions related to SARS.⁠1, 2, 3
+
+WHERE THIS ANSWER COMES FROM
+SARS Coronavirus Protease Pathway	⁠1
+Probable SARS (severe acute respiratory syndrome)	⁠2
+SARS (severe acute respiratory syndrome) confirmed	⁠3
+SARS Coronavirus Protease Pathway	⁠4
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+4
+Based on 4 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/medgen/C1519126
+ -> https://www.ncbi.nlm.nih.gov/medgen/C4302012
+ -> https://www.ncbi.nlm.nih.gov/medgen/C4302019
+ -> https://www.ncbi.nlm.nih.gov/medgen/276768
+
+TIME_TO_ANSWER_SECONDS=9.7 askback=false

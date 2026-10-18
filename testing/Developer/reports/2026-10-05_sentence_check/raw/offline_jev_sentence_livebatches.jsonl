@@ -1,0 +1,76 @@
+{"meta": {"batch": "med1-c1", "n_items": 5, "model": "typesafe/jev-1.13-20260917", "latency_ms": 316, "cost_usd": 8.442e-05, "state_chars": 1922, "input_tokens": 2010}}
+{"meta": {"batch": "med1-c2", "n_items": 5, "model": "typesafe/jev-1.13-20260917", "latency_ms": 229, "cost_usd": 8.6016e-05, "state_chars": 2142, "input_tokens": 2048}}
+{"meta": {"batch": "med2-c1", "n_items": 4, "model": "typesafe/jev-1.13-20260917", "latency_ms": 256, "cost_usd": 7.0266e-05, "state_chars": 1736, "input_tokens": 1673}}
+{"meta": {"batch": "med2-c2", "n_items": 7, "model": "typesafe/jev-1.13-20260917", "latency_ms": 284, "cost_usd": 0.000124698, "state_chars": 3077, "input_tokens": 2969}}
+{"meta": {"batch": "med3-c1", "n_items": 6, "model": "typesafe/jev-1.13-20260917", "latency_ms": 280, "cost_usd": 9.8028e-05, "state_chars": 2174, "input_tokens": 2334}}
+{"meta": {"batch": "gerd1-c1", "n_items": 7, "model": "typesafe/jev-1.13-20260917", "latency_ms": 250, "cost_usd": 0.000113064, "state_chars": 2646, "input_tokens": 2692}}
+{"meta": {"batch": "gerd1-c2", "n_items": 5, "model": "typesafe/jev-1.13-20260917", "latency_ms": 283, "cost_usd": 8.526e-05, "state_chars": 2025, "input_tokens": 2030}}
+{"meta": {"batch": "gerd2-c1", "n_items": 7, "model": "typesafe/jev-1.13-20260917", "latency_ms": 233, "cost_usd": 0.000114366, "state_chars": 2724, "input_tokens": 2723}}
+{"meta": {"batch": "gerd2-c2", "n_items": 5, "model": "typesafe/jev-1.13-20260917", "latency_ms": 261, "cost_usd": 9.9372e-05, "state_chars": 3576, "input_tokens": 2366}}
+{"meta": {"batch": "gerd3-c1", "n_items": 6, "model": "typesafe/jev-1.13-20260917", "latency_ms": 319, "cost_usd": 9.6642e-05, "state_chars": 1980, "input_tokens": 2301}}
+{"meta": {"batch": "gerd3-c2", "n_items": 8, "model": "typesafe/jev-1.13-20260917", "latency_ms": 272, "cost_usd": 0.000127428, "state_chars": 3117, "input_tokens": 3034}}
+{"id": "med1-c1-i1", "class": "R", "choice": "yes", "p_no": 0.0, "p_yes": 1.0, "approved": false}
+{"id": "med1-c1-i2", "class": "F", "choice": "no", "p_no": 0.78, "p_yes": 0.22, "approved": true}
+{"id": "med1-c1-i3", "class": "R", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "med1-c1-i4", "class": "F", "choice": "no", "p_no": 0.76, "p_yes": 0.24, "approved": true}
+{"id": "med1-c1-i5", "class": "A", "choice": "no", "p_no": 0.54, "p_yes": 0.46, "approved": true}
+{"id": "med1-c2-i1", "class": "R", "choice": "yes", "p_no": 0.0, "p_yes": 1.0, "approved": false}
+{"id": "med1-c2-i2", "class": "R", "choice": "no", "p_no": 0.68, "p_yes": 0.32, "approved": true}
+{"id": "med1-c2-i3", "class": "A", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "med1-c2-i4", "class": "R", "choice": "yes", "p_no": 0.48, "p_yes": 0.52, "approved": false}
+{"id": "med1-c2-i5", "class": "R", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "med2-c1-i1", "class": "F", "choice": "no", "p_no": 0.62, "p_yes": 0.38, "approved": true}
+{"id": "med2-c1-i2", "class": "R", "choice": "yes", "p_no": 0.13, "p_yes": 0.87, "approved": false}
+{"id": "med2-c1-i3", "class": "R", "choice": "yes", "p_no": 0.0, "p_yes": 1.0, "approved": false}
+{"id": "med2-c1-i4", "class": "R", "choice": "yes", "p_no": 0.29, "p_yes": 0.71, "approved": false}
+{"id": "med2-c2-i1", "class": "R", "choice": "yes", "p_no": 0.4, "p_yes": 0.6, "approved": false}
+{"id": "med2-c2-i2", "class": "R", "choice": "yes", "p_no": 0.02, "p_yes": 0.98, "approved": false}
+{"id": "med2-c2-i3", "class": "F", "choice": "no", "p_no": 0.83, "p_yes": 0.17, "approved": true}
+{"id": "med2-c2-i4", "class": "R", "choice": "no", "p_no": 0.63, "p_yes": 0.37, "approved": true}
+{"id": "med2-c2-i5", "class": "F", "choice": "no", "p_no": 0.66, "p_yes": 0.34, "approved": true}
+{"id": "med2-c2-i6", "class": "R", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "med2-c2-i7", "class": "F", "choice": "yes", "p_no": 0.42, "p_yes": 0.58, "approved": false}
+{"id": "med3-c1-i1", "class": "F", "choice": "no", "p_no": 0.74, "p_yes": 0.26, "approved": true}
+{"id": "med3-c1-i2", "class": "R", "choice": "yes", "p_no": 0.22, "p_yes": 0.78, "approved": false}
+{"id": "med3-c1-i3", "class": "F", "choice": "no", "p_no": 0.65, "p_yes": 0.35, "approved": true}
+{"id": "med3-c1-i4", "class": "R", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "med3-c1-i5", "class": "R", "choice": "yes", "p_no": 0.09, "p_yes": 0.91, "approved": false}
+{"id": "med3-c1-i6", "class": "A", "choice": "yes", "p_no": 0.32, "p_yes": 0.68, "approved": false}
+{"id": "gerd1-c1-i1", "class": "R", "choice": "no", "p_no": 0.94, "p_yes": 0.06, "approved": true}
+{"id": "gerd1-c1-i2", "class": "A", "choice": "yes", "p_no": 0.11, "p_yes": 0.89, "approved": false}
+{"id": "gerd1-c1-i3", "class": "F", "choice": "no", "p_no": 0.55, "p_yes": 0.45, "approved": true}
+{"id": "gerd1-c1-i4", "class": "R", "choice": "no", "p_no": 0.97, "p_yes": 0.03, "approved": true}
+{"id": "gerd1-c1-i5", "class": "R", "choice": "no", "p_no": 0.76, "p_yes": 0.24, "approved": true}
+{"id": "gerd1-c1-i6", "class": "R", "choice": "no", "p_no": 0.89, "p_yes": 0.11, "approved": true}
+{"id": "gerd1-c1-i7", "class": "R", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "gerd1-c2-i1", "class": "F", "choice": "no", "p_no": 0.81, "p_yes": 0.19, "approved": true}
+{"id": "gerd1-c2-i2", "class": "F", "choice": "no", "p_no": 0.82, "p_yes": 0.18, "approved": true}
+{"id": "gerd1-c2-i3", "class": "A", "choice": "no", "p_no": 0.65, "p_yes": 0.35, "approved": true}
+{"id": "gerd1-c2-i4", "class": "R", "choice": "yes", "p_no": 0.25, "p_yes": 0.75, "approved": false}
+{"id": "gerd1-c2-i5", "class": "R", "choice": "yes", "p_no": 0.0, "p_yes": 1.0, "approved": false}
+{"id": "gerd2-c1-i1", "class": "F", "choice": "no", "p_no": 0.86, "p_yes": 0.14, "approved": true}
+{"id": "gerd2-c1-i2", "class": "F", "choice": "yes", "p_no": 0.45, "p_yes": 0.55, "approved": false}
+{"id": "gerd2-c1-i3", "class": "F", "choice": "yes", "p_no": 0.39, "p_yes": 0.61, "approved": false}
+{"id": "gerd2-c1-i4", "class": "F", "choice": "no", "p_no": 0.79, "p_yes": 0.21, "approved": true}
+{"id": "gerd2-c1-i5", "class": "R", "choice": "no", "p_no": 0.66, "p_yes": 0.34, "approved": true}
+{"id": "gerd2-c1-i6", "class": "R", "choice": "no", "p_no": 0.53, "p_yes": 0.47, "approved": true}
+{"id": "gerd2-c1-i7", "class": "R", "choice": "yes", "p_no": 0.01, "p_yes": 0.99, "approved": false}
+{"id": "gerd2-c2-i1", "class": "R", "choice": "no", "p_no": 0.55, "p_yes": 0.45, "approved": true}
+{"id": "gerd2-c2-i2", "class": "F", "choice": "no", "p_no": 0.65, "p_yes": 0.35, "approved": true}
+{"id": "gerd2-c2-i3", "class": "R", "choice": "yes", "p_no": 0.43, "p_yes": 0.57, "approved": false}
+{"id": "gerd2-c2-i4", "class": "R", "choice": "no", "p_no": 0.75, "p_yes": 0.25, "approved": true}
+{"id": "gerd2-c2-i5", "class": "R", "choice": "yes", "p_no": 0.18, "p_yes": 0.82, "approved": false}
+{"id": "gerd3-c1-i1", "class": "R", "choice": "no", "p_no": 0.91, "p_yes": 0.09, "approved": true}
+{"id": "gerd3-c1-i2", "class": "F", "choice": "no", "p_no": 0.51, "p_yes": 0.49, "approved": true}
+{"id": "gerd3-c1-i3", "class": "F", "choice": "no", "p_no": 0.69, "p_yes": 0.31, "approved": true}
+{"id": "gerd3-c1-i4", "class": "R", "choice": "no", "p_no": 0.97, "p_yes": 0.03, "approved": true}
+{"id": "gerd3-c1-i5", "class": "R", "choice": "no", "p_no": 0.76, "p_yes": 0.24, "approved": true}
+{"id": "gerd3-c1-i6", "class": "R", "choice": "no", "p_no": 0.89, "p_yes": 0.11, "approved": true}
+{"id": "gerd3-c2-i1", "class": "F", "choice": "no", "p_no": 0.81, "p_yes": 0.19, "approved": true}
+{"id": "gerd3-c2-i2", "class": "F", "choice": "no", "p_no": 0.83, "p_yes": 0.17, "approved": true}
+{"id": "gerd3-c2-i3", "class": "F", "choice": "no", "p_no": 0.73, "p_yes": 0.27, "approved": true}
+{"id": "gerd3-c2-i4", "class": "A", "choice": "no", "p_no": 0.61, "p_yes": 0.39, "approved": true}
+{"id": "gerd3-c2-i5", "class": "R", "choice": "yes", "p_no": 0.02, "p_yes": 0.98, "approved": false}
+{"id": "gerd3-c2-i6", "class": "R", "choice": "no", "p_no": 0.57, "p_yes": 0.43, "approved": true}
+{"id": "gerd3-c2-i7", "class": "F", "choice": "no", "p_no": 0.87, "p_yes": 0.13, "approved": true}
+{"id": "gerd3-c2-i8", "class": "F", "choice": "no", "p_no": 0.79, "p_yes": 0.21, "approved": true}

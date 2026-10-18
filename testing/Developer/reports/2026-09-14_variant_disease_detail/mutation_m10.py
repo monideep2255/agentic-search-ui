@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui"
+ROOT = "<repo-root>"
 path = ROOT + "/src/system_03_search_agent/core/graph.py"
 old = "    if fallback_sentences:\n        # Product-owner direction 2026-09-14"
 new = "    if fallback_sentences and audience_depth != 'researcher':\n        for sentence in fallback_sentences:\n            sentence_token(sentence)\n    elif fallback_sentences:\n        # Product-owner direction 2026-09-14"

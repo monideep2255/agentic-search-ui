@@ -1,0 +1,7 @@
+{
+  "name": "mod-context-weather",
+  "version": "0.1.0",
+  "description": "Shows context fullness as a weather band above the prompt, with a sparkline, last-turn change and cache warmth, nudges you to /precompact when you step away while the cache is warm, and adds /precompact. Trigger: Auto, and /precompact",
+  "author": { "name": "Monideep Chakraborti" },
+  "types": "./types/index.d.ts"
+}

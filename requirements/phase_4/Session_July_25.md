@@ -50,7 +50,7 @@ Four Sonnet agents mined the Agentic-Search reference repository in parallel: AP
 
 ## New rule: plan-then-fan-out
 
-Added `.claude/rules/plan-then-fan-out.md`: the reasoning model plans and decomposes fan-out work, cheaper models (Sonnet 5, Haiku 4.5) execute the bounded pieces in parallel. Logged as a decision: a fan-out of five reasoning-model agents hit a session limit together this session, and the re-run as scoped Sonnet tasks succeeded. Added to both this repo and personal-os-work.
+Added `.claude/rules/plan-then-fan-out.md`: the reasoning model plans and decomposes fan-out work, cheaper models (Sonnet 5, Haiku 4.5) execute the bounded pieces in parallel. Logged as a decision: a fan-out of five reasoning-model agents hit a session limit together this session, and the re-run as scoped Sonnet tasks succeeded. Added to both this repo and the owner's private personal operating system repository.
 
 ## Config surface updated
 

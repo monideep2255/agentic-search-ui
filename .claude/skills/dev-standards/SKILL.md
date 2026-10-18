@@ -1,6 +1,6 @@
 ---
 name: dev-standards
-description: "Apply production coding standards to the agentic search system. Reviews code against 6 lenses (security, testing, quality, PR readiness, deployment, production hardening), generates readiness checklists, and guides prototype-to-production quality. Distinct from objective-review, which is for general, documentation, or plan review rather than production-code readiness."
+description: "Review agentic search code against production standards across six lenses: security, testing, quality, pull request readiness, deployment, hardening. Use for production-readiness checks. Unlike objective-review, which covers general work, documents, and plans."
 scope: project
 depends_on:
   - .claude/rules/system-design-patterns.md
@@ -14,7 +14,7 @@ depended_by:
 
 # Dev standards skill
 
-Use this skill when building, reviewing, or preparing to deploy any code in the agentic search system. It applies the production quality bar adapted from NCBI Web Platform (NWS) enterprise standards for the System 3 stack: FastAPI, LangGraph, React, PostgreSQL, and the multi-model LLM harness.
+Use this skill when building, reviewing, or preparing to deploy any code in the agentic search system. It applies a production quality bar for the System 3 stack: FastAPI, LangGraph, React, PostgreSQL, and the multi-model LLM harness.
 
 ## When to invoke
 
@@ -218,7 +218,7 @@ Issues to fix before production:
 
 ## Reference
 
-Source standards: adapted from NWS-style production coding standards
+
 
 Deployment pipeline: LOCAL (Docker Compose) -> Staging -> Production
 Security tools: bandit (SAST), safety/pip-audit (dependency audit), semgrep (patterns)

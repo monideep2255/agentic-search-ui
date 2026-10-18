@@ -1,0 +1,1783 @@
+{
+ "record": {
+  "id": "G-023",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which clinically significant variants have been reported in CFTR?",
+  "session_id": "c103-b91abb7a9fab",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:05:01+00:00",
+  "run_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 72 sources",
+  "citations": 72,
+  "distinct_sources": 71,
+  "citations_by_layer": {
+   "layer_1_graph": 54,
+   "layer_2_api": 13,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   17,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 547,
+  "answer_start": "Found 54 sequence variant records for CFTR, of 6047 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 15.136,
+  "seconds": 15.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 96,
+   "citation": 72,
+   "trust_signal": 73,
+   "done": 1
+  },
+  "first_word_s": 15.32,
+  "first_token_ts": "2026-09-26T17:03:37.507234Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 0,
+   "ts": "2026-09-26T17:03:23.337159Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 2,
+   "ts": "2026-09-26T17:03:29.608026Z",
+   "payload": {
+    "narrative": "The query asks for variants reported in a specific gene, requiring a direct lookup of variant records associated with CFTR.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 4,
+   "ts": "2026-09-26T17:03:29.611772Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-52f0063b39a5",
+      "layer": "layer_1_graph",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-dabb34fc0fcc",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-f1086a6e5d07",
+      "layer": "layer_3_enrichment",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-cd41e725232c",
+      "layer": "layer_3_enrichment",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a7e1ecd3c865",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-76daebb6af92",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-519bd74ae1be",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-535a12eb55b3",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-1932cefb1c3c",
+      "layer": "layer_3_enrichment",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-51f959207bf8",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7b7c3cc5f42b",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e6be236dddc3",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-0d9c07107ed9",
+      "layer": "layer_1_graph",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 6,
+   "ts": "2026-09-26T17:03:29.613191Z",
+   "payload": {
+    "call_id": "cq-52f0063b39a5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 7,
+   "ts": "2026-09-26T17:03:29.613221Z",
+   "payload": {
+    "call_id": "ne-dabb34fc0fcc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 8,
+   "ts": "2026-09-26T17:03:29.613232Z",
+   "payload": {
+    "call_id": "pa-f1086a6e5d07",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 9,
+   "ts": "2026-09-26T17:03:29.613241Z",
+   "payload": {
+    "call_id": "ct-cd41e725232c",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 10,
+   "ts": "2026-09-26T17:03:29.613250Z",
+   "payload": {
+    "call_id": "ne-a7e1ecd3c865",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 11,
+   "ts": "2026-09-26T17:03:29.613258Z",
+   "payload": {
+    "call_id": "ne-76daebb6af92",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 12,
+   "ts": "2026-09-26T17:03:29.613266Z",
+   "payload": {
+    "call_id": "ne-519bd74ae1be",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 13,
+   "ts": "2026-09-26T17:03:29.613275Z",
+   "payload": {
+    "call_id": "ne-535a12eb55b3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 14,
+   "ts": "2026-09-26T17:03:29.613283Z",
+   "payload": {
+    "call_id": "pa-1932cefb1c3c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 15,
+   "ts": "2026-09-26T17:03:29.613292Z",
+   "payload": {
+    "call_id": "ne-51f959207bf8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 16,
+   "ts": "2026-09-26T17:03:29.613300Z",
+   "payload": {
+    "call_id": "ne-7b7c3cc5f42b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 17,
+   "ts": "2026-09-26T17:03:29.613324Z",
+   "payload": {
+    "call_id": "ne-e6be236dddc3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 18,
+   "ts": "2026-09-26T17:03:29.613332Z",
+   "payload": {
+    "call_id": "cq-0d9c07107ed9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 19,
+   "ts": "2026-09-26T17:03:29.786367Z",
+   "payload": {
+    "call_id": "pa-f1086a6e5d07",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 20,
+   "ts": "2026-09-26T17:03:29.825879Z",
+   "payload": {
+    "call_id": "ne-dabb34fc0fcc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 21,
+   "ts": "2026-09-26T17:03:29.862254Z",
+   "payload": {
+    "call_id": "ct-cd41e725232c",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 22,
+   "ts": "2026-09-26T17:03:29.870313Z",
+   "payload": {
+    "call_id": "ne-76daebb6af92",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 23,
+   "ts": "2026-09-26T17:03:29.918739Z",
+   "payload": {
+    "call_id": "ne-a7e1ecd3c865",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 24,
+   "ts": "2026-09-26T17:03:30.018743Z",
+   "payload": {
+    "call_id": "ne-519bd74ae1be",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 25,
+   "ts": "2026-09-26T17:03:30.068232Z",
+   "payload": {
+    "call_id": "ne-e6be236dddc3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 26,
+   "ts": "2026-09-26T17:03:30.176453Z",
+   "payload": {
+    "call_id": "cq-0d9c07107ed9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 27,
+   "ts": "2026-09-26T17:03:32.959718Z",
+   "payload": {
+    "call_id": "cq-52f0063b39a5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "100 row(s) of 6030",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 28,
+   "ts": "2026-09-26T17:03:33.261371Z",
+   "payload": {
+    "call_id": "pa-1932cefb1c3c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 29,
+   "ts": "2026-09-26T17:03:33.264276Z",
+   "payload": {
+    "call_id": "ne-51f959207bf8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 30,
+   "ts": "2026-09-26T17:03:33.282889Z",
+   "payload": {
+    "call_id": "ne-535a12eb55b3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 31,
+   "ts": "2026-09-26T17:03:33.377884Z",
+   "payload": {
+    "call_id": "ne-7b7c3cc5f42b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 32,
+   "ts": "2026-09-26T17:03:33.382392Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 33,
+   "ts": "2026-09-26T17:03:37.507234Z",
+   "payload": {
+    "text": "Found 54 sequence variant records for CFTR, of 6047 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54]. ",
+    "marker_ids": [
+     "cq-52f0063b39a5-10",
+     "cq-52f0063b39a5-11",
+     "cq-52f0063b39a5-15",
+     "cq-52f0063b39a5-16",
+     "cq-52f0063b39a5-19",
+     "cq-52f0063b39a5-29",
+     "cq-52f0063b39a5-1",
+     "cq-52f0063b39a5-2",
+     "cq-52f0063b39a5-3",
+     "cq-52f0063b39a5-4",
+     "cq-52f0063b39a5-5",
+     "cq-52f0063b39a5-6",
+     "cq-52f0063b39a5-7",
+     "cq-52f0063b39a5-8",
+     "cq-52f0063b39a5-9",
+     "cq-52f0063b39a5-12",
+     "cq-52f0063b39a5-13",
+     "cq-52f0063b39a5-14",
+     "cq-52f0063b39a5-17",
+     "cq-52f0063b39a5-18"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "CFTR"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012571",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012571",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012572",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012572",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1027585",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1027585",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1027591",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1027591",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1029876",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029876",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1043026",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043026",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000823",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000823",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002760",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002760",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003660",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003660",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007213",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007213",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009171",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009171",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009391",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009391",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009463",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009463",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010196",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010196",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011536",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011536",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1018653",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1018653",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1018890",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1018890",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1024644",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1024644",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1029874",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029874",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.389T>C (p.Leu130Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1029875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029875",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.407T>G (p.Leu136Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1035472",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1035472",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1036122",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1036122",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1037205",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1037205",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1037208",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1037208",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3590A>G (p.His1197Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1038310",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1038310",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1038737",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1038737",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1444A>G (p.Ile482Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1039311",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1039311",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1040997",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1040997",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1077A>G (p.Gln359=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1042311",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042311",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1043097",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043097",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1043398",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043398",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1178T>G (p.Val393Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1044113",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1044113",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1044502",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1044502",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2764G>A (p.Val922Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1046296",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1046296",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1048778",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1048778",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.89dup (p.Arg31fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1051107",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1051107",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1052121",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1052121",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1052165",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1052165",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.851T>C (p.Met284Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1053721",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1053721",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.508C>A (p.Arg170Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1053748",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1053748",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1054952",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1054952",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1055358",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1055358",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.941G>C (p.Gly314Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1060053",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1060053",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1685T>C (p.Val562Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1064446",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1064446",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1409T>A (p.Val470Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1064636",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1064636",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.878T>C (p.Leu293Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065566",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065566",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065569",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065569",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065570",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065570",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1069281",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1069281",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2560dup (p.Thr854fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1069526",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1069526",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1069549",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1069549",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.300_301del (p.Leu101fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1070544",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1070544",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4340del (p.Val1447fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1073653",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1073653",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1573del (p.Gln525fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "602421",
+    "source_url": "https://omim.org/entry/602421",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "a71bf433-a6e7-44a9-a383-654f2fa15a1a",
+   "seq": 275,
+   "ts": "2026-09-26T17:03:37.520736Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 15136,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 72 sources",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 193
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.88,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 180
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 191
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 54 sequence variant records for CFTR, of 6047 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54]. \n\nFive records\u2014ClinVar:1012571 [1], ClinVar:1012572 [2], ClinVar:1027585 [3], ClinVar:1027591 [4], ClinVar:1029876 [5], and ClinVar:1043026 [6]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000823, name: NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr) [7]. SequenceVariant ClinVar:1002760, name: NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala) [8]. SequenceVariant ClinVar:1003660, name: NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser) [9]. SequenceVariant ClinVar:1007213, name: NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu) [10]. SequenceVariant ClinVar:1009171, name: NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala) [11]. SequenceVariant ClinVar:1009391, name: NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn) [12]. SequenceVariant ClinVar:1009463, name: NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys) [13]. SequenceVariant ClinVar:1010196, name: NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro) [14]. SequenceVariant ClinVar:1011536, name: NM_000492.4(CFTR):c.3064G>A (p.Val1022Met) [15]. SequenceVariant record ClinVar:1012571 [1]. SequenceVariant record ClinVar:1012572 [2]. SequenceVariant ClinVar:1018653, name: NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn) [16]. SequenceVariant ClinVar:1018890, name: NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp) [17]. SequenceVariant ClinVar:1024644, name: NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly) [18]. SequenceVariant record ClinVar:1027585 [3]. SequenceVariant record ClinVar:1027591 [4]. SequenceVariant ClinVar:1029874, name: NM_000492.4(CFTR):c.389T>C (p.Leu130Pro) [19]. SequenceVariant ClinVar:1029875, name: NM_000492.4(CFTR):c.407T>G (p.Leu136Arg) [20]. SequenceVariant record ClinVar:1029876 [5]. SequenceVariant ClinVar:1035472, name: NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr) [21]. SequenceVariant ClinVar:1036122, name: NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu) [22]. SequenceVariant ClinVar:1037205, name: NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn) [23]. SequenceVariant ClinVar:1037208, name: NM_000492.4(CFTR):c.3590A>G (p.His1197Arg) [24]. SequenceVariant ClinVar:1038310, name: NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser) [25]. SequenceVariant ClinVar:1038737, name: NM_000492.4(CFTR):c.1444A>G (p.Ile482Val) [26]. SequenceVariant ClinVar:1039311, name: NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser) [27]. SequenceVariant ClinVar:1040997, name: NM_000492.4(CFTR):c.1077A>G (p.Gln359=) [28]. SequenceVariant ClinVar:1042311, name: NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser) [29]. SequenceVariant record ClinVar:1043026 [6]. SequenceVariant ClinVar:1043097, name: NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly) [30]. SequenceVariant ClinVar:1043398, name: NM_000492.4(CFTR):c.1178T>G (p.Val393Gly) [31]. SequenceVariant ClinVar:1044113, name: NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly) [32]. SequenceVariant ClinVar:1044502, name: NM_000492.4(CFTR):c.2764G>A (p.Val922Ile) [33]. SequenceVariant record ClinVar:1046296 [34]. SequenceVariant ClinVar:1048778, name: NM_000492.4(CFTR):c.89dup (p.Arg31fs) [35]. SequenceVariant ClinVar:1051107, name: NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg) [36]. SequenceVariant ClinVar:1052121, name: NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile) [37]. SequenceVariant ClinVar:1052165, name: NM_000492.4(CFTR):c.851T>C (p.Met284Thr) [38]. SequenceVariant ClinVar:1053721, name: NM_000492.4(CFTR):c.508C>A (p.Arg170Ser) [39]. SequenceVariant ClinVar:1053748, name: NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys) [40]. SequenceVariant ClinVar:1054952, name: NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn) [41]. SequenceVariant ClinVar:1055358, name: NM_000492.4(CFTR):c.941G>C (p.Gly314Ala) [42]. SequenceVariant ClinVar:1060053, name: NM_000492.4(CFTR):c.1685T>C (p.Val562Ala) [43]. SequenceVariant ClinVar:1064446, name: NM_000492.4(CFTR):c.1409T>A (p.Val470Glu) [44]. SequenceVariant ClinVar:1064636, name: NM_000492.4(CFTR):c.878T>C (p.Leu293Pro) [45]. SequenceVariant ClinVar:1065566, name: NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter) [46]. SequenceVariant record ClinVar:1065569 [47]. SequenceVariant record ClinVar:1065570 [48]. SequenceVariant record ClinVar:1065980 [49]. SequenceVariant ClinVar:1069281, name: NM_000492.4(CFTR):c.2560dup (p.Thr854fs) [50]. SequenceVariant record ClinVar:1069526 [51]. SequenceVariant ClinVar:1069549, name: NM_000492.4(CFTR):c.300_301del (p.Leu101fs) [52]. SequenceVariant ClinVar:1070544, name: NM_000492.4(CFTR):c.4340del (p.Val1447fs) [53]. SequenceVariant ClinVar:1073653, name: NM_000492.4(CFTR):c.1573del (p.Gln525fs) [54]. \n\nGene records found\n\nGene symbol: CFTR [55]. Gene name: CFTR [59]. \n\nPubmed records found\n\nPubmed title: Molecular Structure of the Human CFTR Ion Channel [56]. Pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [61]. Pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [64]. Pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [67]. Pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [70]. \n\nClinvar records found\n\nClinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [57]. Clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [62]. Clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [65]. Clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [68]. Clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [71]. \n\nOmim records found\n\nCYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR [58]. CFTR [58]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [63]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [66]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [69]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [72]. \n\nNote: this answer was truncated because only 117 of the 6047 records that matched this question in the graph were retrieved"
+}

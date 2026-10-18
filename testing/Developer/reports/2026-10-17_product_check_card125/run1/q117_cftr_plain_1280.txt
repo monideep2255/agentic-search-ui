@@ -1,0 +1,47 @@
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered15.4s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+One of these describes a patient with a mutation called D579G who had a milder form of the disease with less lung damage.⁠2 One of these papers reports that a pair of helper molecules called Hdj-2 and Hsc70 assists with the early stages of CFTR production.⁠1 Another shows that a protein called CHIP marks immature CFTR for destruction.⁠22 One paper describes how protein kinase A attaches to CFTR through a linking protein called ezrin.⁠9 Another reports that a metabolic sensor called AMP-activated protein kinase blocks CFTR function.⁠11 One paper reports that carrying a mutation in the CFTR gene can increase susceptibility to chronic rhinosinusitis in the general population.⁠14 Another examines how a common CFTR mutation called DeltaF508 and a genetic variant called the 5T allele appear in patients with chronic pancreatitis and pancreatic cancer.⁠19 One paper finds that diagnosing cystic fibrosis through newborn screening prevents severe malnutrition and improves long-term growth.⁠21 Another paper looks at how a region of DNA upstream of the CFTR gene is regulated.⁠4 One paper examines CFTR gene expression in a different kidney disease called autosomal dominant polycystic kidney disease.⁠16 A further paper investigates how a gene involved in immune recognition, called mannose binding lectin, influences the severity of liver disease in cystic fibrosis patients.⁠29 One paper conducts a worldwide genetic analysis of the entire CFTR region of the genome.⁠17 Another describes how an accessory protein helps CFTR molecules interact with each other to boost chloride channel activity.⁠15 A further paper reports that splicing factors can cause part of the CFTR gene to be skipped during processing.⁠8 Another paper studies how a structural region of CFTR called the PDZ-interacting domain is needed for the protein to reach its proper place in the cell membrane.⁠10 One paper describes how a protein called E3KARP links ezrin and protein kinase A to CFTR in airway cells.⁠12 Another examines how two structural parts of CFTR, called nucleotide binding domains, have different roles in how the protein works.⁠5 From the paper "Regulation of cystic fibrosis transmembrane conductance regulator single-channel gating by bivalent PDZ-domain-mediated interaction": One paper studies how paired PDZ-domain interactions regulate the opening and closing of the CFTR channel.⁠23 Another describes the structural basis for how a regulatory factor called NHERF1 connects to the tail end of the CFTR protein.⁠28 A further paper examines how often the S1235R mutation appears in CFTR and its clinical significance.⁠26 One paper investigates CFTR mutations and the 5T allele in patients with allergic bronchopulmonary aspergillosis.⁠27 A further paper examines CFTR gene patterns in Japanese patients with chronic pancreatitis.⁠20 One paper studies the frequency of CFTR mutations found through newborn screening when a digestive enzyme called trypsin is abnormally high.⁠24
+
+WHERE THIS ANSWER COMES FROM
+The Hdj-2/Hsc70 chaperone pair facilitates early steps in CFTR biogenesis.	⁠1
+Identification of a D579G homozygote cystic fibrosis patient with pancreatic sufficiency and minor lung involvement. Mutations in brief no. 221. Online.	⁠2
+Genetic findings in congenital bilateral aplasia of vas deferens patients and identification of six novel mutatations. Mutations in brief no. 138. Online.	⁠3
+Analysis of a DNase I hypersensitive site located -20.9 kb upstream of the CFTR gene.	⁠4
+Differential function of the two nucleotide binding domains on cystic fibrosis transmembrane conductance regulator.	⁠5
+A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient. Mutations in brief no. 175. Online.	⁠6
+Sodium 4-phenylbutyrate downregulates Hsc70: implications for intracellular trafficking of DeltaF508-CFTR.	⁠7
+Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element.	⁠8
+Protein kinase A associates with cystic fibrosis transmembrane conductance regulator via an interaction with ezrin.	⁠9
+The PDZ-interacting domain of cystic fibrosis transmembrane conductance regulator is required for functional expression in the apical plasma membrane.	⁠10
+Showing 1–10 of 71
+‹ Previous
+Page 1 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

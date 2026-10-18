@@ -1,0 +1,1607 @@
+{
+ "record": {
+  "id": "G-002",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "Give me everything NCBI knows about BRCA1: the gene record, associated conditions, clinically significant variants, available genetic tests, and key literature.",
+  "session_id": "c103-189d6d65888e",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:09:05+00:00",
+  "run_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:672"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 57 sources",
+  "citations": 57,
+  "distinct_sources": 56,
+  "citations_by_layer": {
+   "layer_1_graph": 35,
+   "layer_2_api": 17,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 5,
+  "must_cite_hits": 4,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 40,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   40,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 512,
+  "answer_start": "Found 35 sequence variant records for BRCA1 [1][3][5][6][7][8][9][10][11][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 18.126,
+  "seconds": 18.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 84,
+   "citation": 57,
+   "trust_signal": 58,
+   "done": 1
+  },
+  "first_word_s": 18.317,
+  "first_token_ts": "2026-09-26T17:07:44.638898Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 0,
+   "ts": "2026-09-26T17:07:31.188317Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 2,
+   "ts": "2026-09-26T17:07:33.999627Z",
+   "payload": {
+    "narrative": "The query asks for a comprehensive, multi-faceted overview of a single gene across multiple NCBI resources, which is open-ended and requires assembling information from several distinct databases.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 4,
+   "ts": "2026-09-26T17:07:34.003631Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-ae4642db5e9a",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f040b0fd5a3c",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-0777ccdcfb21",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-556f558d7f85",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fc5bf1ff6eda",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-19505952e333",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-bd537c17737e",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-10d8183c6f1d",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-2040acccf5bb",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-eb565122f2df",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4a4649dd1a74",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5d26ac97d226",
+      "layer": "layer_2_api",
+      "persona": "Perutz",
+      "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-7a3cd86e13cb",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 6,
+   "ts": "2026-09-26T17:07:34.005281Z",
+   "payload": {
+    "call_id": "cq-ae4642db5e9a",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 7,
+   "ts": "2026-09-26T17:07:34.005330Z",
+   "payload": {
+    "call_id": "ne-f040b0fd5a3c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 8,
+   "ts": "2026-09-26T17:07:34.005345Z",
+   "payload": {
+    "call_id": "pa-0777ccdcfb21",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 9,
+   "ts": "2026-09-26T17:07:34.005359Z",
+   "payload": {
+    "call_id": "ct-556f558d7f85",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 10,
+   "ts": "2026-09-26T17:07:34.005372Z",
+   "payload": {
+    "call_id": "ne-fc5bf1ff6eda",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 11,
+   "ts": "2026-09-26T17:07:34.005384Z",
+   "payload": {
+    "call_id": "ne-19505952e333",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 12,
+   "ts": "2026-09-26T17:07:34.005396Z",
+   "payload": {
+    "call_id": "ne-bd537c17737e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 13,
+   "ts": "2026-09-26T17:07:34.005480Z",
+   "payload": {
+    "call_id": "ne-10d8183c6f1d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 14,
+   "ts": "2026-09-26T17:07:34.005495Z",
+   "payload": {
+    "call_id": "pa-2040acccf5bb",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 15,
+   "ts": "2026-09-26T17:07:34.005509Z",
+   "payload": {
+    "call_id": "ne-eb565122f2df",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 16,
+   "ts": "2026-09-26T17:07:34.005522Z",
+   "payload": {
+    "call_id": "ne-4a4649dd1a74",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 17,
+   "ts": "2026-09-26T17:07:34.005536Z",
+   "payload": {
+    "call_id": "ne-5d26ac97d226",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 18,
+   "ts": "2026-09-26T17:07:34.005550Z",
+   "payload": {
+    "call_id": "cq-7a3cd86e13cb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 19,
+   "ts": "2026-09-26T17:07:34.189737Z",
+   "payload": {
+    "call_id": "pa-0777ccdcfb21",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 20,
+   "ts": "2026-09-26T17:07:34.269957Z",
+   "payload": {
+    "call_id": "ne-fc5bf1ff6eda",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 21,
+   "ts": "2026-09-26T17:07:34.294845Z",
+   "payload": {
+    "call_id": "ne-19505952e333",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 22,
+   "ts": "2026-09-26T17:07:34.344202Z",
+   "payload": {
+    "call_id": "ct-556f558d7f85",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 23,
+   "ts": "2026-09-26T17:07:34.362167Z",
+   "payload": {
+    "call_id": "ne-f040b0fd5a3c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 24,
+   "ts": "2026-09-26T17:07:34.486550Z",
+   "payload": {
+    "call_id": "ne-bd537c17737e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 25,
+   "ts": "2026-09-26T17:07:34.489071Z",
+   "payload": {
+    "call_id": "ne-5d26ac97d226",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 26,
+   "ts": "2026-09-26T17:07:34.732358Z",
+   "payload": {
+    "call_id": "cq-7a3cd86e13cb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "40 row(s) of 40",
+    "result_count": 40,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 27,
+   "ts": "2026-09-26T17:07:36.175622Z",
+   "payload": {
+    "call_id": "cq-ae4642db5e9a",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "100 row(s) of 100",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 28,
+   "ts": "2026-09-26T17:07:36.501997Z",
+   "payload": {
+    "call_id": "pa-2040acccf5bb",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 29,
+   "ts": "2026-09-26T17:07:36.525157Z",
+   "payload": {
+    "call_id": "ne-4a4649dd1a74",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 30,
+   "ts": "2026-09-26T17:07:36.567179Z",
+   "payload": {
+    "call_id": "ne-eb565122f2df",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 31,
+   "ts": "2026-09-26T17:07:36.618253Z",
+   "payload": {
+    "call_id": "ne-10d8183c6f1d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Perutz",
+    "persona_about": "Solved the structure of haemoglobin after 22 years of work, showing how a protein's shape carries its function.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Perutz",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 32,
+   "ts": "2026-09-26T17:07:36.622577Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 33,
+   "ts": "2026-09-26T17:07:44.638898Z",
+   "payload": {
+    "text": "Found 35 sequence variant records for BRCA1 [1][3][5][6][7][8][9][10][11][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][37][38][39], linked to 5 diseases: Hereditary breast ovarian cancer syndrome [2], Hereditary cancer-predisposing syndrome [4], Familial breast-ovarian cancer susceptibility 1 [12] and Familial cancer of breast [36] and 1 other. ",
+    "marker_ids": [
+     "cq-ae4642db5e9a-1",
+     "cq-ae4642db5e9a-3",
+     "cq-ae4642db5e9a-5",
+     "cq-ae4642db5e9a-6",
+     "cq-ae4642db5e9a-7",
+     "cq-ae4642db5e9a-8",
+     "cq-ae4642db5e9a-9",
+     "cq-ae4642db5e9a-10",
+     "cq-ae4642db5e9a-11",
+     "cq-ae4642db5e9a-13",
+     "cq-ae4642db5e9a-14",
+     "cq-ae4642db5e9a-15",
+     "cq-ae4642db5e9a-16",
+     "cq-ae4642db5e9a-17",
+     "cq-ae4642db5e9a-18",
+     "cq-ae4642db5e9a-19",
+     "cq-ae4642db5e9a-20",
+     "cq-ae4642db5e9a-21",
+     "cq-ae4642db5e9a-22",
+     "cq-ae4642db5e9a-23"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Familial breast-ovarian cancer susceptibility 1",
+     "Hereditary breast ovarian cancer syndrome",
+     "Hereditary cancer-predisposing syndrome",
+     "Familial cancer of breast",
+     "BRCA1"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000183",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0677776",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0677776",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0027672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0027672",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002154",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002750",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003150",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004428",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004775",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C2676676",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004786",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005082",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005528",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005598",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005841",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005942",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007698",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007721",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008789",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009121",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009204",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009272",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009310",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009406",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010063",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010509",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010603",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010734",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011036",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012155",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1728del (p.Glu577fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0346153",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012156",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012905",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1013802",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28976962",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267740",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "113705",
+    "source_url": "https://omim.org/entry/113705",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00590109",
+    "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267741",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00597987",
+    "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "373892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00617656",
+    "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39261728",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39261728/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4823850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00673335",
+    "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4848411",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00700778",
+    "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "1cdc900e-20be-4cf2-8d7e-226b8e2f5a7a",
+   "seq": 233,
+   "ts": "2026-09-26T17:07:44.643377Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 18126,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 57 sources",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 188
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.68,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 115
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.98,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 111
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 128
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 35 sequence variant records for BRCA1 [1][3][5][6][7][8][9][10][11][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][37][38][39], linked to 5 diseases: Hereditary breast ovarian cancer syndrome [2], Hereditary cancer-predisposing syndrome [4], Familial breast-ovarian cancer susceptibility 1 [12] and Familial cancer of breast [36] and 1 other. \n\nDisease records found\n\nDisease name: Hereditary breast ovarian cancer syndrome [2]. Disease name: Hereditary cancer-predisposing syndrome [4]. Disease name: Familial breast-ovarian cancer susceptibility 1 [12]. Disease name: Familial cancer of breast [36]. \n\nVariant-to-disease mapping\n\nSequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [1]. SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [3]. SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [5]. SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [6]. SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [7]. SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [8]. SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [9]. SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [10]. SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [11]. SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [13]. SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [14]. SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [15]. SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [16]. SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [17]. SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [18]. SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [19]. SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [20]. SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [21]. SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [22]. SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [23]. SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [24]. SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [25]. SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [26]. SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [27]. SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [28]. SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [29]. SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [30]. SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [31]. SequenceVariant record ClinVar:1010631 [32]. SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [33]. SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [34]. SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [35]. SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [37]. SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [38]. SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [39]. \n\nGene records found\n\nGene symbol: BRCA1 [40]. Gene name: BRCA1 [44]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [41]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [46]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [49]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [52]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [55]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [42]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [47]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [50]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [53]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [56]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [43]. BRCA1 [43]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [45]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [48]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [51]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [54]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [57]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query\n\n6 variant links to ClinVar placeholder conditions ('not provided', 'not specified' or 'see cases') are not listed."
+}

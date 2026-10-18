@@ -1,0 +1,10 @@
+{
+ "modes": [
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=GERD -> https://www.ncbi.nlm.nih.gov/search/all/?term=GERD"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

@@ -1,0 +1,101 @@
+HIDDEN  potentially->potential
+   develop pairs with 'potentially': ['symptoms potentially', 'potentially caused']
+   branch  pairs with 'potentially': []
+   branch all pairs: []
+HIDDEN  generally->general
+   develop pairs with 'generally': ['are generally', 'generally safe']
+   branch  pairs with 'generally': []
+   branch all pairs: []
+HIDDEN  commonly->common
+   develop pairs with 'commonly': ['is commonly', 'commonly caused']
+   branch  pairs with 'commonly': []
+   branch all pairs: []
+HIDDEN  usually->usual
+   develop pairs with 'usually': ['symptoms usually', 'usually resolve']
+   branch  pairs with 'usually': []
+   branch all pairs: []
+HIDDEN  typically->typical
+   develop pairs with 'typically': ['reflux typically', 'typically resolves']
+   branch  pairs with 'typically': []
+   branch all pairs: []
+HIDDEN  frequently->frequent
+   develop pairs with 'frequently': ['esophagus frequently', 'frequently develop']
+   branch  pairs with 'frequently': []
+   branch all pairs: []
+HIDDEN  largely->large
+   develop pairs with 'largely': ['is largely', 'largely asymptomatic']
+   branch  pairs with 'largely': []
+   branch all pairs: []
+HIDDEN  partially->partial
+   develop pairs with 'partially': ['are partially', 'partially effective']
+   branch  pairs with 'partially': []
+   branch all pairs: []
+HIDDEN  moderately->moderate
+   develop pairs with 'moderately': ['is moderately', 'moderately effective']
+   branch  pairs with 'moderately': []
+   branch all pairs: []
+HIDDEN  significantly->significant
+   develop pairs with 'significantly': ['obesity significantly', 'significantly increases']
+   branch  pairs with 'significantly': []
+   branch all pairs: []
+HIDDEN  occasionally->occasional
+   develop pairs with 'occasionally': ['esophagitis occasionally', 'occasionally progresses']
+   branch  pairs with 'occasionally': []
+   branch all pairs: []
+HIDDEN  relatively->relative
+   develop pairs with 'relatively': ['are relatively', 'relatively rare']
+   branch  pairs with 'relatively': []
+   branch all pairs: []
+HIDDEN  transiently->transient
+   develop pairs with 'transiently': ['symptoms transiently', 'transiently improve']
+   branch  pairs with 'transiently': []
+   branch all pairs: []
+HIDDEN  slightly->slight
+   develop pairs with 'slightly': ['use slightly', 'slightly increases']
+   branch  pairs with 'slightly': []
+   branch all pairs: []
+same    chronically->chronic
+   develop pairs with 'chronically': ['chronically treated']
+   branch  pairs with 'chronically': ['chronically treated']
+   branch all pairs: ['chronically treated']
+HIDDEN  limited->limit (ed to stem)
+   develop pairs with 'limited': ['limited evidence']
+   branch  pairs with 'limited': []
+   branch all pairs: []
+HIDDEN  selected->select
+   develop pairs with 'selected': ['benefits selected', 'selected patients']
+   branch  pairs with 'selected': []
+   branch all pairs: []
+HIDDEN  treated->treatment (ment)
+   develop pairs with 'treated': ['in treated', 'treated patients']
+   branch  pairs with 'treated': []
+   branch all pairs: []
+same    young (control, by design)
+   develop pairs with 'young': ['in young', 'young children']
+   branch  pairs with 'young': ['in young', 'young children']
+   branch all pairs: ['in young', 'young children']
+HIDDEN  certain->certainly
+   develop pairs with 'certain': ['in certain', 'certain patients']
+   branch  pairs with 'certain': []
+   branch all pairs: []
+same    rarely->rare (below floor, control)
+   develop pairs with 'rarely': ['is rarely', 'rarely severe']
+   branch  pairs with 'rarely': ['is rarely', 'rarely severe']
+   branch all pairs: ['is rarely', 'rarely severe']
+HIDDEN  approximately->approximate
+   develop pairs with 'approximately': ['approximately 20']
+   branch  pairs with 'approximately': []
+   branch all pairs: []
+HIDDEN  suspected (ed)
+   develop pairs with 'suspected': ['with suspected', 'suspected gerd']
+   branch  pairs with 'suspected': []
+   branch all pairs: []
+HIDDEN  reported->reports
+   develop pairs with 'reported': ['patients reported', 'reported partial']
+   branch  pairs with 'reported': []
+   branch all pairs: []
+HIDDEN  transient (adjective, the card's own word) ->transiently
+   develop pairs with 'transient': ['abnormal transient', 'transient relaxations']
+   branch  pairs with 'transient': []
+   branch all pairs: []
+limit pairs hidden by the branch: 22 of 25

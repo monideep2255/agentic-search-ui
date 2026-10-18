@@ -1,0 +1,76 @@
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+New search
+
+? Answered15.6s · 13 tools · 25 sources from 3 layers
+
+Show work ▾
+
+I found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer.⁠4–10
+
+The protein made by MLH1 partners with another repair protein called PMS2 to form a complex that helps correct DNA mismatches.⁠1 When this complex finds a mismatch, it creates a break in the DNA strand so the error can be cut out.⁠1 MLH1 was identified as a gene frequently mutated in hereditary nonpolyposis colon cancer.⁠1
+
+MLH1, and the gene is identified by the symbol MLH1.⁠2, 3
+
+WHERE THIS ANSWER COMES FROM
+mutL homolog 1	⁠4
+Muir-Torré syndrome	⁠5
+Colorectal cancer, hereditary nonpolyposis, type 2	⁠6
+Mismatch repair cancer syndrome 1	⁠7
+mutS homolog 2	⁠8
+Lynch syndrome 1	⁠9
+Mismatch repair cancer syndrome 2	⁠10
+MLH1	⁠3
+Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.	⁠11
+NM_000249.4(MLH1):c.545+1271_677+737delinsCA	⁠12
+Showing 1–10 of 24
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Note: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+24
+Based on 24 sources, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/gene/4436
+ -> https://www.ncbi.nlm.nih.gov/gene/4292
+ -> https://www.ncbi.nlm.nih.gov/gene/4292/
+ -> https://www.ncbi.nlm.nih.gov/medgen/C1321489
+ -> https://www.ncbi.nlm.nih.gov/medgen/C1333991
+ -> https://www.ncbi.nlm.nih.gov/medgen/C5399763
+ -> https://www.ncbi.nlm.nih.gov/medgen/C2936783
+ -> https://www.ncbi.nlm.nih.gov/medgen/C5436806
+ -> https://pubmed.ncbi.nlm.nih.gov/17510385/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/242650/
+ -> https://pubmed.ncbi.nlm.nih.gov/30998989/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/242651/
+ -> https://pubmed.ncbi.nlm.nih.gov/40769155/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4686835/
+ -> https://pubmed.ncbi.nlm.nih.gov/41439704/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4852684/
+ -> https://pubmed.ncbi.nlm.nih.gov/41480639/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4856878/
+ -> https://clinicaltrials.gov/study/NCT00261456
+ -> https://clinicaltrials.gov/study/NCT01876511
+ -> https://clinicaltrials.gov/study/NCT02760849
+ -> https://clinicaltrials.gov/study/NCT02993068
+ -> https://clinicaltrials.gov/study/NCT03005002
+
+TIME_TO_ANSWER_SECONDS=17.5 askback=false

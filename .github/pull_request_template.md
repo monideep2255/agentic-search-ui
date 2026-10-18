@@ -29,7 +29,7 @@ Section 24 is explicit that the security scan is not an automated block: `claude
 
 - [ ] Security scan: ran `/claude-security` on this branch, reviewed the findings, applied or accepted each one (see `docs/Claude_security_plugin_usage.md`). Required before a release; judgement call otherwise, scaled to the attack surface this change actually adds
 - [ ] Citation provenance: every claim carries `source`, `source_id`, `source_url` and `layer`; every tool and subagent output is schema-validated
-- [ ] Documentation sync: `CLAUDE.md`, `DECISIONS.md`, `LEARNINGS.md`, `tracker/BOARD.md`, the phase file, and `docs/build/Debugging_guide.md` if any file under `src/` was added, deleted, renamed or repurposed
+- [ ] Documentation sync: `CLAUDE.md`, `DECISIONS.md`, `LEARNINGS.md`, the board `testing/UI_fix_plan.md`, the phase file, and `docs/build/Debugging_guide.md` if any file under `src/` was added, deleted, renamed or repurposed. `tracker/BOARD.md` is frozen at build phase 6.2 and takes no update
 - [ ] Review rounds used, and whether any finding sat inside an earlier fix from this same phase
 
 ### Decisions made

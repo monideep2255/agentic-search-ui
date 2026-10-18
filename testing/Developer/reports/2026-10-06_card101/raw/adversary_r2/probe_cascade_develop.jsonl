@@ -1,0 +1,3 @@
+{"case": "copied pronoun sentence after it", "candidates": [], "check_holds_back": null, "shown": "Bronchiolitis is a self-limited disease in infants and children [1]. It usually lasts about two weeks [1]."}
+{"case": "approved rewording after it, same record, not naming it", "candidates": ["Care mainly treats the symptoms and keeps oxygen and fluids adequate"], "check_holds_back": null, "shown": "Bronchiolitis is a self-limited disease in infants and children [1]. Care mainly treats the symptoms and keeps oxygen and fluids adequate [1]."}
+{"case": "copied clause after it in the same sentence", "candidates": [], "check_holds_back": null, "shown": "Bronchiolitis is a self-limited disease in infants and children [1], and treatment is usually symptomatic [1]."}

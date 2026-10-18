@@ -140,7 +140,15 @@ async def test_an_unknown_shape_still_runs_the_model_path(monkeypatch: pytest.Mo
     scripted = "MATCH (g:Gene {id: $e_NCBIGene_672})-[:gene_associated_with_condition]->(d:Disease) RETURN d"
     harness = _ScriptedHarness(scripted)
 
-    output = await cypher_query(harness, _input("Tell me about BRCA1", query_class="exploratory"))
+    # 2026-09-22: a gene question with no shape now takes the record
+    # template on every class but `aggregate` (the generated query timed
+    # out, or failed validation, on every measured pass of the shapes that
+    # used to reach the model), so the class here is aggregate, where the
+    # model path is still the deliberate behaviour when the question asks
+    # for a count, because a count is something a record cannot give (G-034
+    # in the consistency run). Since 2026-10-05 an `aggregate` gene question
+    # with no count request takes the record too (card 91).
+    output = await cypher_query(harness, _input("How many records does BRCA1 have?", query_class="aggregate"))
 
     assert len(harness.calls) == 1, "the plan tier must write the Cypher when no template matches"
     assert output.status == "ok"

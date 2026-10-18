@@ -1,0 +1,488 @@
+{
+ "record": {
+  "id": "G-038",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "discovery",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Tell me about the tree of life.",
+  "session_id": "c103-65ecb4f2d0d3",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:49:54+00:00",
+  "run_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 8,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 8
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 293,
+  "answer_start": "Found 5 pubmed records: On tree longevity. [4], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [5], Gradient Boosted Tree Approaches",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 19.18,
+  "seconds": 19.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 20,
+   "citation": 8,
+   "trust_signal": 9,
+   "done": 1
+  },
+  "first_word_s": 19.523,
+  "first_token_ts": "2026-09-26T20:48:34.965642Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 0,
+   "ts": "2026-09-26T20:48:17.802256Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 2,
+   "ts": "2026-09-26T20:48:19.247124Z",
+   "payload": {
+    "narrative": "Broad, open-ended question about a conceptual framework, not specific to biomedical databases or genes.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 4,
+   "ts": "2026-09-26T20:48:19.249571Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: tree, life",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5960aad8cb08",
+      "layer": "layer_2_api",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ad591498361e",
+      "layer": "layer_2_api",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-d136a07ac612",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 6,
+   "ts": "2026-09-26T20:48:19.250807Z",
+   "payload": {
+    "call_id": "ne-5960aad8cb08",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 7,
+   "ts": "2026-09-26T20:48:19.250841Z",
+   "payload": {
+    "call_id": "ne-ad591498361e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 8,
+   "ts": "2026-09-26T20:48:19.250852Z",
+   "payload": {
+    "call_id": "pa-d136a07ac612",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 9,
+   "ts": "2026-09-26T20:48:20.332040Z",
+   "payload": {
+    "call_id": "ne-5960aad8cb08",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 10,
+   "ts": "2026-09-26T20:48:20.458859Z",
+   "payload": {
+    "call_id": "pa-d136a07ac612",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 11,
+   "ts": "2026-09-26T20:48:20.601298Z",
+   "payload": {
+    "call_id": "ne-ad591498361e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 12,
+   "ts": "2026-09-26T20:48:20.602565Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 13,
+   "ts": "2026-09-26T20:48:34.965642Z",
+   "payload": {
+    "text": "Found 5 pubmed records: On tree longevity. [4], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [5], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [6], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [7] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [8]. ",
+    "marker_ids": [
+     "ne-ad591498361e-1",
+     "ne-ad591498361e-2",
+     "ne-ad591498361e-3",
+     "ne-ad591498361e-4",
+     "ne-ad591498361e-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits.",
+     "Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment.",
+     "Tree mycorrhizal type and tree diversity shape the forest soil microbiota.",
+     "On tree longevity."
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34327789",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34327789/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36096966",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36096966/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "51f02f9b-02f2-4142-b683-38bfc2693574",
+   "seq": 51,
+   "ts": "2026-09-26T20:48:34.966209Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 19180,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "on_topic",
+      "decided_by": "jev",
+      "jev_choice": "on_topic",
+      "jev_confidence": 0.88,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 125
+     },
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 98
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.96,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 116
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 135
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 214
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: On tree longevity. [4], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [5], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [6], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [7] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [8]. \n\nTree longevity\n\nTrees do not appear to die from genetically programmed meristem senescence but are instead killed by external agents or disturbance events [1]. Long lifespans are enabled by life-history trait combinations within realized niches that confer resistance to or avoidance of extrinsic mortality [1]. \n\nMycorrhizal type and forest productivity\n\nPositive relationships between tree species richness and community productivity strengthen over time, but arbuscular and ectomycorrhizal tree species influence productivity differently [2]. Ectomycorrhizal communities show low initial productivity with increasing increment over time and strong biodiversity effects, whereas arbuscular communities display the opposite pattern [2]. \n\nNonstructural carbohydrate dynamics\n\nBranches and roots serve as the most dynamic NSC-supplying organs in the respective species [3]. \n\nPubmed records found\n\nPubmed title: On tree longevity [4]. Pubmed title: Tree mycorrhizal type and tree diversity shape the forest soil microbiota [5]. Pubmed title: Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer [6]. Pubmed title: Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment [7]. Pubmed title: Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits [8]. "
+}

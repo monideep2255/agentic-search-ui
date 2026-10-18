@@ -1,0 +1,5 @@
+STEP 1 OF 9 Welcome to NCBI Agentic Search Ask a biomedical question in plain words. The answer is built from the NCBI knowledge graph and from live NCBI APIs, queried as you ask. Every claim carries a numbered source you can open. When the records do not support an answer, the system says so rather than guessing. Next Skip tour
+---
+STEP 2 OF 9 The question box Type your question here. Enter sends it, and Shift+Enter starts a new line. The arrow button sends it too. A question can run to about 2,000 characters. Back Next Skip tour
+---
+STEP 3 OF 9 Answer mode Plain language, the default, gives the answer in simple terms, easy to understand. Researcher gives it in technical terms, with the specifics and the records listed or in tables. The sources stay the same in both modes, and every claim is cited. A change applies to your next question. Back Next Skip tour

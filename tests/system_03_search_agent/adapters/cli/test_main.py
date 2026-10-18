@@ -49,6 +49,7 @@ import pytest
 # delivered_citation`) assigns this into `fake_modules.render.Renderer`
 # to exercise the real references-block logic through `main.py`'s actual
 # interrupt path, rather than `_FakeRenderer`'s marker-only stand-in.
+from system_03_search_agent.adapters.cli.render import JsonRenderer as _RealJsonRenderer
 from system_03_search_agent.adapters.cli.render import Renderer as _RealRenderer
 
 
@@ -80,6 +81,10 @@ class FakeInsecureCredentialsError(FakeCredentialsError):
     pass
 
 
+class FakeInsecureCredentialsDirectoryError(FakeInsecureCredentialsError):
+    pass
+
+
 class FakeRefreshError(FakeCredentialsError):
     """Stand-in for credentials.py's `RefreshError` (J-4.2-02/F-4.2-A-06):
     `_call_with_one_refresh` and `_create_run_never_retried` both catch
@@ -104,6 +109,10 @@ class FakeCorruptCredentialsError(FakeCredentialsError):
     typed replacement is what `_load_credentials_or_report` now catches
     via the `CredentialsError` base.
     """
+
+
+class FakeCredentialsPathIsDirectoryError(FakeCorruptCredentialsError):
+    pass
 
 
 class FakeRefreshLockTimeoutError(FakeCredentialsError):
@@ -220,6 +229,8 @@ def fake_modules(monkeypatch: pytest.MonkeyPatch):
     credentials_module.Credentials = FakeCredentials
     credentials_module.CredentialsError = FakeCredentialsError
     credentials_module.InsecureCredentialsError = FakeInsecureCredentialsError
+    credentials_module.InsecureCredentialsDirectoryError = FakeInsecureCredentialsDirectoryError
+    credentials_module.CredentialsPathIsDirectoryError = FakeCredentialsPathIsDirectoryError
     credentials_module.RefreshError = FakeRefreshError
     credentials_module.SessionLostError = FakeSessionLostError
     credentials_module.CorruptCredentialsError = FakeCorruptCredentialsError
@@ -249,6 +260,11 @@ def fake_modules(monkeypatch: pytest.MonkeyPatch):
     from system_03_search_agent.adapters.cli import render as _real_render_module
 
     render_module._sanitize_untrusted = _real_render_module._sanitize_untrusted
+    # Build phase 8.10's fix round (F-8.10-A05): `_run_login` names the
+    # server it signed in to through `address_for_display`, which drops a
+    # `user:pass@` from the base URL. The genuine function too, for the
+    # same reason as the one above.
+    render_module.address_for_display = _real_render_module.address_for_display
 
     monkeypatch.setitem(
         sys.modules, "system_03_search_agent.adapters.cli.credentials", credentials_module
@@ -1194,6 +1210,10 @@ class TestStopCommand:
             ["stop", "run-123"], stdin=io.StringIO(""), stdout=out, stderr=err, http_client=object()
         )
         assert exit_code == 0
+        # Card 59, A-59-03: the server now answers `stopped: false` for a run
+        # that had already finished, including one still saving its answer,
+        # and the person is told so rather than "run stopped".
+        assert out.getvalue() == "run was already finished\n"
 
     @pytest.mark.asyncio
     async def test_stopping_someone_elses_run_renders_403_and_exits_nonzero(
@@ -1708,6 +1728,57 @@ class TestAskCommand:
         assert "[1] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/VCV000123" in stdout_value
 
     @pytest.mark.asyncio
+    async def test_ctrl_c_json_names_the_persons_stop_not_a_connection_fault(
+        self, main_module, fake_modules
+    ) -> None:
+        fake_modules.credentials.load = lambda: FakeCredentials(
+            base_url="http://test", access_token="a", refresh_token="r"
+        )
+        fake_modules.render.JsonRenderer = _RealJsonRenderer
+        fake_modules.render.Renderer = _RealRenderer
+        started = asyncio.Event()
+
+        class FakeCliClient:
+            def __init__(self, http: object, creds: FakeCredentials) -> None:
+                pass
+
+            async def create_run(
+                self, text: str, session_id: str, audience_depth: str
+            ) -> tuple[str, str]:
+                return "run-1", "persona"
+
+            def stream_events(self, run_id: str, *, last_event_id: str | None = None):
+                async def wait_for_interrupt():
+                    started.set()
+                    await asyncio.sleep(3600)
+                    yield _FakeEvent("unreachable")
+
+                return wait_for_interrupt()
+
+            async def stop(self, run_id: str) -> bool:
+                return True
+
+        fake_modules.client.CliClient = FakeCliClient
+        out, err = io.StringIO(), io.StringIO()
+        interrupt_signals: asyncio.Queue[None] = asyncio.Queue()
+        task = asyncio.create_task(
+            main_module.async_main(
+                ["ask", "--json", "q"],
+                stdin=io.StringIO(""), stdout=out, stderr=err,
+                http_client=object(), interrupt_signals=interrupt_signals,
+            )
+        )
+        await asyncio.wait_for(started.wait(), 5)
+        interrupt_signals.put_nowait(None)
+        assert await asyncio.wait_for(task, 5) == main_module.EXIT_INTERRUPTED
+        document = json.loads(out.getvalue())
+        assert document["complete"] is False
+        assert document["error"]["error_class"] == "interrupted"
+        assert "stopped" in document["error"]["message"]
+        assert "connection" not in document["error"]["message"]
+        assert "interrupted" in err.getvalue()
+
+    @pytest.mark.asyncio
     async def test_second_ctrl_c_during_a_slow_stop_returns_without_waiting_for_it(
         self, main_module, fake_modules
     ) -> None:
@@ -2095,7 +2166,9 @@ class TestReadPassword:
 
         result = main_module._read_password(FakeTtyStdin())
         assert result == "typed-secret"
-        assert prompts == [""]
+        # Build phase 8.10 changed the prompt from "" to "Password: ": with
+        # an empty prompt the terminal showed nothing while `s3 login` waited.
+        assert prompts == ["Password: "]
 
 
 # ---------------------------------------------------------------------------

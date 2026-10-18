@@ -21,7 +21,7 @@ The distinction that resolves it, and which the rule's current text does not dra
 
 ## Blocked at open: the Layer 1 transport
 
-`python3 tracker/preflight.py` on 2026-08-19 returned `product-model ok`, `harness-model ok`, `graph skipped` (unset in the process environment). Re-probed with the real values loaded from `.env`: `graph down, TCP 15432: Connection refused`. That port is the SSH local forward `ssh -N -L 15432:127.0.0.1:5432 root@46.225.128.133` recorded in `tracker/phase_2.1.md`, and nothing has opened it in this session. Port 22 on the host answers, so the forward is openable from here with product-owner approval.
+`python3 tracker/preflight.py` on 2026-08-19 returned `product-model ok`, `harness-model ok`, `graph skipped` (unset in the process environment). Re-probed with the real values loaded from `.env`: `graph down, TCP 15432: Connection refused`. That port is the SSH local forward `ssh -N -L 15432:127.0.0.1:5432 root@<server-ip>` recorded in `tracker/phase_2.1.md`, and nothing has opened it in this session. Port 22 on the host answers, so the forward is openable from here with product-owner approval.
 
 Every ticket below except T-4.4-06 reads Layer 1. None of them may be dispatched while the probe reads `down`, per `docs/build/Build_workflow_cadence.md` stage 4.
 

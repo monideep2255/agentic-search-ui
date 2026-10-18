@@ -119,7 +119,7 @@ allowlists are live-probed for key presence and shape, not semantically
 verified field by field, which puts them at the same trust tier as the
 `dbvar`/`omim`/`medgen`/`gtr` rows above rather than at the `gene` row's.
 
-As a result every one of `SummaryDb`'s 12 databases is allowlisted, and the
+As a result every one of `SummaryDb`'s 14 databases is allowlisted, and the
 `summary` action never reaches `_generic_summary_fields`. That function's
 one remaining caller is `_extract_generic_fetch_records`, the unverified
 EFetch fallback, where the response shape is unknown by definition and there
@@ -442,7 +442,7 @@ def _apply_field_tags(term: str, field_tags: list[str]) -> tuple[str | None, str
     "sym" becomes a free-text search term of its own. The flagship symbol
     lookup then ranks a wrong gene (1956, EGFR) above the intended one (672,
     BRCA1). An unscoped wrong answer that still cites cleanly is exactly the
-    failure class this repo treats as worse than a crash.
+    failure class this repository treats as worse than a crash.
 
     The root fix, therefore, is that Entrez scopes a field tag correctly ONLY
     against an atomic term. Both correct forms are live-verified:
@@ -506,6 +506,8 @@ _RECORD_URL_TEMPLATES: Final[dict[str, str]] = {
     "gds": "https://www.ncbi.nlm.nih.gov/gds/{id}",
     "taxonomy": "https://www.ncbi.nlm.nih.gov/taxonomy/{id}",
     "mesh": "https://www.ncbi.nlm.nih.gov/mesh/{id}",
+    # Card 74 (2026-10-05): verified live, HTTP 200 for a sequence uid.
+    "nuccore": "https://www.ncbi.nlm.nih.gov/nuccore/{id}",
     # UI fix set 11 (search breadth, 2026-09-14). A PMC uid from ESearch or
     # ELink is the bare number; the record page prefixes it with `PMC`.
     # Live-verified the same day: this exact shape answers HTTP 301 to
@@ -565,6 +567,32 @@ def _cap_fields(fields: dict[str, Any]) -> dict[str, Any]:
     return dict(list(fields.items())[:_MAX_RECORD_FIELDS])
 
 
+def _repair_mojibake(value: str) -> str:
+    """Repair double-encoded UTF-8 strings from NCBI esummary.
+
+    NCBI's MedGen esummary sometimes returns mojibake: UTF-8 bytes that
+    were double-encoded as latin-1 and then decoded as UTF-8. For example,
+    the character "é" (U+00E9, UTF-8 bytes c3 a9) gets sent as "Ã©"
+    (UTF-8 bytes c3 83 c2 a9), which is the UTF-8 encoding of the latin-1
+    string "Ã©".
+
+    This function detects and repairs such strings by:
+    1. Checking if the string contains U+00C2 or U+00C3 (Â or Ã)
+    2. Attempting to re-encode as latin-1 and decode as UTF-8
+    3. Returning the repaired string if successful, otherwise the original
+
+    See: testing/Developer/reports/2026-10-05_card96/source_trace.md
+    """
+    if 'Â' not in value and 'Ã' not in value:
+        return value
+
+    try:
+        repaired = value.encode("latin-1").decode("utf-8")
+        return repaired
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return value
+
+
 def _cap_text(value: str) -> str:
     """Hard character cap on untrusted free text pulled from a record body.
 
@@ -600,7 +628,8 @@ def _cap_value(value: Any, depth: int = 0) -> Any:
           neither exhaust the stack nor smuggle uncapped text past the cap
     """
     if isinstance(value, str):
-        return _cap_text(value)
+        repaired = _repair_mojibake(value)
+        return _cap_text(repaired)
     if value is None or isinstance(value, (int, float, bool)):
         return value
     if depth >= _MAX_NESTING_DEPTH:
@@ -621,7 +650,16 @@ def _truncate_error(message: str | None) -> str:
     return message[:500]
 
 
-def _error_output(action: str, message: str | None) -> NcbiEfetchOutput:
+def _error_output(
+    action: str,
+    message: str | None,
+    failure_kind: ncbi_transport.FailureKind | None = None,
+) -> NcbiEfetchOutput:
+    """A `status: "error"` output. `failure_kind` is card 63's fixed set.
+
+    Omitted (None) wherever this module has nothing more to say than "it
+    failed", such as a refused field tag; a reader takes None as `other`.
+    """
     return NcbiEfetchOutput(
         status="error",
         action=action,
@@ -629,6 +667,7 @@ def _error_output(action: str, message: str | None) -> NcbiEfetchOutput:
         record_count=0,
         truncated=False,
         error=_truncate_error(message),
+        failure_kind=failure_kind,
     )
 
 
@@ -653,12 +692,22 @@ async def _get_or_error(
             url, params, family="eutils", include_api_key=True
         )
     except ncbi_transport.TransportError as exc:
-        return _error_output(action, str(exc))
+        return _error_output(action, str(exc), ncbi_transport.failure_kind_for_exception(exc))
     status_message = ncbi_transport.http_status_error_message("E-utilities", response)
     if status_message is not None:
-        return _error_output(action, status_message)
+        return _error_output(
+            action,
+            status_message,
+            ncbi_transport.failure_kind_for_status(getattr(response, "status_code", 200)),
+        )
+    # Card 63: the database is passed for the classifier's log line only, so
+    # an `ERROR` body is logged by database. ELink's request carries both
+    # `dbfrom` and `db`; `db` is the one searched.
+    database = params.get("db")
     return ncbi_transport.classify_eutils_response(
-        content_type=response.headers.get("content-type", ""), text=response.text
+        content_type=response.headers.get("content-type", ""),
+        text=response.text,
+        database=database if isinstance(database, str) else None,
     )
 
 
@@ -697,7 +746,7 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("search", result.error_message)
+        return _error_output("search", result.error_message, result.failure_kind)
     if result.status == "empty":
         return _empty_output("search")
 
@@ -775,7 +824,7 @@ async def search(params: NcbiEfetchSearchInput) -> NcbiEfetchOutput:
 
 # Section 6.2's verified ESummary field table (Technical_specification.md
 # lines 946-957). See the module docstring's trust table for which of these
-# are live-verified in THIS repo (gene's name/description/chromosome, case
+# are live-verified in THIS repository (gene's name/description/chromosome, case
 # 2) versus taken on trust from the locked spec (everything else here).
 _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
     "pubmed": (
@@ -804,9 +853,16 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
     # uses `dataset_report`, a different action, so widening this row cannot
     # put either field into a citation a user sees. Both are small scalars
     # and go through `_cap_value` like every other allowlisted field.
+    # `summary` is a further ADDITION beyond Section 6.2's table, live-probed
+    # 2026-09-21 against `esummary.fcgi?db=gene&id=672&retmode=json` (BRCA1).
+    # It is the only plain-English explanatory text NCBI publishes per gene,
+    # where every other field here is a code, a coordinate, or an id. The
+    # product's grounding gate can only pass source text through verbatim,
+    # so a plain-language answer needs plainer source text to draw from, or
+    # it has nothing citable to explain a gene's function in words.
     "gene": (
         "name", "description", "chromosome", "maplocation", "genomicinfo", "mim", "organism",
-        "status", "currentid",
+        "status", "currentid", "summary",
     ),
     # variation_set carries canonical_spdi nested inside it (Section 6.2
     # names "variation_set.canonical_spdi"); passed through as one object
@@ -868,18 +924,52 @@ _SUMMARY_FIELDS_BY_DB: Final[dict[str, tuple[str, ...]]] = {
         "accession", "title", "summary", "taxon", "entrytype", "gdstype",
         "gpl", "gse", "pdat", "n_samples", "bioproject",
     ),
+    # Golden question G-035 (2026-09-22): the organism an isolate question
+    # names, cited to its Taxonomy record. Keys read live from
+    # `esummary.fcgi?db=taxonomy&id=562` the same day; `akataxid`,
+    # `modificationdate`, `status`, `subsp` and `uid` are dropped as saying
+    # nothing a person reads an organism record for.
+    "taxonomy": (
+        "scientificname", "commonname", "rank", "division", "genbankdivision",
+        "genus", "species", "taxid",
+    ),
+    # Golden question G-019 (2026-09-23): the MeSH terms assigned to an
+    # article. The graph's own `OntologyClass.name` is the identifier
+    # (`[MeSH] D000818`) for all 30,790 vertices, so the term itself has to
+    # come from here. Keys read live from
+    # `esummary.fcgi?db=mesh&id=68000818` the same day.
+    #
+    # `ds_meshui` is the JOIN KEY and is the reason this row cannot be
+    # trimmed to the display fields: it carries the record's own descriptor
+    # id, which is how `synthesis/mesh_terms.py` matches a heading back to
+    # the id that was asked about. ESearch returned the same batch's UIDs in
+    # descending numeric order rather than request order, measured, so
+    # matching by position would attach the wrong term to the right id.
+    #
+    # `ds_meshterms` is a list whose FIRST entry is the preferred heading and
+    # whose rest are entry terms (D000818: "Animals", then "Animal",
+    # "Animalia", "Metazoa"). `ds_scopenote` is NLM's own definition of the
+    # heading, the only plain-English text the record carries. `ds_recordtype`
+    # distinguishes a descriptor from a qualifier. The large tree-position
+    # blobs (`ds_idxlinks`, `ds_palist`, `ds_previousindexing`) are
+    # deliberately excluded: they are the highest-volume fields in the
+    # response and carry nothing a person reads a MeSH record for.
+    "mesh": ("ds_meshui", "ds_meshterms", "ds_recordtype", "ds_scopenote"),
     # sra packs its payload into a handful of markup-bearing string fields
     # rather than flat scalars. They are the only substantive content the
     # response carries, so they are allowlisted and lean entirely on
     # `_cap_value` for their bound.
     "sra": ("expxml", "runs", "createdate", "updatedate"),
+    # Card 74 (2026-10-05): live-read from `esummary.fcgi?db=nuccore`; the
+    # record's title leads, then its accession and the facts a reader scans.
+    "nuccore": ("title", "accessionversion", "organism", "moltype", "slen"),
 }
 
 
 def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
     """Last-resort passthrough for a payload with no allowlist at all.
 
-    After the F-3.1-10 reopen, every one of `SummaryDb`'s 12 databases has
+    After the F-3.1-10 reopen, every one of `SummaryDb`'s 14 databases has
     an entry in `_SUMMARY_FIELDS_BY_DB`, so the `summary` action never
     reaches this function. Its one remaining caller is
     `_extract_generic_fetch_records`, the unverified EFetch fallback, where
@@ -899,6 +989,154 @@ def _generic_summary_fields(entry: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# ---------------------------------------------------------------------------
+# T-8.1-06 (tracker/phase_8.1.md): MedGen clinical features, an ADDITION
+# beyond Section 6.2's table, exactly as `gene`'s `summary` field is (see the
+# comment above `_SUMMARY_FIELDS_BY_DB["gene"]`). "What phenotypic features
+# are associated with Marfan syndrome?" answered with variant and gene
+# records at both depths, because the graph holds no phenotype edges
+# (CLAUDE.md's three-layer architecture only reaches the graph, EFetch and
+# the three enrichment APIs; a phenotype resolver is not a v1 tool). MedGen's
+# own ESummary already carries the clinical picture for a concept: measured
+# live 2026-09-25 against `esummary.fcgi?db=medgen&id=44287` (Marfan
+# syndrome, UID 44287, CUI C0024796), the `conceptmeta` field is 35KB of
+# markup with a `<ClinicalFeatures>` block of 70 `<ClinicalFeature>`
+# elements, each carrying a `<Name>` ("Aortic regurgitation",
+# "Arachnodactyly", "Ectopia lentis", ...) and an `SDUI` attribute that is
+# the HPO id ("HP:0001659") when the feature has one.
+#
+# `conceptmeta` is NOT one well-formed document: it concatenates several
+# sibling top-level elements (`<Names>...</Names><OMIM>...</OMIM>
+# <ClinicalFeatures>...</ClinicalFeatures>...`), which is why it is parsed
+# here rather than allowlisted straight into `_SUMMARY_FIELDS_BY_DB["medgen"]`
+# and handed to `ElementTree.fromstring` as-is: a document with more than one
+# root element does not parse. Wrapping it in one throwaway root element
+# fixes the shape without changing any byte of NCBI's own content.
+#
+# WHY THE 35KB BLOB ITSELF NEVER REACHES THE MODEL. `conceptmeta` also
+# carries every synonym MedGen has ever indexed for the concept (Names),
+# every cross-reference (OMIM, GTR, Orphanet, MONDO), semantic types and
+# definitions repeated per name, none of it phenotype content and all of it
+# untrusted external markup. Only the parsed, bounded `clinical_features`
+# list this function extracts is added to the record; `conceptmeta` itself
+# is never allowlisted, so it never enters `entry`'s extracted fields and
+# never reaches a prompt. This is the bounded-context-items gate in
+# `.claude/rules/production-standards.md` applied at the point of extraction
+# rather than trusted to a later truncation pass.
+#
+# F-8.1-J09 (fix-and-verify round, 2026-09-25): the count cap rose from 30 to
+# 100. MedGen lists 70 features for Marfan syndrome (measured live
+# 2026-09-25), in MedGen's own document order, which is not an importance
+# order: the old cap of 30 silently dropped aortic root aneurysm, aortic
+# dissection and tall stature, the features a clinician looks for first.
+# 100 covers every record measured in round 1 (70, 57, 31) with room, and it
+# is still a cap: `clinical_features_total` carries how many MedGen listed,
+# so the answer can say "N of M" whenever this, or any later cap, cuts.
+MAX_CLINICAL_FEATURES: Final[int] = 100
+_MAX_CLINICAL_FEATURE_NAME_CHARS: Final[int] = 120
+
+# F-8.1-J10, A03: an HPO term id is exactly `HP:` and seven ASCII digits.
+# `fullmatch` with `re.ASCII`, not `^...$` with `\d`: `$` also matches before
+# a trailing newline, and `\d` without `re.ASCII` matches any Unicode digit.
+# An `SDUI` that does not match is dropped and the feature's name is kept.
+_HPO_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r"HP:[0-9]{7}", re.ASCII)
+
+
+def is_hpo_id(value: Any) -> bool:
+    """Whether `value` is exactly one HPO term id, `HP:` plus seven digits."""
+    return isinstance(value, str) and _HPO_ID_PATTERN.fullmatch(value) is not None
+
+
+def clean_clinical_feature_name(value: Any) -> str:
+    """A MedGen feature name as one printable line, at most
+    `_MAX_CLINICAL_FEATURE_NAME_CHARS` characters, or "" when nothing is left.
+
+    F-8.1-A03, J14: text from NCBI is data, never structure. A character
+    reference such as `&#10;` decodes to a real newline inside `<Name>`, and
+    a newline in a feature name forged a numbered line in the writing
+    model's findings block ("[2] MedGen title: ..."). So every non-printable
+    character (newline, tab, control characters, a bidi override such as
+    U+202E, a zero-width space) becomes a space, whitespace collapses to
+    single spaces, and the result is cut to the cap. Also used by
+    `core/graph.py` on the way into a row, so the rule has one definition.
+    """
+    if not isinstance(value, str):
+        return ""
+    printable = "".join(ch if ch.isprintable() else " " for ch in value)
+    collapsed = " ".join(printable.split())
+    return collapsed[:_MAX_CLINICAL_FEATURE_NAME_CHARS].rstrip()
+
+# `.claude/rules/production-standards.md`: "XML parsers must disable
+# external entities. NCBI EFetch returns XML: etree.XMLParser(
+# resolve_entities=False)", an `lxml` parameter this project does not depend
+# on (see `tools/ncbi_transport.py`'s "XML parsing and external entities"
+# section, which this reject mirrors for the same reason: `lxml` and
+# `defusedxml` are both new dependencies this ticket is not scoped to add,
+# `.claude/rules/supply-chain-security.md`). Stdlib `xml.etree.ElementTree`
+# does not resolve external entities or fetch external DTDs by default, so
+# XXE is not the live risk; an internal `<!ENTITY` declaration (which can
+# only appear inside a DOCTYPE) is, so any DOCTYPE or ENTITY marker anywhere
+# in the fragment is rejected before `ElementTree.fromstring` ever sees it.
+# `conceptmeta` is a content fragment, not a full document, so a legitimate
+# one never carries a DOCTYPE at all; if one appears, that is itself reason
+# enough to fail closed, no legitimate-DOCTYPE carve-out is needed the way
+# `ncbi_transport.py`'s PubMed EFetch reject needs one for the public NLM
+# DTD every genuine PubMed record declares.
+_XML_DOCTYPE_MARKER: Final[str] = "<!doctype"
+_XML_ENTITY_MARKER: Final[str] = "<!entity"
+
+
+def _parse_medgen_clinical_features(conceptmeta: Any) -> tuple[list[dict[str, str]], int] | None:
+    """The `<ClinicalFeature>` entries of a MedGen `conceptmeta` blob, and
+    how many distinct features the record lists, or None when it cannot be
+    read.
+
+    F-8.1-J11 (fix-and-verify round): "could not read" and "has none" are
+    different answers and must stay different all the way to the reader.
+    None, never raising, for anything that is not a non-blank string, that
+    fails the DOCTYPE/ENTITY reject, or that does not parse as XML once
+    wrapped: the caller then says nothing about features at all. A record
+    that parsed and carries no `ClinicalFeature` is `([], 0)`, and only that
+    one may be described as listing none.
+
+    Each item is `{"name": ..., "hpo_id": ...}`, or `{"name": ...}` when the
+    feature's `SDUI` is not exactly an HPO id (`is_hpo_id`). Names pass
+    through `clean_clinical_feature_name`; a feature whose name is empty
+    after cleaning is skipped, and a repeated name (case-insensitive) is
+    kept once. The list is count-capped at `MAX_CLINICAL_FEATURES`, in
+    MedGen's own document order; the second value counts every distinct
+    feature, including any past the cap.
+    """
+    if not isinstance(conceptmeta, str) or not conceptmeta.strip():
+        return None
+    lowered = conceptmeta.lower()
+    if _XML_ENTITY_MARKER in lowered or _XML_DOCTYPE_MARKER in lowered:
+        return None
+    try:
+        root = ElementTree.fromstring(f"<medgen_concept_meta>{conceptmeta}</medgen_concept_meta>")
+    except ElementTree.ParseError:
+        return None
+    features: list[dict[str, str]] = []
+    seen: set[str] = set()
+    total = 0
+    for element in root.iter("ClinicalFeature"):
+        name_element = element.find("Name")
+        raw_name = "".join(name_element.itertext()) if name_element is not None else ""
+        name = clean_clinical_feature_name(raw_name)
+        if not name or name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        total += 1
+        if len(features) >= MAX_CLINICAL_FEATURES:
+            continue
+        item: dict[str, str] = {"name": name}
+        hpo_id = element.get("SDUI")
+        if is_hpo_id(hpo_id):
+            item["hpo_id"] = hpo_id
+        features.append(item)
+    return features, total
+
+
 async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
     """ESummary: `db=<db>&id=<ids>&retmode=json`. Case 2 live-verifies db=gene."""
     request_params = {"db": params.db, "id": ",".join(params.ids), "retmode": "json"}
@@ -907,7 +1145,7 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("summary", result.error_message)
+        return _error_output("summary", result.error_message, result.failure_kind)
     if result.status == "empty":
         return _empty_output("summary")
 
@@ -950,6 +1188,21 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
             }
         else:
             extracted = _generic_summary_fields(entry)
+        # T-8.1-06: MedGen's clinical features, parsed out of the raw
+        # `conceptmeta` field and added as their own bounded keys. Never add
+        # `conceptmeta` itself to `_SUMMARY_FIELDS_BY_DB["medgen"]`: see the
+        # comment above `_parse_medgen_clinical_features` for why the 35KB
+        # blob it comes from must never reach a prompt whole.
+        #
+        # F-8.1-J11 (fix-and-verify round): both keys are set ONLY when the
+        # blob was read. `clinical_features` is then the (possibly empty)
+        # list and `clinical_features_total` the number MedGen lists; an
+        # unreadable blob sets neither, so the caller can never turn "could
+        # not read" into "MedGen lists none".
+        if params.db == "medgen":
+            parsed = _parse_medgen_clinical_features(entry.get("conceptmeta"))
+            if parsed is not None:
+                extracted["clinical_features"], extracted["clinical_features_total"] = parsed
         records.append(
             NcbiEfetchRecord(
                 id=uid,
@@ -1088,7 +1341,7 @@ async def fetch(params: NcbiEfetchFetchInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("fetch", result.error_message)
+        return _error_output("fetch", result.error_message, result.failure_kind)
     if result.status == "empty":
         # Trap 4: an empty <PubmedArticleSet> (or an unrecognized-but-empty
         # body) fabricates zero records. Never a placeholder with a
@@ -1154,7 +1407,7 @@ async def link(params: NcbiEfetchLinkInput) -> NcbiEfetchOutput:
     if isinstance(result, NcbiEfetchOutput):
         return result
     if result.status == "error":
-        return _error_output("link", result.error_message)
+        return _error_output("link", result.error_message, result.failure_kind)
     if result.status == "empty":
         return _empty_output("link")
 

@@ -1,0 +1,110 @@
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+New search
+
+? Answered14.3s · 15 tools · 62 sources from 3 layers
+
+Show work ▾
+
+I found 1 gene and 34 genetic variants related to BRCA1, RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216 and LOC111589215.⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+BRCA1 DNA repair associated	⁠1
+NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)	⁠2
+NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)	⁠3
+NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)	⁠4
+NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)	⁠5
+NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)	⁠6
+NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)	⁠7
+NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)	⁠8
+NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)	⁠9
+NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)	⁠10
+Showing 1–10 of 63
+‹ Previous
+Page 1 of 7
+Next ›
+NOTES
+Note: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query
+Note: no written summary could be checked against the records, so the records found are listed below with their sources
+Note: this answer does not address the following entities named in the question: RPL21P4, LOC127886930, LOC129664047, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+62
+Based on 62 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/gene/672
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935316/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7897034/
+ -> https://www.ncbi.nlm.nih.gov/gene/672/
+ -> https://pubmed.ncbi.nlm.nih.gov/28976962/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935318/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7897183/
+ -> https://pubmed.ncbi.nlm.nih.gov/35432218/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935321/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7905344/
+ -> https://pubmed.ncbi.nlm.nih.gov/36914836/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935322/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7905530/
+ -> https://pubmed.ncbi.nlm.nih.gov/39261728/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4935323/
+ -> https://www.ncbi.nlm.nih.gov/dbvar/variants/nsv7906304/
+ -> https://pubmed.ncbi.nlm.nih.gov/39265497/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+ -> https://clinicaltrials.gov/study/NCT00590109
+ -> https://clinicaltrials.gov/study/NCT00597987
+ -> https://clinicaltrials.gov/study/NCT00617656
+ -> https://clinicaltrials.gov/study/NCT00673335
+ -> https://clinicaltrials.gov/study/NCT00700778
+
+TIME_TO_ANSWER_SECONDS=18.0 askback=false

@@ -1,0 +1,6 @@
+{
+  "name": "mod-context-budget",
+  "version": "1.0.0",
+  "description": "Totals the standing context (memory files, skills listing, custom agents, MCP tools) at session start, toasts when it is over budget or grew, and lists every item with /context-budget. Costs no tokens. Trigger: /context-budget",
+  "author": { "name": "Monideep Chakraborti" }
+}

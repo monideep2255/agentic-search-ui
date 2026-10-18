@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "answer",
+  "words": 268,
+  "paragraphs": 6,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "11583104",
+    "33388079",
+    "34291426",
+    "36870101",
+    "40626862"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \nA major position statement from the International Society of Sports Nutrition reports that caffeine enhances many aspects of exercise, with aerobic endurance showing the most consistent benefits [1]. Caffeine helps both trained and untrained people [1]. \nA broad review of caffeine and exercise found it lets athletes train at higher output or for longer and can increase speed in simulated race conditions, though it does not raise maximal oxygen capacity directly [2]. That review also reports no evidence that caffeine before exercise causes dehydration or other adverse effects [2]. However, it notes that getting caffeine through coffee appears less effective than using pure caffeine [2]. \nResearch focused on resistance training\u2014weightlifting and similar exercises\u2014found caffeine improves strength, muscular endurance, velocity, and power [3]. Lower doses around 2\u20133 mg per kilogram work about as well as higher doses [3]. Alternate sources such as caffeinated gum, gel, and coffee are also effective for resistance exercise [3]. \nOn the other hand, caffeine can interfere with sleep if consumed too close to bedtime, reducing total sleep time and deep sleep [4]. One study recommends stopping caffeine at least 8.8 hours before bed for coffee and 13.2 hours for pre-workout supplements [4]. \nSeparate research on coffee and heart health found that moderate coffee consumption is linked to lower risk of several cardiovascular conditions [5]. Some of coffee's health effects may come from compounds other than caffeine [5]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- Effects of Caffeine on Resistance Exercise: A Review of Recent Research.\n- The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.\n- Coffee and cardiovascular disease.\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q5"
+}

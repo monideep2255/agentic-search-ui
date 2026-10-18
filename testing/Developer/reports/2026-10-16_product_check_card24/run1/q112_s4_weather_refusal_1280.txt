@@ -1,0 +1,15 @@
+What is the weather in Paris?
+New search
+
+1.5s · 0 tool calls · 0 sources cited
+
+Show work ▾
+Outside biomedical research
+This looks outside biomedical research. I can help with a gene, variant, pathogen, or paper question.
+
+ASK ANOTHER QUESTION
+
+Ask
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

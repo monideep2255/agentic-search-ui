@@ -1,0 +1,248 @@
+{
+ "record": {
+  "id": "G-029",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with Li-Fraumeni syndrome?",
+  "session_id": "c103-21764fd5ef3c",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:25:12+00:00",
+  "run_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0085390"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 2 sources",
+  "citations": 4,
+  "distinct_sources": 4,
+  "citations_by_layer": {
+   "layer_1_graph": 3,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 77,
+  "answer_start": "Found 3 gene records for Li-Fraumeni syndrome: checkpoint kinase 2 [1], cyclin dependent kinase inhibitor 2A [2] and tumor protein p53 [4], linked to 1 disease:",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 9.262,
+  "seconds": 12.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 12,
+   "citation": 4,
+   "trust_signal": 5,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 0,
+   "ts": "2026-09-22T17:23:40.364705Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 2,
+   "ts": "2026-09-22T17:23:47.116923Z",
+   "payload": {
+    "narrative": "The question asks for genes linked to a specific disease, which can be answered by a single API call to a disease-gene association database. (Li-Fraumeni syndrome: 1 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Li-Fraumeni syndrome",
+      "curie": "MedGen:C0085390",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 4,
+   "ts": "2026-09-22T17:23:47.119150Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-c7d7b53ba843",
+      "layer": "layer_1_graph",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Li-Fraumeni syndrome",
+      "curie": "MedGen:C0085390",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 6,
+   "ts": "2026-09-22T17:23:47.120152Z",
+   "payload": {
+    "call_id": "cq-c7d7b53ba843",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 7,
+   "ts": "2026-09-22T17:23:48.550287Z",
+   "payload": {
+    "call_id": "cq-c7d7b53ba843",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 8,
+   "ts": "2026-09-22T17:23:48.551600Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:11200",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/11200",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "checkpoint kinase 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1029",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1029",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cyclin dependent kinase inhibitor 2A",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0085390",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0085390",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "70cb0ef2-8be2-4765-be14-159dd72071e8",
+   "seq": 31,
+   "ts": "2026-09-22T17:23:50.780641Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 9262,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 2 sources",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for Li-Fraumeni syndrome: checkpoint kinase 2 [1], cyclin dependent kinase inhibitor 2A [2] and tumor protein p53 [4], linked to 1 disease: Li-Fraumeni syndrome [3]. \n\nCheckpoint kinase 2, identified as NCBIGene:11200, is the third gene associated with Li-Fraumeni syndrome [1]. \n\nDisease records found\n\nDisease name: Li-Fraumeni syndrome [3]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1029, name: cyclin dependent kinase inhibitor 2A [2]. Gene NCBIGene:11200, name: checkpoint kinase 2 [1]. Gene NCBIGene:7157, name: tumor protein p53 [4]. "
+}

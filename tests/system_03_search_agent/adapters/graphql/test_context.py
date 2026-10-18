@@ -15,7 +15,7 @@ elsewhere (`auth/dependencies.py`, `auth/guest.py`).
 Every assertion below names, in a comment beside it, the mutation that
 turns it red, matching this repository's mutation-proof discipline for a
 gate-adjacent file (`tracker/phase_4.3.md`'s "Premise gate design" section,
-and this repo's `test_types.py`/`test_fold.py` precedent for the same
+and this repository's `test_types.py`/`test_fold.py` precedent for the same
 package).
 """
 
@@ -254,7 +254,7 @@ class TestGetContext:
         # caller once T-4.3-07 wires this as GraphQLRouter's
         # context_getter. Since context_getter runs as a FastAPI
         # dependency resolved strictly before the route body executes
-        # (verified against the installed strawberry-graphql==0.324.0
+        # (verified against the installed strawberry-graphql==0.327.7, re-verified 2026-10-15
         # router source, see this module's own docstring), raising here is
         # what makes "auth precedes execution" true for the whole surface.
         with pytest.raises(HTTPException) as exc_info:

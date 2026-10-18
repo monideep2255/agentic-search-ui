@@ -1,9 +1,109 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+
+// Card 60, second pass. `comments.legal` below keeps a package's own
+// `@license` source comment, and that is all React, react-dom, and the
+// scheduler need since Meta's build already puts one in every file. MUI
+// carries no such comment in its compiled output at all, and neither do most
+// other MIT dependencies, so `comments.legal` alone still drops MUI's notice.
+// MIT requires the license TEXT to travel with the copy, not a source
+// comment if one happens to exist, so this plugin reads each bundled
+// package's own LICENSE file off disk and writes it into one file the build
+// output carries alongside the bundle.
+function thirdPartyNoticesPlugin(): Plugin {
+  const SECTION_DELIMITER = "=".repeat(80);
+  // Card 86. A package may spell its license file any way: `LICENSE`,
+  // `license` (clsx), `LICENCE.txt`, `License.md`. A Mac file system ignores
+  // case, so a fixed list of names passed locally and missed on Linux. This
+  // matches the folder listing instead, ignoring case.
+  const LICENSE_FILE_RE = /^licen[cs]e(\.md|\.txt)?$/i;
+
+  // A module id looks like ".../node_modules/react/cjs/react.production.js"
+  // or, scoped, ".../node_modules/@mui/material/index.js". The package root
+  // is everything up to and including the (possibly scoped) package
+  // directory; matching on the LAST "node_modules" segment handles a nested
+  // copy correctly, since that is the copy actually bundled.
+  function packageRootAndName(moduleId: string): { root: string; name: string } | null {
+    const match = moduleId.match(/^(.*\/node_modules\/((?:@[^/]+\/)?[^/]+))\//);
+    if (!match) return null;
+    return { root: match[1], name: match[2] };
+  }
+
+  function licenseText(root: string): string {
+    let names: string[] = [];
+    try {
+      names = readdirSync(root).filter((name) => LICENSE_FILE_RE.test(name));
+    } catch {
+      return "no license file found";
+    }
+    // An exact `LICENSE` wins when several files match; then a stable order.
+    names.sort((a, b) => Number(b === "LICENSE") - Number(a === "LICENSE") || a.localeCompare(b));
+    for (const name of names) {
+      const licensePath = path.join(root, name);
+      try {
+        return readFileSync(licensePath, "utf-8").trim();
+      } catch {
+        // A folder that matches the pattern is not a license file; try the next.
+      }
+    }
+    return "no license file found";
+  }
+
+  function packageVersion(root: string): string {
+    const packageJsonPath = path.join(root, "package.json");
+    if (!existsSync(packageJsonPath)) return "unknown";
+    try {
+      const parsed = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as { version?: unknown };
+      return typeof parsed.version === "string" ? parsed.version : "unknown";
+    } catch {
+      return "unknown";
+    }
+  }
+
+  return {
+    name: "third-party-notices",
+    generateBundle(_options, bundle) {
+      const packages = new Map<string, string>();
+      for (const file of Object.values(bundle)) {
+        if (file.type !== "chunk") continue;
+        for (const moduleId of file.moduleIds) {
+          const found = packageRootAndName(moduleId);
+          if (found && !packages.has(found.name)) {
+            packages.set(found.name, found.root);
+          }
+        }
+      }
+
+      // Sorted so the file's content, and therefore its hash-free bytes, is
+      // reproducible across builds of the same dependency set.
+      const names = [...packages.keys()].sort((a, b) => a.localeCompare(b));
+      const sections = names.map((name) => {
+        const root = packages.get(name) as string;
+        return [
+          SECTION_DELIMITER,
+          `PACKAGE: ${name}`,
+          `VERSION: ${packageVersion(root)}`,
+          "LICENSE:",
+          licenseText(root),
+        ].join("\n");
+      });
+      sections.push(SECTION_DELIMITER);
+
+      this.emitFile({
+        type: "asset",
+        fileName: "THIRD_PARTY_NOTICES.txt",
+        source: sections.join("\n\n") + "\n",
+      });
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), thirdPartyNoticesPlugin()],
   // Build phase 4.12. `vite preview` refuses any request whose Host header it
   // does not recognise, and returns 403 with "Blocked request. This host ...
   // is not allowed." That is a deliberate anti-DNS-rebinding control, not a
@@ -22,6 +122,19 @@ export default defineConfig({
   // blanket allow would be a control switched off to make one URL work.
   preview: {
     allowedHosts: ["search-agent-web-production.up.railway.app"],
+  },
+  // Card 60. React, React DOM, its scheduler and MUI are MIT licensed, and MIT
+  // requires their copyright and permission notices to travel with every copy.
+  // Vite 8 minifies JavaScript with Oxc through Rolldown, not esbuild: the
+  // `esbuild` block above only reaches the CSS minifier in this version, so
+  // `esbuild.legalComments` is a no-op for the JS bundle. The setting has to
+  // go here instead, on the output rolldown actually builds with.
+  build: {
+    rolldownOptions: {
+      output: {
+        comments: { legal: true },
+      },
+    },
   },
   test: {
     environment: "jsdom",

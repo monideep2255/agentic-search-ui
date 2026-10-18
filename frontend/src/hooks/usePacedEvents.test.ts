@@ -17,7 +17,21 @@
  * - Stop, a failed stream, an `error` event and a failed guard flush at once
  *   and leave no timer;
  * - reduced motion keeps the order with the minimum dwells;
- * - a new run, or a reset buffer, starts from zero.
+ * - a new run, or a reset buffer, starts from zero;
+ * - build phase 8.7: TEXT IS NEVER HELD. The first `token` releases
+ *   everything that arrived before it, in order, in the same render, whether
+ *   it is the record listing arriving mid-narrative or a whole answer that
+ *   arrived in one burst.
+ *
+ * WHY THE NARRATIVE ARMS USE `search()`, a burst with no text, since build
+ * phase 8.7. They pin how the helpers' stages are paced. Until 8.7 their
+ * burst ended with the answer's token and `done`, which queued behind the
+ * narrative; that queueing is exactly the lag the phase removes (the owner's
+ * acceptance: "nothing shown is held back"), so a burst ending in text now
+ * shows at once and would pin nothing about the narrative. The server now
+ * sends the record listing AFTER the last result, so a text-free burst is
+ * the shape the narrative is actually paced in. Every timing assertion those
+ * arms made is kept, on the same stages.
  *
  * WHAT IT DOES NOT PIN: how the stages look (RunProgress tests and the
  * bold-and-stagger e2e screenshots) or `useAnswerReveal`'s own banner time.
@@ -56,6 +70,16 @@ function run(helpers = 2): AgentEvent[] {
   ];
 }
 
+/** The search alone: guard, think, plan, each helper's start and result, no text. */
+function search(helpers = 2): AgentEvent[] {
+  return run(helpers).slice(0, 3 + 2 * helpers);
+}
+
+/** The record listing's first token, the first text a run sends under 8.7. */
+function listingToken(): AgentEvent {
+  return ev("token", { text: "Found 3 disease records.", marker_ids: [], placement: "listing" });
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -72,12 +96,12 @@ function advance(ms: number, step = 10) {
 
 describe("usePacedEvents", () => {
   it("releases a burst one stage at a time, in order, with each minimum dwell", () => {
-    const events = run(2);
+    const events = search(2);
     const ceiling = maxLagFor(helperCount(events), PACING);
     const { result } = renderHook(() => usePacedEvents(events, { runKey: "r1", stopped: false }));
 
-    // Populate-check: nine events arrived at once, naming two helpers.
-    expect(events).toHaveLength(9);
+    // Populate-check: seven events arrived at once, naming two helpers.
+    expect(events).toHaveLength(7);
     expect(helperCount(events)).toBe(2);
     // The time each count first appears, in ms since arrival.
     const firstSeen = new Map<number, number>([[result.current.length, 0]]);
@@ -96,11 +120,8 @@ describe("usePacedEvents", () => {
     expect(at(5)).toBe(planAt + PACING.helperGapMs); // second helper's search appears
     const handoffEnd = planAt + PACING.helperGapMs + PACING.handoffMs;
     expect(at(6)).toBe(handoffEnd); // first search completes
-    // Second completes; the token and done follow with no dwell of their own.
-    expect(at(7)).toBeUndefined();
-    expect(at(8)).toBeUndefined();
-    expect(at(9)).toBe(handoffEnd + PACING.helperGapMs);
-    expect(at(9)).toBeLessThanOrEqual(ceiling);
+    expect(at(7)).toBe(handoffEnd + PACING.helperGapMs); // second completes
+    expect(at(7)).toBeLessThanOrEqual(ceiling);
     expect(result.current).toBe(events);
   });
 
@@ -111,16 +132,16 @@ describe("usePacedEvents", () => {
     // window. Naming a third helper must now visibly widen that window, and
     // consecutive helper stages must land at least a full `helperGapMs`
     // apart, not a few hundred milliseconds like the old 350ms gap did.
-    const two = run(2);
-    const three = run(3);
+    const two = search(2);
+    const three = search(3);
     expect(helperCount(three)).toBe(3);
     const ceilingTwo = maxLagFor(helperCount(two), PACING);
     const ceilingThree = maxLagFor(helperCount(three), PACING);
     expect(ceilingThree).toBeGreaterThan(ceilingTwo);
 
     const { result } = renderHook(() => usePacedEvents(three, { runKey: "r1", stopped: false }));
-    // 11 events: guard, think, plan, 3 tool_start, 3 tool_result, token, done.
-    expect(three).toHaveLength(11);
+    // 9 events: guard, think, plan, 3 tool_start, 3 tool_result.
+    expect(three).toHaveLength(9);
     const firstSeen = new Map<number, number>([[result.current.length, 0]]);
     for (let t = 10; t <= ceilingThree + 100; t += 10) {
       act(() => vi.advanceTimersByTime(10));
@@ -136,8 +157,8 @@ describe("usePacedEvents", () => {
     expect(at(6)).toBe(planAt + 2 * PACING.helperGapMs);
     expect(at(5) - at(4)).toBeGreaterThanOrEqual(900);
     expect(at(6) - at(5)).toBeGreaterThanOrEqual(900);
-    // The whole run still finishes inside its (wider) ceiling, uncapped.
-    expect(at(11)).toBeLessThanOrEqual(ceilingThree);
+    // The whole search still finishes inside its (wider) ceiling, uncapped.
+    expect(at(9)).toBeLessThanOrEqual(ceilingThree);
     expect(result.current).toBe(three);
   });
 
@@ -165,6 +186,12 @@ describe("usePacedEvents", () => {
     // helperGapMs and the lag ceiling to fix the burst case must not cost
     // this case anything, since this is exactly the run UI fix 11.8 sped up
     // from ~6s to ~17s median.
+    //
+    // Build phase 8.7: the answer's text arrives with the results here, so
+    // it is shown at once, results and all. Before 8.7 the last two results
+    // still staggered by `helperGapMs` each and the answer waited behind
+    // them; the hand-back stagger is still pinned, on its own, in the next
+    // arm, where no text has arrived.
     const all = run(3);
     const openingBurstEnd = 6; // guard, think, plan, tool_start x3 (indices 0..5)
     const opening = all.slice(0, openingBurstEnd);
@@ -181,24 +208,68 @@ describe("usePacedEvents", () => {
     advance(15000);
     expect(result.current).toBe(opening);
 
-    // The results, the token and done all land together once the tools
-    // finish. The first result releases the instant it arrives: because the
-    // opening burst's dwell chain finished ~15 seconds ago in real time,
-    // `earliest` for it is already far in the past relative to `now`, so the
-    // arrival clamp does not hold it at all.
     rerender({ events: all });
+    expect(result.current, "the answer waited behind the helpers' hand-back").toBe(all);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("staggers the helpers handing back after a slow search by a small fixed wait, while no text has arrived", () => {
+    // The same slow run, the results arriving together and no text yet: the
+    // shape build phase 8.7's server sends, the listing following the last
+    // result. The first result releases the instant it arrives: the opening
+    // burst's dwell chain finished ~15 seconds ago in real time, so the
+    // arrival clamp does not hold it at all.
+    const searched = search(3);
+    const openingBurstEnd = 6;
+    const opening = searched.slice(0, openingBurstEnd);
+    const { result, rerender } = renderHook(
+      ({ events }) => usePacedEvents(events, { runKey: "r1", stopped: false }),
+      { initialProps: { events: opening } },
+    );
+    advance(maxLagFor(3, PACING) + 100);
+    advance(15000);
+    expect(result.current).toBe(opening);
+
+    rerender({ events: searched });
     expect(result.current).toHaveLength(openingBurstEnd + 1);
 
-    // The two remaining results still stagger by `helperGapMs` each, same as
-    // the burst case: THAT is intended, it is the "helpers hand back one at
-    // a time" narrative the product owner asked to watch. What matters is
-    // that this residual wait is small and FIXED by helper count, not
-    // inflated by the 15-second gap that already elapsed or by the run's
-    // (much larger) lag ceiling.
+    // The two remaining results still stagger by `helperGapMs` each: THAT is
+    // intended, it is the "helpers hand back one at a time" narrative the
+    // product owner asked to watch. What matters is that this residual wait
+    // is small and FIXED by helper count, not inflated by the 15-second gap
+    // that already elapsed or by the run's (much larger) lag ceiling.
     const residual = 2 * PACING.helperGapMs + 50;
     expect(residual).toBeLessThan(3000);
     advance(residual);
-    expect(result.current).toBe(all);
+    expect(result.current).toBe(searched);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("shows text the moment it arrives, releasing everything before it in the same render (build phase 8.7)", () => {
+    // Thirteen helpers, G-013's count, arrive in one burst: the narrative has
+    // up to 26 seconds of ceiling to pace them through. Mid-narrative, the
+    // record listing arrives. It is shown at once, and so is every stage that
+    // arrived before it, in order.
+    const searched = search(13);
+    const { result, rerender } = renderHook(
+      ({ events }) => usePacedEvents(events, { runKey: "r1", stopped: false }),
+      { initialProps: { events: searched } },
+    );
+    advance(PACING.guardMs + PACING.thinkMs + PACING.planMs + 2 * PACING.helperGapMs);
+    // Populate-check: the narrative is mid-way, with most of it held.
+    expect(result.current.length).toBeLessThan(searched.length / 2);
+    expect(maxLagFor(helperCount(searched), PACING)).toBeGreaterThan(20000);
+
+    const arrived = [...searched, listingToken()];
+    rerender({ events: arrived });
+    expect(result.current, "arrived text was held back behind the helper narrative").toBe(arrived);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("shows a whole run that arrives in one burst, as develop sends it before 8.7, at once", () => {
+    const events = run(3);
+    const { result } = renderHook(() => usePacedEvents(events, { runKey: "r1", stopped: false }));
+    expect(result.current, "the answer's text was held behind the helper narrative").toBe(events);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -219,7 +290,7 @@ describe("usePacedEvents", () => {
       baseMaxLagMs: 300,
       perHelperLagMs: 50,
     };
-    const events = run(6);
+    const events = search(6);
     const ceiling = maxLagFor(helperCount(events), timing);
     const { result } = renderHook(() => usePacedEvents(events, { runKey: "r1", stopped: false, timing }));
     // Populate-check: the full dwell chain for six helpers exceeds the ceiling.
@@ -239,7 +310,7 @@ describe("usePacedEvents", () => {
   });
 
   it("flushes at once when Stop latches, and leaves no timer", () => {
-    const events = run(2);
+    const events = search(2);
     const { result, rerender } = renderHook(
       ({ stopped }) => usePacedEvents(events, { runKey: "r1", stopped }),
       { initialProps: { stopped: false } },
@@ -276,7 +347,7 @@ describe("usePacedEvents", () => {
   });
 
   it("keeps the order under reduced motion with the minimum dwells", () => {
-    const events = run(2);
+    const events = search(2);
     const { result } = renderHook(() =>
       usePacedEvents(events, { runKey: "r1", stopped: false, reducedMotion: true }),
     );
@@ -298,7 +369,7 @@ describe("usePacedEvents", () => {
   });
 
   it("starts from zero for a new run and for a reset buffer", () => {
-    const first = run(1);
+    const first = search(1);
     const { result, rerender } = renderHook(
       ({ events, runKey }) => usePacedEvents(events, { runKey, stopped: false }),
       { initialProps: { events: first, runKey: "r1" } },
@@ -306,13 +377,13 @@ describe("usePacedEvents", () => {
     advance(maxLagFor(helperCount(first), PACING) + 50);
     expect(result.current).toBe(first);
 
-    const second = run(1);
+    const second = search(1);
     rerender({ events: second, runKey: "r2" });
     expect(result.current).toHaveLength(1);
     expect(result.current[0]).toBe(second[0]);
 
     // Same key, but the buffer was reset and refilled with different events.
-    const refilled = run(1);
+    const refilled = search(1);
     rerender({ events: refilled, runKey: "r2" });
     expect(result.current).toHaveLength(1);
     expect(result.current[0]).toBe(refilled[0]);

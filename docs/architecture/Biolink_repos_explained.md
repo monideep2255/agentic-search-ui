@@ -1,10 +1,10 @@
-# The BioLink repos: what they are and how to use them for the NCBI KG project
+# The BioLink repositories: what they are and how to use them for the NCBI KG project
 
 Written using first-principles approach. Date: February 24, 2026.
 
 ## Table of contents
 
-- [Part 1: the two repos](#part-1-the-two-repos)
+- [Part 1: the two repositories](#part-1-the-two-repositories)
 - [What is `biolink-model`?](#what-is-biolink-model)
 - [What is `translator-ingests`?](#what-is-translator-ingests)
 - [Part 2: how BioLink fits your NCBI KG project](#part-2-how-biolink-fits-your-ncbi-kg-project)
@@ -28,7 +28,7 @@ flowchart LR
     KGX -- "load" --> AGE
 ```
 
-## Part 1: the two repos
+## Part 1: the two repositories
 
 ## What is `biolink-model`?
 
@@ -89,7 +89,7 @@ You are mapping NCBI data (ClinVar, NCBI Gene, MedGen) to Biolink types. Concret
 | Gene → GO term | `biolink:has_biological_process` | - |
 | A MedGen disease concept | `biolink:Disease` (mapped to MONDO) | - |
 
-The `biolink-model` repo is your reference. You read it to know which class or predicate to use. You do not modify it.
+The `biolink-model` repository is your reference. You read it to know which class or predicate to use. You do not modify it.
 
 ## What is `translator-ingests`?
 
@@ -139,7 +139,7 @@ Key concept: Resource Ingest Guide (RIG). Every data source gets a `RIG`, a YAML
 
 `translator-ingests` is your implementation model. You use it as the template for writing your own ingest code for ClinVar, NCBI Gene, and MedGen.
 
-The CTD (Comparative Toxicology Database) example in the repo is especially useful, it shows a complete worked example from raw data to KGX output.
+The CTD (Comparative Toxicology Database) example in the repository is especially useful, it shows a complete worked example from raw data to KGX output.
 
 Concretely, for the NCBI KG project, you would write:
 
@@ -245,4 +245,4 @@ The hardest step is step 5. The MedGen → UMLS → MONDO mapping is the main te
 
 ## In one sentence
 
-The `biolink-model` repo is the dictionary. The `translator-ingests` repo is the instruction manual for using that dictionary to process real data. Your NCBI KG project uses both to make ClinVar, NCBI Gene, and MedGen speak the same language as every other NLM knowledge graph.
+The `biolink-model` repository is the dictionary. The `translator-ingests` repository is the instruction manual for using that dictionary to process real data. Your NCBI KG project uses both to make ClinVar, NCBI Gene, and MedGen speak the same language as every other NLM knowledge graph.

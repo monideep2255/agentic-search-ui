@@ -7,10 +7,10 @@ fakes whose bytes the test controls (the same discipline as
     THE PLAN. A resolved gene plans, beside the four calls set 8 already
     planned, a PubMed search and a ClinVar search (stage one), and declares
     the abstract fetch, the PubTator3 publication annotation and the
-    ClinVar summary as follow-ups whose ids come from those searches, plus
-    a code-chosen GO template as a second, context-only graph call. OMIM
-    is never planned (its record URL cannot be cited). The plan event's
-    tool list is fixed per question shape.
+    the ClinVar summary as follow-ups whose ids come from those searches, plus
+    a code-chosen GO template as a second, context-only graph call. Item 2b
+    (2026-09-22) adds the OMIM search and the OMIM summary to that list.
+    The plan event's tool list is fixed per question shape.
 
     THE SECOND STAGE. The follow-ups run AFTER the searches, with the ids
     the searches returned, sorted highest first and capped, and the
@@ -47,13 +47,28 @@ fakes whose bytes the test controls (the same discipline as
     first up to the quota and the context calls then share the remaining
     slots one row per call per round, so no source is crowded out.
 
+    OMIM (item 2b, 2026-09-22). A question about one gene never shows an
+    OMIM record for a different gene: OMIM's own search ranks `MAP4K2`
+    first for `GCK`, and the record whose title does not name the asked
+    symbol in a symbol field is dropped in the act shaping step, before it
+    can become a row, a finding or a citation. With no resolved symbol,
+    nothing is kept. The surviving record's `omim.org` citation passes the
+    citation contract's own host pattern. One arm replaces
+    `filter_omim_titles` with the identity function and asserts the
+    wrong-gene record then DOES appear, so the drop is proven to be that
+    filter's doing rather than an accident of the cap, the sort or a
+    missing record URL.
+
 EVERY ARM CARRIES A POPULATE-CHECK where a negative or comparative
 assertion could otherwise pass on nothing.
 
 Not exercised here, stated so the gap is arguable: the live APIs' own
 answers and their latency, which the build report's live table measures;
 the rendering of the new sources on screen; the count of transport calls,
-which the fakes bypass (measured live in the report against the ceiling).
+which the fakes bypass (measured live in the report against the ceiling);
+and whether OMIM's real titles for a given symbol take the `NAME; SYMBOL`
+shape the filter reads, which only a live run can say and which
+`testing/Developer/reports/2026-09-22_OMIM_live/findings.md` measures.
 """
 
 from __future__ import annotations
@@ -96,8 +111,22 @@ from tests.system_03_search_agent.model_stub import (
 )
 
 _GENE_QUESTION = "Which diseases are associated with BRCA1?"
-_KNOWN = {"BRCA1": "NCBIGene:672", "TP53": "NCBIGene:7157"}
+_GCK_QUESTION = "Which diseases are associated with GCK?"
+_DATASET_QUESTION = "Find GEO expression datasets studying TP53 in human tumour samples."
+_KNOWN = {"BRCA1": "NCBIGene:672", "TP53": "NCBIGene:7157", "GCK": "NCBIGene:2645"}
 _ABSTRACT = "Loss of BRCA1 function abolishes homologous recombination in this cohort."
+
+# Item 2b. Real OMIM entry numbers and the `NAME; SYMBOL` title shape OMIM
+# publishes. `603166` is the MAP4K2 entry, the record OMIM's own search
+# ranks FIRST for the symbol `GCK` (measured in the 2026-09-14 breadth
+# audit), which is the wrong-gene case the filter exists to drop.
+_OMIM_BRCA1 = ("113705", "BREAST CANCER 1 GENE; BRCA1")
+_OMIM_GCK = ("138079", "GLUCOKINASE; GCK")
+_OMIM_MAP4K2 = ("603166", "MITOGEN-ACTIVATED PROTEIN KINASE KINASE KINASE KINASE 2; MAP4K2")
+
+
+def _omim_url(uid: str) -> str:
+    return f"https://omim.org/entry/{uid}"
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +157,7 @@ def _no_op_daily_caps(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _ModelSpy:
-    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def __init__(self, monkeypatch: pytest.MonkeyPatch, *, entity: str = "BRCA1") -> None:
         from system_03_search_agent.core.graph import _THINK_SYSTEM_INSTRUCTION
         from system_03_search_agent.guardrail.classifier import GUARD_SYSTEM_INSTRUCTION
         from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
@@ -146,7 +175,7 @@ class _ModelSpy:
                         {
                             "query_class": "single_hop",
                             "narrative": "stand-in classification",
-                            "entities": [{"text": "BRCA1", "entity_type": "gene"}],
+                            "entities": [{"text": entity, "entity_type": "gene"}],
                         }
                     )
                 )
@@ -206,14 +235,31 @@ class _ToolSpy:
         *,
         pubmed_ids: list[str] | None = None,
         clinvar_ids: list[str] | None = None,
+        omim_titles: dict[str, str] | None = None,
+        gds_ids: list[str] | None = None,
         search_status: str = "ok",
         summary_raises: bool = False,
+        failing: dict[tuple[str, str], str] | None = None,
     ) -> None:
         self.efetch_inputs: list[dict[str, Any]] = []
+        # Card 63 (F-63-A01): `(action, db)` to the `failure_kind` that call
+        # answers with, `status: "error"`. Lets a test fail ONE step after
+        # the search on the same database succeeded.
+        self.failing = dict(failing or {})
+        # Fix-plan item 1: what a GEO DataSets search answers, two real
+        # series uids, given lowest first so the sort is visible.
+        self.gds_ids = ["200315234", "200346694"] if gds_ids is None else gds_ids
         self.pubtator_inputs: list[dict[str, Any]] = []
         self.cypher_templates: list[str | None] = []
         self.pubmed_ids = ["30000001", "30000003", "30000002"] if pubmed_ids is None else pubmed_ids
         self.clinvar_ids = ["12", "11", "13"] if clinvar_ids is None else clinvar_ids
+        # Item 2b: what OMIM answers, uid to title. The default pairs the
+        # right gene's entry with the wrong gene's, so the DEFAULT path of
+        # every arm in this file runs the filter on a mixed result rather
+        # than on a clean one.
+        self.omim_titles = (
+            dict([_OMIM_BRCA1, _OMIM_MAP4K2]) if omim_titles is None else dict(omim_titles)
+        )
 
         async def _cypher(harness: Any, cypher_input: Any, **kwargs: Any) -> CypherQueryOutput:
             template = kwargs.get("template")
@@ -227,13 +273,27 @@ class _ToolSpy:
         async def _efetch(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
             root = tool_input.root
             self.efetch_inputs.append(root.model_dump())
+            failing_kind = self.failing.get((root.action, getattr(root, "db", "") or ""))
+            if failing_kind is not None:
+                return NcbiEfetchOutput(
+                    status="error", action=root.action, records=[], record_count=0,
+                    total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+                    failure_kind=failing_kind,
+                )
             if root.action == "search":
                 if search_status != "ok":
                     return NcbiEfetchOutput(
                         status="error", action="search", records=[], record_count=0,
                         total_available=None, truncated=False, error="ESearch failed",
                     )
-                ids = self.pubmed_ids if root.db == "pubmed" else self.clinvar_ids
+                if root.db == "pubmed":
+                    ids = list(self.pubmed_ids)
+                elif root.db == "omim":
+                    ids = list(self.omim_titles)
+                elif root.db == "gds":
+                    ids = list(self.gds_ids)
+                else:
+                    ids = list(self.clinvar_ids)
                 return NcbiEfetchOutput(
                     status="ok", action="search",
                     records=[NcbiEfetchRecord(db=root.db, fields={"idlist": list(ids), "idlist_count": len(ids)})],
@@ -242,6 +302,54 @@ class _ToolSpy:
             if root.action == "summary":
                 if summary_raises:
                     raise RuntimeError("summary exploded")
+                if root.db == "omim":
+                    # An OMIM ESummary record, with the four fields the tool's
+                    # own allowlist keeps (`ncbi_eutils_actions._SUMMARY_
+                    # FIELDS["omim"]`) and OMIM's real `omim.org/entry/{id}`
+                    # record URL.
+                    omim_records = [
+                        NcbiEfetchRecord(
+                            id=uid, db="omim",
+                            fields={
+                                "oid": f"OMIM:{uid}",
+                                "title": self.omim_titles[uid],
+                                "alttitles": "",
+                                "locus": "7p13",
+                            },
+                            source_url=_omim_url(uid),
+                        )
+                        for uid in root.ids
+                        if uid in self.omim_titles
+                    ]
+                    return NcbiEfetchOutput(
+                        status="ok", action="summary", records=omim_records,
+                        record_count=len(omim_records), total_available=len(omim_records),
+                        truncated=False,
+                    )
+                if root.db == "gds":
+                    # A GEO DataSets ESummary record with the fields the
+                    # tool's own allowlist keeps and NCBI's `gds/{uid}` page.
+                    gds_records = [
+                        NcbiEfetchRecord(
+                            id=uid, db="gds",
+                            fields={
+                                "accession": f"GSE{uid[3:]}",
+                                "title": f"TP53 expression series {uid}",
+                                "summary": "A paragraph of submitter prose.",
+                                "taxon": "Homo sapiens",
+                                "entrytype": "GSE",
+                                "gdstype": "Expression profiling by high throughput sequencing",
+                                "n_samples": 27,
+                            },
+                            source_url=f"https://www.ncbi.nlm.nih.gov/gds/{uid}",
+                        )
+                        for uid in root.ids
+                    ]
+                    return NcbiEfetchOutput(
+                        status="ok", action="summary", records=gds_records,
+                        record_count=len(gds_records), total_available=len(gds_records),
+                        truncated=False,
+                    )
                 records = [
                     NcbiEfetchRecord(
                         id=uid, db="clinvar",
@@ -342,22 +450,34 @@ async def test_a_resolved_gene_plans_the_breadth_calls_beside_the_existing_ones(
     tools = _plan_tools(events)
     assert tools[0] == ("cypher_query", "layer_1_graph"), "the primary graph call stays first"
     assert tools.count(("cypher_query", "layer_1_graph")) == 2, "the GO template is a second graph call"
-    # Set 8's four, unchanged, plus five breadth calls: two searches and
-    # three follow-ups.
-    assert tools.count(("ncbi_efetch", "layer_2_api")) == 1 + 2 + 2, tools
+    # Set 8's four, unchanged, plus seven breadth calls (three searches and
+    # four follow-ups, item 2b having added the OMIM pair on 2026-09-22),
+    # plus item 11.31's Gene ESummary, which is planned DIRECTLY from the
+    # resolved CURIE and is not a follow-up of any search.
+    assert tools.count(("ncbi_efetch", "layer_2_api")) == 1 + 3 + 3 + 1, tools
     assert tools.count(("pubtator_annotate", "layer_3_enrichment")) == 2, tools
     assert tools.count(("clinicaltrials_search", "layer_3_enrichment")) == 1, tools
-    assert len(tools) == 10, tools
+    assert len(tools) == 13, tools
 
 
-def test_the_breadth_plan_never_dispatches_omim_and_needs_a_symbol() -> None:
+def test_the_breadth_plan_dispatches_omim_with_the_symbol_and_needs_a_symbol() -> None:
+    """INVERTED on 2026-09-22 (item 2b) rather than deleted: this arm used
+    to pin that OMIM is never planned, which was true while its records
+    could not be cited and then while nothing checked them against the
+    asked gene. Both controls exist now, so the arm pins the opposite, and
+    additionally pins the thing the earlier absence made unnecessary: the
+    OMIM follow-up carries the resolved symbol, which is what lets Act drop
+    a record for another gene."""
     calls = graph_module._build_breadth_calls("BRCA1")
     purposes = [getattr(c, "purpose", "") for c in calls]
     assert purposes == [
-        "pubmed_search", "clinvar_search", "pubmed_abstracts",
-        "pubtator_publications", "clinvar_summary",
+        "pubmed_search", "clinvar_search", "omim_search", "pubmed_abstracts",
+        "pubtator_publications", "clinvar_summary", "omim_summary",
     ], purposes
-    assert not any("omim" in p for p in purposes)
+    omim_follow_ups = [c for c in calls if getattr(c, "purpose", "") == "omim_summary"]
+    assert len(omim_follow_ups) == 1, calls
+    assert omim_follow_ups[0].gene_symbol == "BRCA1", omim_follow_ups
+    assert omim_follow_ups[0].source_purpose == "omim_search", omim_follow_ups
     assert graph_module._build_breadth_calls(None) == []
     # A mention that is not symbol-shaped plans nothing rather than
     # searching for text the reader never typed.
@@ -392,9 +512,20 @@ async def test_follow_ups_run_on_the_sorted_capped_ids_the_searches_returned(
     events = await _events(_GENE_QUESTION)
     fetches = [i for i in spy.efetch_inputs if i["action"] == "fetch"]
     summaries = [i for i in spy.efetch_inputs if i["action"] == "summary"]
-    assert len(fetches) == 1 and len(summaries) == 1, spy.efetch_inputs
+    # Three summaries now: ClinVar's and OMIM's, whose ids come from their
+    # own searches, and item 11.31's Gene ESummary, whose id comes from the
+    # resolved CURIE. Selected by db rather than by position, so a
+    # planning-order change cannot make this arm assert the wrong call's ids.
+    clinvar_summaries = [i for i in summaries if i["db"] == "clinvar"]
+    gene_summaries = [i for i in summaries if i["db"] == "gene"]
+    omim_summaries = [i for i in summaries if i["db"] == "omim"]
+    assert len(fetches) == 1 and len(summaries) == 3, spy.efetch_inputs
+    assert len(clinvar_summaries) == 1 and len(gene_summaries) == 1, summaries
+    assert len(omim_summaries) == 1, summaries
     assert fetches[0]["ids"] == ["30000003", "30000002", "30000001"], fetches
-    assert summaries[0]["ids"] == ["13", "12", "11"], summaries
+    assert clinvar_summaries[0]["ids"] == ["13", "12", "11"], clinvar_summaries
+    assert gene_summaries[0]["ids"] == ["672"], gene_summaries
+    assert omim_summaries[0]["ids"] == ["603166", "113705"], omim_summaries
     annotations = [i for i in spy.pubtator_inputs if i["mode"] == "annotate_publications"]
     assert len(annotations) == 1 and annotations[0]["pmids"] == fetches[0]["ids"]
     # The searches ran before the follow-ups: the follow-up inputs are
@@ -404,12 +535,42 @@ async def test_follow_ups_run_on_the_sorted_capped_ids_the_searches_returned(
     # Every planned call started and closed, the premise gate's A1 and A2.
     starts = [e for e in events if e.type == "tool_start"]
     results = _results(events)
-    assert len(starts) == 10 == len(results), (len(starts), len(results))
+    assert len(starts) == 13 == len(results), (len(starts), len(results))
     # The new sources reach the answer.
     sources = _sources(events)
     assert "https://www.ncbi.nlm.nih.gov/clinvar/variation/13/" in sources, sources
     assert "https://pubmed.ncbi.nlm.nih.gov/30000003/" in sources, sources
     assert "https://www.ncbi.nlm.nih.gov/gene/672" in sources, sources
+    # Item 2b: OMIM's BRCA1 entry is cited, and the MAP4K2 entry the same
+    # fake returned beside it is not.
+    assert _omim_url(_OMIM_BRCA1[0]) in sources, sources
+    assert _omim_url(_OMIM_MAP4K2[0]) not in sources, sources
+
+
+@pytest.mark.asyncio
+async def test_every_tool_start_comes_before_the_first_tool_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 19 pins the order the progress steps rest on.
+
+    `useRunView` ends Act once every STARTED call has a result. That is only
+    right while `act_node` writes every `tool_start` of a run, follow-ups
+    included, before any call runs. A start after a result would send the
+    steps to Write and then back to Act.
+    """
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch)
+    events = await _events(_GENE_QUESTION)
+    # Not vacuous: follow-up calls (fetch and summary, built from the ids a
+    # search returned) really ran, and every planned call has a start frame.
+    follow_up_actions = [i["action"] for i in spy.efetch_inputs if i["action"] != "search"]
+    assert follow_up_actions, spy.efetch_inputs
+    kinds = [e.type for e in events if e.type in ("tool_start", "tool_result")]
+    starts = [i for i, k in enumerate(kinds) if k == "tool_start"]
+    results = [i for i, k in enumerate(kinds) if k == "tool_result"]
+    assert len(starts) == 13 == len(results), (len(starts), len(results))
+    assert max(starts) < min(results), kinds
 
 
 @pytest.mark.asyncio
@@ -420,16 +581,322 @@ async def test_a_failed_search_closes_its_follow_ups_empty_and_the_run_still_ans
     _install_lookup(monkeypatch)
     spy = _ToolSpy(monkeypatch, search_status="error")
     events = await _events(_GENE_QUESTION)
-    assert not any(i["action"] in ("fetch", "summary") for i in spy.efetch_inputs), (
-        "a follow-up must never be issued without ids"
-    )
+    # Item 11.31's Gene ESummary is excluded by db, deliberately: it is NOT a
+    # follow-up. Its id comes from the CURIE the question already resolved,
+    # so it is correct for it to run when every search fails, which is the
+    # whole reason it was planned from the CURIE rather than from a search.
+    assert not any(
+        i["action"] in ("fetch", "summary") and i.get("db") != "gene"
+        for i in spy.efetch_inputs
+    ), "a follow-up must never be issued without ids"
     results = _results(events)
-    assert len(results) == 10, [r["tool"] for r in results]
+    assert len(results) == 13, [r["tool"] for r in results]
     empties = [r for r in results if r["status"] == "empty" and "no ids" in r["summary"]]
-    assert len(empties) == 3, [(r["tool"], r["status"], r["summary"]) for r in results]
+    # Four now: the OMIM summary joins the three earlier follow-ups in being
+    # closed `empty` when its own search fails.
+    assert len(empties) == 4, [(r["tool"], r["status"], r["summary"]) for r in results]
     done = next(e for e in events if e.type == "done")
     assert done.payload["trust_outcome"] in ("answer", "ask"), done.payload
     assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
+
+
+#: Card 63: the body NCBI served for every ESearch from 02:24 UTC on
+#: 2026-09-27, as the tool's untrusted `error` text. Here to prove it
+#: reaches no event, no summary and no note.
+_NCBI_OUTAGE_TEXT = (
+    "Search Backend failed: Search is temporarily unavailable. "
+    "Cannot connect to SOLR"
+)
+
+
+@pytest.mark.asyncio
+async def test_a_search_down_at_ncbi_says_so_in_our_words_and_says_try_later(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 63, end to end through the real loop with every tool faked.
+
+    PubMed's search answers the way it did during the 2026-09-27 outage:
+    `status: "error"` with `failure_kind: "service_down"` (what
+    `ncbi_eutils_actions.search` now returns for that body, proven in
+    `tests/system_03_search_agent/tools/test_ncbi_eutils_actions.py`).
+    ClinVar and OMIM answer normally. What a person and a developer see:
+
+    - the search's `tool_result` summary says the service is down at NCBI,
+      where it used to say "search: 0 id(s)";
+    - `failed_searches[].reason` carries those same words, with the kind
+      and the database beside it;
+    - the note under the answer names PubMed, says the answer may be missing
+      papers from it and says "Try again later", never "Ask again to retry";
+    - none of NCBI's own text appears anywhere in the stream.
+    """
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch)
+    spy_efetch = graph_module.ncbi_efetch
+
+    async def _pubmed_down(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "search" and root.db == "pubmed":
+            return NcbiEfetchOutput(
+                status="error", action="search", records=[], record_count=0,
+                total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+                failure_kind="service_down",
+            )
+        return await spy_efetch(tool_input, **kwargs)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _pubmed_down)
+
+    recorded: list[list[dict[str, str]]] = []
+    real_builder = graph_module._build_failed_search_note
+
+    def _recording_builder(failed_searches: list[dict[str, str]]) -> str:
+        recorded.append([dict(item) for item in failed_searches])
+        return real_builder(failed_searches)
+
+    monkeypatch.setattr(graph_module, "_build_failed_search_note", _recording_builder)
+
+    events = await _events(_GENE_QUESTION)
+
+    search_errors = [r for r in _results(events) if r["summary"].startswith("search error")]
+    assert [r["summary"] for r in search_errors] == ["search error: the service is down at NCBI"]
+    assert search_errors[0]["status"] == "error"
+    # POPULATE CHECK: the other searches ran and answered, so the one error
+    # above is PubMed's and not every search failing at once.
+    assert any(r["summary"].startswith("search: ") for r in _results(events))
+
+    assert recorded, "write_node never built a failed-search note"
+    pubmed = [item for item in recorded[-1] if item.get("source") == "pubmed"]
+    assert pubmed == [
+        {
+            "tool": "ncbi_efetch",
+            "layer": "layer_2_api",
+            "reason": "search error: the service is down at NCBI",
+            "kind": "service_down",
+            "source": "pubmed",
+        }
+    ], recorded[-1]
+
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    down_notes = [n for n in notes if n.startswith("PubMed is down at NCBI right now")]
+    assert len(down_notes) == 1, notes
+    assert down_notes[0].startswith(
+        "PubMed is down at NCBI right now, so this answer may be missing papers from it."
+    )
+    assert down_notes[0].endswith("Try again later.")
+    assert not any("ask again" in note.lower() for note in notes), notes
+
+    stream = json.dumps([e.payload for e in events], default=str)
+    for fragment in ("SOLR", "temporarily unavailable", "Search Backend"):
+        assert fragment not in stream, fragment
+
+    done = next(e for e in events if e.type == "done")
+    assert done.payload["trust_outcome"] in ("ask", "flag"), done.payload
+    # The answer still stands on what did respond.
+    assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
+
+
+def _direct_efetch_call(action: str, db: str) -> Any:
+    """One planned `ncbi_efetch` call of the given action, the shape
+    `_execute_planned_call` branches on, with no breadth purpose so it takes
+    the fetch, summary and link branch and not the search branch."""
+    from system_03_search_agent.contracts.events import ToolCall
+    from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput
+
+    if action == "link":
+        payload: dict[str, Any] = {"action": "link", "dbfrom": "gene", "db": db, "ids": ["672"]}
+    else:
+        payload = {"action": action, "db": db, "ids": ["672"]}
+    return graph_module._PlannedNcbiEfetchToolCall(
+        tool_call=ToolCall(tool="ncbi_efetch", call_id=f"ef-{action}", layer="layer_2_api"),
+        ncbi_efetch_input=NcbiEfetchInput.model_validate(payload),
+    )
+
+
+class _DirectHarness:
+    """Just enough harness for the `ncbi_efetch` branch: it runs the call
+    to completion, as `enforce_timeout` does when nothing times out."""
+
+    async def enforce_timeout(self, step: str, coro: Any, budget_s: float) -> Any:
+        return await coro
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action", "db"), [("fetch", "pubmed"), ("summary", "clinvar"), ("link", "pubmed")]
+)
+async def test_a_failed_fetch_summary_or_link_names_the_failure_and_carries_its_kind(
+    monkeypatch: pytest.MonkeyPatch, action: str, db: str
+) -> None:
+    """F-63-J02: the second card 63 summary branch of `_execute_planned_call`,
+    the one for a record fetch, a summary or a link. Its summary is the
+    failure in OUR words, never the tool's own text, and its `failure_kind`
+    and `failure_source` are what `failed_searches` records."""
+
+    async def _down(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="error", action=tool_input.root.action, records=[], record_count=0,
+            total_available=None, truncated=False, error=_NCBI_OUTAGE_TEXT,
+            failure_kind="service_down",
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _down)
+    outcome = await graph_module._execute_planned_call(
+        _DirectHarness(), "single_hop", _direct_efetch_call(action, db)  # type: ignore[arg-type]
+    )
+    assert outcome.status == "error"
+    assert outcome.summary == f"{action} error: the service is down at NCBI", outcome.summary
+    assert outcome.failure_kind == "service_down"
+    assert outcome.failure_source == db
+    for fragment in ("SOLR", "temporarily unavailable", "Search Backend"):
+        assert fragment not in outcome.summary, fragment
+
+
+@pytest.mark.asyncio
+async def test_a_fetch_that_succeeds_keeps_its_record_count_and_records_no_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The populate check for the arm above: the SAME call answering `ok`
+    keeps the pre-card summary and records no kind, so the arm above reads
+    the failure and not a branch that always words it."""
+
+    async def _ok(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        return NcbiEfetchOutput(
+            status="ok", action="fetch",
+            records=[
+                NcbiEfetchRecord(
+                    id="672", db="pubmed", fields={"title": "t"},
+                    source_url="https://pubmed.ncbi.nlm.nih.gov/672/",
+                )
+            ],
+            record_count=1, total_available=1, truncated=False,
+        )
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _ok)
+    outcome = await graph_module._execute_planned_call(
+        _DirectHarness(), "single_hop", _direct_efetch_call("fetch", "pubmed")  # type: ignore[arg-type]
+    )
+    assert outcome.status == "ok"
+    assert outcome.summary == "fetch: 1 record(s)", outcome.summary
+    assert outcome.failure_kind is None
+    assert outcome.failure_source == ""
+
+
+@pytest.mark.asyncio
+async def test_an_ncbi_efetch_timeout_records_the_timed_out_kind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-63-J03: the ncbi_efetch per-step timeout path records `timed_out`
+    in `failed_searches`, not `other`. Through the real loop: the PubMed
+    search never answers within a shortened per-step budget."""
+    import asyncio
+
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch)
+    spy_efetch = graph_module.ncbi_efetch
+
+    async def _pubmed_search_hangs(tool_input: Any, **kwargs: Any) -> NcbiEfetchOutput:
+        root = tool_input.root
+        if root.action == "search" and root.db == "pubmed":
+            await asyncio.sleep(30)
+        return await spy_efetch(tool_input, **kwargs)
+
+    monkeypatch.setattr(graph_module, "ncbi_efetch", _pubmed_search_hangs)
+    monkeypatch.setattr(graph_module, "_NCBI_EFETCH_ACT_TIMEOUT_SECONDS", 0.2)
+
+    recorded: list[list[dict[str, str]]] = []
+    real_builder = graph_module._build_failed_search_note
+
+    def _recording_builder(failed_searches: list[dict[str, str]]) -> str:
+        recorded.append([dict(item) for item in failed_searches])
+        return real_builder(failed_searches)
+
+    monkeypatch.setattr(graph_module, "_build_failed_search_note", _recording_builder)
+    events = await _events(_GENE_QUESTION)
+
+    assert recorded, "write_node never built a failed-search note"
+    timed_out = [item for item in recorded[-1] if item.get("kind") == "timed_out"]
+    assert len(timed_out) == 1, recorded[-1]
+    assert timed_out[0]["tool"] == "ncbi_efetch"
+    assert not any(item.get("kind") == "other" for item in recorded[-1]), recorded[-1]
+    # A timeout still says asking again can help, and now says which source.
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    assert any(
+        "NCBI records" in note and "took too long" in note and "Ask again" in note
+        for note in notes
+    ), notes
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action", "db", "name", "missing"),
+    [
+        ("fetch", "pubmed", "PubMed", "papers"),
+        ("summary", "clinvar", "ClinVar", "variant records"),
+    ],
+    ids=["pubmed_fetch_down", "clinvar_summary_down"],
+)
+async def test_an_outage_after_a_successful_search_never_says_the_answer_has_none(
+    monkeypatch: pytest.MonkeyPatch, action: str, db: str, name: str, missing: str
+) -> None:
+    """F-63-A01, the regression: the search on a database SUCCEEDS and finds
+    records, then the fetch or the summary on that database fails with an
+    outage. The records are on screen above the note, and the note must not
+    contradict them. It never says the answer "has no" papers or variant
+    records and never says a "search is down"; it says NCBI is down and the
+    answer MAY be missing them. The same words must be in what is saved,
+    which reopens later beside the same records."""
+    from system_03_search_agent.feedback.capture import answer_markdown_from
+
+    _ModelSpy(monkeypatch)
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch, failing={(action, db): "service_down"})
+    events = await _events(_GENE_QUESTION)
+
+    # POPULATE CHECK: the failing step really ran and failed, AFTER its own
+    # database's search ran and succeeded, so the failure is not the search's.
+    searches = [i for i in spy.efetch_inputs if i["action"] == "search" and i["db"] == db]
+    assert len(searches) == 1, spy.efetch_inputs
+    results = _results(events)
+    assert any(r["summary"] == "search: 3 id(s)" for r in results), results
+    assert [r["summary"] for r in results if r["summary"].startswith(f"{action} error")] == [
+        f"{action} error: the service is down at NCBI"
+    ], results
+    assert not any(r["summary"].startswith("search error") for r in results), results
+
+    expected = (
+        f"{name} is down at NCBI right now, so this answer may be missing {missing} "
+        "from it. Try again later."
+    )
+    notes = [
+        e.payload["text"] for e in events
+        if e.type == "token" and e.payload.get("kind") == "note"
+    ]
+    assert expected in notes, notes
+    saved = answer_markdown_from(events)
+    assert saved is not None
+    for text in [*notes, saved]:
+        assert "has no " not in text, text
+        assert "search is down" not in text, text
+        assert "searches are down" not in text, text
+    assert expected in saved, saved
+
+    # The records the successful search found are still shown, beside the note.
+    sources = _sources(events)
+    if db == "pubmed":
+        assert "https://pubmed.ncbi.nlm.nih.gov/30000003/" in sources, sources
+    assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in sources, sources
+    # The saved answer lists the very records the note is about: the papers
+    # for a PubMed outage, the ClinVar table for a ClinVar one.
+    assert ("PMID:30000003" if db == "pubmed" else "## Clinvar records found") in saved, saved
+    done = next(e for e in events if e.type == "done")
+    assert done.payload["trust_outcome"] in ("ask", "flag"), done.payload
 
 
 @pytest.mark.asyncio
@@ -442,7 +909,11 @@ async def test_a_follow_up_that_raises_degrades_to_an_error_result(
     events = await _events(_GENE_QUESTION)
     results = _results(events)
     errors = [r for r in results if r["status"] == "error"]
-    assert len(errors) == 1 and errors[0]["tool"] == "ncbi_efetch", errors
+    # Three `ncbi_efetch` errors now: the raising ClinVar summary this test
+    # induces, item 2b's OMIM summary, and item 11.31's Gene ESummary, all
+    # three raised by the same stub because it keys on the action rather
+    # than on the db.
+    assert len(errors) == 3 and {e["tool"] for e in errors} == {"ncbi_efetch"}, errors
     assert "https://www.ncbi.nlm.nih.gov/medgen/C1" in _sources(events)
     assert "https://pubmed.ncbi.nlm.nih.gov/30000003/" in _sources(events)
 
@@ -495,7 +966,13 @@ async def test_three_runs_with_shuffled_ids_produce_one_plan_and_one_source_set(
         plans.append(_plan_tools(events))
         sources.append(_sources(events))
         fetch = next(i for i in spy.efetch_inputs if i["action"] == "fetch")["ids"]
-        summary = next(i for i in spy.efetch_inputs if i["action"] == "summary")["ids"]
+        # By db, not by position: item 11.31 added a second `summary` call
+        # (the Gene ESummary), and this arm is about the ClinVar follow-up's
+        # ids being stable across shuffles.
+        summary = next(
+            i for i in spy.efetch_inputs
+            if i["action"] == "summary" and i["db"] == "clinvar"
+        )["ids"]
         follow_up_ids.append((fetch, summary))
     assert plans[0] == plans[1] == plans[2], plans
     assert sources[0] == sources[1] == sources[2], sources
@@ -803,3 +1280,268 @@ def test_a_pubtator_publication_citation_carries_its_pmid_as_source_id() -> None
     assert citation is not None
     assert citation.source_id == "42639261", citation
     assert citation.source_url == url
+# ---------------------------------------------------------------------------
+# OMIM (item 2b, 2026-09-22): never a record for a different gene.
+# ---------------------------------------------------------------------------
+
+
+def _gck_omim_titles() -> dict[str, str]:
+    """What OMIM answers for `GCK`: the right entry and the wrong one OMIM's
+    own search actually ranks first for that symbol."""
+    return dict([_OMIM_GCK, _OMIM_MAP4K2])
+
+
+def _omim_summary_output() -> NcbiEfetchOutput:
+    """One real-shaped OMIM ESummary result holding both entries."""
+    records = [
+        NcbiEfetchRecord(
+            id=uid, db="omim",
+            fields={"oid": f"OMIM:{uid}", "title": title, "alttitles": "", "locus": "7p13"},
+            source_url=_omim_url(uid),
+        )
+        for uid, title in (_OMIM_GCK, _OMIM_MAP4K2)
+    ]
+    return NcbiEfetchOutput(
+        status="ok", action="summary", records=records, record_count=len(records),
+        total_available=len(records), truncated=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_an_omim_record_for_another_gene_never_reaches_the_answer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A question about GCK shows OMIM's GCK entry and never OMIM's MAP4K2
+    entry, which is the record OMIM's own search returns first for that
+    symbol. Run through the real loop, so the drop is proven where it has
+    to hold: in what the person asking actually gets back.
+    """
+    spy_model = _ModelSpy(monkeypatch, entity="GCK")
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch, omim_titles=_gck_omim_titles())
+    events = await _events(_GCK_QUESTION)
+    sources = _sources(events)
+    # Populate-check: OMIM was reached at all, so the absence below is a
+    # drop rather than a call that never happened.
+    assert _omim_url(_OMIM_GCK[0]) in sources, sources
+    assert _omim_url(_OMIM_MAP4K2[0]) not in sources, sources
+    # And it never reached the model either, so no sentence could be built
+    # from it even uncited.
+    prompt = "\n".join(spy_model.synth_prompts)
+    assert "GLUCOKINASE" in prompt, prompt[:2000]
+    assert "MAP4K2" not in prompt, prompt[:2000]
+    assert _omim_url(_OMIM_MAP4K2[0]) not in prompt, prompt[:2000]
+
+
+def test_the_act_shaping_step_drops_the_wrong_gene_and_keeps_the_right_one() -> None:
+    """The same drop at the step that performs it, so a future change to
+    the loop cannot hide which line is doing the work."""
+    shaped = graph_module._ncbi_efetch_output_to_structured_fields(
+        _omim_summary_output(), "omim_summary", "GCK"
+    )
+    urls = [row["source_url"] for row in shaped["rows"]]
+    assert urls == [_omim_url(_OMIM_GCK[0])], shaped
+    assert shaped["row_count"] == 1, shaped
+    # The kept row carries the entry title, which is what a reader sees.
+    assert shaped["rows"][0]["fields"]["title"] == _OMIM_GCK[1], shaped
+    # `oid` is withheld, like every other row-identity field.
+    assert "oid" not in shaped["rows"][0]["fields"], shaped
+
+
+def test_no_resolved_symbol_keeps_no_omim_record_at_all() -> None:
+    """With nothing to check a title against, no OMIM title can be stood
+    behind, so nothing survives. The populate-check is the same output
+    shaped WITH a symbol, which does produce a row."""
+    output = _omim_summary_output()
+    with_symbol = graph_module._ncbi_efetch_output_to_structured_fields(
+        output, "omim_summary", "GCK"
+    )
+    assert with_symbol["row_count"] == 1, with_symbol
+    for missing in (None, "", "   "):
+        shaped = graph_module._ncbi_efetch_output_to_structured_fields(
+            output, "omim_summary", missing
+        )
+        assert shaped["rows"] == [], (missing, shaped)
+        assert shaped["row_count"] == 0, (missing, shaped)
+
+
+@pytest.mark.asyncio
+async def test_the_omim_follow_up_is_planned_and_its_citations_pass_the_host_pattern(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A gene question plans the OMIM search and the OMIM summary behind it,
+    and the citations the surviving records produce are real `omim.org`
+    citations that satisfy the citation contract's own host-pinned
+    pattern, which is the control that decides whether a source can be
+    cited at all."""
+    import re
+
+    from system_03_search_agent.contracts.events import NCBI_SOURCE_URL_PATTERN
+
+    _ModelSpy(monkeypatch, entity="GCK")
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch, omim_titles=_gck_omim_titles())
+    events = await _events(_GCK_QUESTION)
+    searches = [i for i in spy.efetch_inputs if i["action"] == "search"]
+    assert [i["db"] for i in searches].count("omim") == 1, searches
+    assert next(i for i in searches if i["db"] == "omim")["term"] == "GCK", searches
+    assert [i["db"] for i in spy.efetch_inputs if i["action"] == "summary"].count("omim") == 1
+    omim_citations = [
+        e.payload for e in events if e.type == "citation" and "omim.org" in e.payload["source_url"]
+    ]
+    assert len(omim_citations) == 1, [e.payload for e in events if e.type == "citation"]
+    payload = omim_citations[0]
+    assert payload["source_url"] == _omim_url(_OMIM_GCK[0]), payload
+    assert re.match(NCBI_SOURCE_URL_PATTERN, payload["source_url"]), payload
+    assert payload["layer"] == "layer_2_api", payload
+
+
+@pytest.mark.asyncio
+async def test_bypassing_filter_omim_titles_lets_the_wrong_gene_through(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MUTATION ARM. Replace `filter_omim_titles` with the identity
+    function and the MAP4K2 record DOES reach the answer for a GCK
+    question.
+
+    Without this, the arm above could pass for a reason that has nothing to
+    do with the filter: a record with no URL, a cap of one, a sort that
+    happens to drop the second record. This proves the filter is on the
+    path and is the thing doing the dropping, so deleting the call makes a
+    test go red rather than quietly restoring the defect.
+    """
+    monkeypatch.setattr(
+        graph_module.breadth_plan,
+        "filter_omim_titles",
+        lambda records, gene_symbol: list(records),
+    )
+    _ModelSpy(monkeypatch, entity="GCK")
+    _install_lookup(monkeypatch)
+    _ToolSpy(monkeypatch, omim_titles=_gck_omim_titles())
+    events = await _events(_GCK_QUESTION)
+    sources = _sources(events)
+    assert _omim_url(_OMIM_MAP4K2[0]) in sources, sources
+
+
+# ---------------------------------------------------------------------------
+# Fix-plan item 1 (2026-09-22): the GEO DataSets pair on a dataset question.
+# ---------------------------------------------------------------------------
+
+
+def test_a_dataset_question_plans_the_geo_pair_after_omim_and_a_plain_one_does_not() -> None:
+    """Golden G-037 asks for GEO expression datasets and got none, because
+    nothing searched GEO and the graph has no dataset vertex. The pair is
+    planned only when the question asks, after OMIM's pair, so under the
+    call ceiling it is the first the admission would skip."""
+    calls = graph_module._build_breadth_calls("TP53", datasets=True)
+    purposes = [getattr(c, "purpose", "") for c in calls]
+    assert purposes == [
+        "pubmed_search", "clinvar_search", "omim_search", "gds_search", "pubmed_abstracts",
+        "pubtator_publications", "clinvar_summary", "omim_summary", "gds_summary",
+    ], purposes
+    (gds_follow_up,) = [c for c in calls if getattr(c, "purpose", "") == "gds_summary"]
+    assert gds_follow_up.source_purpose == "gds_search"
+    plain = [getattr(c, "purpose", "") for c in graph_module._build_breadth_calls("TP53")]
+    assert "gds_search" not in plain and "gds_summary" not in plain, plain
+    assert graph_module._build_breadth_calls(None, datasets=True) == []
+
+
+@pytest.mark.asyncio
+async def test_a_dataset_question_reaches_the_answer_with_geo_series_cited(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ModelSpy(monkeypatch, entity="TP53")
+    _install_lookup(monkeypatch)
+    spy = _ToolSpy(monkeypatch)
+    events = await _events(_DATASET_QUESTION)
+    tools = _plan_tools(events)
+    # The plain gene question's eight NCBI calls plus the GEO search and
+    # its summary.
+    assert tools.count(("ncbi_efetch", "layer_2_api")) == 1 + 4 + 4 + 1, tools
+    searches = [i for i in spy.efetch_inputs if i["action"] == "search" and i["db"] == "gds"]
+    assert len(searches) == 1, spy.efetch_inputs
+    assert searches[0]["term"] == "TP53[All Fields] AND gse[Entry Type]"
+    summaries = [i for i in spy.efetch_inputs if i["action"] == "summary" and i["db"] == "gds"]
+    assert len(summaries) == 1 and summaries[0]["ids"] == ["200346694", "200315234"], summaries
+    sources = _sources(events)
+    assert "https://www.ncbi.nlm.nih.gov/gds/200346694" in sources, sources
+    assert "https://www.ncbi.nlm.nih.gov/gds/200315234" in sources, sources
+    # Every planned call started and closed.
+    starts = [e for e in events if e.type == "tool_start"]
+    assert len(starts) == 15 == len(_results(events)), (len(starts), len(_results(events)))
+    # Populate check: the plain gene question plans no GEO call at all.
+    plain_spy = _ToolSpy(monkeypatch)
+    plain_events = await _events(_GENE_QUESTION, session_id="s-plain")
+    assert not [i for i in plain_spy.efetch_inputs if i.get("db") == "gds"], plain_spy.efetch_inputs
+    assert not [s for s in _sources(plain_events) if "/gds/" in s]
+
+
+#: One realistic record per breadth purpose, as the tool that fills it builds
+#: one. A purpose missing here fails `test_every_breadth_purpose_has_a_record`.
+_REALISTIC_BREADTH_RECORDS: dict[str, tuple[str, dict[str, Any], str | None]] = {
+    "pubmed_abstracts": ("pubmed", {"title": "BRCA1 and breast cancer risk."}, None),
+    "clinvar_summary": (
+        "clinvar",
+        {"title": "NM_007294.4(BRCA1):c.5266dup (p.Gln1756fs)", "genes": [{"symbol": "BRCA1"}]},
+        None,
+    ),
+    "omim_summary": ("omim", {"title": "GLUCOKINASE; GCK", "locus": "7p13"}, "GCK"),
+    "gds_summary": ("gds", {"title": "Expression profiling of TP53 knockouts"}, None),
+    "clinvar_overlap": (
+        "clinvar",
+        {"title": "NM_007294.4(BRCA1):c.5266dup", "gene_symbol": ["BRCA1"], "chr_start": 1},
+        None,
+    ),
+    "dbvar_overlap": (
+        "dbvar",
+        {
+            "chr": "17", "chr_start": 43115725, "chr_end": 43125364, "assembly": "GRCh38",
+            "variant_type": ["copy number variation"], "gene_name": ["BRCA1", "NBR2"],
+        },
+        None,
+    ),
+    "bioproject_summary": ("bioproject", {"project_title": "Salmonella surveillance"}, None),
+    "biosample_summary": ("biosample", {"title": "Salmonella enterica isolate"}, None),
+    "nuccore_summary": (
+        "nuccore", {"title": "Homo sapiens KIR2DL5B mRNA", "accessionversion": "NM_001018081.2"}, None,
+    ),
+    "sra_summary": ("sra", {"runs": '<Run acc="SRR9496657" total_spots="118"/>'}, None),
+    "assembly_summary": ("assembly", {"assemblyname": "ASM584v2"}, None),
+    "taxonomy_summary": ("taxonomy", {"scientificname": "Escherichia coli"}, None),
+    "medgen_summary": (
+        "medgen", {"title": "Cystic fibrosis", "definition": {"value": "A genetic disorder."}}, None,
+    ),
+}
+
+
+def test_every_breadth_purpose_has_a_record() -> None:
+    assert set(_REALISTIC_BREADTH_RECORDS) == set(graph_module._BREADTH_FIELDS_BY_PURPOSE)
+
+
+@pytest.mark.parametrize("purpose", sorted(_REALISTIC_BREADTH_RECORDS))
+def test_every_breadth_purpose_turns_a_realistic_record_into_a_finding(purpose: str) -> None:
+    """Card 92: a first field that was a list dropped every dbVar row without
+    a word. One realistic record per purpose must reach a citable value."""
+    from system_03_search_agent.synthesis.findings import _citable_value_for_row
+    from system_03_search_agent.tools.ncbi_efetch_schemas import (
+        NcbiEfetchOutput,
+        NcbiEfetchRecord,
+    )
+
+    db, fields, gene = _REALISTIC_BREADTH_RECORDS[purpose]
+    output = NcbiEfetchOutput(
+        status="ok", action="summary", record_count=1, total_available=1, truncated=False,
+        records=[
+            NcbiEfetchRecord(
+                id="1", db=db, fields=fields,
+                source_url=f"https://www.ncbi.nlm.nih.gov/{db}/1/",
+            )
+        ],
+    )
+    shaped = graph_module._ncbi_efetch_output_to_structured_fields(output, purpose, gene)
+    assert shaped["rows"], purpose
+    name, value, _suspect, curie_fallback = _citable_value_for_row(
+        shaped["rows"][0], graph_module._pick_representative_field,
+        apply_vocabulary_artifact_check=False,
+    )
+    assert name and value and not curie_fallback, (purpose, shaped["rows"][0])

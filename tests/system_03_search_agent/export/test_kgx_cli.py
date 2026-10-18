@@ -879,7 +879,7 @@ class TestOutputDirectoryFailure:
     ) -> None:
         # A file sitting where a directory needs to go: mkdir(parents=True,
         # exist_ok=True) raises FileExistsError/NotADirectoryError on this
-        # shape on every platform this repo targets.
+        # shape on every platform this repository targets.
         blocker = tmp_path / "blocker"
         blocker.write_text("not a directory", encoding="utf-8")
         target = blocker / "export_here"

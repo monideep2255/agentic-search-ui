@@ -44,6 +44,26 @@ export type ToolName =
 
 export type Layer = "layer_1_graph" | "layer_2_api" | "layer_3_enrichment";
 
+/**
+ * The wire's layer strings, mapped to the design system's 1, 2, 3.
+ *
+ * Lives beside `Layer` so the live answer (`hooks/useRunView.ts`) and a
+ * reopened saved answer (`lib/api.ts`'s `fetchHistoryAnswer`) read a
+ * citation's layer through the one mapping. Card 102: the saved-answer
+ * parser had its own numeric check instead, and every stored citation,
+ * which carries the wire string, was dropped.
+ */
+export function layerNumber(layer: Layer): 1 | 2 | 3 {
+  switch (layer) {
+    case "layer_1_graph":
+      return 1;
+    case "layer_2_api":
+      return 2;
+    default:
+      return 3;
+  }
+}
+
 export type TrustOutcome = "answer" | "flag" | "ask" | "refuse";
 
 // ---------------------------------------------------------------------------
@@ -59,7 +79,8 @@ export interface GuardPayload {
     | "injection"
     | "rate_limited"
     | "cost_capped"
-    | "write_seeking";
+    | "write_seeking"
+    | "compute_request";
   reason: string | null;
 }
 
@@ -74,6 +95,17 @@ export interface ThinkPayload {
   query_class: "lookup" | "single_hop" | "multi_hop" | "aggregate" | "exploratory";
   resolved_entities: ResolvedEntity[];
   clarifying_question: string | null;
+  /**
+   * UI fix plan item 12.3 (2026-09-23). Four full questions the reader can
+   * pick with one click, set only for a bare one-to-three-word topic that
+   * opens a conversation ("reflux disease", "GERD"). OPTIONAL AND
+   * NULLABLE on the wire, mirroring `contracts/events.py`: an older
+   * backend omits it, item 7.5's own clarification ("which gene, variant
+   * or condition do you mean") never sets it, and every consumer treats
+   * absent and null identically, exactly like the three persona fields on
+   * `ToolCall` above.
+   */
+  clarifying_options?: string[] | null;
 }
 
 export interface ToolCall {
@@ -161,6 +193,19 @@ export const TOKEN_KINDS = [
 ] as const;
 export type TokenKind = (typeof TOKEN_KINDS)[number];
 
+/**
+ * Build phase 8.7, T-8.7-03 (card 50). Where on the answer screen a token
+ * belongs, mirroring `TokenPayload.placement` in `contracts/events.py`:
+ * "listing" is the code-built record listing, sent the moment the searches
+ * end, and the notes under it; "summary" is the code-built count line and
+ * the written answer, shown ABOVE the listing whatever order the two arrive
+ * in. Absent or null reads as "summary", which is where every token from an
+ * older producer rendered. The server sets it only for a run this bundle
+ * started with `POST /v1/query?reads=placement` (`createRun`, F-8.7-A14).
+ */
+export const TOKEN_PLACEMENTS = ["listing", "summary"] as const;
+export type TokenPlacement = (typeof TOKEN_PLACEMENTS)[number];
+
 export interface TokenPayload {
   text: string;
   marker_ids: string[];
@@ -168,6 +213,8 @@ export interface TokenPayload {
   kind?: TokenKind | null;
   cells?: string[] | null;
   emphasis?: string[] | null;
+  // Build phase 8.7, additive and optional per Section 2.6.
+  placement?: TokenPlacement | null;
 }
 
 export interface CitationPayload {
@@ -241,7 +288,7 @@ export interface DonePayload {
   trust_outcome: TrustOutcome;
   /**
    * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
-   * on 1 source, not yet confirmed"), built in code by the backend. Optional
+   * on 1 source cited, from MedGen"), built in code by the backend. Optional
    * and nullable; null on a refusal, absent from an older backend.
    */
   trust_line?: string | null;
@@ -304,7 +351,12 @@ export type AgentEventType = AgentEvent["type"];
 /**
  * The known event types this client listens for, mirroring Section 12.2's
  * `knownTypes` list minus `cost` (see this module's docstring for why
- * `cost` has no client-side variant).
+ * `cost` has no client-side variant) and minus `step`. The backend emits
+ * `step` (`StepPayload` in `contracts/events.py`), and this client skips it
+ * by name before parsing, through `FORWARD_COMPATIBLE_EVENT_NAMES` in
+ * `hooks/useAgentRun.ts`, so it has no variant here either. The facts
+ * checker reads that set, so a `step` frame the client stops skipping must
+ * be added here too.
  */
 export const KNOWN_EVENT_TYPES: readonly AgentEventType[] = [
   "guard",
@@ -344,7 +396,7 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
-function isLayer(value: unknown): value is Layer {
+export function isLayer(value: unknown): value is Layer {
   return value === "layer_1_graph" || value === "layer_2_api" || value === "layer_3_enrichment";
 }
 
@@ -377,6 +429,7 @@ function isGuardPayload(value: unknown): value is GuardPayload {
       "rate_limited",
       "cost_capped",
       "write_seeking",
+      "compute_request",
     ].includes(value.category) &&
     isNullableString(value.reason)
   );
@@ -399,7 +452,10 @@ function isThinkPayload(value: unknown): value is ThinkPayload {
     ["lookup", "single_hop", "multi_hop", "aggregate", "exploratory"].includes(value.query_class) &&
     Array.isArray(value.resolved_entities) &&
     value.resolved_entities.every(isResolvedEntity) &&
-    isNullableString(value.clarifying_question)
+    isNullableString(value.clarifying_question) &&
+    (value.clarifying_options === undefined ||
+      value.clarifying_options === null ||
+      isStringArray(value.clarifying_options))
   );
 }
 
@@ -490,7 +546,10 @@ function isTokenPayload(value: unknown): value is TokenPayload {
       value.kind === null ||
       (TOKEN_KINDS as readonly unknown[]).includes(value.kind)) &&
     isOptionalStringArray(value.cells) &&
-    isOptionalStringArray(value.emphasis)
+    isOptionalStringArray(value.emphasis) &&
+    (value.placement === undefined ||
+      value.placement === null ||
+      (TOKEN_PLACEMENTS as readonly unknown[]).includes(value.placement))
   );
 }
 

@@ -63,7 +63,7 @@ const DONE = envelope("done", {
   total_tool_calls: 1,
   elapsed_ms: 900,
   trust_outcome: "answer",
-  trust_line: "Based on 4 sources, not yet confirmed",
+  trust_line: "Based on 4 sources cited, all from MedGen",
 });
 
 function tailStream(typed: boolean): AgentEvent[] {
@@ -197,6 +197,43 @@ describe("records never render inline", () => {
     expect(screen.getByTestId("claim-text-3").tagName.toLowerCase()).toBe("tr");
     expect(tables[1]).toContainElement(screen.getByTestId("claim-text-4"));
   });
+
+  /*
+   * Item 12.9 (2026-09-23): a Researcher table's "Identifier" column is the
+   * design's identifier cell (`.rtab td.g`) whatever the id looks like. RED
+   * before: "@GENE_BRCA1" and "omim 138079" fail `isIdentifierCell`'s shape
+   * test, so they rendered in body type beside a mono CURIE. Populate-checked:
+   * the name and status cells in the same rows stay out of mono.
+   */
+  it("sets every cell under the Identifier header in mono, whatever the id looks like", () => {
+    renderEvents([
+      envelope("token", { text: "Records found\n\n", marker_ids: [], kind: "heading" }),
+      envelope("token", { text: "", marker_ids: [], kind: "table_header", cells: ["Record", "Identifier", "Status"] }),
+      envelope("token", {
+        text: "Literature entity name: BRCA1 [1]. ",
+        marker_ids: ["c1"],
+        kind: "table_row",
+        cells: ["BRCA1", "@GENE_BRCA1", "Recruiting"],
+      }),
+      envelope("token", {
+        text: "omim title: BREAST-OVARIAN CANCER [2]. ",
+        marker_ids: ["c2"],
+        kind: "table_row",
+        cells: ["BREAST-OVARIAN CANCER", "omim 138079", ""],
+      }),
+      citation("c1", 1),
+      citation("c2", 2),
+      DONE,
+    ]);
+    for (const index of [0, 1]) {
+      const cells = within(screen.getByTestId(`claim-text-${index}`)).getAllByRole("cell");
+      expect(getComputedStyle(cells[1]!).fontFamily).toMatch(/monospace/);
+      expect(getComputedStyle(cells[0]!).fontFamily).not.toMatch(/monospace/);
+    }
+    const first = within(screen.getByTestId("claim-text-0")).getAllByRole("cell");
+    expect(first[1]).toHaveTextContent("@GENE_BRCA1");
+    expect(getComputedStyle(first[2]!).fontFamily).not.toMatch(/monospace/);
+  });
 });
 
 describe("clean copy and accessible citations", () => {
@@ -272,5 +309,150 @@ describe("on a phone", () => {
     expect(name).toHaveTextContent("Familial cancer of breast");
     expect(within(name!).getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
     expect(id).toHaveTextContent("C0346153");
+  });
+
+  it("keeps the Identifier column in mono on a stacked row too (item 12.9)", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("max-width:720px"),
+        media: query,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    renderEvents([
+      envelope("token", { text: "", marker_ids: [], kind: "table_header", cells: ["Record", "Identifier"] }),
+      envelope("token", {
+        text: "Literature entity name: BRCA1 [1]. ",
+        marker_ids: ["c1"],
+        kind: "table_row",
+        cells: ["BRCA1", "@GENE_BRCA1"],
+      }),
+      citation("c1", 1),
+      DONE,
+    ]);
+    const [name, id] = Array.from(screen.getByTestId("claim-text-0").children) as HTMLElement[];
+    expect(name).toHaveTextContent("BRCA1");
+    expect(id).toHaveTextContent("@GENE_BRCA1");
+    expect(getComputedStyle(id!).fontFamily).toMatch(/monospace/);
+    expect(getComputedStyle(name!).fontFamily).not.toMatch(/monospace/);
+  });
+});
+
+/*
+ * Card 23's second part (J-23-01, A-23-01, 2026-10-07). The line under the
+ * variant-to-disease table describes that one table, so it sits directly
+ * under it. RED before: when the table ended the answer, the line had no
+ * claim after it to attach to and showed first in the Notes list instead.
+ * Mutation run: dropping the `noteAfter` branch in `useRunView` turns the
+ * table-last arms red; dropping the prefix guard turns the answer-wide arm red.
+ */
+describe("card 23: the variant-to-disease source line stays under its table", () => {
+  const SOURCE_LINE =
+    "Each row lists the conditions the variant's ClinVar record names; the record's classification " +
+    "(for example pathogenic, benign or uncertain) is not shown here. Disease names are MedGen titles looked up from NCBI.";
+  const PLACEHOLDER = "2 variant links to ClinVar placeholder conditions (not provided, not specified) are not listed.";
+
+  function variantTable(): AgentEvent[] {
+    return [
+      envelope("token", { text: "HNF1A variants are linked to two diseases [1]. ", marker_ids: ["c1"], kind: "claim" }),
+      envelope("token", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+      envelope("token", { text: "Variant-to-disease mapping\n\n", marker_ids: [], kind: "heading" }),
+      envelope("token", { text: "", marker_ids: [], kind: "table_header", cells: ["Variant", "Identifier", "Linked disease"] }),
+      envelope("token", {
+        text: "Sequence variant name: c.737T>G [1]. ",
+        marker_ids: ["c1"],
+        kind: "table_row",
+        cells: ["c.737T>G", "ClinVar:1134661", "Maturity-onset diabetes of the young type 3; Monogenic diabetes"],
+      }),
+      envelope("token", {
+        text: "Sequence variant name: c.1011C>T [2]. ",
+        marker_ids: ["c2"],
+        kind: "table_row",
+        cells: ["c.1011C>T", "ClinVar:1036297", "Maturity-onset diabetes of the young"],
+      }),
+      envelope("token", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+      envelope("token", { text: SOURCE_LINE, marker_ids: [], kind: "note" }),
+    ];
+  }
+
+  const answerWideNotes = (): AgentEvent[] => [
+    envelope("token", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+    envelope("token", { text: PLACEHOLDER, marker_ids: [], kind: "note" }),
+  ];
+
+  function expectLineDirectlyUnderTable(tableNode: HTMLElement) {
+    const line = screen.getByText(SOURCE_LINE);
+    expect(line.dataset.testid).toMatch(/answer-inline-note-\d+$/);
+    expect(tableNode.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Directly under: the next element after the table's own block is the line.
+    let block: HTMLElement = tableNode;
+    while (block.parentElement && !block.parentElement.contains(line)) block = block.parentElement;
+    while (block.parentElement && block.parentElement !== line.parentElement) block = block.parentElement;
+    expect(block.nextElementSibling).toBe(line);
+    expect(screen.getAllByText(SOURCE_LINE)).toHaveLength(1);
+  }
+
+  it("keeps the line under the table when the table ends the answer", () => {
+    const view = renderEvents([...variantTable(), ...answerWideNotes(), citation("c1", 1), citation("c2", 2), DONE]);
+    expect(view.systemNotes).toEqual([PLACEHOLDER]);
+    expect(view.claims[2]!.noteAfter).toBe(SOURCE_LINE);
+    expectLineDirectlyUnderTable(screen.getByTestId("answer-table"));
+    expect(screen.getByTestId("answer-notes")).not.toHaveTextContent("ClinVar record names");
+    expect(screen.getByTestId("answer-note-0")).toHaveTextContent(PLACEHOLDER);
+  });
+
+  it("keeps the line under the table, and before the next heading, when more records follow", () => {
+    renderEvents([
+      ...variantTable(),
+      envelope("token", { text: "\n\n", marker_ids: [], kind: "paragraph_break" }),
+      envelope("token", { text: "Gene records found\n\n", marker_ids: [], kind: "heading" }),
+      envelope("token", { text: "Gene HNF1A [3]. ", marker_ids: ["c3"], kind: "list_item", cells: ["HNF1A"] }),
+      citation("c1", 1),
+      citation("c2", 2),
+      citation("c3", 3),
+      DONE,
+    ]);
+    const [variants] = screen.getAllByTestId("answer-table");
+    expectLineDirectlyUnderTable(variants!);
+    const next = screen.getByRole("heading", { name: "Gene records found" });
+    expect(screen.getByText(SOURCE_LINE).compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps the line under the stacked rows on a phone when the table ends the answer", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("max-width:720px"),
+        media: query,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+    renderEvents([...variantTable(), ...answerWideNotes(), citation("c1", 1), citation("c2", 2), DONE]);
+    const stacked = screen.getByTestId("claim-text-2").parentElement!;
+    expect(stacked).toContainElement(screen.getByTestId("claim-text-1"));
+    expectLineDirectlyUnderTable(stacked);
+    expect(screen.getByTestId("answer-notes")).not.toHaveTextContent("ClinVar record names");
+  });
+
+  it("leaves an answer-wide note after any table in the Notes list", () => {
+    const view = renderEvents([
+      envelope("token", { text: "Gene-to-disease mapping\n\n", marker_ids: [], kind: "heading" }),
+      envelope("token", { text: "", marker_ids: [], kind: "table_header", cells: ["Gene", "Linked disease"] }),
+      envelope("token", { text: "Gene HNF1A [1]. ", marker_ids: ["c1"], kind: "table_row", cells: ["HNF1A", "MODY3"] }),
+      ...answerWideNotes(),
+      citation("c1", 1),
+      DONE,
+    ]);
+    expect(view.systemNotes).toEqual([PLACEHOLDER]);
+    expect(view.claims[0]!.noteAfter).toBeUndefined();
+    expect(screen.queryAllByTestId(/answer-inline-note-\d+$/)).toHaveLength(0);
+    expect(screen.getByTestId("answer-note-0")).toHaveTextContent(PLACEHOLDER);
   });
 });

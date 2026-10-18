@@ -1,146 +1,303 @@
 ---
 name: verify
-description: "Run pre-commit verification checks for the agentic-search-ui stack: Python compile check, test suite, lint, git status, and an optional frontend check. Invoke with /verify."
+description: "Run the product and prove a change visually: capture changed screens at 1280 and 390 pixels and judge each beside the design prototype. TRIGGER on 'verify', 'QA this', 'does it look right'. Unlike /precommit, which checks code only."
 scope: project
-depends_on:
-  - pyproject.toml
-  - requirements.txt
-depended_by:
-  - CLAUDE.md
 ---
 
 # Verify skill
 
-Run these checks in sequence before committing System 3 code, then format the output as a verification report. Stop at the first FAIL if it is a real blocker.
+Run the product and prove the change works on screen, before the owner looks. When a change reaches the product owner, three things are already done:
 
-Five build phases are merged as of this write-up: 1.0 (FastAPI skeleton and the event contract), 1.1 (auth service and the PostgreSQL user-data schema), 2.0 (the real LangGraph loop and the three-tier harness), 1.2 (the React shell and SSE streaming, wired end to end), and 2.1 (`cypher_query` over Layer 1, the first live graph access). The Python test suite, the FastAPI entrypoint, ruff, and the frontend test suite all exist and are runnable now. Every check below runs for real and reports a real result. None of them degrade to a pass-with-note for an empty or Phase-1 repository state anymore.
+- The team drove the running app at the widths people use.
+- It compared each screen with the design.
+- It fixed what failed.
 
-## Prerequisites
+The owner's retest then confirms rather than discovers.
 
-- Python virtualenv (`venv/`) active: `which python` should point inside `venv/`
-- Run from the repo root
+Approved by the product owner on 2026-09-26 as step 1 of card 42 (DECISIONS.md, "The verify loop of card 42 is approved as proposed"). The design is `docs/build/Verify_loop_proposal.md`. Until 2026-09-26 the name `/verify` belonged to the pre-commit skill, now `/precommit`.
 
-## Checks to run
+A script captures and the model judges. The script measures what a script can decide, and the model reads the screenshots for what only a reader can. No judgement is written without a file behind it, the product owner's lesson of 2026-09-01: every capture the assistant interpreted by hand needed correcting at least once.
 
-### 1. Python import/compile check
+## Table of contents
 
-Compile every module under the search agent package:
-
-```bash
-python -m py_compile $(find src/system_03_search_agent -name "*.py")
-```
-
-Catches syntax errors before they hit git history. The FastAPI app entrypoint exists at `src/system_03_search_agent/adapters/web_sse/app.py` (shipped in build phase 1.2). Run the import smoke check against it:
-
-```bash
-python -c "import system_03_search_agent.adapters.web_sse.app"
-```
-
-Confirm the entrypoint path first with `find src/system_03_search_agent -name "main.py" -o -name "app.py"` in case a future phase relocates it. If the found path differs from `adapters/web_sse/app.py`, import that path instead and report the change. Only report "no application module yet" if the find command genuinely returns nothing, which is not the current state.
-
-### 2. Test suite
-
-```bash
-pytest --tb=short
-```
-
-Short traceback for failures. Report the actual pass/fail count from the pytest output, taken from the run itself, never hardcoded into this skill.
-
-`tests/` now holds hundreds of real tests across the five merged build phases. Zero collected tests (pytest exit code 5, "no tests collected") is a FAILURE, not a pass with a note. At this point in the project, zero collection means the test runner is broken, most likely a wrong working directory, a broken `PYTHONPATH`, a bad virtualenv activation, or a deleted or moved test tree, not that tests do not exist yet. Treat it as a real blocker: report it as FAIL, name the likely cause, and stop rather than continuing past it.
-
-### 3. Lint
-
-```bash
-ruff check .
-```
-
-Confirmed from `pyproject.toml`: ruff is configured as a dev dependency (`[project.optional-dependencies].dev`), and `[tool.ruff]` sets `line-length = 100`. ruff is installed in `venv/` and runs (`ruff --version` reports a working install). Run the command and report the issue count normally: zero issues is PASS, any issue found is a real result to report, not a note.
-
-If a future environment genuinely lacks ruff, "command not found" or a `ModuleNotFoundError` is the signal: report "lint configured in pyproject.toml but ruff is not installed, run `pip install -e '.[dev]'`" as a note in that case only, and do not invent a different lint command. That is not the current state of `venv/`.
-
-### 3b. Import order
-
-```bash
-bash .github/gates/gate02_import_order.sh
-```
-
-This runs the CI gate's own script rather than a hand-written `isort` line, and that is the point of it. Section 24 gate 2 is `isort --check-only --diff` over `src tests services tracker alembic .claude .github`, and if this skill restated that command instead of invoking it, the two could drift and nothing would report it.
-
-Added 2026-08-30 after build phase 5.0's pull request went red on exactly this gate while every local check was green (F-5.0-30 in `tracker/phase_5.0.md`). The gate existed only in CI, so it had never once run against that branch. This is build phase 4.15's lesson one layer out: 4.15 found that `ruff check` with no path is a different command from `ruff check src services`, and 5.0 found that a gate the local ritual omits entirely has never run at all. "Verified locally" names a set of commands, so the honest form of the claim is the list.
-
-Two things not to do when it fails. Do not run bare `isort` and commit whatever comes out: isort is not idempotent on every input, and on the input that caused this, its first pass split a statement and its second merged it back with a `# noqa: F401` hoisted onto the `import (` line, where it suppresses the unused-import check for every name in the statement rather than one. That form passes both this gate and ruff, and taking it would trade a red gate for a quietly weakened one, which `goal-contracts` forbids outright. And do not add the file to an ignore list to make the check pass. Fix the imports, then confirm that gate 3 still passes too, since the two tools can disagree.
-
-### 4. Git status
-
-```bash
-git status --short
-git diff --stat
-```
-
-Show uncommitted changes so you know what you are about to commit.
-
-### 5. Frontend check (conditional)
-
-```bash
-test -f frontend/package.json && (cd frontend && npm test && npm run test:e2e)
-```
-
-`frontend/package.json` exists (shipped in build phase 1.2, the React shell with SSE). Run this check for real. The `package.json` `scripts` block defines `test` (`vitest run`, 120 unit and component tests across 15 files) and `test:e2e` (`playwright test`, 3 end-to-end tests), not `lint`: there is currently no `lint` script and no eslint devDependency wired into `frontend/package.json`, so do not invoke `npm run lint`, it will fail with "missing script" rather than reporting a real lint result. Report that gap as a note (no frontend lint check configured yet) rather than fabricating a command. Report the `test` and `test:e2e` results the same way as the Python checks: pass/fail counts, not a skip, since the frontend is no longer unscaffolded.
-
-Keep the `test -f frontend/package.json` guard for robustness, but do not treat it as expected to fail. If it ever does fail, that itself is a regression worth flagging (a deleted or moved frontend), not the normal Phase 1 state it used to guard against.
-
-### 6. Documentation drift
-
-```bash
-python tracker/check_doc_drift.py --check
-```
-
-Computes the tracked counts from source (Python tests, frontend tests, Playwright tests, the premise gate, DECISIONS.md rows, LEARNINGS.md entries, open flags, build-phase statuses, merged pull request numbers) and fails when any tracked document states a stale value. It also checks structure: a table of contents that does not match its body, two sections describing the same build phase, a last-updated date older than the file's newest content, a phase called "next" that the board marks done, and the integrity of the two append-only tables in DECISIONS.md and LEARNINGS.md (a blank line inside a table, which silently truncates it when rendered, a row missing the `<details>` wrapper its format requires, and a row whose column count does not match the header).
-
-Exit 0 is clean. A nonzero exit names each drifted document as `path:line`. Fix the document, then rerun. Never pass this check by narrowing it, and never report it as skipped when the script exists.
-
-The script never writes a file. Run `--self-test` if a result looks wrong: it exercises the classifier that separates a current assertion from a dated historical record, which is the part most likely to produce a false result. Its module docstring states what it does not check, and that statement is part of the check, not a footnote to it.
-
-## Output format
-
-Format results as a verification report:
-
-```
-VERIFICATION REPORT
-====================
-Python compile:  PASS / FAIL (details)
-Tests:           X passed, Y failed / FAIL: no tests collected, investigate before proceeding
-Lint:            X issues found (0 is PASS) / FAIL (details) / not installed (note, unexpected)
-Git status:      clean / N files changed
-Frontend:        PASS / FAIL (vitest: X passed Y failed, playwright: X passed Y failed)
-Doc drift:       PASS (0 stale, 0 structural) / FAIL (N stale, M structural, list them)
-
-Overall:         READY / NOT READY
-```
+- [When to use](#when-to-use)
+- [Step 1: pick the target](#step-1-pick-the-target)
+- [Step 2: name what to check](#step-2-name-what-to-check)
+- [Step 3: capture, with the script](#step-3-capture-with-the-script)
+- [Step 4: judge](#step-4-judge)
+- [Step 5: answers](#step-5-answers)
+- [Step 6: facts and downstream](#step-6-facts-and-downstream)
+- [Step 7: the loop](#step-7-the-loop)
+- [Step 8: closing](#step-8-closing)
+- [The report](#the-report)
+- [What it will not catch](#what-it-will-not-catch)
+- [Exit checklist](#exit-checklist)
 
 ## When to use
 
-- Before committing System 3 code
-- Before presenting work to the user
-- After making changes to the agent loop, tools, API routes, or React components
-- Say `/verify` to invoke
+- Any change that touches a screen, before it reaches the owner.
+- Any backend change that can make what a screen or a document says about the system untrue: Step 6 alone runs, with no screen to capture.
+- On a branch before the merge, and on deployed develop after it.
+- When anyone asks whether the site looks right, or to QA a change.
 
-## Important
+Not for checking the code: that is `/precommit`. Not a substitute for the golden run on an answer-path change: Step 5 points there.
 
-This skill does not assume a virtualenv path beyond `venv/` at the repo root. Confirm your environment is active before invoking.
+```mermaid
+flowchart LR
+    A[Pick the target] --> B[Name the screens]
+    B --> C[Script captures]
+    C --> D[Model judges]
+    D --> E{Any fail?}
+    E -->|yes, round 1| F[Builder fixes]
+    F --> C
+    E -->|no| G[Report and close]
+    E -->|yes, round 2| H[Stop and name it]
+```
 
-The repository is no longer near-empty: five build phases are merged, and the Python test suite, the FastAPI entrypoint, ruff, and the frontend test suite all exist and run for real. This skill hard-fails on real errors. Mark a check FAIL when it errors on code that actually exists: a real syntax error, a real failing test, zero collected tests, a real lint violation, or a real frontend test failure. There is no longer a pre-code-state exemption for any of the five checks; the only note-not-failure exception left in this skill is the frontend `lint` gap described in check 5, because no `lint` script is currently wired into `frontend/package.json`.
+## Step 1: pick the target
+
+| When | Target | How it is chosen |
+|------|--------|------------------|
+| On a branch, before the merge | The local stack | The change is not deployed anywhere yet, so local is the only place it exists |
+| After the merge, once `/ship` has confirmed the deploy | Deployed develop | The owner retests there, so that is what gets proved |
+
+The URLs are not written here. The script reads them from their one source:
+
+- Develop: `DEVELOP_WEB` and `DEVELOP_API` in `frontend/e2e/live-target.ts`, overridden by `S3_LIVE_WEB_URL` and `S3_LIVE_API_URL` exactly as there.
+- Local: the two fixed ports in `frontend/playwright.config.ts`, Vite on 5273 and FastAPI on 8931.
+
+Confirm which app answered before anything is captured. A screenshot of the wrong deployment looks identical to one of the right deployment.
+
+- On develop the script asks the API's `/health` for `app_env`. Anything but `develop` stops it with exit code 2 and nothing captured.
+- On local it records whatever `app_env` the local backend reports, and stops only if `/health` does not answer.
+
+Starting the local stack, each in the background, stopped when the run ends:
+
+- Backend, from the repository root: `PORT=8931 python3 -m tests.e2e_support.mock_llm_backend`. The model call is faked, so it proves layout and wording, not answers. `S3_E2E_REAL_MODEL=1` makes it real (the backend's module docstring says what that changes).
+- Frontend, from `frontend/`: `VITE_API_BASE_URL=http://127.0.0.1:8931 npm run dev -- --port 5273 --strictPort --host 127.0.0.1`.
+
+## Step 2: name what to check
+
+The screens come from the caller, or from the diff when the caller names none.
+
+- On a branch: `git diff --name-only origin/develop...HEAD -- frontend/src`.
+- After the merge: the same over the merged range.
+
+Map each changed file to the screens a person reaches it on:
+
+| Changed file under `frontend/src/components/` | Screens |
+|------------------------------------------------|---------|
+| `screens/HomeScreen.tsx`, `controls/` | Home |
+| `screens/RunScreen.tsx`, `screens/RunProgress.tsx`, `screens/ReasoningLog.tsx`, `chat/` | The run, mid-question |
+| `screens/AnswerScreen.tsx`, `answer/`, `feedback/` | The answer |
+| `screens/InfoScreens.tsx`, `screens/AboutScreen*`, `screens/ArchitectureScreen.tsx` | Integrations, About, Architecture |
+| `auth/`, `guest/` | Sign-in, the guest wall |
+| `shell/`, `brand/`, `frontend/src/theme.ts` | Every screen: home and answer at least |
+
+For each screen, write down how a person reaches it. That is the spec in Step 3.
+
+- A screen with an address: the address.
+- A screen behind a click: the clicks.
+- The answer screen: a real question. Ask something light, such as "What does BRCA1 do?".
+
+Before judging any screen, look it up in the coverage table of `docs/build/design/README.md`. A screen with no design is named as a gap in Step 4.
+
+## Step 3: capture, with the script
+
+The capture is `.claude/skills/verify/scripts/capture.mjs`. Its module comment is the full contract:
+
+- The spec format.
+- What it measures, and what it does not.
+- Its exit codes.
+
+Run it from `frontend/`, so it uses the Playwright and `@axe-core/playwright` installed there:
+
+```bash
+cd frontend
+node ../.claude/skills/verify/scripts/capture.mjs \
+  --spec ../.claude/skills/verify/specs/home_and_answer.json --target develop
+```
+
+- A screen reached by its address alone needs no spec: `--screen about=/about --topic about_copy`.
+- A screen reached by clicks or a question needs a JSON spec. `specs/home_and_answer.json` is the worked example, including how to reach the same screen in the prototype.
+- An agent worktree has no `frontend/node_modules`. Run the command from the main checkout's `frontend/` with the worktree's script path. The output still lands in the worktree, since the script derives every path from its own location.
+
+The widths are exactly 1280 and 390, by default 1280x900 and 390x844. A spec with any other widths is refused, because a failing screen could otherwise pass by dropping the width it fails at.
+
+- `--allow-partial-widths` runs other widths for a diagnosis.
+- Such a run prints, and records in `results.json`, that it cannot start the seven-day close.
+
+Per screen and per width, each width in a fresh browser so a phone-width page loads at phone width:
+
+- A full-page screenshot, `<screen>_<width>.png`, and the first screen a person sees on landing, `<screen>_<width>_fold.png`.
+- Horizontal overflow, the page's `scrollWidth` minus its `clientWidth`. Anything above zero fails, and the script lists up to five elements whose right edge passes the screen's, as candidates for the cause.
+- Console errors and uncaught page errors. Any one fails.
+- An axe scan with the WCAG 2.1 A and AA tags `frontend/e2e/accessibility.spec.ts` uses. Every serious or critical violation is listed, and any one fails.
+- The same screen in `docs/build/design/design-system/prototype/app.html` at the same width, `prototype_<screen>_<width>.png`, when the spec says how to reach it there.
+
+It writes into a new folder for every run, `testing/Developer/reports/<date>_verify_<topic>_<HHMMSS>Z/`, named by the UTC time. It refuses a folder that already holds files unless `--overwrite` is passed, so a rerun never overwrites committed evidence. The folder holds:
+
+- The screenshots.
+- `results.json`: every measurement, and one pass or fail line per scripted check.
+- `spec.json`: the spec that ran.
+
+It replaces the repository root and the home folder with `<repo-root>` and `<home>` before anything reaches disk.
+
+Exit codes:
+
+- 0: every scripted check passed.
+- 1: at least one failed, or no check ran at all.
+- 2: the target was wrong or unreachable, or the arguments, the widths or the output folder were refused.
+
+Poll it until it exits. A question runs once per width, so one answer screen costs two of a guest's five answers and a few cents.
+
+`--self-test` checks the script's guards with no browser and no network, and `tests/ci/test_verify_capture.py` runs it in CI. The guards it checks:
+
+- The widths.
+- The output folder.
+- The exit code when no check ran.
+
+## Step 4: judge
+
+Copy every scripted line from the script's output unchanged. The script's pass or fail stands; the model never overrides it.
+
+Then add one line per screenshot pair, for each screen at each width:
+
+1. Read the app screenshot and the prototype screenshot at the same width.
+2. Judge position, not only presence: where each part sits, what wraps, what is cut off, what is missing. Build phase 4.8's checks asserted what was on screen and never where, and the whole app shipped in a 720px strip.
+3. Where the prototype draws a canned answer and the app a real one, judge layout and structure, not the words.
+4. A sticky or fixed element is drawn where the first screen ends in a full-page screenshot, not where the page ends. The app's footer band is sticky (`frontend/src/components/shell/AppShell.tsx`), so it can appear mid-page there: read it as pinned to the bottom of the screen, and check the first-screen shot.
+5. Mark it pass or fail, and name both files.
+
+Until `/design` exists, the design system and the prototype are the spec (`.claude/rules/design-consistency.md`). The prototype is the only file that answers what happens at 390 pixels, since every media query lives there.
+
+A screen with no design in the coverage table gets a gap line instead of a design line: it names the missing design and is never judged against an invented look. Its scripted checks still run and still count.
+
+## Step 5: answers
+
+A change to the answer path, one that can change what an answer says, which records it names or cites, or whether a question is answered or refused, also needs two things `/verify` does not do itself:
+
+- The golden consistency run, `.claude/skills/bossman-mode/reference/Product_review.md` Step 2. It blocks on any drop in the answered count below the floor.
+- The five-line rubric, Step 3 of the same file.
+
+Run them exactly as written there. The `/verify` report names their result, or names them as still to run. A screenshot check cannot judge whether an answer is right.
+
+## Step 6: facts and downstream
+
+What the app says about itself must still be true, and so must every document that restates it. The product owner's request of 2026-09-26. A screenshot cannot catch this, because a stale sentence looks exactly like a true one. The facts include:
+
+- The graph's size and where it came from.
+- The tools, and the data layer each reads.
+- Each time limit and call budget.
+- Which step asks which model.
+- Who may use which surface.
+
+The check is `.claude/skills/verify/scripts/check_facts.py`, and its module comment is the full contract. Its registry, `facts_registry.py` beside it, names two things for each fact:
+
+- Its one source: a constant or type in the backend, a data file, or the graph owner's reference.
+- Every screen and document that states it.
+
+Before the merge, from the checkout under test, with the repository's virtual environment:
+
+```bash
+venv/bin/python .claude/skills/verify/scripts/check_facts.py
+```
+
+- It needs Python 3.11 or later, which the venv has. A system `python3` may be 3.9, and the script refuses it with exit code 2 and a message naming the venv.
+- It reads the code and never imports or runs it, so the stack need not be up. It needs no network and no secret. The one process it starts is `git rev-parse`.
+- In an agent worktree the `reference/` link does not resolve. The script falls back to the main checkout's copy, or takes `--reference <dir>`. A `--reference` that names no directory is refused, never ignored.
+- This step has its own rule, stricter than the report's verdict: the facts check passes only on exit 0, which means every place matches its source. Any other exit fails `/verify`, whatever the screens show:
+  - Exit 1: at least one FAIL, a stale screen, document or copy in code.
+  - Exit 2: at least one ERROR. The registry no longer matches the code, or a place reads as nothing; update the registry in the same change.
+  - Exit 3: at least one GAP and nothing worse. A source could not be read here, so those places were never judged. Rerun with the reference present.
+- Copy every FAIL, GAP and ERROR line into the report unchanged, with the summary line. The summary ends PASS or NOT PASSED, the same verdict as the exit code.
+- For each backend file in the diff, `--map --from <file>` names every screen and document that restates a fact computed from it, so one round updates them all. A `--from` path that does not exist is refused with exit 2, so a typo cannot read as "nothing restates it".
+- A change that puts a new number, name, limit or capability on a screen adds it to the registry, then runs `--self-test` with the reference present. The self-test fails unless every place can both pass and fail and every reader follows a changed source.
+
+After the merge, check the merged develop commit itself, then confirm develop serves it. The branch-head run above proved the branch, not what landed.
+
+1. Fetch and export the merged commit, then rerun the check on it with the checker and registry from that export. Run it from the main checkout, for its `venv/bin/python` alone: whatever branch the main checkout has out, and whatever its own `scripts/` folder holds, plays no part.
+
+```bash
+git fetch origin develop
+C=$(git rev-parse --short origin/develop)
+mkdir <scratch>/develop_$C
+git archive origin/develop | tar -x -C <scratch>/develop_$C
+venv/bin/python <scratch>/develop_$C/.claude/skills/verify/scripts/check_facts.py \
+  --root <scratch>/develop_$C --reference <repo-root>/reference/agentic-search-data-engineering
+```
+
+- `mkdir` without `-p` refuses a folder that already exists, so an older export is never checked by mistake. Pick a new folder name instead.
+- If the export has no `check_facts.py`, Python refuses to open it. The merge did not land the checker, and nothing else is run in its place.
+
+2. Confirm the deployed version is that commit. `/health` cannot say: its response model, `HealthResponse` in `adapters/web_sse/app.py`, carries `status` and `app_env` only, and the web bundle carries no commit either.
+   - The API service: read its latest deployment the way `/ship` does, which must show SUCCESS and the commit `git rev-parse origin/develop` names.
+   - The web service: `/ship` does not read it. Read its latest deployment the same way from the deployment platform, or write a GAP line for it.
+   - Write each commit, and where it was read, in the report's target line.
+3. If a deploy record cannot be read, write a GAP line, "deployed commit unknown for <service>, /health reports none". The facts are then proven for the merged code, not for what develop serves. This GAP line is written by the model, not printed by the facts check, so it names the gap without failing the verdict (The report, item 7).
+
+### Integrations smoke, not yet wired in
+
+The Integrations audit is on develop, and its smoke script is `testing/Developer/reports/2026-09-26_integrations_audit/integrations_smoke.py`. It runs each command the Integrations page prints against the target, one line per command. It is not part of `/verify` yet: phase 8.10 makes it pass first, and the lead wires it in here after that. Until then the registry checks those commands' names and flags against the code and runs none of them.
+
+## Step 7: the loop
+
+- A failing line goes back to whoever built the change, with the line and its file.
+- They fix it, and `/verify` runs again with the same spec. The rerun gets its own new folder, and its report names the round.
+- At most two rounds (`.claude/rules/self-eval-loop.md`). If a line still fails after round two, stop and name it: the change ships with that line named as open, or it is reverted. There is no third round.
+- Never make a check pass by changing the check. Dropping a failing screen or width from the spec, or rewording a line to pass, is a failed run (`.claude/rules/goal-contracts.md`).
+
+## Step 8: closing
+
+- A wording or layout card that passes at both widths, 1280 and 390, starts the seven-day close. A run with `--allow-partial-widths` never does. The owner's retest is a spot check, and the owner can object or reopen within the seven days (DECISIONS.md 2026-09-26, "A `/verify` pass at 1280 and 390 pixels starts the seven-day close").
+- A facts check that did not exit 0 makes the verdict FAIL (The report, item 7), so it holds the close too. A GAP line for a screen with no design, or for an unread deploy record, does not.
+- The lead writes the "closes on" date on the card, as `.claude/skills/bossman-mode/reference/UI_fix_loop.md` step 8 says.
+- A card that changes answers waits for the owner's verdict, whatever `/verify` says.
+- `/verify` never moves a card or closes a ticket itself.
+
+## The report
+
+The report is `report.md` in the same folder. An agent that may not write files returns it as text, and the lead saves it there. It is short, in this order:
+
+1. The target: the web and API URLs, `app_env`, the local checkout's commit and the deployed commit where known, and the round.
+2. Every check line, fails first: one line per scripted check, the "screen reached" lines included, and one judgement line per screenshot pair. The verdict words are PASS, FAIL and GAP, plus ERROR on a facts line from Step 6, and no others:
+
+```text
+- FAIL | answer at 390 | horizontal overflow | 14 px | testing/Developer/reports/<folder>/results.json
+- PASS | home at 1280 | matches the prototype | heading, search bar and depth control centred as in the prototype | home_1280.png, prototype_home_1280.png
+- GAP | sign-in at 390 | no design | the coverage table lists sign-in and sign-up as not designed | docs/build/design/README.md
+```
+
+3. For an answer-path change, the golden run and rubric results, or that they are still to run.
+4. The facts lines from Step 6, fails first, and the deployed commit or its GAP line.
+5. What was not captured and why, stated rather than implied.
+6. Notes for the owner: what a line cannot settle, such as a difference from the prototype that may be a later decision of theirs. Raise it per `decision-cadence`, asked at once with a notification, not held for this report. The line itself stays FAIL until the owner says otherwise.
+7. The verdict: PASS at both widths, or FAIL with the lines still failing. How the lines count:
+   - A GAP line the model writes does not fail the verdict: a screen with no design (Step 4), or a deploy record that could not be read after the merge (Step 6). It names what was not judged, and the owner reads it.
+   - The facts check keeps its own stricter rule (Step 6): it passes only when `check_facts.py` exits 0. Any other exit makes the verdict FAIL, and every line the script printed that is not PASS, its GAP and ERROR lines included, is a line still failing.
+   - A backend-only change has no screen to capture, so its verdict is the facts check's alone.
+
+Before committing the folder, prove it holds no local path, secret or personal data. `grep -rlF "$HOME" <folder>` must print nothing, and read the `.txt` files. The capture runs as a guest, so no account appears on screen.
+
+## What it will not catch
+
+- Taste where no design exists: it names the gap instead.
+- Whether an answer is good beyond the rubric's five lines.
+- Any screen the spec does not name, and any state it does not reach.
+- A screen only a signed-in person sees: the script has no sign-in step yet, so such a screen is named as not captured.
+- Keyboard traps, screen-reader order and touch behaviour. The phone width is a viewport, not a device profile.
+- Contrast during an animation: pages run with reduced motion, so the scan reads the settled colours, as the accessibility suite does.
+- A fact the registry does not name. A new sentence stating a new number is unchecked until Step 6's registry carries it, and what the deployment sets at run time, such as a tier's model on develop, is checked only as the code's default.
 
 ## Exit checklist
 
-Done when all of these are true:
-
-- [ ] All 7 checks ran: Python compile, test suite, lint, import order, git status, frontend, documentation drift
-- [ ] Import order ran the gate's own script, `bash .github/gates/gate02_import_order.sh`, not a hand-written `isort` line that could drift from it
-- [ ] A failing import-order check was fixed by correcting the imports, never by taking bare `isort` output that broadens a `# noqa`, and never by adding the file to an ignore list
-- [ ] Each result captured with pass/fail and counts where relevant, taken from the actual command output, never hardcoded into this skill
-- [ ] Zero collected Python tests reported as FAIL with a likely cause, never as a pass-with-note
-- [ ] The frontend `lint` gap (no `lint` script in `frontend/package.json`) reported as a note, not fabricated as a command that will fail with "missing script"
-- [ ] Verification report printed in the standard format
-- [ ] Overall READY / NOT READY line included
-- [ ] Any real blocker failure is surfaced, not swallowed
+- [ ] The target was confirmed through `/health` before anything was captured
+- [ ] Every changed screen was captured at 1280 and 390, or named as not captured with the reason
+- [ ] Every scripted line was copied unchanged, with its file
+- [ ] Every screenshot pair has a judgement line naming both files, or a gap line
+- [ ] An answer-path change names the golden run and the rubric, run or still to run
+- [ ] The verdict is PASS at both widths, or FAIL with the lines still failing; a GAP line for a screen with no design or an unread deploy record was named and did not fail it
+- [ ] The facts check ran with the venv and exited 0, or every FAIL, GAP and ERROR line it printed was copied and the verdict is FAIL, since any exit but 0 fails `/verify`
+- [ ] After the merge, the facts check reran on the merged develop commit, and each service's deployed commit was confirmed or named as a GAP
+- [ ] At most two rounds, and anything still failing is named as open
+- [ ] The report folder holds no local path, secret or personal data

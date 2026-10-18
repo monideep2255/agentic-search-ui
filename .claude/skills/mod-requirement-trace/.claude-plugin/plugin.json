@@ -1,0 +1,7 @@
+{
+  "name": "mod-requirement-trace",
+  "version": "1.0.0",
+  "description": "Spots a card or phase reference in your prompt and shows its title in the status line. /trace lists the source files behind it, with heading lines only. Trigger: Auto on prompt submit, or /trace [card N | phase N.N]",
+  "author": { "name": "Monideep Chakraborti" },
+  "types": "./types/index.d.ts"
+}

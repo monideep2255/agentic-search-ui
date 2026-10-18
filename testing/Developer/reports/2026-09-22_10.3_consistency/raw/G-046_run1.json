@@ -1,0 +1,360 @@
+{
+ "record": {
+  "id": "G-046",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "BLAST this sequence against nr and tell me the top hit: ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAA",
+  "session_id": "c103-5d2745940003",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:00:48+00:00",
+  "run_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "MedGen:C0005699",
+   "MedGen:C0427540",
+   "MedGen:C0427705",
+   "MedGen:C0549414",
+   "MedGen:C1332565",
+   "MedGen:C1332566",
+   "MedGen:C1378512",
+   "MedGen:C1531551"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 7,
+  "distinct_sources": 7,
+  "citations_by_layer": {
+   "layer_2_api": 7
+  },
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 7,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   7
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 112,
+  "answer_start": "Found 7 disease records for BLAST [1][2][3][4][5][6][7]. \n\nDisease records found\n\nDisease name: Blast phase chronic myelogenous leukemia, BCR-ABL1 positive [1].",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 4.621,
+  "seconds": 9.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 14,
+   "citation": 7,
+   "trust_signal": 8,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 0,
+   "ts": "2026-09-22T16:59:16.574555Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 2,
+   "ts": "2026-09-22T16:59:18.952397Z",
+   "payload": {
+    "narrative": "A direct command to run BLAST and return the top hit, a single API call. (BLAST: 8 of 14 MedGen records matched by name)",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0005699",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427540",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427705",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0549414",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332565",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332566",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1378512",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1531551",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 4,
+   "ts": "2026-09-22T16:59:18.954401Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-724e617bc8b7",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0005699",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427540",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0427705",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C0549414",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332565",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1332566",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1378512",
+      "confidence": 1.0
+     },
+     {
+      "text": "BLAST",
+      "curie": "MedGen:C1531551",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 6,
+   "ts": "2026-09-22T16:59:18.955734Z",
+   "payload": {
+    "call_id": "cq-724e617bc8b7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 7,
+   "ts": "2026-09-22T16:59:19.936744Z",
+   "payload": {
+    "call_id": "cq-724e617bc8b7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "7 row(s) of 7",
+    "result_count": 7,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 8,
+   "ts": "2026-09-22T16:59:19.937970Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0005699",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0005699",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0427540",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0427540",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0427705",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0427705",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0549414",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0549414",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1332565",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1332565",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1332566",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1332566",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1531551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1531551",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "e895b64e-4c6f-4d81-b206-e73b816919d7",
+   "seq": 39,
+   "ts": "2026-09-22T16:59:24.411021Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 4621,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 7 disease records for BLAST [1][2][3][4][5][6][7]. \n\nDisease records found\n\nDisease name: Blast phase chronic myelogenous leukemia, BCR-ABL1 positive [1]. Disease name: Blast cells present [2]. Disease name: Marrow: primitive blast cells+ [3]. Disease name: Blast Cell Proliferation [4]. Disease name: Blast Cells Increased in Bone Marrow [5]. Disease name: Blast Cells Present in Peripheral Blood [6]. Disease name: Chronic myeloid leukemia in lymphoid blast crisis [7]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: Blast cell leukemia. Ask about them individually for a complete answer."
+}

@@ -1,0 +1,76 @@
+{
+ "record": {
+  "id": "G-026",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-golden-b-20260929@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with cystic fibrosis?",
+  "session_id": "c103-ec7b5d5fabc1",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:12:47+00:00",
+  "run_id": "2ff4e9d4-6499-4167-9e92-8c54d8ab720e",
+  "outcome": "error",
+  "timed_out": false,
+  "guard_passed": null,
+  "guard_category": null,
+  "guard_reason": null,
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": null,
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": {
+   "fatal": true,
+   "scope": "run",
+   "source": "core.run.run",
+   "error_class": "unexpected",
+   "message": "This query failed unexpectedly before it could complete.",
+   "retry_after_s": 0
+  },
+  "total_cost_usd": null,
+  "total_tool_calls": null,
+  "server_elapsed_s": null,
+  "seconds": 4.2,
+  "event_types": {
+   "error": 1
+  },
+  "first_word_s": null,
+  "first_token_ts": null
+ },
+ "events": [
+  {
+   "type": "error",
+   "version": "v1",
+   "trace_id": "2ff4e9d4-6499-4167-9e92-8c54d8ab720e",
+   "seq": 0,
+   "ts": "2026-09-29T16:11:02.762773Z",
+   "payload": {
+    "fatal": true,
+    "scope": "run",
+    "source": "core.run.run",
+    "error_class": "unexpected",
+    "message": "This query failed unexpectedly before it could complete.",
+    "retry_after_s": 0
+   }
+  }
+ ],
+ "answer_text": ""
+}

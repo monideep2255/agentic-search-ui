@@ -1,0 +1,86 @@
+{
+  "tag": "brca1",
+  "question": "Which diseases are associated with BRCA1?",
+  "steps": [
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "live answer 1280",
+      "secondsToTrustLine": 39.12,
+      "trust": {
+        "text": "Based on 21 sources cited, not yet confirmed · High-risk claim",
+        "spans": [
+          {
+            "id": "trust-plain",
+            "text": "Based on 21 sources cited, not yet confirmed",
+            "color": "rgb(86, 92, 101)"
+          },
+          {
+            "id": "trust-risk",
+            "text": "High-risk claim",
+            "color": "rgb(152, 27, 30)"
+          }
+        ]
+      },
+      "mainTextStart": "+ New search\n\nYOUR SEARCHES\n\nWhich diseases are associated with BRCA1?\n13 tool calls · 21 sources cited from 2 layers\nWhat is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?\n55 sources cited · Oct 8\n[account]\nNo search limit in effect yet\nWhich diseases are associated with BRCA1?\nNew search\n\n? Answered20.5s · 13 tool calls · 21 sources cited from 2 layers\n\nShow work ▾\n\nFound 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group"
+    },
+    {
+      "step": "live mask",
+      "emailStillVisible": false,
+      "overflow1280": 0
+    },
+    {
+      "step": "rail buttons matching",
+      "count": 1
+    },
+    {
+      "step": "reopened 1280",
+      "secondsToOpen": 0.308,
+      "marker": "SAVED ANSWER · ASKED OCT 8, 2026, 9:34 PM",
+      "trust": {
+        "text": "Based on 21 sources cited, not yet confirmed·High-risk claim",
+        "spans": [
+          {
+            "id": "saved-answer-trust-risk",
+            "text": "High-risk claim",
+            "color": "rgb(152, 27, 30)"
+          }
+        ]
+      },
+      "overflow": 0
+    },
+    {
+      "step": "reopen mask 1280",
+      "emailStillVisible": false
+    },
+    {
+      "step": "390 new search clicked",
+      "newOk": true
+    },
+    {
+      "step": "rail buttons matching",
+      "count": 1
+    },
+    {
+      "step": "reopened 390",
+      "secondsToOpen": 0.234,
+      "trust": {
+        "text": "Based on 21 sources cited, not yet confirmed·High-risk claim",
+        "spans": [
+          {
+            "id": "saved-answer-trust-risk",
+            "text": "High-risk claim",
+            "color": "rgb(152, 27, 30)"
+          }
+        ]
+      },
+      "overflow": 0
+    },
+    {
+      "step": "reopen mask 390",
+      "emailStillVisible": false
+    }
+  ]
+}

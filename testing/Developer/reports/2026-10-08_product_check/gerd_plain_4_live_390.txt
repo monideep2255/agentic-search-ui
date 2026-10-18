@@ -1,0 +1,38 @@
+✓ Answered10.5s · 8 tool calls · 12 sources cited from 2 layers
+
+Show work ▾
+
+I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to GERD.⁠2–13
+
+Gastroesophageal reflux disease, or GERD, happens when stomach contents flow back up into the esophagus or mouth, causing symptoms or complications.⁠1 The typical symptoms are heartburn and regurgitation of gastric contents into the oropharynx.⁠1 GERD can affect quality of life and may lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, which is a precursor to esophageal adenocarcinoma.⁠1 Long-term use of proton-pump inhibitors, the most effective treatment for GERD, is associated with bone fractures, chronic and acute kidney disease, community-acquired pneumonia, and Clostridium difficile intestinal infection.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Gastroesophageal Reflux Disease.⁠2
+Gastroesophageal reflux (GERD)⁠3
+Gastroesophageal Reflux⁠4
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease⁠5
+Gastroesophageal Reflux Disease.⁠6
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)⁠7
+Gastroesophageal Reflux Disease.⁠8
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents⁠9
+Gastroesophageal reflux disease in children: What's new right now?⁠10
+On Demand Treatment of Reflux Disease⁠11
+Showing 1–10 of 12
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+12
+▶
+LIVE NCBI APIS
+6
+▶
+ENRICHMENT
+6
+Based on 12 sources cited
+
+NOTES: 

@@ -1,0 +1,205 @@
+{"id": "d-med1-c1-i1", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["dehydrogenase deficiency", "enzyme deficiency", "causes a"]}
+{"id": "d-med1-c1-i2", "label": "F", "sublabel": "faithful", "approved": true, "dropped": []}
+{"id": "d-med1-c1-i3", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["ancestry and", "role in", "incidence and", "amongst the"]}
+{"id": "d-med1-c1-i4", "label": "F", "sublabel": "faithful", "approved": true, "dropped": []}
+{"id": "d-med1-c1-i5", "label": "A", "sublabel": "reframed", "approved": false, "dropped": ["understanding of", "regional and", "effective screening", "identification of", "early diagnosis", "necessary and", "better genetic"]}
+{"id": "d-med1-c2-i1", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["with this", "also may"]}
+{"id": "d-med1-c2-i2", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["because acute", "caused by", "infection oxidative", "drug or", "other stressors"]}
+{"id": "d-med1-c2-i3", "label": "A", "sublabel": "other_record", "approved": true, "dropped": []}
+{"id": "d-med1-c2-i4", "label": "B", "sublabel": "added_gloss", "approved": false, "dropped": ["this study", "effort to", "provide a", "contributes to", "certain clinical"]}
+{"id": "d-med1-c2-i5", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["play a", "incidence and", "amongst the"]}
+{"id": "d-med2-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["assigned to", "degrees of", "because acute", "caused by", "form of", "infection oxidative", "drug or", "avoidance of", "these and", "other stressors"]}
+{"id": "d-med2-c1-i2", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["mutations in"]}
+{"id": "d-med2-c1-i3", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["mediterranean fever", "incidence in", "arabic and"]}
+{"id": "d-med2-c1-i4", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["play a", "hemoglobinopathies with", "asian and"]}
+{"id": "d-med2-c2-i1", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["caused by", "form of", "drug or", "avoidance of"]}
+{"id": "d-med2-c2-i2", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["mutations in"]}
+{"id": "d-med2-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["mutations in", "fever mefv", "with a", "incidence in"]}
+{"id": "d-med2-c2-i4", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["this study", "mefv gene", "results and", "findings of", "universities and", "effort to", "correlation and", "contributes to"]}
+{"id": "d-med2-c2-i5", "label": "F", "sublabel": "faithful", "approved": true, "dropped": []}
+{"id": "d-med2-c2-i6", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["objective and", "identified 51", "haplotypes that"]}
+{"id": "d-med2-c2-i7", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["hemoglobinopathies are", "play a", "role in", "nature of", "amongst the"]}
+{"id": "d-med3-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["caused by", "drug or"]}
+{"id": "d-med3-c1-i2", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["mutations in", "incidence in"]}
+{"id": "d-med3-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["mediterranean fever", "autoinflammatory disorder", "recurrent fever", "erythema and"]}
+{"id": "d-med3-c1-i4", "label": "R", "sublabel": "beyond_widened_sentence", "approved": true, "dropped": []}
+{"id": "d-med3-c1-i5", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["importantly on", "basis of", "runs of", "haplotypes that"]}
+{"id": "d-med3-c1-i6", "label": "A", "sublabel": "added_explanation", "approved": false, "dropped": ["ancestry and", "role in", "incidence and", "nature of", "with african", "amongst the"]}
+{"id": "d-gerd1-c1-i1", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["results from"]}
+{"id": "d-gerd1-c1-i2", "label": "A", "sublabel": "added_population", "approved": false, "dropped": ["symptoms of", "into the"]}
+{"id": "d-gerd1-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in", "prompting the"]}
+{"id": "d-gerd1-c1-i4", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["disease are"]}
+{"id": "d-gerd1-c1-i5", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["relaxations of", "include defects", "impaired esophageal", "clearance as", "well as"]}
+{"id": "d-gerd1-c1-i6", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["lower esophageal", "other factors", "role in", "gerd include", "anatomical defects", "lower esophageal"]}
+{"id": "d-gerd1-c1-i7", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["ppis is"]}
+{"id": "d-gerd1-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "d-gerd1-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "d-gerd1-c2-i3", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["gerd in", "young children"]}
+{"id": "d-gerd1-c2-i4", "label": "B", "sublabel": "narrowed", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "pathogenesis of", "gerd include", "well as"]}
+{"id": "d-gerd1-c2-i5", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["ppis is"]}
+{"id": "d-gerd2-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "d-gerd2-c1-i2", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "d-gerd2-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "d-gerd2-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease are", "those most", "providers in"]}
+{"id": "d-gerd2-c1-i5", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "include defects", "well as"]}
+{"id": "d-gerd2-c1-i6", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["life and", "cause erosive"]}
+{"id": "d-gerd2-c1-i7", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["ppis is"]}
+{"id": "d-gerd2-c2-i1", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["quality of", "life and", "cause erosive", "precursor to"]}
+{"id": "d-gerd2-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "well as"]}
+{"id": "d-gerd2-c2-i3", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["ppis is"]}
+{"id": "d-gerd2-c2-i4", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["disease are", "clinical approaches", "evaluation and", "these symptoms", "including proton", "warrant referral"]}
+{"id": "d-gerd2-c2-i5", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["this is", "contrast ger", "disease gerd", "which may", "need medical"]}
+{"id": "d-gerd3-c1-i1", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["gastroesophageal reflux", "disease gerd", "from the"]}
+{"id": "d-gerd3-c1-i2", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["typical symptoms", "into the"]}
+{"id": "d-gerd3-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "d-gerd3-c1-i4", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["disease are"]}
+{"id": "d-gerd3-c1-i5", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["from abnormal", "impaired esophageal", "defects of"]}
+{"id": "d-gerd3-c1-i6", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["life and", "cause erosive"]}
+{"id": "d-gerd3-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "d-gerd3-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "d-gerd3-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease are", "commonly reported", "providers in"]}
+{"id": "d-gerd3-c2-i4", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["gerd in", "young children"]}
+{"id": "d-gerd3-c2-i5", "label": "R", "sublabel": "beyond_widened_sentence", "approved": false, "dropped": ["this is", "disease gerd"]}
+{"id": "d-gerd3-c2-i6", "label": "F", "sublabel": "within_widened_sentence", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "pathogenesis of", "gerd include", "well as"]}
+{"id": "d-gerd3-c2-i7", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["ppis is"]}
+{"id": "d-gerd3-c2-i8", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["clinical approaches", "evaluation and", "including proton", "warrant referral"]}
+{"id": "w-gp1-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease gerd", "from the"]}
+{"id": "w-gp1-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd are", "gastric contents"]}
+{"id": "w-gp1-c1-i4", "label": "B", "sublabel": "added_gloss", "approved": false, "dropped": ["from abnormal", "relaxations of", "other factors", "role in", "pathogenesis of", "include defects", "mucosal defense", "motility and", "clearance as", "well as", "barrier such"]}
+{"id": "w-gp1-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["attributable to", "disease are", "those most", "commonly reported"]}
+{"id": "w-gp1-c1-i6", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["young children"]}
+{"id": "w-gp1-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-gp1-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease gerd", "from the"]}
+{"id": "w-gp1-c2-i6", "label": "A", "sublabel": "dropped_hedge", "approved": false, "dropped": ["disease are", "those most"]}
+{"id": "w-gp2-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-gp2-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease gerd", "from the"]}
+{"id": "w-gp2-c1-i5", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["gerd is", "diagnosis and", "with proton-pump", "ppis is", "with bone", "renal disease", "renal disease", "community-acquired pneumonia", "difficile intestinal"]}
+{"id": "w-gp2-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-gp2-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gp2-c2-i4", "label": "B", "sublabel": "relabelled", "approved": false, "dropped": ["from abnormal", "relaxations of", "lower esophageal", "other factors", "role in", "pathogenesis of", "gerd include", "impaired esophageal", "motility and", "clearance as", "well as", "lower esophageal", "barrier such"]}
+{"id": "w-gp2-c2-i5", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["gerd in", "young children", "prompting the", "diagnostic evaluation"]}
+{"id": "w-gp3-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease gerd", "from the"]}
+{"id": "w-gp3-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd are"]}
+{"id": "w-gp3-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["attributable to", "disease are", "those most"]}
+{"id": "w-gp3-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-gp3-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gp3-c2-i3", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["young children"]}
+{"id": "w-gp3-c2-i4", "label": "B", "sublabel": "relabelled", "approved": false, "dropped": ["from abnormal", "transient relaxations", "lower esophageal", "other factors", "role in", "pathogenesis of", "gerd include", "impaired esophageal", "motility and", "clearance as", "well as", "lower esophageal", "barrier such"]}
+{"id": "w-gp3-c2-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease are", "those most"]}
+{"id": "w-gp4-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease gerd", "from the"]}
+{"id": "w-gp4-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd are", "gastric contents"]}
+{"id": "w-gp4-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["affects quality", "esophagitis esophageal", "strictures and", "precursor to"]}
+{"id": "w-gp4-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["attributable to", "disease are", "commonly reported"]}
+{"id": "w-gp4-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-gp4-c2-i6", "label": "A", "sublabel": "dropped_hedge", "approved": false, "dropped": ["gastroesophageal reflux", "disease are", "those most"]}
+{"id": "w-gp5-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-gp5-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease gerd", "from the"]}
+{"id": "w-gp5-c1-i4", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["young children", "diagnostic evaluation"]}
+{"id": "w-gp5-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "transient relaxations", "other factors", "role in", "pathogenesis of", "mucosal defense", "motility and", "well as", "barrier such"]}
+{"id": "w-gp5-c1-i6", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["gerd is", "diagnosis and", "with proton-pump", "ppis is", "with bone", "renal disease", "renal disease", "community-acquired pneumonia", "difficile intestinal"]}
+{"id": "w-gr1-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gr1-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd affects", "cause erosive"]}
+{"id": "w-gr1-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "pathogenesis of", "gerd include", "well as"]}
+{"id": "w-gr1-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastroesophageal reflux", "disease gerd", "results from"]}
+{"id": "w-gr1-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "include defects", "well as"]}
+{"id": "w-gr1-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd is", "diagnosis and", "treated with", "ppis is"]}
+{"id": "w-gr1-c2-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["reflux ger", "this is", "contrast ger", "disease gerd", "which may"]}
+{"id": "w-gr1-c2-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-gr2-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["results from"]}
+{"id": "w-gr2-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-gr2-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease are", "those most"]}
+{"id": "w-gr2-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-gr2-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "impaired esophageal", "defects of"]}
+{"id": "w-gr2-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gr2-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-gr3-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gr3-c1-i3", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-gr3-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-gr3-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "include defects", "well as"]}
+{"id": "w-gr3-c1-i8", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["cause erosive"]}
+{"id": "w-gr3-c1-i9", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["limit complications"]}
+{"id": "w-gr4-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastroesophageal reflux", "disease gerd", "from the"]}
+{"id": "w-gr4-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "role in", "pathogenesis of", "gerd include", "well as"]}
+{"id": "w-gr4-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd is", "diagnosis and", "treated with", "ppis is"]}
+{"id": "w-gr4-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["quality of", "life and", "cause erosive", "precursor to"]}
+{"id": "w-gr4-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastroesophageal reflux", "gerd is", "results from", "symptoms or"]}
+{"id": "w-gr4-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-gr4-c2-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["diagnosis and", "ppis is"]}
+{"id": "w-gr5-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gr5-c1-i3", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-gr5-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-gr5-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "impaired esophageal", "defects of"]}
+{"id": "w-gr5-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd is", "diagnosis and", "treated with", "ppis is"]}
+{"id": "w-gr5-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-gr5-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-gr5-c2-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["clinical approaches", "evaluation and", "including proton", "warrant referral"]}
+{"id": "w-md1-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["spectrum of", "disorder most"]}
+{"id": "w-md1-c2-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["play a", "nature of", "amongst the"]}
+{"id": "w-md2-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["because acute", "caused by", "stressor in", "infection oxidative", "drug or", "other stressors"]}
+{"id": "w-md2-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["dehydrogenase deficiency", "spectrum of", "hemolysis and", "disorder most", "approximately 400", "affected worldwide"]}
+{"id": "w-md2-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["this study", "universities and", "effort to", "provide a", "correlation and", "contributes to", "certain clinical"]}
+{"id": "w-md2-c2-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["2504 patients", "genotyping r202q", "1567 39", "co-variant was"]}
+{"id": "w-md3-c2-i2", "label": "B", "sublabel": "reframed", "approved": false, "dropped": ["mutations in", "with a", "incidence in"]}
+{"id": "w-md3-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["fever abdominal", "erythema and"]}
+{"id": "w-md3-c2-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["hemoglobinopathies with", "asian and", "amongst the"]}
+{"id": "w-md4-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["monogenic autoinflammatory", "recurrent fever", "erythema and", "with a", "incidence in"]}
+{"id": "w-md4-c1-i2", "label": "B", "sublabel": "weaker_degree", "approved": false, "dropped": ["spectrum of", "disorder most"]}
+{"id": "w-md4-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["caused by", "drug or"]}
+{"id": "w-md4-c1-i4", "label": "B", "sublabel": "weaker_degree", "approved": false, "dropped": ["hemoglobinopathies are", "play a", "incidence and", "hemoglobinopathies with", "amongst the"]}
+{"id": "w-md4-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["degrees of", "because acute", "caused by", "form of", "drug or", "avoidance of", "these and"]}
+{"id": "w-md4-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["recurrent fever", "erythema and", "complications as", "mutations in", "this study", "results and", "findings of", "universities and", "institutions in", "combined in", "provide a", "into the", "correlation and", "findings in"]}
+{"id": "w-md5-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["recurrent fever", "erythema and", "renal complications", "incidence in"]}
+{"id": "w-cm3-c1-i4", "label": "F", "sublabel": "faithful", "approved": true, "dropped": []}
+{"id": "w-cm4-c2-i2", "label": "F", "sublabel": "faithful", "approved": true, "dropped": []}
+{"id": "w-cm4-c2-i9", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["ndds is"]}
+{"id": "w-cm5-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["1004 25"]}
+{"id": "w-cm5-c1-i8", "label": "A", "sublabel": "dropped_condition", "approved": false, "dropped": ["with a", "distribution across", "seen in"]}
+{"id": "w-cm5-c2-i3", "label": "A", "sublabel": "loosened_frequency", "approved": false, "dropped": ["these and", "hemolysis is", "warrant a"]}
+{"id": "w-cp1-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cp1-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["reflux of", "symptoms or", "esophagitis esophageal", "strictures and", "precursor to"]}
+{"id": "w-cp1-c2-i4", "label": "A", "sublabel": "dropped_hedge", "approved": false, "dropped": ["attributable to", "disease are", "those most", "indications or", "warrant referral"]}
+{"id": "w-cp1-c2-i5", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["proton-pump inhibitors", "with bone", "renal disease", "renal disease", "community-acquired pneumonia", "difficile intestinal"]}
+{"id": "w-cp2-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd are", "gastric contents"]}
+{"id": "w-cp2-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["affects quality", "esophagitis esophageal", "strictures and"]}
+{"id": "w-cp2-c1-i3", "label": "B", "sublabel": "relabelled", "approved": false, "dropped": ["mucosal defense", "motility and", "well as", "lower esophageal", "barrier such"]}
+{"id": "w-cp2-c1-i4", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["young children"]}
+{"id": "w-cp2-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["attributable to", "disease are", "those most", "providers in"]}
+{"id": "w-cp2-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-cp2-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the", "symptoms or"]}
+{"id": "w-cp2-c2-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease are", "those most"]}
+{"id": "w-cp2-c2-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["manifestations of", "prompting the", "diagnostic evaluation"]}
+{"id": "w-cp3-c1-i1", "label": "F", "sublabel": "faithful", "approved": true, "dropped": []}
+{"id": "w-cp3-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd are", "gastric contents"]}
+{"id": "w-cp3-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["attributable to", "disease are", "those most", "reported to"]}
+{"id": "w-cp3-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-cp3-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cp3-c2-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["attributable to", "disease are", "those most", "reported to"]}
+{"id": "w-cp3-c2-i5", "label": "B", "sublabel": "relabelled", "approved": false, "dropped": ["transient relaxations", "esophageal and", "motility and", "barrier such"]}
+{"id": "w-cp4-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cp4-c1-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd are"]}
+{"id": "w-cp4-c1-i4", "label": "B", "sublabel": "added_gloss", "approved": false, "dropped": ["transient relaxations", "lower esophageal", "other factors", "role in", "pathogenesis of", "include defects", "impaired esophageal", "motility and", "clearance as", "well as", "lower esophageal", "barrier such"]}
+{"id": "w-cp4-c2-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-cp4-c2-i2", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cp4-c2-i6", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["children are"]}
+{"id": "w-cp5-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gastric contents"]}
+{"id": "w-cp5-c1-i3", "label": "A", "sublabel": "dropped_qualifier", "approved": false, "dropped": ["gerd in", "young children"]}
+{"id": "w-cp5-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["relaxations of", "defense impaired", "motility and", "well as", "barrier such"]}
+{"id": "w-cp5-c2-i3", "label": "B", "sublabel": "relabelled", "approved": false, "dropped": ["lower esophageal", "impaired esophageal", "motility and"]}
+{"id": "w-cr1-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cr1-c1-i3", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-cr1-c1-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "pathogenesis of", "impaired esophageal", "defects of"]}
+{"id": "w-cr1-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["well as", "lower esophageal", "reflux barrier"]}
+{"id": "w-cr3-c1-i3", "label": "B", "sublabel": "stronger_degree", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-cr3-c2-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["disease are", "those most", "providers in"]}
+{"id": "w-cr3-c2-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["inhibitor trials", "warrant referral"]}
+{"id": "w-cr4-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cr4-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-cr4-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["role in", "pathogenesis of", "include defects", "clearance as", "well as", "barrier such"]}
+{"id": "w-cr4-c2-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-cr4-c2-i7", "label": "B", "sublabel": "stronger_degree", "approved": true, "dropped": []}
+{"id": "w-cr5-c1-i1", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from the"]}
+{"id": "w-cr5-c1-i3", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["typical symptoms"]}
+{"id": "w-cr5-c1-i4", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}
+{"id": "w-cr5-c1-i6", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["from abnormal", "other factors", "impaired esophageal", "defects of"]}
+{"id": "w-cr5-c2-i4", "label": "B", "sublabel": "narrowed", "approved": false, "dropped": ["other factors", "role in", "well as", "barrier such"]}
+{"id": "w-cr5-c2-i5", "label": "F", "sublabel": "faithful", "approved": false, "dropped": ["gerd in"]}

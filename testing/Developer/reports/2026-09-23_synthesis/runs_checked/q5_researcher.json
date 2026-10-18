@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "answer",
+  "words": 239,
+  "paragraphs": 5,
+  "headings": 3,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "11583104",
+    "33388079",
+    "34291426",
+    "36870101",
+    "40626862"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \n\n## Ergogenic Effects on Endurance\nCaffeine supplementation acutely enhances aerobic endurance, which appears to be the form of exercise with the most consistent moderate-to-large benefits [1]. However, caffeine does not directly improve maximal oxygen capacity [2]. \n\n## Effects on Strength and Resistance Exercise\nCaffeine ingestion is ergogenic for one-repetition maximum strength, isometric and isokinetic strength, as well as muscular endurance, velocity, and power across resistance exercise protocols [3]. These effects appear similar in magnitude between males and females [3]. Earlier work suggested no effect on maximal ability but enhanced resistance to fatigue [2]. Habitual caffeine intake and CYP1A2 or ADORA2A polymorphisms do not appear to modulate these effects on resistance exercise [3]. \nNotably, caffeine ingested as coffee appears to be ineffective compared to pure caffeine [2], although coffee and caffeinated gum and gel are also reported as ergogenic for resistance exercise [3]. \nCaffeine consumption reduces total sleep time by approximately 45 minutes and sleep efficiency by 7%, with decreases in deep sleep duration [4]. To avoid reductions in total sleep time, a standard serving of coffee should be consumed at least 8.8 hours before bedtime [4]. Moderate coffee consumption is associated with reduced risk of hypertension, type 2 diabetes, myocardial infarction, and overall mortality, though some beneficial effects appear independent of caffeine [5]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- Effects of Caffeine on Resistance Exercise: A Review of Recent Research.\n- The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.\n- Coffee and cardiovascular disease.\n",
+  "key": "q5"
+}

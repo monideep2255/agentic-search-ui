@@ -1,0 +1,38 @@
+[
+  {
+    "gene": "BRCA1",
+    "run": 1,
+    "trace_id": "91552457-7944-4ea5-bd3b-0e8e935c2534",
+    "elapsed_s": 17.0,
+    "citations": 73,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 14,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "113705",
+        "title": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  },
+  {
+    "gene": "GCK",
+    "run": 1,
+    "trace_id": "075bf995-8302-4ea2-87c2-6ba78dcd179f",
+    "elapsed_s": 21.3,
+    "citations": 54,
+    "omim_citations": 1,
+    "charged_layer_2_3_calls": 16,
+    "wrong_gene_mentions": 0,
+    "omim_entries": [
+      {
+        "uid": "138079",
+        "title": "GLUCOKINASE; GCK",
+        "names_asked_gene": true
+      }
+    ],
+    "trust_outcome": "ask"
+  }
+]

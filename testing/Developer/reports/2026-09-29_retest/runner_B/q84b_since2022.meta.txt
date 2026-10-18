@@ -1,0 +1,19 @@
+{
+ "modes": [
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://pubmed.ncbi.nlm.nih.gov/30642643/ -> https://pubmed.ncbi.nlm.nih.gov/30642643/",
+  "https://pubmed.ncbi.nlm.nih.gov/25655639/ -> https://pubmed.ncbi.nlm.nih.gov/25655639/",
+  "https://pubmed.ncbi.nlm.nih.gov/32729746/ -> https://pubmed.ncbi.nlm.nih.gov/32729746/",
+  "https://pubmed.ncbi.nlm.nih.gov/38889624/ -> https://pubmed.ncbi.nlm.nih.gov/38889624/",
+  "https://pubmed.ncbi.nlm.nih.gov/39348077/ -> https://pubmed.ncbi.nlm.nih.gov/39348077/"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

@@ -1,0 +1,80 @@
+Integrations
+
+The same agent, reachable four ways, returning the same citations.
+
+115M nodes
+693M edges
+3 data layers
+7 tools
+REST and SSE
+
+Start a run, then subscribe to its event stream and render it as it happens, exactly as this interface does. Resumable after a dropped connection.
+
+Copy curl
+API reference
+OpenAPI schema
+GraphQL
+
+One typed request and one typed response over the same core, for a client that wants the whole answer in a single round trip. No live stream: a run comes back complete or not at all.
+
+Copy query
+GraphQL endpoint
+MCP server
+
+Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are coming to MCP next. An account is required, and a bearer token lasts 15 minutes.
+
+{
+  "mcpServers": {
+    "ncbi-search": {
+      "type": "http",
+      "url": "https://search-agent-api-develop-43b3.up.railway.app/mcp/",
+      "headers": {
+        "Authorization": "Bearer <your token>"
+      }
+    }
+  }
+}
+Copy config
+Command line tools
+
+Two console commands rather than HTTP routes, installed once with pip. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, and needs graph credentials only the operator grants.
+
+{
+  "mcpServers": {
+    "system3": {
+      "command": "s3",
+      "args": ["mcp"]
+    }
+  }
+}
+Copy install command
+Copy command
+Copy agent config
+Copy KGX command
+Access
+Registered accounts: the Log in flow issues the bearer token every surface here accepts.
+GraphQL and the MCP server: an account is required, so a guest cannot reach either.
+REST and SSE: a guest may run queries without an account, within the anonymous daily cap. POST /auth/guest issues a guest's own token.
+API documentation
+
+What a programmatic caller sends, what comes back, and what the system will refuse to do.
+
+Authentication
+
+Every programmatic call carries an Authorization header of the form Bearer followed by the token. POST /auth/login exchanges the same email and password you use here for that token and a refresh token.
+
+Citations
+
+Every claim is tied to a specific record, with the layer that produced it, its evidence type, its confidence and its licence. An answer with an uncited sentence is a defect.
+
+The event stream
+
+A run emits twelve kinds of event: guard, think, plan, step, tool_start, tool_result, token, citation, trust_signal, cost, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error. think carries clarifying_options when the question is a bare topic, and the finishing done event carries decisions, trust_line and layer_calls_used.
+
+id: 1
+event: guard
+data: {"type":"guard","version":"v1","trace_id":"7c1e2a","seq":1,"ts":"2026-09-13T09:00:00Z","payload":{"passed":true,"category":"ok","reason":null}}
+Copy frame
+Limits
+
+Each tool carries its own per-call timeout and rate-limit pool, and a query is capped at twenty Layer 2 and Layer 3 calls. A call that would exceed either fails fast with a retry hint rather than joining an unbounded queue.

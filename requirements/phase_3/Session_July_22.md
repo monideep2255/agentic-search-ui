@@ -17,7 +17,7 @@ Framing question settled first: who is the primary reader? Confirmed the primary
 
 ## Step 3.1: outline
 
-Pulled the spec template (`reference/personal-os-work/NIH/Agentic-Search/Specs/_templates/PRODUCT.md`) and the milestone-ladder spine from the synthesis. Key structural decision, already made in Phase 1: the outcomes-and-stakeholders section is the logic model, built on the four gates (G1 tools work alone and G2 cross-layer join serve the build team; G3 cited SME-credible answers serves the researcher and SME reviewer; G4 reuse-ready formats serves external adopters and NCBI leadership; the leadership-explainability test is served by the strategic memo, not a code gate).
+Pulled the spec template (from the owner's private notes (not published)) and the milestone-ladder spine from the synthesis. Key structural decision, already made in Phase 1: the outcomes-and-stakeholders section is the logic model, built on the four gates (G1 tools work alone and G2 cross-layer join serve the build team; G3 cited SME-credible answers serves the researcher and SME reviewer; G4 reuse-ready formats serves external adopters and NCBI leadership; the leadership-explainability test is served by the strategic memo, not a code gate).
 
 Confirmed the 15-section outline, ordered for the stakeholder reader: the case first (problem and wedge, outcomes, success, personas, acceptance criteria), then the build contract (flows, UI, cost UX, edge cases, guardrails, security, accessibility, delivery formats), then the boundaries (out of scope, open items).
 

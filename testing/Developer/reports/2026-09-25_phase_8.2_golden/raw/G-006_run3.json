@@ -1,0 +1,236 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-49cffbbee696",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:22:24+00:00",
+  "run_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "call did not complete within its per-step timeout budget"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 26,
+  "answer_start": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nl",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 119.328,
+  "seconds": 121.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 0,
+   "ts": "2026-09-25T13:20:58.817668Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 2,
+   "ts": "2026-09-25T13:21:17.570022Z",
+   "payload": {
+    "narrative": "One identifier (PMID) is checked against a set of link types; each link is a direct lookup so it is a single-hop retrieval.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 4,
+   "ts": "2026-09-25T13:21:17.572240Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-6cf757da9450",
+      "layer": "layer_1_graph",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 6,
+   "ts": "2026-09-25T13:21:17.573214Z",
+   "payload": {
+    "call_id": "cq-6cf757da9450",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 7,
+   "ts": "2026-09-25T13:22:47.573676Z",
+   "payload": {
+    "call_id": "cq-6cf757da9450",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "call did not complete within its per-step timeout budget",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 8,
+   "ts": "2026-09-25T13:22:47.575053Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "83105b6e-ec89-4a6d-8f8e-529c2a15ba23",
+   "seq": 12,
+   "ts": "2026-09-25T13:22:49.362730Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 119328,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 163
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.91,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 161
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=PMID%3A11237011"
+}

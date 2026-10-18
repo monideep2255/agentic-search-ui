@@ -1,11 +1,13 @@
 """Tests for the Event envelope and the Section 2.3 payload taxonomy."""
 
+import re
 from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
 
 from system_03_search_agent.contracts.events import (
+    NCBI_SOURCE_URL_PATTERN,
     CitationPayload,
     CostPayload,
     DonePayload,
@@ -21,6 +23,7 @@ from system_03_search_agent.contracts.events import (
     ToolStartPayload,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.token_order import placement_of
 
 EVENT_TYPES = [
     "guard",
@@ -214,6 +217,7 @@ class TestGuardPayload:
             "rate_limited",
             "cost_capped",
             "write_seeking",
+            "compute_request",
         ],
     )
     def test_every_category_accepted(self, category: str) -> None:
@@ -310,6 +314,65 @@ class TestThinkPayload:
     def test_resolved_entity_confidence_out_of_range_rejected(self) -> None:
         with pytest.raises(ValidationError):
             ResolvedEntity(text="BRCA1", curie="NCBIGene:672", confidence=1.5)
+
+    def test_clarifying_options_defaults_to_none(self) -> None:
+        """Fix-plan item 12.3. An older producer that has never heard of
+        this field still validates, and item 7.5's own clarification
+        ("which gene, variant or condition do you mean") never sets it."""
+        payload = ThinkPayload(
+            narrative="ok",
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question="One more detail is needed",
+        )
+        assert payload.clarifying_options is None
+
+    def test_clarifying_options_at_max_items_accepted(self) -> None:
+        payload = ThinkPayload(
+            narrative="ok",
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question="What would you like to know about GERD?",
+            clarifying_options=[
+                "What is GERD and what are its symptoms?",
+                "Which genes or variants are linked to GERD?",
+                "Are there clinical trials for GERD?",
+                "What does recent research say about GERD?",
+            ],
+        )
+        assert payload.clarifying_options is not None
+        assert len(payload.clarifying_options) == 4
+
+    def test_clarifying_options_over_max_items_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ThinkPayload(
+                narrative="ok",
+                query_class="lookup",
+                resolved_entities=[],
+                clarifying_question="What would you like to know about GERD?",
+                clarifying_options=["one", "two", "three", "four", "five"],
+            )
+
+    def test_clarifying_options_item_at_max_length_accepted(self) -> None:
+        payload = ThinkPayload(
+            narrative="ok",
+            query_class="lookup",
+            resolved_entities=[],
+            clarifying_question="ok",
+            clarifying_options=["x" * 220],
+        )
+        assert payload.clarifying_options is not None
+        assert len(payload.clarifying_options[0]) == 220
+
+    def test_clarifying_options_item_over_max_length_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ThinkPayload(
+                narrative="ok",
+                query_class="lookup",
+                resolved_entities=[],
+                clarifying_question="ok",
+                clarifying_options=["x" * 221],
+            )
 
 
 class TestPlanPayload:
@@ -443,6 +506,84 @@ class TestTokenPayload:
         with pytest.raises(ValidationError):
             TokenPayload(text="ok", marker_ids=[f"c_{i}" for i in range(21)])
 
+    # Build phase 8.7, T-8.7-03: the additive `placement` field.
+
+    def test_a_payload_without_placement_validates_and_reads_as_summary(self) -> None:
+        # Every token a producer built before phase 8.7 carries no placement.
+        # It must still validate, and land where it always rendered.
+        before_8_7 = {"text": "BRCA1 is a gene [1].", "marker_ids": ["c_1"], "kind": "claim"}
+        payload = TokenPayload.model_validate(before_8_7)
+        assert payload.placement is None
+        assert placement_of(payload) == "summary"
+
+    def test_a_token_without_placement_serializes_to_the_bytes_it_had_before(self) -> None:
+        # Fix round, F-8.7-A01: a request that did not ask for `placement`
+        # gets no such key, so a client whose own contract forbids extra
+        # keys reads the frame as before. The literal is the exact JSON
+        # the pre-8.7 `TokenPayload` produced for this token. Mutation that
+        # turns this red: drop `_placement_is_absent`, or default the
+        # field to "summary" again.
+        payload = TokenPayload(text="Found 4 records.", marker_ids=["c_1"], kind="claim")
+        assert payload.model_dump_json() == (
+            '{"text":"Found 4 records.","marker_ids":["c_1"],"kind":"claim",'
+            '"cells":null,"emphasis":null}'
+        )
+        assert "placement" not in payload.model_dump()
+        explicit_none = TokenPayload.model_validate(
+            {"text": "ok", "marker_ids": [], "placement": None}
+        )
+        assert "placement" not in explicit_none.model_dump()
+        placed = TokenPayload(text="ok", marker_ids=[], placement="listing")
+        assert placed.model_dump()["placement"] == "listing"
+
+    def test_the_serialization_schema_describes_a_token(self) -> None:
+        # F-8.7-V01: the wrap serializer that left `placement` out returned
+        # `Any`, so the token's serialization schema read `{}` and the
+        # contract could not be exported for agents or the command line.
+        # Mutation that turns this red: put the wrap `model_serializer`
+        # returning `Any` back on `TokenPayload`.
+        schema = TokenPayload.model_json_schema(mode="serialization")
+        assert schema.get("type") == "object"
+        assert schema.get("additionalProperties") is False
+        assert schema.get("required") == ["text"]
+        properties = schema["properties"]
+        assert set(properties) == {
+            "text",
+            "marker_ids",
+            "kind",
+            "cells",
+            "emphasis",
+            "placement",
+        }
+        assert properties["text"]["maxLength"] == 1000
+        assert {"enum": ["listing", "summary"], "type": "string"} in (
+            properties["placement"]["anyOf"]
+        )
+        assert properties == TokenPayload.model_json_schema(mode="validation")["properties"]
+
+    def test_both_placements_validate(self) -> None:
+        for placement in ("listing", "summary"):
+            payload = TokenPayload(text="Found 4 records.", marker_ids=[], placement=placement)
+            assert payload.placement == placement
+
+    @pytest.mark.parametrize("placement", ["header", "", "LISTING", 1])
+    def test_a_placement_outside_the_two_values_is_rejected(self, placement: object) -> None:
+        # Bounded like every other field here: a free string would let a
+        # producer invent a region the screen has no slot for.
+        with pytest.raises(ValidationError):
+            TokenPayload.model_validate({"text": "ok", "marker_ids": [], "placement": placement})
+
+    def test_placement_travels_on_the_wire_envelope(self) -> None:
+        event = Event(
+            type="token",
+            version="v1",
+            trace_id="t_1",
+            seq=1,
+            ts=datetime(2026, 9, 27, tzinfo=UTC),
+            payload={"text": "Found 4 records.", "marker_ids": [], "placement": "listing"},
+        )
+        assert event.model_dump(mode="json")["payload"]["placement"] == "listing"
+
 
 class TestCitationPayload:
     def _valid_kwargs(self, **overrides: object) -> dict[str, object]:
@@ -544,6 +685,122 @@ class TestCitationPayload:
                     layer="layer_3_enrichment",
                 )
             )
+
+    def test_omim_entry_url_accepted(self) -> None:
+        """2026-09-20 DECISIONS.md row ("REVERSES the row above: widen the
+        citation host rule so OMIM can be cited"): `omim.org` is an exact
+        additional host, so an OMIM record's citation URL now validates
+        and can ship cited (closes F-3.4-T05-04).
+        """
+        payload = CitationPayload(
+            **self._valid_kwargs(
+                source_url="https://omim.org/entry/123456",
+                layer="layer_2_api",
+            )
+        )
+        assert payload.source_url == "https://omim.org/entry/123456"
+
+    def test_omim_dotted_suffix_host_rejected(self) -> None:
+        """`omim.org.evil.com` is not `omim.org`: the exact-host rule must
+        not degrade into a prefix match on the real host's own text.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://omim.org.evil.com/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_lookalike_host_rejected(self) -> None:
+        """`evilomim.org` shares the `omim.org` suffix but is a different
+        registrable domain and must not be admitted by a careless
+        substring or suffix match.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://evilomim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_similarly_named_host_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://notomim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_http_scheme_rejected(self) -> None:
+        """Plain HTTP is rejected for every host this pattern admits, OMIM
+        included: the scheme check is not host-specific.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="http://omim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_www_host_accepted(self) -> None:
+        """Added 2026-09-21, closing a silent-drop path rather than widening
+        the decision.
+
+        The tool schema's own `NCBI_EFETCH_RECORD_URL_PATTERN` accepts the
+        OMIM host with an optional `www.` prefix, so a record arriving as
+        `https://www.omim.org/entry/113705` is schema-valid at the tool
+        boundary. With only the bare host admitted here, such a record
+        would fail `CitationPayload` construction and be dropped UNCITED
+        and in silence, which is the exact failure the host widening was
+        taken to end. `clinicaltrials.gov` is already handled with the
+        identical optional `www.` prefix for the same reason.
+
+        Still an exact host: `www.` only, never a wildcard, which
+        `test_omim_subdomain_rejected` below holds.
+        """
+        payload = CitationPayload(
+            **self._valid_kwargs(source_url="https://www.omim.org/entry/113705")
+        )
+        assert payload.source_url == "https://www.omim.org/entry/113705"
+
+    def test_omim_subdomain_rejected(self) -> None:
+        """The decision names `omim.org` as an EXACT additional host, never
+        a loosened pattern. Unlike the NCBI alternative, which deliberately
+        allows a wildcard subdomain prefix, OMIM gets no such prefix, so a
+        subdomain must not match. If OMIM subdomains are ever needed, that
+        is a new, separately justified decision, not a default.
+        """
+        with pytest.raises(ValidationError):
+            CitationPayload(
+                **self._valid_kwargs(
+                    source_url="https://sub.omim.org/entry/1",
+                    layer="layer_2_api",
+                )
+            )
+
+    def test_omim_host_mutation_arm_can_go_red(self) -> None:
+        """Mutation arm for the OMIM host addition: with `omim.org`
+        removed from the pattern, the exact URL this phase exists to admit
+        must fail. This proves the assertion above is actually anchored to
+        the new alternative and is not a vacuous arm that would pass
+        whether or not `omim.org` were ever added.
+        """
+        mutated_pattern = NCBI_SOURCE_URL_PATTERN.replace(r"|(?:www\.)?omim\.org/)", ")")
+        assert mutated_pattern != NCBI_SOURCE_URL_PATTERN, (
+            "the mutation replaced nothing, so this arm proves nothing. The "
+            "OMIM alternative's exact text changed on 2026-09-21 when `www.` "
+            "was admitted, and a mutation arm that silently stops mutating "
+            "is the vacuous arm it exists to prevent"
+        )
+        assert re.match(mutated_pattern, "https://omim.org/entry/123456") is None
+        assert re.match(mutated_pattern, "https://www.omim.org/entry/123456") is None
+        # The populate-check: the real, unmutated pattern still admits both.
+        assert re.match(NCBI_SOURCE_URL_PATTERN, "https://omim.org/entry/123456")
+        assert re.match(NCBI_SOURCE_URL_PATTERN, "https://www.omim.org/entry/123456")
 
     def test_claim_text_over_max_length_rejected(self) -> None:
         with pytest.raises(ValidationError):
@@ -658,6 +915,33 @@ class TestCostPayload:
                 query_cap_usd=0.10,
                 cap_fraction=0.1,
                 model_tier="guard",
+            )
+
+    # Build phase 8.6, T-8.6-08 (product harness review C5): one additive,
+    # optional field within v1 (system-design-patterns pattern 10).
+
+    def test_call_elapsed_s_is_optional_so_every_v1_payload_still_validates(self) -> None:
+        payload = CostPayload.model_validate(
+            {"query_cost_usd": 0.01, "query_cap_usd": 0.10, "cap_fraction": 0.1, "model_tier": "guard"}
+        )
+        assert payload.call_elapsed_s is None
+
+    def test_call_elapsed_s_is_carried(self) -> None:
+        payload = CostPayload(
+            query_cost_usd=0.01, query_cap_usd=0.10, cap_fraction=0.1, model_tier="synth", call_elapsed_s=6.4
+        )
+        assert payload.call_elapsed_s == pytest.approx(6.4)
+
+    def test_negative_call_elapsed_s_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            CostPayload(
+                query_cost_usd=0.01, query_cap_usd=0.10, cap_fraction=0.1, model_tier="plan", call_elapsed_s=-1.0
+            )
+
+    def test_the_payload_still_forbids_unknown_fields(self) -> None:
+        with pytest.raises(ValidationError):
+            CostPayload(
+                query_cost_usd=0.01, query_cap_usd=0.10, cap_fraction=0.1, model_tier="plan", elapsed=1.0
             )
 
 
@@ -870,3 +1154,27 @@ class TestEventPayloadBoundToDeclaredType:
                     type="done", payload={"passed": True, "category": "ok"}
                 )
             )
+
+
+
+def test_the_done_event_carries_the_layer_call_count_and_may_omit_it() -> None:
+    """Fix-plan item 1 (2026-09-22): the count of Layer 2 and 3 calls the
+    query spent is on the done event, additive and optional. Populate check:
+    a negative count is rejected, so the field is validated rather than
+    merely accepted."""
+    import pytest as _pytest
+
+    from system_03_search_agent.contracts.events import DonePayload
+
+    with_count = DonePayload(
+        total_cost_usd=0.0, total_tool_calls=3, elapsed_ms=10, trust_outcome="answer",
+        layer_calls_used=15,
+    )
+    assert with_count.layer_calls_used == 15
+    without = DonePayload(total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse")
+    assert without.layer_calls_used is None
+    with _pytest.raises(ValueError):
+        DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse",
+            layer_calls_used=-1,
+        )

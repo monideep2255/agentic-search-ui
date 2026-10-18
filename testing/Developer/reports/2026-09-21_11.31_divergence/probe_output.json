@@ -1,0 +1,353 @@
+[
+  {
+    "name": "shape1_restate_mechanism_abstract_words_only",
+    "shape": "1",
+    "input_narrative": "BRCA1 encodes a tumor suppressor [1].",
+    "question": "",
+    "output_narrative": "BRCA1 encodes a tumor suppressor [1].",
+    "stripped_count": 0,
+    "claim_count": 1,
+    "refused": false,
+    "verdict": "SURVIVED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": true,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape1b_restate_recombination_abstract_words_only",
+    "shape": "1",
+    "input_narrative": "Pathogenic BRCA1 variants abolish homologous recombination in this cohort [1].",
+    "question": "",
+    "output_narrative": "Pathogenic BRCA1 variants abolish homologous recombination in this cohort [1].",
+    "stripped_count": 0,
+    "claim_count": 1,
+    "refused": false,
+    "verdict": "SURVIVED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": true,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape2_synonym_brake_on_cell_growth",
+    "shape": "2",
+    "input_narrative": "BRCA1 acts as a brake on cell growth [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "acts",
+        "brake",
+        "cell",
+        "growth"
+      ]
+    }
+  },
+  {
+    "name": "shape2b_synonym_stops_tumors_forming",
+    "shape": "2",
+    "input_narrative": "BRCA1 helps stop tumors from forming [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "forming",
+        "helps",
+        "stop"
+      ]
+    }
+  },
+  {
+    "name": "shape3_general_definition_marked",
+    "shape": "3",
+    "input_narrative": "A gene is a stretch of DNA that carries instructions [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "carries",
+        "dna",
+        "gene",
+        "instructions",
+        "stretch"
+      ]
+    }
+  },
+  {
+    "name": "shape3b_general_definition_unmarked",
+    "shape": "3",
+    "input_narrative": "A gene is a stretch of DNA that carries instructions.",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED"
+  },
+  {
+    "name": "shape4_question_plus_abstract_wording",
+    "shape": "4",
+    "input_narrative": "Which mechanism does BRCA1 disrupt in tumors [1]?",
+    "question": "Which mechanism does BRCA1 disrupt in tumors?",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "Which mechanism does BRCA1 disrupt in tumors",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication Which mechanism does BRCA1 disrupt in tumors",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape4b_disease_question_plus_record_wording_same_order",
+    "shape": "4",
+    "input_narrative": "BRCA1 is associated with MedGen:C0346153, which the question asks about [2].",
+    "question": "Which diseases are associated with BRCA1?",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "Which diseases are associated with BRCA1",
+      "supporting_text": "BRCA1 is associated with MedGen:C0346153 disease_association disease association MedGen:C0346153 Disease Which diseases are associated with BRCA1",
+      "ground_claim_ok": true,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "about",
+        "asks",
+        "question"
+      ]
+    }
+  },
+  {
+    "name": "shape4c_disease_question_reordered_fails_ground_claim",
+    "shape": "4",
+    "input_narrative": "MedGen:C0346153 is associated with BRCA1 [2].",
+    "question": "Which diseases are associated with BRCA1?",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "Which diseases are associated with BRCA1",
+      "supporting_text": "BRCA1 is associated with MedGen:C0346153 disease_association disease association MedGen:C0346153 Disease Which diseases are associated with BRCA1",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape5_split_two_sentences_same_marker",
+    "shape": "5",
+    "input_narrative": "BRCA1 is associated with a disease [2]. That disease is MedGen:C0346153 [2].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 2,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED"
+  },
+  {
+    "name": "shape5b_split_reusing_finding_words_verbatim",
+    "shape": "5",
+    "input_narrative": "BRCA1 is associated with [2]. MedGen:C0346153 [2].",
+    "question": "",
+    "output_narrative": "BRCA1 is associated with [1]. MedGen:C0346153 [1].",
+    "stripped_count": 0,
+    "claim_count": 2,
+    "refused": false,
+    "verdict": "SURVIVED"
+  },
+  {
+    "name": "shape6a_related_vs_associated_synonym",
+    "shape": "6",
+    "input_narrative": "BRCA1 is related to MedGen:C0346153 [2].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "BRCA1 is associated with MedGen:C0346153 disease_association disease association MedGen:C0346153 Disease ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape6b_linked_vs_associated_synonym",
+    "shape": "6",
+    "input_narrative": "BRCA1 is linked to MedGen:C0346153 [2].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "BRCA1 is associated with MedGen:C0346153 disease_association disease association MedGen:C0346153 Disease ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape6c_causes_vs_associated_not_in_synonym_set",
+    "shape": "6",
+    "input_narrative": "BRCA1 causes MedGen:C0346153 [2].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "BRCA1 is associated with MedGen:C0346153 disease_association disease association MedGen:C0346153 Disease ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "causes"
+      ]
+    }
+  },
+  {
+    "name": "shape7a_framing_opener_nothing_after",
+    "shape": "7",
+    "input_narrative": "In summary, the following was found [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED"
+  },
+  {
+    "name": "shape7b_framing_opener_then_factual_claim_unmarked",
+    "shape": "7",
+    "input_narrative": "In summary, BRCA1 encodes a tumor suppressor.",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED"
+  },
+  {
+    "name": "shape7c_framing_opener_then_factual_claim_marked",
+    "shape": "7",
+    "input_narrative": "In summary, BRCA1 encodes a tumor suppressor [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": true,
+      "offending_tokens": []
+    }
+  },
+  {
+    "name": "shape8a_hedge_this_suggests_plus_grounded_fact",
+    "shape": "8",
+    "input_narrative": "This suggests BRCA1 encodes a tumor suppressor [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "suggests"
+      ]
+    }
+  },
+  {
+    "name": "shape8b_hedge_may_be_higher_ungrounded_interpretation",
+    "shape": "8",
+    "input_narrative": "This suggests the risk may be higher [1].",
+    "question": "",
+    "output_narrative": "",
+    "stripped_count": 1,
+    "claim_count": 0,
+    "refused": false,
+    "verdict": "STRIPPED",
+    "diagnosis": {
+      "licensed_question": "",
+      "supporting_text": "Background: BRCA1 encodes a tumor suppressor. Methods: we sequenced 312 tumors. Results: pathogenic BRCA1 variants abolish homologous recombination in this cohort. Conclusion: carriers should be offered enhanced surveillance. abstract abstract PMID:30000003 Publication ",
+      "ground_claim_ok": false,
+      "numbers_are_supported_ok": true,
+      "claim_introduces_no_new_content_ok": false,
+      "offending_tokens": [
+        "higher",
+        "may",
+        "risk",
+        "suggests"
+      ]
+    }
+  }
+]
+
+TOTALS: 19 cases, 3 SURVIVED, 16 STRIPPED

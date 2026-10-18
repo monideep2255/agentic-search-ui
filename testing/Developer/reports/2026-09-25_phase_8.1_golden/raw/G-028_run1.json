@@ -1,0 +1,1068 @@
+{
+ "record": {
+  "id": "G-028",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "discovery",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is the evidence linking APOE to late-onset Alzheimer disease?",
+  "session_id": "c103-37751c9b001d",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T09:51:55+00:00",
+  "run_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:348",
+   "MedGen:C0338449"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 18 sources, not yet confirmed",
+  "citations": 20,
+  "distinct_sources": 17,
+  "citations_by_layer": {
+   "layer_2_api": 15,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 76,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0,
+   76
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 310,
+  "answer_start": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record and 5 clinical trial records for APOE and late-onset Alzheimer disease, of 131 availabl",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 11.281,
+  "seconds": 24.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 43,
+   "citation": 20,
+   "trust_signal": 21,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 0,
+   "ts": "2026-09-25T09:50:21.444049Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 2,
+   "ts": "2026-09-25T09:50:29.084020Z",
+   "payload": {
+    "narrative": "The question asks for evidence linking a gene to a disease, which is broad and open-ended without a single obvious path. (late-onset Alzheimer disease: 1 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "APOE",
+      "curie": "NCBIGene:348",
+      "confidence": 1.0
+     },
+     {
+      "text": "late-onset Alzheimer disease",
+      "curie": "MedGen:C0338449",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 4,
+   "ts": "2026-09-25T09:50:29.093266Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:348. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-a3707963cb1c",
+      "layer": "layer_1_graph",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-3a9b4a42b5d5",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-cd7e90c8381b",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-fd4cba6eabc4",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fa6fa4892982",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a6d589ef2941",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d336b8b37568",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-689b7065911c",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-9b2dc3628f26",
+      "layer": "layer_3_enrichment",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-15fea0c98453",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f7c0fb3b433a",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a1bc1b6091ed",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-d35e2bb5a336",
+      "layer": "layer_1_graph",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "APOE",
+      "curie": "NCBIGene:348",
+      "confidence": 1.0
+     },
+     {
+      "text": "late-onset Alzheimer disease",
+      "curie": "MedGen:C0338449",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 6,
+   "ts": "2026-09-25T09:50:29.096327Z",
+   "payload": {
+    "call_id": "cq-a3707963cb1c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 7,
+   "ts": "2026-09-25T09:50:29.096472Z",
+   "payload": {
+    "call_id": "ne-3a9b4a42b5d5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 8,
+   "ts": "2026-09-25T09:50:29.096520Z",
+   "payload": {
+    "call_id": "pa-cd7e90c8381b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 9,
+   "ts": "2026-09-25T09:50:29.096548Z",
+   "payload": {
+    "call_id": "ct-fd4cba6eabc4",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 10,
+   "ts": "2026-09-25T09:50:29.096572Z",
+   "payload": {
+    "call_id": "ne-fa6fa4892982",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 11,
+   "ts": "2026-09-25T09:50:29.096612Z",
+   "payload": {
+    "call_id": "ne-a6d589ef2941",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 12,
+   "ts": "2026-09-25T09:50:29.096705Z",
+   "payload": {
+    "call_id": "ne-d336b8b37568",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 13,
+   "ts": "2026-09-25T09:50:29.096773Z",
+   "payload": {
+    "call_id": "ne-689b7065911c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 14,
+   "ts": "2026-09-25T09:50:29.096798Z",
+   "payload": {
+    "call_id": "pa-9b2dc3628f26",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 15,
+   "ts": "2026-09-25T09:50:29.096822Z",
+   "payload": {
+    "call_id": "ne-15fea0c98453",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 16,
+   "ts": "2026-09-25T09:50:29.096844Z",
+   "payload": {
+    "call_id": "ne-f7c0fb3b433a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 17,
+   "ts": "2026-09-25T09:50:29.096866Z",
+   "payload": {
+    "call_id": "ne-a1bc1b6091ed",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 18,
+   "ts": "2026-09-25T09:50:29.096891Z",
+   "payload": {
+    "call_id": "cq-d35e2bb5a336",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 19,
+   "ts": "2026-09-25T09:50:29.349185Z",
+   "payload": {
+    "call_id": "pa-cd7e90c8381b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 20,
+   "ts": "2026-09-25T09:50:29.472338Z",
+   "payload": {
+    "call_id": "ne-fa6fa4892982",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 21,
+   "ts": "2026-09-25T09:50:29.558568Z",
+   "payload": {
+    "call_id": "ne-d336b8b37568",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 22,
+   "ts": "2026-09-25T09:50:29.559244Z",
+   "payload": {
+    "call_id": "ne-a6d589ef2941",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 23,
+   "ts": "2026-09-25T09:50:29.631309Z",
+   "payload": {
+    "call_id": "ct-fd4cba6eabc4",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 24,
+   "ts": "2026-09-25T09:50:29.637311Z",
+   "payload": {
+    "call_id": "ne-a1bc1b6091ed",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 25,
+   "ts": "2026-09-25T09:50:29.637719Z",
+   "payload": {
+    "call_id": "cq-a3707963cb1c",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 26,
+   "ts": "2026-09-25T09:50:29.777273Z",
+   "payload": {
+    "call_id": "ne-3a9b4a42b5d5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 27,
+   "ts": "2026-09-25T09:50:30.560312Z",
+   "payload": {
+    "call_id": "cq-d35e2bb5a336",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "76 row(s) of 131",
+    "result_count": 76,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 28,
+   "ts": "2026-09-25T09:50:30.762289Z",
+   "payload": {
+    "call_id": "pa-9b2dc3628f26",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 29,
+   "ts": "2026-09-25T09:50:30.828970Z",
+   "payload": {
+    "call_id": "ne-15fea0c98453",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 30,
+   "ts": "2026-09-25T09:50:30.918939Z",
+   "payload": {
+    "call_id": "ne-f7c0fb3b433a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 31,
+   "ts": "2026-09-25T09:50:30.981611Z",
+   "payload": {
+    "call_id": "ne-689b7065911c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 32,
+   "ts": "2026-09-25T09:50:30.991170Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31911114",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31911114/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31911114",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31911114/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "17863",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/17863/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "107741",
+    "source_url": "https://omim.org/entry/107741",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "348",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/348",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00018499",
+    "source_url": "https://clinicaltrials.gov/study/NCT00018499",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34157306",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34157306/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "441270",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/441270/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00046670",
+    "source_url": "https://clinicaltrials.gov/study/NCT00046670",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35256931",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35256931/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "478850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/478850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00089882",
+    "source_url": "https://clinicaltrials.gov/study/NCT00089882",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38266643",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38266643/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "478851",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/478851/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00348309",
+    "source_url": "https://clinicaltrials.gov/study/NCT00348309",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38375983",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38375983/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "478870",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/478870/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00428090",
+    "source_url": "https://clinicaltrials.gov/study/NCT00428090",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "f09afddd-14b3-407b-bbd1-727b1331ef02",
+   "seq": 118,
+   "ts": "2026-09-25T09:50:43.530157Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 11281,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 18 sources, not yet confirmed",
+    "layer_calls_used": 16,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record and 5 clinical trial records for APOE and late-onset Alzheimer disease, of 131 available [3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nThe APOE gene encodes apolipoprotein E, a major chylomicron apoprotein essential for triglyceride-rich lipoprotein catabolism, and mutations in this gene cause familial dysbetalipoproteinemia [1]. \n\nAPOE genotype also influences normal brain processes in the absence of AD hallmarks, with effects on hippocampal neuron structure and behavior [2]. \n\nGene records found\n\nGene symbol: APOE [3]. Gene name: APOE [7]. \n\nPubmed records found\n\nPubmed title: APOE in the normal brain [4]. Pubmed title: Overexpressing low-density lipoprotein receptor reduces tau-associated neurodegeneration in relation to apoE-linked mechanisms [9]. Pubmed title: Apolipoprotein E and Alzheimer's disease [12]. Pubmed title: Apolipoprotein E secreted by astrocytes forms antiparallel dimers in discoidal lipoproteins [15]. Pubmed title: Silencing Apoe with divalent-siRNAs improves amyloid burden and activates immune response pathways in Alzheimer's disease [18]. \n\nClinvar records found\n\nClinvar title: NM_000041.4(APOE):c.[388=;526=] [5]. Clinvar title: NM_000041.3(APOE):c.[349G>A;508G>C] [10]. Clinvar title: NM_000041.4(APOE):c.508G>C (p.Ala170Pro) [13]. Clinvar title: NM_000041.4(APOE):c.349G>A (p.Ala117Thr) [16]. Clinvar title: NM_000041.2(APOE):c.725G>A (p.Arg242Gln) [19]. \n\nOmim records found\n\nAPOLIPOPROTEIN E [6]. APOE [6]. \n\nClinical trial records found\n\nClinical trial name: Genotype Influence on Recovery After Traumatic Brain Injury [8]. Clinical trial name: Sleep Disordered Breathing, APOE, and Lipid Metabolism [11]. Clinical trial name: Risk Evaluation and Education for Alzheimer's Disease (REVEAL) II [14]. Clinical trial name: Rosiglitazone (Extended Release Tablets) As Adjunctive Therapy For Subjects With Mild To Moderate Alzheimer's Disease [17]. Clinical trial name: Rosiglitazone (Extended Release Tablets) As Monotherapy In Subjects With Mild To Moderate Alzheimer's Disease [20]. \n\nNote: this answer was truncated because only 76 of the 131 records that matched this question in the graph were retrieved\n\nNote: this answer does not address the following entities named in the question: Non-familial Alzheimer disease of late onset. Ask about them individually for a complete answer."
+}

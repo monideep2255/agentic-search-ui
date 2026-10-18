@@ -1,0 +1,440 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-5afa12fc7f0d",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:25:20+00:00",
+  "run_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 10,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 10
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 281,
+  "answer_start": "Found 5 pubmed records: Huntington disease. [6], Clinical Features of Huntington's Disease. [7], Potential disease-modifying therapies for Huntington's disease:",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 3.768,
+  "seconds": 18.7,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 21,
+   "citation": 10,
+   "trust_signal": 11,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 0,
+   "ts": "2026-09-25T13:23:46.548673Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 2,
+   "ts": "2026-09-25T13:23:47.901121Z",
+   "payload": {
+    "narrative": "The question asks about available genetic tests, which requires assembling information about tests from multiple sources, making it open-ended and broad.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 4,
+   "ts": "2026-09-25T13:23:47.904150Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: genetic, tests, available, huntington, disease",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b8bf83587e62",
+      "layer": "layer_2_api",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2042187ddffc",
+      "layer": "layer_2_api",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-3754c0f6a653",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 6,
+   "ts": "2026-09-25T13:23:47.905117Z",
+   "payload": {
+    "call_id": "ne-b8bf83587e62",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 7,
+   "ts": "2026-09-25T13:23:47.905149Z",
+   "payload": {
+    "call_id": "ne-2042187ddffc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 8,
+   "ts": "2026-09-25T13:23:47.905159Z",
+   "payload": {
+    "call_id": "pa-3754c0f6a653",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 9,
+   "ts": "2026-09-25T13:23:48.211548Z",
+   "payload": {
+    "call_id": "ne-b8bf83587e62",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 10,
+   "ts": "2026-09-25T13:23:48.354267Z",
+   "payload": {
+    "call_id": "pa-3754c0f6a653",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 11,
+   "ts": "2026-09-25T13:23:48.535828Z",
+   "payload": {
+    "call_id": "ne-2042187ddffc",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 12,
+   "ts": "2026-09-25T13:23:48.536952Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29427096",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29427096/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36222771",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36222771/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40748130",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40748130/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35716694",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35716694/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29427096",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29427096/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35716694",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35716694/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36222771",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36222771/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40748130",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40748130/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7dc54c70-5525-4f38-b3cb-e209d5b1ea85",
+   "seq": 56,
+   "ts": "2026-09-25T13:24:03.052237Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 3768,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 114
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 145
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: Huntington disease. [6], Clinical Features of Huntington's Disease. [7], Potential disease-modifying therapies for Huntington's disease: lessons learned and future opportunities. [8], Chorea. [9] and Huntington Disease and Chorea. [10]. \n\nHuntington disease (HD) is a monogenic, autosomal-dominant neurodegenerative disorder caused by an expanded CAG trinucleotide repeat in the HTT gene, and the published literature describes genetic testing as central to diagnosis, updated disease definitions, and the recognition of HD phenocopies [1] [2] [3]. \n\nGenetic Basis and Diagnostic Testing\n\nThe causative mutation was identified in 1993 as an expanded CAG repeat encoding a prolonged polyglutamine stretch in the huntingtin protein, and the disease is recognised as the most common monogenic neurodegenerative disorder and the commonest genetic dementia in the developed world [1] [2]. Several reviews explain that the principles of genetic testing for HD are well established and are a core component of clinical management [1] [2]. \n\nBroader access to genetic testing has also improved awareness of genetic mimics of HD such as C9orf72 and IgLON5, which must be distinguished in the differential diagnosis of chorea [3]. \n\nClinical Context and Symptomatic Management\n\nHD presents with progressive motor, cognitive, and psychiatric symptoms over 15\u201320 years, and genetic testing informs both prognosis and the symptomatic management of chorea, for which a third VMAT2 inhibitor, valbenazine, is now available [1] [4]. Although no disease-modifying therapies have yet been approved, genetic testing remains integral to ongoing therapeutic trials and biomarker development [5]. \n\nPubmed records found\n\nPubmed title: Huntington disease [6]. Pubmed title: Clinical Features of Huntington's Disease [7]. Pubmed title: Potential disease-modifying therapies for Huntington's disease: lessons learned and future opportunities [8]. Pubmed title: Chorea [9]. Pubmed title: Huntington Disease and Chorea [10]. "
+}

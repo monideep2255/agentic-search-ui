@@ -52,6 +52,7 @@ import {
   ApiError,
   createRun,
   fetchHistory,
+  fetchHistoryAnswer,
   fetchMe,
   fetchPersona,
   getAllowance,
@@ -60,7 +61,7 @@ import {
   refreshSession,
   stopRun,
 } from "./lib/api";
-import type { AllowanceResponse, HistoryItem } from "./lib/api";
+import type { AllowanceResponse, HistoryAnswerResponse, HistoryItem } from "./lib/api";
 import {
   capitalizeFirst,
   clearPersistedGuestToken,
@@ -77,7 +78,11 @@ import { useAgentRun } from "./hooks/useAgentRun";
 import { useRunView, EMPTY_RUN_VIEW } from "./hooks/useRunView";
 import { useAnswerReveal } from "./hooks/useAnswerReveal";
 import { usePacedEvents } from "./hooks/usePacedEvents";
-import { deriveStopEnabled } from "./components/chat/StopButton";
+import {
+  STOP_CONFIRM_TIMEOUT_MS,
+  deriveStopOffered,
+  deriveStopVerdict,
+} from "./components/chat/StopButton";
 import { AuthGate } from "./components/auth/AuthGate";
 import { AppShell } from "./components/shell/AppShell";
 import { useScreenRoute } from "./lib/routing";
@@ -85,8 +90,9 @@ import { HomeScreen } from "./components/screens/HomeScreen";
 import { RunScreen } from "./components/screens/RunScreen";
 import { RunProgress } from "./components/screens/RunProgress";
 import type { StepName } from "./components/screens/RunScreen";
-import { AnswerScreen } from "./components/screens/AnswerScreen";
+import { AnswerScreen, summarySentencesShown } from "./components/screens/AnswerScreen";
 import type { PreviousTurn } from "./components/screens/AnswerScreen";
+import { SavedAnswerScreen } from "./components/screens/SavedAnswerScreen";
 import { ArchitectureScreen } from "./components/screens/ArchitectureScreen";
 import { AboutScreen, IntegrationsScreen } from "./components/screens/InfoScreens";
 import { CollapsedRail, FollowUp, HistoryRail } from "./components/answer/FollowUp";
@@ -120,6 +126,15 @@ type SearchView =
    * five places and would eventually be missed in one.
    */
   | { name: "answer"; question: string; continued?: boolean }
+  /**
+   * Item 10.2, overnight run 2026-09-22/23. Reached only from the history
+   * rail, for a row whose `has_saved_answer` is true. Renders whatever
+   * `savedAnswer` state below holds for `question`, never a live run: no
+   * `useAgentRun`/`useRunView` state applies here, which is why this is a
+   * separate view name rather than a flag on "answer", the same reasoning
+   * `continued` above documents for that view's own special case.
+   */
+  | { name: "savedAnswer"; question: string }
   | { name: "signin" };
 
 /** Canned follow-up hints. Stubbed; build phase 4.5 derives these for real.
@@ -157,10 +172,11 @@ const DAILY_CAP_COPY: Record<"anon_daily_cap_reached" | "anon_source_daily_cap_r
  * `id` INVARIANT, stated here because F-4.13-RV-01 shipped for want of it
  * being written down anywhere: an id must be unique across the whole list
  * and must stay the same for that row's whole life. It is therefore NEVER
- * derived from the row's position or from the list's length. The list can
- * SHRINK, since `ask` filters the re-asked question out before unshifting a
- * fresh row, so a positional id is reused the moment a re-ask keeps the
- * length flat, and three consumers read the id as though it were unique:
+ * derived from the row's position or from the list's length. The list
+ * could SHRINK while `ask` filtered the re-asked question out before
+ * unshifting a fresh row (removed by card 112), and a positional id was
+ * reused the moment a re-ask kept the length flat. Three consumers read the
+ * id as though it were unique:
  * `FollowUp.tsx` renders it as React's `key` and compares it to `activeId`,
  * and `onOpen` below resolves a click with `history.find`, first match wins.
  * Two rows sharing an id means clicking one question runs a different one.
@@ -179,7 +195,21 @@ const DAILY_CAP_COPY: Record<"anon_daily_cap_reached" | "anon_source_daily_cap_r
  * when the row is created, and a row must be clickable before its run has
  * been admitted.
  */
-type HistoryEntry = { id: string; question: string; meta?: string; traceId?: string };
+/**
+ * `hasSavedAnswer` (item 10.2) mirrors `HistoryItem.has_saved_answer`
+ * exactly, carried through `mergeServerHistory` below. It is absent, never
+ * `false`-by-default, on a locally created row (one this tab just asked
+ * and the server has not echoed back yet), because such a row's answer has
+ * not been stored yet either way and `onOpen` must fall back to asking
+ * rather than to fetching a row that cannot exist.
+ */
+type HistoryEntry = {
+  id: string;
+  question: string;
+  meta?: string;
+  traceId?: string;
+  hasSavedAnswer?: boolean;
+};
 
 /**
  * Mints the id of a locally created rail row (F-4.13-RV-01's fix).
@@ -236,11 +266,30 @@ function nextLocalHistoryId(): string {
  * that is not a date ("not-a-date"), that one catches a value that is not a
  * string at all.
  */
+/**
+ * The most rows `GET /v1/history` returns (`DEFAULT_LIMIT` in
+ * `feedback/history.py`; `fetchHistory` sends no limit). A re-ask keeps the
+ * in-tab list to it, dropping the oldest, so the list before a reload has
+ * the rows the list after one will.
+ */
+const HISTORY_LIST_LIMIT = 20;
+
 function formatHistoryMeta(item: HistoryItem): string | undefined {
   const parts: string[] = [];
-  if (item.citation_count !== undefined && item.citation_count !== null) {
+  if (item.has_saved_answer === false) {
+    // Card 109: a row with no saved answer (a search stopped after its
+    // records appeared, a refusal, a clarifying question) carries a citation
+    // count from the records it showed, but nothing to open. Saying "N
+    // sources cited" would make it look like an answered row. An absent flag
+    // (an older API) keeps the count, as before.
+    parts.push("No answer saved");
+  } else if (item.citation_count !== undefined && item.citation_count !== null) {
+    // Card 22 fix round (J-22-05, A-22-06): the server counts the distinct
+    // record pages the answer cited (`feedback/history.py`,
+    // `_citation_count`), the number the live item's line called "sources
+    // cited", so a reload keeps the same count and the same words.
     const count = item.citation_count;
-    parts.push(`${count} source${count === 1 ? "" : "s"}`);
+    parts.push(`${count} source${count === 1 ? "" : "s"} cited`);
   }
   if (item.asked_at) {
     const askedAt = new Date(item.asked_at);
@@ -288,6 +337,7 @@ function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[])
       question: item.question,
       traceId: item.trace_id,
       meta: formatHistoryMeta(item),
+      hasSavedAnswer: item.has_saved_answer === true,
     }));
   return [...current, ...restored];
 }
@@ -413,6 +463,17 @@ export function App() {
   const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  /**
+   * Item 10.2. The row `savedAnswer` view is currently showing, and whether
+   * its fetch is still in flight. `savedAnswerRequestId` guards against a
+   * slow fetch for a row the reader has since clicked away from resolving
+   * into state that no longer belongs to the screen on show, the same
+   * stale-response problem `activeEntryId`/the seeding effect's
+   * `AbortController` guard against elsewhere in this file.
+   */
+  const [savedAnswer, setSavedAnswer] = useState<HistoryAnswerResponse | null>(null);
+  const [savedAnswerLoading, setSavedAnswerLoading] = useState(false);
+  const savedAnswerRequestId = useRef(0);
   const [flagged, setFlagged] = useState<number[]>([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   /**
@@ -424,6 +485,14 @@ export function App() {
    */
   // UI fix set 9, item 9.1: Plain language is the default mode (decision A3).
   const [depth, setDepth] = useState<AudienceDepth>("plain_language");
+  /**
+   * Card 24. The mode the answer on screen was asked at: the `chosenDepth`
+   * of the last `ask`, which is also the request's `audience_depth`. Kept
+   * apart from `depth` because the profile seed rewrites `depth` on every
+   * session refresh (J-24-05, A-24-04).
+   */
+  const [answerDepth, setAnswerDepth] = useState<AudienceDepth | null>(null);
+
   /**
    * Monotonic ask counter, for request sequencing (F-4.8-A-02).
    *
@@ -452,8 +521,20 @@ export function App() {
    * it state would re-run the effect on every ask for no benefit.
    */
   const activeEntryId = useRef<string | null>(null);
-  /** True while a stopped run should stay stopped (F-4.8-A-10). */
-  const [stopped, setStopped] = useState(false);
+  // Card 112: the row a person opened to read its saved answer, for the rail
+  // highlight (a ref would not re-render when it changes).
+  const [openedRowId, setOpenedRowId] = useState<string | null>(null);
+  /**
+   * Stop was pressed on the run in flight (F-4.8-A-10), and how many events
+   * had arrived at that moment.
+   *
+   * Card 59: pressing Stop no longer decides "stopped" on its own. What it
+   * turned out to mean is `deriveStopVerdict`'s job, read off the server's
+   * stream below. `mark` is what the screen keeps showing while that reply
+   * is awaited, and after a confirmed stop: the run as it stood when the
+   * person pressed Stop, nothing that arrived afterwards.
+   */
+  const [stopPress, setStopPress] = useState<{ mark: number } | null>(null);
   // T-6.2-05. When the current run started, client-side, driving the
   // elapsed counter on the run screen. Deliberately NOT `view.elapsedMs`,
   // which comes from the server's `done` payload and therefore only
@@ -714,7 +795,6 @@ export function App() {
       cancelled = true;
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -774,7 +854,7 @@ export function App() {
     // cannot silently refuse the restore.
     restoreStarted.current = false;
     setRunId(null);
-    setStopped(false);
+    setStopPress(null);
     setThread([]);
     setHistory([]);
     setFlagged([]);
@@ -792,6 +872,7 @@ export function App() {
     // not treated as read by the next.
     setAccepted(false);
     setDepth("plain_language");
+    setAnswerDepth(null);
     // P-03: the next person at this workstation did not collapse the
     // rail, so they do not inherit a collapsed one.
     setRailOpen(railOpenByDefault());
@@ -799,7 +880,6 @@ export function App() {
     // including Integrations and About (Docs folded into Integrations, fix set 5).
     setScreen("search");
     setSearchView({ name: "home" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -868,7 +948,6 @@ export function App() {
         // cleared above, so there is nothing left to clean up.
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -943,7 +1022,6 @@ export function App() {
    * docstring in `lib/guestSession.ts`.
    */
   const dailyLimitLine = dailyLimitPhrase(allowance);
-
   /**
    * Whether the rail, its strip and its toggle exist at all (F-4.8-P-03).
    *
@@ -965,7 +1043,49 @@ export function App() {
   // run screen sat with five pending steps and Stop disabled, silently, for
   // ever. F-4.8-J-12 closed exactly this hole for createRun and left the
   // identical one a single call downstream.
-  const { events, status, error: streamError, stop } = useAgentRun(runId, authToken);
+  const {
+    events,
+    status: streamStatus,
+    error: rawStreamError,
+    stop,
+  } = useAgentRun(runId, authToken);
+  /*
+   * Card 59, owner decision D18: an answer that finished before Stop arrived
+   * stands. The server's stream says which happened (`deriveStopVerdict`):
+   * `done` means the answer stands and is shown at once, in full; the
+   * `cancelled` error means the stop landed first and "Search stopped" is
+   * shown. Until one arrives the run is `stopping`: Stop reads "Stopping…"
+   * and the screen holds where it was, claiming neither.
+   *
+   * The `cancelled` error is the server confirming the stop the person asked
+   * for, not a failure, so a confirmed stop reads as a stream that ended
+   * normally and carries no error text. Every consumer below reads `status`
+   * and `streamError`, so none of them can mistake it for one.
+   */
+  const stopVerdict = deriveStopVerdict(events, stopPress !== null, {
+    streamEnded: streamStatus === "done" || streamStatus === "error",
+  });
+  const stopped = stopVerdict === "stopped";
+  const stopping = stopVerdict === "pending";
+  const answerStood = stopVerdict === "answered";
+  const status = stopped && streamStatus === "error" ? "done" : streamStatus;
+  const streamError = stopped ? null : rawStreamError;
+  const shownEvents = useMemo(
+    () => (stopPress !== null && (stopped || stopping) ? events.slice(0, stopPress.mark) : events),
+    [events, stopPress, stopped, stopping],
+  );
+  /*
+   * A stop that gets no reply, because the request failed or the stream
+   * hung, must not leave Stop reading "Stopping…" for ever. After
+   * `STOP_CONFIRM_TIMEOUT_MS` the stream is closed and the run reads as
+   * stopped, which is the pre-card-59 behaviour. `stop` is not a dependency:
+   * it is a new function each render and only reads the hook's own ref.
+   */
+  useEffect(() => {
+    if (!stopping) return;
+    const timer = setTimeout(() => stop(), STOP_CONFIRM_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [stopping, runId]);
   /*
    * UI fix 11.28, 2026-09-14. Events arrive in bursts, so the screen raced
    * through the lead starting, the handoff, each helper's search and the
@@ -977,24 +1097,15 @@ export function App() {
    * error or a refusal. Everything below derives from the paced prefix.
    */
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)", { noSsr: true });
-  const pacedEvents = usePacedEvents(events, {
+  const pacedEvents = usePacedEvents(shownEvents, {
     runKey: runId,
-    stopped,
-    flush: status === "error",
+    // Any press flushes, as before card 59: a stop shows at once what had
+    // arrived, and an answer that stood shows at once in full.
+    stopped: stopPress !== null,
+    flush: status === "error" || answerStood,
     reducedMotion,
   });
   const pacedView = useRunView(pacedEvents);
-  /*
-   * Stop follows the REAL stream, not the paced one: once `done` has arrived
-   * the run is over on the server, and offering Stop while its last stages
-   * are still being shown would stop a finished run.
-   */
-  const realStopEnabled = deriveStopEnabled(events);
-  const streamed = useMemo(
-    () =>
-      pacedView.stopEnabled === realStopEnabled ? pacedView : { ...pacedView, stopEnabled: realStopEnabled },
-    [pacedView, realStopEnabled],
-  );
 
   /**
    * F-4.8-J-03. `useAgentRun` does not clear its buffer when `runId` goes null,
@@ -1007,20 +1118,63 @@ export function App() {
    * Gating on `runId` closes that window at the point of use, without reaching
    * into a hook other screens share.
    */
-  const liveView = runId === null ? EMPTY_RUN_VIEW : streamed;
+  const liveView = runId === null ? EMPTY_RUN_VIEW : pacedView;
   /*
-   * 2026-09-14. The write step's sentences arrive as one burst, usually with
-   * `done`, after a long silent gap. `useAnswerReveal` shows them one at a
-   * time under the writing banner and holds the view unlanded until the last
-   * one is on screen, so every consumer below sees one consistent state.
-   * Once revealed, it returns `liveView` itself, unchanged.
+   * Build phase 8.7, T-8.7-03: the screen follows the stream. The answer is
+   * no longer revealed on a timer; `useAnswerReveal` passes the view through
+   * unchanged and decides only what a Stop leaves on screen
+   * (`whatStopLeavesOnScreen`): nothing of an answer the reader had not
+   * seen, and exactly the records they had seen, with nothing new after.
    */
-  const view = useAnswerReveal(liveView, {
+  const revealedView = useAnswerReveal(liveView, {
     runKey: runId,
-    stopped,
-    flush: status === "error",
-    reducedMotion,
+    // Frozen while the server's reply is awaited, so no sentence appears
+    // under a Stop that may yet be confirmed.
+    stopped: stopped || stopping,
+    flush: status === "error" || answerStood,
   });
+  /*
+   * Card 58, 2026-09-27: Stop follows the SCREEN, not the stream.
+   *
+   * It used to follow the arrived stream, on the reasoning that once `done`
+   * had arrived the run was over on the server. It was, but the reader had
+   * not seen it: the pacing and the reveal above hold the answer back, and
+   * on develop Stop went grey up to 13 seconds before the first sentence
+   * was on screen. The product owner: "a user should be able to stop the
+   * answer at any point of time until the answer pops out."
+   *
+   * So Stop is offered until the first sentence is on screen or the view
+   * lands (`deriveStopOffered` has the full rule). A confirmed stop
+   * discards the held answer through `useAnswerReveal`'s `withholdAnswer`,
+   * which holds for every shape of run, including one with no sentences at
+   * all (F-58-J02). Card 59 changed what a press after the server finished
+   * means: that answer stands and lands at once (D18), so the screen, the
+   * history and the memory all hold the same answer. Gated on `runId`
+   * because `useAgentRun` keeps the previous run's events until a new run
+   * replaces them (F-4.8-J-03), and off once pressed.
+   */
+  /*
+   * Build phase 8.7: only SUMMARY sentences count. The record listing now
+   * reaches the screen the moment the searches end, while the summary is
+   * still being written; the reader is still waiting for the answer then,
+   * and the server is still working, so Stop stays offered. Counting the
+   * records would grey Stop at the records, which card 58's report warned
+   * against in advance.
+   */
+  const stopOffered =
+    runId !== null &&
+    stopVerdict === "none" &&
+    deriveStopOffered(events, {
+      landed: revealedView.landed,
+      claimsShown: summarySentencesShown(revealedView.claims),
+    });
+  const view = useMemo(
+    () =>
+      revealedView.stopEnabled === stopOffered
+        ? revealedView
+        : { ...revealedView, stopEnabled: stopOffered },
+    [revealedView, stopOffered],
+  );
 
   /*
    * What the tour is told about the run it is watching, derived from the
@@ -1119,6 +1273,93 @@ export function App() {
     );
   }, [view.landed, view.meta, searchView]);
 
+  /*
+   * Item 12.13: a row asked THIS tab session never got `hasSavedAnswer`,
+   * because the only writer of that field was `mergeServerHistory`, run
+   * once per sign-in (see that function's docstring). So clicking the row
+   * a person just answered fell to `onOpen`'s re-ask branch instead of
+   * opening what they already have, which is what the diagnosis at
+   * `testing/Developer/reports/2026-09-23_fix2/history_rerun.md` traced.
+   *
+   * Set optimistically here, the moment THIS run lands, rather than by
+   * re-fetching `/v1/history`: `_capture_interaction` (`core/run.py`)
+   * writes the `interactions` row in a `finally` block that only runs
+   * after every event, `done` included, has already been yielded to the
+   * client, so a re-fetch issued right at `landed` can still race the
+   * write and 404. That race is exactly why `onOpen` already falls back
+   * to a fresh `ask()` on any `fetchHistoryAnswer` failure (see that
+   * handler); an optimistic flag here is safe because the existing
+   * fallback catches the rare case where the write has not landed yet,
+   * the same guard the meta effect above relies on for its own writes.
+   *
+   * Guests are excluded (`signedIn`, mirroring `onOpen`'s own `token`
+   * check): a guest run's answer is never stored server side, so marking
+   * it saved would send `onOpen` to a fetch that always fails, for no
+   * gain over the unconditional re-ask a guest already gets.
+   */
+  useEffect(() => {
+    if (!view.landed || !signedIn) return;
+    const question = searchView.name === "answer" || searchView.name === "run"
+      ? searchView.question
+      : null;
+    if (question === null) return;
+    const entryId = activeEntryId.current;
+    if (entryId === null) return;
+    setHistory((current) =>
+      current.map((item) =>
+        item.id === entryId && item.question === question && item.hasSavedAnswer !== true
+          ? { ...item, hasSavedAnswer: true }
+          : item,
+      ),
+    );
+  }, [view.landed, signedIn, searchView]);
+
+  /*
+   * Card 112: a search the server confirmed as stopped reads, in "Your
+   * searches", what the same row reads after a reload: "No answer saved"
+   * and its date (`formatHistoryMeta`, card 109). It used to have no second
+   * line at all until a reload, because the meta effect above writes only
+   * when a run lands, and a stopped run never does.
+   *
+   * Only on the server's own terminal reply (a fatal error event, the
+   * `cancelled` one in practice). A stop whose request failed closes the
+   * stream without a reply, and the server may then still answer and save
+   * that answer, so the row is left as it is rather than claim a fact the
+   * screen cannot know. The date is taken when the stop is confirmed, which
+   * is closer to the server's own: it stores `asked_at` (`created_at`) when
+   * it saves the row after the stop, not when the question was sent. The
+   * two can still differ (a browser clock off, a server a moment later), so
+   * a reload shows the server's date.
+   */
+  const stopConfirmed =
+    stopped && events.some((event) => event.type === "error" && event.payload.fatal === true);
+  const stopConfirmedAt = useRef<{ id: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!stopConfirmed || !signedIn || runStartedAt === null) return;
+    const question = searchView.name === "answer" || searchView.name === "run"
+      ? searchView.question
+      : null;
+    if (question === null) return;
+    const entryId = activeEntryId.current;
+    if (entryId === null) return;
+    if (stopConfirmedAt.current?.id !== entryId) {
+      stopConfirmedAt.current = { id: entryId, at: Date.now() };
+    }
+    const meta = formatHistoryMeta({
+      trace_id: entryId,
+      question,
+      asked_at: new Date(stopConfirmedAt.current.at).toISOString(),
+      has_saved_answer: false,
+    });
+    setHistory((current) =>
+      current.map((item) =>
+        item.id === entryId && item.question === question && (item.meta !== meta || item.hasSavedAnswer !== false)
+          ? { ...item, meta, hasSavedAnswer: false }
+          : item,
+      ),
+    );
+  }, [stopConfirmed, signedIn, runStartedAt, searchView]);
+
   const ask = useCallback(
     async (
       question: string,
@@ -1136,6 +1377,7 @@ export function App() {
       continuesThread = false,
     ) => {
       setDepth(chosenDepth);
+      setAnswerDepth(chosenDepth);
       // Set 1 (R1 to R3, 2026-09-12): there is no guest allowance and no
       // sign-in wall any more. A browser whose guest session was moved into
       // an account simply mints a fresh guest identity on its next signed-out
@@ -1163,7 +1405,9 @@ export function App() {
       // which is what a re-ask actually is: a new run for an old question,
       // not an edit of the old run's record. Transcribed the same way here,
       // so the freshly unshifted entry starts with no `meta` and no
-      // `traceId` of its own, exactly like a brand-new question.
+      // `traceId` of its own, exactly like a brand-new question. Card 112
+      // kept the unshift and dropped the filter: see the comment on the
+      // `setHistory` call below.
       //
       // F-4.13-FV-02. This comment used to claim the rail holds "at most one
       // item per question text". THAT IS FALSE and stating it was actively
@@ -1193,10 +1437,14 @@ export function App() {
       // row and no other. Set before the state update rather than after, so
       // a run that lands unusually fast cannot find a stale id here.
       activeEntryId.current = entryId;
-      setHistory((current) => [
-        { id: entryId, question },
-        ...current.filter((item) => item.question !== question),
-      ]);
+      // Card 112: no text filter. It used to drop every row with the same
+      // question the moment it was asked again, so a person who re-asked a
+      // question, and then stopped it or let it answer, watched every
+      // earlier search of it leave "Your searches" until a reload brought
+      // them back (11 rows fell to 5). Each search is its own row on the
+      // server (`mergeServerHistory` keys on `traceId`, never on text), so
+      // the list before a reload now matches the list after one.
+      setHistory((current) => [{ id: entryId, question }, ...current].slice(0, HISTORY_LIST_LIMIT));
       const seq = ++askSeq.current;
       /*
        * T-4.16-02. Archive the turn now on screen BEFORE anything resets,
@@ -1237,6 +1485,7 @@ export function App() {
           {
             question: finished,
             meta: view.meta,
+            depth: answerDepth ?? undefined,
             claims: view.claims,
             sources: view.sources,
             trust: view.trust,
@@ -1253,7 +1502,7 @@ export function App() {
         ]);
       }
       setRunId(null);
-      setStopped(false);
+      setStopPress(null);
       setRunStartedAt(Date.now());
       /*
        * UI FIX SET 7 (R22). The product owner: "it goes to a new page, which
@@ -1344,13 +1593,13 @@ export function App() {
         // row will carry, so `mergeServerHistory` can recognise the SAME
         // run when the server later echoes it back, rather than matching
         // on question text (see that function's own docstring for why
-        // text is the wrong key). Matched by `question`, the same way the
-        // meta-on-landing effect above matches this run's item: the
-        // in-session dedup a few lines up already guarantees at most one
-        // item exists per question text, so this cannot mis-tag a sibling.
+        // text is the wrong key). Card 112: matched by this ask's own row
+        // id, because the rail now keeps every earlier row of the same
+        // question, and an older one with no trace id yet (a run that never
+        // started) must not be tagged with this run's id.
         setHistory((current) =>
           current.map((item) =>
-            item.question === question && item.traceId === undefined
+            item.id === entryId && item.traceId === undefined
               ? { ...item, traceId: response.run_id }
               : item,
           ),
@@ -1409,7 +1658,7 @@ export function App() {
     // `view` and `searchView` joined the list when T-4.16-02 made `ask`
     // archive the turn on screen: a stale closure here would file away the
     // PREVIOUS conversation's last turn under this one's question.
-    [signedIn, token, guestToken, sessionId, view, searchView],
+    [signedIn, token, guestToken, sessionId, view, searchView, answerDepth],
   );
 
   /**
@@ -1420,17 +1669,40 @@ export function App() {
    * of this would be two chances for one of them to stop the browser without
    * stopping the server.
    *
-   * A-10. `deriveStopEnabled` only goes false on a terminal event, and
-   * stopping ABORTS the stream so no terminal event ever arrives: Stop
-   * stayed enabled forever and the stepper kept asserting live work.
-   * `StopButton` solved this with local `hasStopped` state; reusing its
-   * derive helper without its state reused half the answer. This latches
-   * the other half.
+   * A-10. Stop stayed enabled forever once pressed, because the stream was
+   * aborted and no terminal event ever arrived. This latches the press,
+   * once per run, and `stopOffered` goes off with it.
    */
   const stopCurrentRun = () => {
-    setStopped(true);
-    stop();
-    if (runId && authToken) void stopRun(runId, authToken).catch(() => undefined);
+    if (stopPress !== null) return;
+    setStopPress({ mark: events.length });
+    /*
+     * Card 59, D18. The server already sent `done`: the answer it saved and
+     * remembered stands, and lands at once. No stop is sent, because there
+     * is nothing left to stop and a cancel reaching the server while it is
+     * still filing that answer could cut the filing short.
+     */
+    if (events.some((event) => event.type === "done")) return;
+    /*
+     * Otherwise the stream stays open: the server's reply on it, `done` or
+     * the `cancelled` error, decides what the screen shows. A stop request
+     * that fails gets no reply, so it closes the stream and the run reads
+     * as stopped, as it did before card 59.
+     *
+     * The fix round, J-59-04 and A-59-02: only for the run it was sent for.
+     * `stop` closes whichever stream is current WHEN it is called, and a
+     * failed stop can come back long after the person moved on and asked a
+     * new question; closing that one froze the new question's screen while
+     * the server answered and remembered it. `askSeq` moves the instant a
+     * new question (or a sign-out) starts, before any render, so a reply
+     * for an older run is dropped.
+     */
+    if (runId && authToken) {
+      const pressedOn = askSeq.current;
+      void stopRun(runId, authToken).catch(() => {
+        if (askSeq.current === pressedOn) stop();
+      });
+    } else stop();
   };
 
   /**
@@ -1443,7 +1715,37 @@ export function App() {
     setSearchView({ name: "home" });
   };
 
+  /*
+   * Build phase 8.7, T-8.7-03: the answer page does not blink when the run
+   * lands.
+   *
+   * The records now reach the screen the moment the searches end, on the
+   * answer page, and the summary lands with `done`. Two things used to
+   * rebuild that page at exactly that moment:
+   *
+   *   - The effect above moves the view from "run" to "answer" AFTER the
+   *     landed frame has rendered, so that frame fell through to `RunScreen`,
+   *     unmounting the answer page with its records, and the next frame
+   *     mounted it again.
+   *   - `fadedBody` is keyed on the view's name, so "run" to "answer"
+   *     remounted everything and replayed the page's fade-in from nothing.
+   *
+   * So the landed run is shown as the answer in the SAME frame, and the fade
+   * is keyed on which page is on show: a run whose records are already on
+   * the answer page is the answer page, and moving to "answer" is not a
+   * change of page. The effect still moves the state, as before.
+   */
+  const shownSearchView: SearchView =
+    searchView.name === "run" && (view.landed || status === "error")
+      ? { name: "answer", question: searchView.question }
+      : searchView;
+  const pageOnShow =
+    shownSearchView.name === "run" && view.claims.length > 0 ? "answer" : shownSearchView.name;
+
   const body = () => {
+    // The view on show, see `shownSearchView`: equal to the state except in
+    // the one frame a run lands, before the effect catches the state up.
+    const searchView = shownSearchView;
     if (screen === "integrations") return <IntegrationsScreen />;
     if (screen === "about")
       return (
@@ -1505,29 +1807,38 @@ export function App() {
          * live, the SAME answer screen a follow-up uses renders the progress
          * (with Stop) above the answer as it builds. The landed state is
          * unchanged: the effect below still switches the view to "answer" on
-         * the terminal event. A stopped run falls back to `RunScreen`, whose
-         * "Search stopped" block says no answer was written, rather than
-         * leaving half an answer on screen as if it were one.
+         * the terminal event.
+         *
+         * STOP, the owner's decision of 2026-09-27 (build phase 8.7). A run
+         * stopped before any of its answer was on screen falls back to
+         * `RunScreen`, whose "Search stopped" block says no answer was
+         * written: `useAnswerReveal` withheld everything, so there are no
+         * claims here. A run stopped AFTER its records were on screen keeps
+         * them: "Search stopped" stands above them, in the progress's own
+         * stopped block, and nothing that arrives afterwards is shown.
          */
-        if (!stopped && !view.landed && view.claims.length > 0) {
+        if (!view.landed && view.claims.length > 0) {
           return (
             <AnswerScreen
               question={searchView.question}
+              stopped={stopped}
               progress={
                 <RunProgress
-                  activeStep={step}
-                  startedAt={runStartedAt}
+                  activeStep={stopped ? null : step}
+                  startedAt={stopped ? null : runStartedAt}
                   reachedSteps={view.reachedSteps}
                   toolCalls={view.toolCalls}
                   steps={view.steps}
                   personaName={persona?.name ?? null}
                   personaAbout={persona?.about ?? null}
                   personaWikipedia={persona?.wikipedia ?? null}
-                  stopEnabled={view.stopEnabled}
+                  stopEnabled={view.stopEnabled && !stopped}
+                  stopping={stopping}
                   refusal={view.refusal}
                   capMessage={view.capMessage}
                   failure={streamError}
-                  stopped={false}
+                  stopped={stopped}
+                  recordsKept={stopped}
                   showNewSearch={false}
                   onStop={stopCurrentRun}
                   onRunAgain={() => void ask(searchView.question, depth)}
@@ -1554,6 +1865,7 @@ export function App() {
             personaAbout={persona?.about ?? null}
             personaWikipedia={persona?.wikipedia ?? null}
             stopEnabled={view.stopEnabled && !stopped}
+            stopping={stopping}
             refusal={view.refusal}
             capMessage={view.capMessage}
             failure={streamError}
@@ -1593,10 +1905,12 @@ export function App() {
             personaAbout={persona?.about ?? null}
             personaWikipedia={persona?.wikipedia ?? null}
             stopEnabled={view.stopEnabled && !stopped}
+            stopping={stopping}
             refusal={view.refusal}
             capMessage={view.capMessage}
             failure={streamError}
             stopped={stopped}
+            recordsKept={stopped && view.claims.length > 0}
             showNewSearch={false}
             onStop={stopCurrentRun}
             onRunAgain={() => {
@@ -1605,7 +1919,7 @@ export function App() {
               // conversation rather than throwing the thread away. Nothing
               // is archived by it, because `ask` only archives a run that
               // LANDED and a stopped one never did.
-              void ask(searchView.question, depth, true);
+              void ask(searchView.question, answerDepth ?? depth, true);
             }}
           />
         ) : null;
@@ -1668,6 +1982,21 @@ export function App() {
             followUp={
               <FollowUp
                 hints={FOLLOW_UP_HINTS}
+                // UI fix set 12 (12.4). Deliberately the SAME expression
+                // `AnswerScreen` uses to decide whether to render its
+                // refusal block, `refusal || refusalLabel` (its line 1552),
+                // rather than a `!== null` pair that agrees with it only
+                // while neither field can be an empty string. Today neither
+                // can, so the two forms pick the same runs; writing the
+                // weaker form and describing it as "the same test" would be
+                // a confident sentence about a check that is not there,
+                // which is the shape this repository has shipped four times
+                // (build phase 4.15). A clarification counts as a refusal,
+                // because a clarification IS a refusal to answer yet.
+                // `FollowUp` also suppresses the hints on its own when this
+                // is true, but the label switch has to happen here, since
+                // `FollowUp` never sees `view` itself.
+                isRefusal={Boolean(view.refusal || view.refusalLabel)}
                 // T-6.2-08. Accepting the offer goes through the SAME `ask`
                 // as anything typed, so it continues the thread rather than
                 // starting over. That was the product owner's condition on
@@ -1686,7 +2015,13 @@ export function App() {
                  * exactly today's behaviour and what an older backend gives.
                  */
                 nextStepQuery={view.nextStepQuery}
-                onAsk={(next) => void ask(next, depth, true)}
+                // UI fix plan item 12.3. The four ready-made questions for a
+                // bare-topic clarification ("reflux disease", "GERD"), read
+                // from the same `think` event `view.clarification` already
+                // reads, so the two can never disagree about which run they
+                // describe.
+                clarifyingOptions={view.clarificationOptions}
+                onAsk={(next) => void ask(next, answerDepth ?? depth, true)}
               />
             }
             flaggedSources={flagged}
@@ -1696,9 +2031,35 @@ export function App() {
               )
             }
             onNewSearch={startNewSearch}
+            /*
+             * Card 24. Switching the answer's own depth switch re-runs the
+             * SAME question at the OTHER depth, through the same `ask` a
+             * typed follow-up uses, `continuesThread=true` so the answer
+             * just read folds into the thread, labelled with its mode.
+             *
+             * `depthValue` is `answerDepth`, the mode the run on screen was
+             * ASKED at (set inside `ask`, from the same value the request
+             * carries as `audience_depth`), not `depth`: `depth` is also
+             * written by the profile seed on every session refresh, so it
+             * can name a mode this answer was never asked at. Follow-ups
+             * below use the same value, so the next question after a switch
+             * runs in the switched mode.
+             */
+            onDepthChange={(next) => void ask(searchView.question, next, true)}
+            depthValue={answerDepth ?? depth}
           />
         );
       }
+      case "savedAnswer":
+        return (
+          <SavedAnswerScreen
+            question={searchView.question}
+            loading={savedAnswerLoading}
+            answer={savedAnswer}
+            onRunAgain={() => void ask(searchView.question, depth)}
+            onNewSearch={startNewSearch}
+          />
+        );
       default:
         return (
           <HomeScreen
@@ -1751,7 +2112,7 @@ export function App() {
    */
   const fadedBody = () => (
     <Box
-      key={`${screen}:${searchView.name}`}
+      key={`${screen}:${pageOnShow}`}
       sx={{
         flex: 1,
         display: "flex",
@@ -1865,19 +2226,52 @@ export function App() {
             <HistoryRail
               items={history}
               activeId={
-                searchView.name === "answer" || searchView.name === "run"
-                  ? history.find((item) => item.question === searchView.question)?.id ?? null
+                searchView.name === "answer" ||
+                searchView.name === "run" ||
+                searchView.name === "savedAnswer"
+                  ? // Card 112: by row id, not question text, since several rows
+                    // can share a question.
+                    (searchView.name === "savedAnswer" ? openedRowId : activeEntryId.current)
                   : null
               }
-              // F-4.8-J-08. This previously switched the heading to a past
-              // question while leaving the CURRENT run's answer on screen,
-              // which is the same fabrication shape as J-03 by another route.
-              // Re-asking is the only truthful option available: this session's
-              // earlier runs are not retained, and retaining them is build
-              // phase 4.5's work, not something to fake here.
+              // F-4.8-J-08's original fix, superseded by item 10.2 (overnight
+              // run of 2026-09-22/23). This used to re-ask every clicked row
+              // unconditionally, on the reasoning that "this session's
+              // earlier runs are not retained" made re-asking the only
+              // truthful option. That is no longer true for a signed-in
+              // row whose answer was stored (`has_saved_answer`): the saved
+              // text is fetched and shown at once, no new search charged to
+              // the reader. Every other row, and any failure fetching a
+              // saved one, still re-asks exactly as before; see
+              // `SavedAnswerScreen` for why the fallback matters more than
+              // the new path.
               onOpen={(id) => {
                 const item = history.find((entry) => entry.id === id);
-                if (item) void ask(item.question, depth);
+                if (!item) return;
+                if (item.hasSavedAnswer === true && item.traceId && token) {
+                  const requestId = savedAnswerRequestId.current + 1;
+                  savedAnswerRequestId.current = requestId;
+                  setSavedAnswer(null);
+                  setSavedAnswerLoading(true);
+                  setOpenedRowId(item.id);
+                  setSearchView({ name: "savedAnswer", question: item.question });
+                  fetchHistoryAnswer(token, item.traceId)
+                    .then((response) => {
+                      if (savedAnswerRequestId.current !== requestId) return;
+                      setSavedAnswer(response);
+                      setSavedAnswerLoading(false);
+                    })
+                    .catch(() => {
+                      // Fallback path, done-when item 3: a stale flag, a row
+                      // that aged out, or a genuine network failure all land
+                      // here, and here is exactly today's re-ask behaviour.
+                      if (savedAnswerRequestId.current !== requestId) return;
+                      setSavedAnswerLoading(false);
+                      void ask(item.question, depth);
+                    });
+                  return;
+                }
+                void ask(item.question, depth);
               }}
               onCollapse={() => setRailOpen(false)}
               onNewSearch={() => {

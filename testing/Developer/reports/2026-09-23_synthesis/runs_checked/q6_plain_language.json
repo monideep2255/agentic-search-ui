@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "answer",
+  "words": 183,
+  "paragraphs": 4,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 9 pubmed records [1][2][3][4][5][6][7][8][9]. \nFamilial Mediterranean fever is caused by mutations in the MEFV gene and mainly affects people of Mediterranean descent, with higher rates in Turkish, Jewish, Arabic, and Armenian populations [1]. A large Turkish study found that the R202Q mutation was the most common among FMF patients, followed by M694V and E148Q [2]. Another study reinforced that FMF is an autosomal recessive disease primarily affecting individuals of Turkish, Armenian, Arab, and non-Ashkenazi Jewish descent, caused by mutations in the MEFV gene [2]. \nThis condition can cause a spectrum of disease including neonatal hyperbilirubinemia, acute hemolysis, and chronic hemolysis, though some affected persons may be asymptomatic [3]. \nHemoglobinopathies are the most common single-gene disorders in humans, with African, Asian, and Mediterranean populations among the most affected [4]. \n\n## Pubmed records found\n\n- Diagnosis and management of G6PD deficiency.\n- High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.\n- Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.\n- Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.\n- Molecular analyses of MEFV gene mutation variants in Turkish population.\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q6"
+}

@@ -348,16 +348,32 @@ export interface RunProgressProps {
    * counter above.
    */
   stopped?: boolean;
+  /**
+   * Build phase 8.7, the owner's decision of 2026-09-27: Stop was pressed
+   * after the record listing was on screen, and those records stay below
+   * this block. Only the sentence under "Search stopped" changes, because
+   * "No answer was produced" above a list of records reads as a
+   * contradiction: what was not produced is the written summary. Read only
+   * while `stopped`.
+   */
+  recordsKept?: boolean;
   /** Re-runs the same question unchanged (decision U7). */
   onRunAgain?: () => void;
   /**
    * Whether Stop is still meaningful.
    *
-   * Derived from the run's own events by `deriveStopEnabled`, which has 19
-   * tests behind it. An earlier version of this screen offered Stop
-   * unconditionally, including after the run had already finished.
+   * Derived by `App` with `deriveStopOffered`: on from the passed guard until
+   * the first answer sentence is on screen or the view lands (card 58). An
+   * earlier version of this screen offered Stop unconditionally, including
+   * after the run had already finished.
    */
   stopEnabled?: boolean;
+  /**
+   * Stop was pressed and the server has not yet said whether it stopped the
+   * run or had already finished it (card 59). Stop reads "Stopping…" and
+   * stays off; nothing else on the screen claims either outcome yet.
+   */
+  stopping?: boolean;
   /**
    * When this run started, as `Date.now()`. Drives the elapsed counter
    * (T-6.2-05). Null before a run starts and after it lands, which is what
@@ -413,8 +429,10 @@ export function RunProgress({
   onNewSearch,
   showNewSearch = true,
   stopped = false,
+  recordsKept = false,
   onRunAgain,
   stopEnabled = true,
+  stopping = false,
   startedAt = null,
   refusal = null,
   capMessage = null,
@@ -497,7 +515,7 @@ export function RunProgress({
           <>
             <Button
               onClick={onStop}
-              disabled={!stopEnabled}
+              disabled={!stopEnabled || stopping}
               sx={{
                 fontSize: 12.5,
                 color: designTokens.inkMuted,
@@ -506,7 +524,7 @@ export function RunProgress({
                 py: 0.6,
               }}
             >
-              Stop
+              {stopping ? "Stopping…" : "Stop"}
             </Button>
             {/* Set 2, R12: filled blue with white text, the design system's `.btn`, so it reads apart from Stop. */}
             {showNewSearch ? (
@@ -531,7 +549,9 @@ export function RunProgress({
             Search stopped
           </Typography>
           <Typography variant="body2" sx={{ color: designTokens.inkMuted, mt: 1, mb: 2.5 }}>
-            No answer was produced. Run the same question again, or start a new one.
+            {recordsKept
+              ? "No summary was written. The records found before you stopped are below. Run the same question again, or start a new one."
+              : "No answer was produced. Run the same question again, or start a new one."}
           </Typography>
           <Box sx={{ display: "flex", gap: 1.25 }}>
             <Button variant="contained" onClick={onRunAgain} sx={{ fontSize: 12.5, px: 1.6, py: 0.6 }}>

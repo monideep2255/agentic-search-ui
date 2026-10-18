@@ -41,11 +41,17 @@
  * surfaces, so it is now the "API documentation" section at the bottom of
  * this page, the tab is removed from the bar, and `/docs` routes here.
  *
- * EVERY COMMAND PRINTED HERE WAS RUN, not written from memory of what the
- * surface probably looks like. That discipline is what T-4.16-04 exists for:
- * this page is prose about other modules, nothing links the two, and a
- * command here is as much a claim as a citation is. Verified against the
- * develop API on 2026-09-13:
+ * EVERY COMMAND PRINTED HERE IS MEANT TO BE RUN, not written from memory of
+ * what the surface probably looks like. That discipline is what T-4.16-04
+ * exists for: this page is prose about other modules, nothing links the two,
+ * and a command here is as much a claim as a citation is. This was never
+ * true of the CLI and KGX commands until build phase 8.10 (T-8.10-01 to 04,
+ * T-8.10-07) gave `s3` a real `--json` flag, a login that asks for the email
+ * left off the command, and a `system3-cli` package that installs `s3` from
+ * this repository (`s3-kgx-export` still ships with the full backend, since
+ * it needs an operator-granted graph credential `system3-cli` never carries).
+ * The REST and GraphQL examples below were verified against the develop API
+ * on 2026-09-13:
  *
  * - `POST /v1/query` with `{"text": ..., "session_id": ...}` and a bearer
  *   token answered 202 with a `run_id` and a `persona_name`.
@@ -58,9 +64,17 @@
  *   audience_depth? }`, and Strawberry's default `auto_camel_case=True`
  *   publishes those as `text`, `sessionId` and `audienceDepth`.
  *
- * The MCP server is NOT claimed to work here. Fix set 5 item 5.3 (R17) owns
- * its "Invalid Host header" defect and is not this file's work; the config
- * printed below is the one a client needs once that is fixed.
+ * The MCP server's "Invalid Host header" defect (fix set 5 item 5.3, R17) was
+ * fixed on 2026-09-13. Build phase 8.10 (T-8.10-05, T-8.10-07) then brought
+ * MCP close to the web app: every depth, every citation up to the run's own
+ * bound, the session id, the clarifying question and its options, and the
+ * trust line, plus tools to list past searches, reopen an answer and send
+ * feedback. The follow-up offers the web shows after an answer are not on
+ * MCP, and the card says so plainly rather than claiming the same parity
+ * (F-8.10-J13) or promising them "next", which no plan schedules (card 62,
+ * F-8.10-V06). The config
+ * below carries the bearer header a caller needs, and a token lasts 15
+ * minutes.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -151,19 +165,101 @@ export const GRAPHQL_EXAMPLE = `curl -X POST ${API_ORIGIN}/graphql \\
 // `POST /mcp` 307s to a plaintext Location, `POST /mcp/` returns 200 with a
 // valid initialize response. Full account:
 // `testing/Developer/reports/2026-09-20_integrations/findings.md`.
+//
+// `"type": "http"` and the `headers.Authorization` entry, added in build
+// phase 8.10 (T-8.10-07): the config below is the one a URL-plus-header
+// client (Claude Code, Cursor, VS Code) needs, per the integrations audit's
+// client table (`testing/Developer/reports/2026-09-26_integrations_audit/
+// report.md`, "The MCP packaging question"). `POST /auth/login` mints the
+// bearer token, and it lasts 15 minutes: paste a fresh one when a call is
+// refused, or use `s3 mcp` below, which renews its own.
 export const MCP_CONFIG = `{
   "mcpServers": {
     "ncbi-search": {
-      "url": "${API_ORIGIN}/mcp/"
+      "type": "http",
+      "url": "${API_ORIGIN}/mcp/",
+      "headers": {
+        "Authorization": "Bearer <your token>"
+      }
     }
   }
 }`;
 
-export const CLI_EXAMPLE = `s3 login
+/** The install for `system3-cli`, until the owner's first release makes a
+ *  published name possible (`tracker/phase_8.10.md`, T-8.10-04 and
+ *  T-8.10-07). Never `pip install s3`, which is a stranger's package on
+ *  PyPI, not this repository's.
+ *
+ *  Card 62, PR-8.10-04: the bare pip line failed two ways on a Mac. The
+ *  system's Python 3.9 gave "No matching distribution found for
+ *  setuptools==83.0.0" (the package needs 3.11), and Homebrew's Python
+ *  refused with "externally-managed-environment". So the copy makes and
+ *  enters a virtual environment first, which also puts `s3` on the PATH for
+ *  the next command, and the card says 3.11 is needed.
+ *
+ *  Card 62's fix round (F-62-J01): `python3` is macOS's own 3.9 under a
+ *  default PATH, so the copied lines still failed with the setuptools
+ *  error. The venv is made with `python3.11` by name, which either works or
+ *  says "command not found", naming what is missing. */
+export const INSTALL_EXAMPLE = `python3.11 -m venv s3-env
+. s3-env/bin/activate
+pip install "git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli"`;
+
+/** Typed into a terminal. `--base-url` names the page's own API origin, so
+ *  every example here points at one server (F-8.10-J06): `s3` defaults to
+ *  production, and without it a tester following develop's page signed in
+ *  to production. `s3 mcp` is not here, since typed at a terminal it only
+ *  waits for input (F-8.10-J10); it is the command in `MCP_STDIO_CONFIG`. */
+export const CLI_EXAMPLE = `s3 login --base-url ${API_ORIGIN} you@example.org
 s3 ask "diseases linked to BRCA1"`;
 
-export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
-  --hops 1 --output-dir ./kgx-out`;
+/** The agent side of `s3 mcp` (F-8.10-J10, A12): what a person pastes into
+ *  an AI agent's MCP configuration so the agent starts `s3 mcp` itself and
+ *  speaks MCP to it over stdio. It carries no token, because `s3 mcp` uses
+ *  the sign-in `s3 login` stored and renews it.
+ *
+ *  Card 62, PR-8.10-09 (F-8.10-V10): the bare `"command": "s3"` did not
+ *  start under the PATH an app opened from the Dock gets
+ *  (`FileNotFoundError: 's3'`), since such an app does not read the shell's
+ *  PATH and `s3` sits in a virtual environment. So the command is a full
+ *  path, shaped like the one `INSTALL_EXAMPLE` makes, and the card says to
+ *  replace it with what `command -v s3` prints. */
+export const MCP_STDIO_CONFIG = `{
+  "mcpServers": {
+    "system3": {
+      "command": "/path/to/s3-env/bin/s3",
+      "args": ["mcp"]
+    }
+  }
+}`;
+
+/** One piece of a card's text: a paragraph, or a command set in a code box. */
+export type CardSegment = string | { code: string; label: string };
+
+/** The command line card's words, in the order a reader needs them: what
+ *  the install needs before it runs, how to get back into the environment
+ *  later, then each command.
+ *
+ *  Card 62's fix round. F-62-J01, J07 and A03: the install runs
+ *  `python3.11` and `git`, and its activate line is POSIX, so the card says
+ *  so before the commands. F-62-A04: a new terminal does not have `s3` on
+ *  its PATH until the environment is entered again, which is also where
+ *  `command -v s3` prints the full path. F-62-J02, J03 and A07: the page no
+ *  longer prints an install for `s3-kgx-export`. The only package that
+ *  carries it is the server's own, whose dependencies are version floors,
+ *  and it owns the same files as `s3`, so uninstalling it deleted `s3`. It
+ *  also reads the graph directly with credentials only the operator holds,
+ *  so an outside reader could never run it; the card says how a KGX file
+ *  is had today instead. */
+export const CLI_CARD_SEGMENTS: CardSegment[] = [
+  "Two console commands rather than HTTP routes. The install works on macOS and Linux and needs git and Python 3.11: its first line runs python3.11 by name, so if python3.11 --version fails, install Python 3.11 first, or put the name of a newer Python, such as python3.12, in that line.",
+  { code: INSTALL_EXAMPLE, label: "Install command for s3" },
+  "Its first two lines make and enter a virtual environment, since many systems refuse a pip install outside one. In a new terminal, enter it again with . s3-env/bin/activate from the same folder before s3 login or s3 ask. s3 asks a question and prints the answer, human-readable by default and JSON with --json.",
+  { code: CLI_EXAMPLE, label: "Sign in and ask with s3" },
+  "s3 mcp turns the same sign-in into a stdio MCP server for a command-running AI agent: it is not typed into a terminal, where it only waits for input, but started by the agent from the configuration below, pasted into the agent's MCP settings. An agent app does not read your shell's PATH, so replace /path/to/s3-env/bin/s3 with the full path that command -v s3 prints inside the virtual environment, after . s3-env/bin/activate.",
+  { code: MCP_STDIO_CONFIG, label: "Agent configuration for s3 mcp" },
+  "s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops. s3-kgx-export is not in that install and has no download: it reads the knowledge graph directly with credentials only the operator holds, so today a KGX file comes from the operator, who runs it for the seed CURIEs you name.",
+];
 
 /** The event stream frame, transcribed from `adapters/web_sse/app.py`'s own
  *  emitter (`{"id": seq, "event": type, "data": envelope_json}`) and
@@ -305,7 +401,15 @@ interface CardLink {
  * outlined, which is the reference's own "Copy curl" beside "API Docs"
  * hierarchy applied to a card whose secondary action is also a copy.
  */
-function CardActionRow({ copies, links }: { copies?: CardCopy[]; links?: CardLink[] }) {
+function CardActionRow({
+  copies,
+  links,
+  showsCode = false,
+}: {
+  copies?: CardCopy[];
+  links?: CardLink[];
+  showsCode?: boolean;
+}) {
   const [state, setState] = useState<{ testId: string; status: CopyStatus } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -384,7 +488,9 @@ function CardActionRow({ copies, links }: { copies?: CardCopy[]; links?: CardLin
         >
           {state.status === "copied"
             ? "Copied to clipboard."
-            : "Could not copy automatically. Select the example and copy it by hand."}
+            : showsCode
+              ? "Could not copy automatically. Select the command shown above and copy it by hand."
+              : "Could not copy automatically. Allow clipboard access for this page, then try again."}
         </Box>
       ) : null}
     </Box>
@@ -404,6 +510,7 @@ function IntegrationCard({
   icon,
   title,
   body,
+  segments,
   code,
   codeLabel,
   copies,
@@ -411,12 +518,18 @@ function IntegrationCard({
 }: {
   icon: React.ReactNode;
   title: string;
-  body: string;
+  body?: string;
+  segments?: CardSegment[];
   code?: string;
   codeLabel?: string;
   copies?: CardCopy[];
   links?: CardLink[];
 }) {
+  const blocks: CardSegment[] = [
+    ...(segments ?? (body ? [body] : [])),
+    ...(code ? [{ code, label: codeLabel ?? `${title} example` }] : []),
+  ];
+  const showsCode = blocks.some((b) => typeof b !== "string");
   return (
     <Box
       sx={{
@@ -433,41 +546,50 @@ function IntegrationCard({
       <Typography variant="h3" component="h2" sx={{ mb: 1 }}>
         {title}
       </Typography>
-      <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-        {body}
-      </Typography>
-      {code ? (
-        <Box
-          component="pre"
-          // A pre with overflow-x: auto is a scrollable region, and a keyboard
-          // user cannot scroll it without being able to focus it. axe flags
-          // this as scrollable-region-focusable; the fix is a tab stop plus a
-          // name, so the region is both reachable and announced.
-          tabIndex={0}
-          role="region"
-          aria-label={codeLabel ?? `${title} example`}
-          sx={{
-            ...mono,
-            fontSize: 11.5,
-            m: 0,
-            mt: 1.5,
-            p: 1.25,
-            // Scrolled rather than wrapped, which is the opposite of what this
-            // page did when five cards each carried a code box. Only one card
-            // shows code now, and it is a small JSON object whose lines are
-            // short enough to read at 390px; a wrapped brace-per-line config
-            // reads as broken, while a scroll container keeps the shape and
-            // still cannot bleed the page sideways.
-            overflowX: "auto",
-            bgcolor: designTokens.surfaceSunk,
-            border: `1px solid ${designTokens.line}`,
-            borderRadius: 0.5,
-          }}
-        >
-          {code}
-        </Box>
-      ) : null}
-      <CardActionRow copies={copies} links={links} />
+      {blocks.map((block, index) =>
+        typeof block === "string" ? (
+          <Typography
+            key={index}
+            variant="body2"
+            sx={{ color: designTokens.inkMuted, mt: index === 0 ? 0 : 1.25 }}
+          >
+            {block}
+          </Typography>
+        ) : (
+          <Box
+            component="pre"
+            // A pre with overflow-x: auto is a scrollable region, and a keyboard
+            // user cannot scroll it without being able to focus it. axe flags
+            // this as scrollable-region-focusable; the fix is a tab stop plus a
+            // name, so the region is both reachable and announced.
+            tabIndex={0}
+            role="region"
+            aria-label={block.label}
+            sx={{
+              ...mono,
+              fontSize: 11.5,
+              m: 0,
+              mt: 1.25,
+              mb: 1.25,
+              p: 1.25,
+              // Scrolled rather than wrapped, which is the opposite of what this
+              // page did when five cards each carried a code box. The MCP
+              // card and the command line card show code now (card 79), and
+              // the agent config for `s3 mcp` (F-8.10-J10) is a small JSON object whose lines are short
+              // enough to read at 390px; a wrapped brace-per-line config reads
+              // as broken, while a scroll container keeps the shape and still
+              // cannot bleed the page sideways.
+              overflowX: "auto",
+              bgcolor: designTokens.surfaceSunk,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 0.5,
+            }}
+          >
+            {block.code}
+          </Box>
+        ),
+      )}
+      <CardActionRow copies={copies} links={links} showsCode={showsCode} />
     </Box>
   );
 }
@@ -642,7 +764,7 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<PlugIcon />}
           title="MCP server"
-          body="One advertised tool, ask_biomedical_question. It folds a whole run into a single cited answer, and the seven internal tools are never separately reachable."
+          body="Four tools. ask_biomedical_question folds a whole run into a single cited answer at any depth, with the session id to continue, the clarifying options and the trust line. list_past_searches, reopen_past_answer and send_answer_feedback reach your account's own history, and the seven internal tools are never separately reachable. The follow-up offers the web app shows after an answer are not part of MCP. An account is required, and a bearer token lasts 15 minutes."
           code={MCP_CONFIG}
           codeLabel="MCP server configuration"
           copies={[
@@ -657,8 +779,14 @@ export function IntegrationsScreen() {
         <IntegrationCard
           icon={<TerminalIcon />}
           title="Command line tools"
-          body="Two console commands rather than HTTP routes. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops."
+          segments={CLI_CARD_SEGMENTS}
           copies={[
+            {
+              label: "Copy install command",
+              text: INSTALL_EXAMPLE,
+              accessibleName: "Copy the install command",
+              testId: "integration-copy-install",
+            },
             {
               label: "Copy command",
               text: CLI_EXAMPLE,
@@ -666,10 +794,10 @@ export function IntegrationsScreen() {
               testId: "integration-copy-cli",
             },
             {
-              label: "Copy KGX command",
-              text: KGX_EXAMPLE,
-              accessibleName: "Copy the KGX export command",
-              testId: "integration-copy-kgx",
+              label: "Copy agent config",
+              text: MCP_STDIO_CONFIG,
+              accessibleName: "Copy the agent configuration for s3 mcp",
+              testId: "integration-copy-mcp-stdio",
             },
           ]}
         />
@@ -693,7 +821,10 @@ export function IntegrationsScreen() {
         >
           <li>Registered accounts: the Log in flow issues the bearer token every surface here accepts.</li>
           <li>GraphQL and the MCP server: an account is required, so a guest cannot reach either.</li>
-          <li>REST and SSE: a guest may run queries without an account, within the anonymous daily cap.</li>
+          <li>
+            REST and SSE: a guest may run queries without an account, within the anonymous daily
+            cap. POST /auth/guest issues a guest's own token.
+          </li>
         </Box>
       </Box>
 
@@ -722,11 +853,11 @@ export function IntegrationsScreen() {
         />
         <NoteCard
           title="Citations"
-          body="Every claim is tied to a specific record, with the layer that produced it, the tool that fetched it, its evidence type, its confidence and its licence. An answer with an uncited sentence is a defect."
+          body="Every claim is tied to a specific record, with the layer that produced it, its evidence type, its confidence and its licence. An answer with an uncited sentence is a defect."
         />
         <NoteCard
           title="The event stream"
-          body="A run emits eleven kinds of event: guard, think, plan, tool_start, tool_result, token, citation, trust_signal, cost, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error."
+          body="A run emits twelve kinds of event: guard, think, plan, step, tool_start, tool_result, token, citation, trust_signal, cost, error and done. Each SSE frame carries the sequence number as its id, the event type as its name, and the whole envelope as its data. A refusal is a normal outcome with a reason attached, not an error. think carries clarifying_options when the question is a bare topic, and the finishing done event carries decisions, trust_line and layer_calls_used."
           code={EVENT_STREAM_EXAMPLE}
           copy={{
             label: "Copy frame",
@@ -782,8 +913,12 @@ export function IntegrationsScreen() {
 //   - Five steps, in order: `core/graph.py`'s `add_node` calls for
 //     guardrail, think, plan, act and write, with `set_entry_point("guardrail")`.
 //   - Which tier runs which step: `core/graph.py`'s `_dispatch_tier_call`
-//     sites pass "guard" for guardrail, "plan" for think AND for plan, and
-//     "synth" for write.
+//     sites pass "guard" for guardrail, "plan" for Think's classification,
+//     and "synth" for write; `tools/cypher_generation.py` calls "plan" in
+//     Act only when no Cypher template fits. The plan step itself makes no
+//     plan-tier call: its decisions, such as `plan.literature`, go through
+//     `harness/decide.py` to the guard tier or Jev
+//     (`docs/architecture/Model_architecture.md`, F-8.10-J04).
 //   - A tier's model is resolved from configuration and held for the query:
 //     `harness/tiers.py`, `TierContext` ("fetched once at query start and
 //     held for the query's duration"), reading GUARD_MODEL, PLAN_MODEL and
@@ -794,15 +929,17 @@ export function IntegrationsScreen() {
 //   - The guardrail's refusal categories: `contracts/events.py`'s
 //     `GuardPayload.category` and `chat/GuardrailBanner.tsx`'s `CATEGORY_COPY`
 //     (off_topic, medical_advice, injection, rate_limited, cost_capped,
-//     write_seeking).
+//     write_seeking, compute_request).
 //   - Entity resolution is live-confirmed: `core/graph.py`'s
 //     `resolve_exact_identifiers` pre-pass, then "a span whose CURIE cannot be
 //     confirmed by a live lookup" does not contribute one. NCBIGene:672 for
 //     BRCA1 appears in `tools/cypher_query.py`'s own examples.
 //   - Timeouts and the call budget: `CYPHER_QUERY_TIMEOUT_SECONDS` is 30
-//     seconds (`tools/cypher_query.py`), `tools/ncbi_transport.py` carries the
-//     15-second per-call budget with one backoff retry, and
-//     `harness/call_budget.py`'s `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
+//     seconds (`tools/graph_schema_constants.py`), `tools/ncbi_transport.py`
+//     carries the 15-second per-call budget with one backoff retry for every
+//     web API, `tools/pathogen_detection.py`'s `_TOTAL_BUDGET_S` is 120
+//     seconds, the longest, and `harness/call_budget.py`'s
+//     `MAX_LAYER_2_3_CALLS_PER_QUERY` is 20.
 //   - Results come back typed and bounded: each tool has its own `*_schemas.py`
 //     input and output models, and `harness/coordinator_worker.py` caps a
 //     finding at `_MAX_FINDING_TOTAL_BYTES` and records that it cut.
@@ -814,8 +951,22 @@ export function IntegrationsScreen() {
 //     `synthesis/grounding.py`'s `ground_claim` accepts a claim only on a
 //     substring match against the record's own field value.
 //   - The event stream: `contracts/events.py`'s envelope `type` union carries
-//     guard, think, plan, tool_start, tool_result, token, citation,
+//     guard, think, plan, step, tool_start, tool_result, token, citation,
 //     trust_signal, cost, error and done.
+//   - Act runs in two rounds (card 53): the first round's planned calls,
+//     the graph query among them, go out together through `core/graph.py`'s
+//     `_gather_planned_calls`; a follow-up that needs a first-round result,
+//     such as the abstracts of the papers a PubMed search found, goes out in
+//     a second round after it.
+//   - When layer 3 runs (card 53): `plan_node` reaches
+//     `_build_layer_tool_calls` only on its last branch, which plans
+//     `pubtator_annotate` and `clinicaltrials_search` on the gene's symbol,
+//     or on the disease's MedGen name when no gene resolved, and one
+//     `litvar2_lookup` for each of the first two rs ids in the question.
+//     Isolate and accession questions, a gene named only by an identifier,
+//     and a no-gene question the `plan.literature` classifier reads as
+//     asking for papers plan none of those three calls. BRCA1, named by its
+//     symbol, gets PubTator3 and ClinicalTrials.gov.
 //   - The scientist is presentation only: `shell/PersonaChip.tsx`'s docstring,
 //     "the persona never changes which tools run, which records are
 //     retrieved, or what the trust signal says".
@@ -835,7 +986,7 @@ const JOURNEY_TIERS = [
   {
     name: "Plan tier",
     kind: "a mid-range model",
-    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. Then runs Plan, which picks the tools to call and writes the graph query itself.",
+    body: "Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. In Act it also writes a graph query, but only when no ready-made template fits the question. Plan itself never calls this tier: it picks the tools in code, and passes the odd yes-or-no question, such as whether you want papers, to the guard tier or a dedicated classifier.",
   },
   {
     name: "Synth tier",
@@ -850,7 +1001,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 1,
     name: "Knowledge graph",
     tools: "cypher_query",
-    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns a stored link, which is why a question like this one starts here.",
+    body: "115M nodes and 693M edges merged from five NCBI databases. One query returns the stored links from BRCA1 to its diseases, while most of the live searches run at the same time and four of the thirteen calls follow in a second round.",
   },
   {
     n: 2,
@@ -867,7 +1018,7 @@ const JOURNEY_LAYERS: { n: 1 | 2 | 3; name: string; tools: string; body: string 
     n: 3,
     name: "Enrichment",
     tools: "pubtator_annotate, litvar2_lookup, clinicaltrials_search",
-    body: "Literature and trial evidence, added when the question asks for it rather than by default.",
+    body: "Literature and trial evidence. Plan adds them here because the question names a gene by its symbol, BRCA1, though not every question gets them.",
   },
 ];
 
@@ -1112,13 +1263,13 @@ export function AboutScreen({
       n: 2,
       name: "Live NCBI APIs",
       colour: designTokens.layer2,
-      body: "E-utilities, Datasets and dbSNP, called at the moment you ask. Narrower and slower, and always current.",
+      body: "E-utilities, Datasets, PubChem, dbSNP and Pathogen Detection, called at the moment you ask. Narrower and slower, and always current.",
     },
     {
       n: 3,
       name: "Enrichment",
       colour: designTokens.layer3,
-      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence layered on a fact the first two layers established.",
+      body: "PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence about the gene, disease or variant a question names, when Plan adds them.",
     },
   ];
 
@@ -1127,6 +1278,33 @@ export function AboutScreen({
       title="How an answer is built"
       lede="Every question crosses up to three data layers. The colour on a citation tells you which layer it came from, and therefore how fresh it is and how it was established."
     >
+      <Box sx={{ ...GRID, mb: 4 }} data-testid="about-layer-cards">
+        {layers.map((layer) => (
+          <Box
+            key={layer.n}
+            sx={{
+              bgcolor: designTokens.surface,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 1,
+              p: 2.5,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.25 }}>
+              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: layer.colour, flex: "none" }} />
+              <Typography variant="h4" component="h2">
+                {layer.name}
+              </Typography>
+              <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: layer.colour }}>
+                L{layer.n}
+              </Box>
+            </Box>
+            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
+              {layer.body}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
       <Typography variant="h2" component="h2" sx={{ mb: 1.5 }}>
         What happens to your question
       </Typography>
@@ -1167,10 +1345,10 @@ export function AboutScreen({
 
         <JourneyStop index={2} title="The model steps, tier by tier">
           <StopText>
-            Four of the five steps ask a language model something, and the harness decides which
-            model each one gets. There are three tiers, matched to how hard the step is. A tier's
-            model is read from configuration once at the start of your question and held there, so
-            it cannot change partway through a run.
+            Every one of the five steps can ask a language model something, and the harness decides
+            which model each one gets. There are three tiers, matched to how hard the step is.
+            A tier's model is read from configuration once at the start of your question and held
+            there, so it cannot change partway through a run.
           </StopText>
           <Box sx={{ display: "grid", gap: 1.5, mb: 1.5, maxWidth: 620 }}>
             {JOURNEY_TIERS.map((tier) => (
@@ -1204,10 +1382,13 @@ export function AboutScreen({
 
         <JourneyStop index={3} title="The search goes out">
           <StopText>
-            Act runs the tools Plan chose, across three layers of data. Each call carries its own
-            time limit, 90 seconds for a graph query and 15 seconds for a live NCBI call, and one
-            question may make at most 20 live calls in total. A call that would exceed either of
-            those fails fast and says which limit it hit, rather than leaving you waiting. This is
+            Act sends out the calls Plan chose, across three layers of data, together rather than
+            one after another. A call that needs another call's result, such as the abstracts of
+            the papers a PubMed search found, goes out in a second round once the first has
+            returned. Each source has its own time limit in code: 30 seconds for a graph query, 15
+            seconds for a call to a live web API, and 120 seconds for Pathogen Detection, the
+            longest. One question may make at most 20 live calls in total. A call that reaches its
+            limit stops there and says which limit it hit, rather than leaving you waiting. This is
             the part you watch on the progress screen.
           </StopText>
           <Box
@@ -1251,7 +1432,7 @@ export function AboutScreen({
                       documents for the same pair, "reading the LABEL in ink
                       while the border, the wash and the check mark keep
                       carrying the green", so it copies a decision rather than
-                      inventing one. The layer cards further down this page
+                      inventing one. The layer cards above the walk
                       keep the coloured mark because their ground is `surface`,
                       where the same pair passes.
                     */}
@@ -1300,11 +1481,14 @@ export function AboutScreen({
 
         <JourneyStop index={5} title="The answer is written, then streamed to you">
           <StopText>
-            Write composes the answer from those records alone. Each sentence is then checked in
-            code against the record it points at, and a sentence that record does not support is
-            dropped rather than reworded. If nothing citeable survives, the system says it could
-            not find an answer and stops instead of answering from memory. That rule is called cite
-            or refuse.
+            Write composes the answer from those records alone. Code checks each sentence against
+            the record it points at: the exact words must be in the record, every number must be in
+            the quote, and a negation must match. A sentence that fails those checks is dropped. One
+            that passes but was reworded is then judged by a model, and kept only when the model
+            finds it adds nothing beyond the record's own words. A copied cut is judged the same
+            way, and a sentence with any copied piece held back is dropped whole. If nothing
+            citeable survives, the system says it could not find an answer and stops instead of
+            answering from memory. That rule is called cite or refuse.
           </StopText>
           <StopText>
             What reaches your browser is a stream of small events rather than one finished page:
@@ -1369,41 +1553,13 @@ export function AboutScreen({
         and ask "{JOURNEY_QUESTION}".
       </Typography>
 
-      <Box sx={GRID}>
-        {layers.map((layer) => (
-          <Box
-            key={layer.n}
-            sx={{
-              bgcolor: designTokens.surface,
-              border: `1px solid ${designTokens.line}`,
-              borderRadius: 1,
-              p: 2.5,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, mb: 1.25 }}>
-              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: layer.colour, flex: "none" }} />
-              <Typography variant="h4" component="h2">
-                {layer.name}
-              </Typography>
-              <Box component="span" sx={{ ...mono, ml: "auto", fontSize: 11, fontWeight: 700, color: layer.colour }}>
-                L{layer.n}
-              </Box>
-            </Box>
-            <Typography variant="body2" sx={{ color: designTokens.inkMuted }}>
-              {layer.body}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-
       <Typography variant="h2" component="h2" sx={{ mt: 5, mb: 1.5 }}>
         Cite or refuse
       </Typography>
       <Typography sx={{ color: designTokens.inkMuted, maxWidth: "66ch" }}>
         Every claim is tied to a specific record. When nothing supports an answer, the system says
-        so and stops rather than answering from memory. The track beside each answer shows one
-        segment per claim, coloured by its layer, so an uncited claim is visible before you read a
-        word.
+        so and stops rather than answering from memory. Each claim's marker carries its layer's
+        colour, and a line of framing with no source shows in muted ink with no marker after it.
       </Typography>
 
       {/*

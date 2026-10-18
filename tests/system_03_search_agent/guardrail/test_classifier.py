@@ -239,3 +239,146 @@ def test_the_user_message_is_the_tagged_query_and_nothing_else() -> None:
         r"<query-[0-9a-f]{16}>\nWhat variants cause it\?\n</query-[0-9a-f]{16}>", user
     ), user
     assert "SESSION MEMORY" not in GUARD_SYSTEM_INSTRUCTION
+
+
+# ---------------------------------------------------------------------------
+# Fix-plan item 12.2's follow-up: the physiological-outcome clarification.
+#
+# Measured live, not assumed: "Does coffee help make exercise more
+# effective?" split 2 refuse / 3 admit over five runs before this paragraph
+# was added, then went 10 for 10 admit across two five-run batches after.
+# These two tests pin the paragraph's text exists (so a future edit cannot
+# silently drop the fix) and that its carve-out for a non-biomedical
+# "effective" still names the exact cases the coordinator independently
+# verified the classifier already refuses correctly, so a rewrite of this
+# paragraph cannot narrow that carve-out without one of these going red.
+# ---------------------------------------------------------------------------
+
+
+def test_the_instruction_names_physiological_outcome_questions_as_on_topic() -> None:
+    """MUTATION PROOF: deleting this paragraph turns this assertion red.
+
+    Without it, a plain "does X help Y" health-effect question with no
+    literature word reads to the model as a lifestyle question rather than a
+    biomedical one on some fraction of runs (measured: 2 of 5). The fix is a
+    prompt instruction, not code, so the only place to pin it is the text.
+    """
+    assert "physiological, health, or exercise-performance outcome" in (
+        GUARD_SYSTEM_INSTRUCTION
+    )
+    # Item 12.16 part 1 (2026-09-24): the example is neutral now, never a
+    # question from `testing/User-feedback/`, which would be teaching to the
+    # test. The pin moves with it, so the paragraph still cannot vanish.
+    assert "does vitamin D help bone strength" in GUARD_SYSTEM_INSTRUCTION
+    assert "coffee" not in GUARD_SYSTEM_INSTRUCTION.lower(), (
+        "a tester's question must not be the prompt's own example"
+    )
+
+
+def test_the_physiological_carveout_does_not_swallow_non_biomedical_effective() -> None:
+    """The paragraph must stay narrow: an outcome test, not a word test.
+
+    Pins the exact negative examples the coordinator measured the classifier
+    already refusing correctly (investment strategy, exam study technique,
+    marketing trend), so the instruction keeps naming them as the boundary
+    rather than letting a future edit widen "effective" into a blanket pass.
+    """
+    assert "investment strategy" in GUARD_SYSTEM_INSTRUCTION
+    assert "study technique for an exam" in GUARD_SYSTEM_INSTRUCTION
+    assert "marketing trend" in GUARD_SYSTEM_INSTRUCTION
+
+
+# ---------------------------------------------------------------------------
+# Build phase 8.6, T-8.6-04, rewired in the fix round (F-8.6-A05, A06, A10,
+# J04, A12): Jev as a second judge of injection. `verdict_for_decision`
+# refuses as injection when the classification OR Jev says so, keeps the
+# classification's own verdict (and refusal reason) otherwise, and takes
+# topicality from the classification.
+# ---------------------------------------------------------------------------
+
+
+def _classified(**fields: object) -> InjectionClassification:
+    values: dict[str, object] = {
+        "is_injection": False,
+        "is_off_topic": False,
+        "confidence": 0.1,
+        "reason": "a real question",
+    }
+    values.update(fields)
+    return InjectionClassification.model_validate(values)
+
+
+@pytest.mark.parametrize("jev_says_injection", [False, True])
+@pytest.mark.parametrize("classifier_says_injection", [False, True])
+def test_either_judge_saying_injection_refuses(
+    jev_says_injection: bool, classifier_says_injection: bool
+) -> None:
+    """Jev can add a refusal, never remove one: the four combinations.
+
+    MUTATION PROOF: the phase's rule, Jev's pick replacing the
+    classification's field, turns the (Jev False, classifier True) case red.
+    """
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    verdict = verdict_for_decision(
+        jev_says_injection, _classified(is_injection=classifier_says_injection)
+    )
+    refused_expected = jev_says_injection or classifier_says_injection
+    assert verdict.admitted is (not refused_expected)
+    if refused_expected:
+        assert verdict.category == "injection"
+
+
+def test_the_classifications_own_refusal_is_kept_whenever_it_said_injection() -> None:
+    """Byte for byte `verdict_for`'s refusal, whatever Jev said, so the
+    reason a person reads is the one the measured classifier gave."""
+    from system_03_search_agent.guardrail.classifier import verdict_for, verdict_for_decision
+
+    classification = _classified(is_injection=True, reason="a forged system turn")
+    for jev_says_injection in (False, True):
+        assert verdict_for_decision(jev_says_injection, classification) == verdict_for(classification)
+
+
+def test_a_refusal_jev_alone_adds_carries_no_model_text() -> None:
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    verdict = verdict_for_decision(True, _classified(is_injection=False))
+    assert not verdict.admitted and verdict.category == "injection"
+    # Jev returns a choice, never free text, so no model reason rides it.
+    assert "(" not in (verdict.reason or "")
+
+
+def test_topicality_still_comes_from_the_classification() -> None:
+    from system_03_search_agent.guardrail.classifier import verdict_for_decision
+
+    off_topic = verdict_for_decision(False, _classified(is_off_topic=True))
+    assert not off_topic.admitted and off_topic.category == "off_topic"
+    # Injection still outranks off-topic.
+    both = verdict_for_decision(True, _classified(is_off_topic=True))
+    assert both.category == "injection"
+
+
+def test_the_injection_decisions_description_fits_the_seam() -> None:
+    """One criterion per offered option, each inside `decide`'s 1000-character
+    bound, and no example query in any of it."""
+    from system_03_search_agent.guardrail.classifier import (
+        INJECTION_DECISION_CRITERIA,
+        INJECTION_DECISION_INSTRUCTIONS,
+        INJECTION_DECISION_OPTIONS,
+        INJECTION_DECISION_POINT,
+    )
+
+    assert INJECTION_DECISION_POINT == "guardrail.injection"
+    assert INJECTION_DECISION_OPTIONS == ("injection", "not_injection")
+    assert set(INJECTION_DECISION_CRITERIA) == set(INJECTION_DECISION_OPTIONS)
+    for text in (INJECTION_DECISION_INSTRUCTIONS, *INJECTION_DECISION_CRITERIA.values()):
+        assert 0 < len(text) <= 1000
+        assert "?" not in text and "'" not in text, "no quoted or example query"
+
+
+def test_a_reply_with_no_content_is_an_unusable_reply_not_a_crash() -> None:
+    """A model reply whose content is None raised AttributeError from
+    `.strip()` and ended the search "failed unexpectedly". It is now the same
+    unusable-reply error a malformed reply raises."""
+    with pytest.raises(ClassificationUnavailableError):
+        parse_classification(None)

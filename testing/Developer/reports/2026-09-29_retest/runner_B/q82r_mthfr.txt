@@ -1,0 +1,71 @@
+No search limit in effect yet
+What does the literature say about MTHFR C677T?
+New search
+
+? Answered21.1s · 13 tools · 76 sources from 3 layers
+
+Show work ▾
+
+Found 58 article records for MTHFR, of 3875 available[21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54][55][56][57][58].⁠1–20
+
+ARTICLE RECORDS FOUND
+PAPER	IDENTIFIER	
+PMID:10536004	PMID:10536004	⁠1
+PMID:10551815	PMID:10551815	⁠2
+PMID:10679944	PMID:10679944	⁠3
+PMID:10791559	PMID:10791559	⁠4
+PMID:11018168	PMID:11018168	⁠5
+PMID:11022077	PMID:11022077	⁠6
+PMID:11024398	PMID:11024398	⁠7
+PMID:11025596	PMID:11025596	⁠8
+PMID:11048629	PMID:11048629	⁠9
+PMID:11054348	PMID:11054348	⁠10
+Showing 1–10 of 58
+‹ Previous
+Page 1 of 6
+Next ›
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+MTHFR	NCBIGene:4524	⁠59
+MTHFR	NCBIGene:4524	⁠63
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+ACMG Practice Guideline: lack of evidence for MTHFR polymorphism testing.	PMID:23288205	⁠60
+Methylenetetrahydrofolate reductase and psychiatric diseases.	PMID:30397195	⁠65
+Shifting landscapes of human MTHFR missense-variant effects.	PMID:34214447	⁠68
+MTHFR gene polymorphisms in diabetes mellitus.	PMID:38908773	⁠71
+Increased methylation levels of the MTHFR gene promoter in Down syndrome.	PMID:40970430	⁠74
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_005957.5(MTHFR):c.512G>A (p.Gly171Asp)	VCV003345787	⁠61
+NM_005957.5(MTHFR):c.1163G>T (p.Arg388Leu)	VCV003384941	⁠66
+NM_005957.5(MTHFR):c.750C>T (p.Cys250=)	VCV003389646	⁠69
+NM_005957.5(MTHFR):c.1003C>A (p.Arg335Ser)	VCV003896160	⁠72
+NM_005957.5(MTHFR):c.1725G>A (p.Val575=)	VCV003896204	⁠75
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+5,10-@METHYLENETETRAHYDROFOLATE REDUCTASE; MTHFR	omim 607093	⁠62
+5,10-@METHYLENETETRAHYDROFOLATE REDUCTASE; MTHFR	omim 607093	⁠62
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Genetic Causes of Male Infertility	NCT00341120	COMPLETED	⁠64
+Study on the Influence of Electroconvulsive Therapy (ECT) on Homocysteine Levels	NCT00370058	COMPLETED	⁠67
+Homocysteine After Nitrous Oxide Anesthesia	NCT00482456	COMPLETED	⁠70
+Examining B12 Deficiency Associated With C677T Mutation on MTHFR Gene in Terms of Commonness and Endothelial Function	NCT00730574	TERMINATED	⁠73
+China Stroke Primary Prevention Trial	NCT00794885	COMPLETED	⁠76
+NOTES
+Note: this answer was truncated because only 113 of the 3875 records that matched this question in the graph were retrieved
+▶
+SOURCES
+76
+Based on 76 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

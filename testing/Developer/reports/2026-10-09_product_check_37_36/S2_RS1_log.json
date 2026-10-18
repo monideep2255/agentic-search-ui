@@ -1,0 +1,42 @@
+{
+  "tag": "S2_RS1",
+  "question": "What does the RS1 gene do?",
+  "steps": [
+    {
+      "step": "bundle",
+      "bundle": [
+        "index-DB6gWcmy.js"
+      ]
+    },
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "landed",
+      "secs": 37.651,
+      "which": [
+        "trust-line"
+      ]
+    },
+    {
+      "step": "answer texts",
+      "emailStillVisible": false,
+      "answerBody": "✓ Answered16.3s · 13 tool calls · 18 sources cited from 3 layers\n\nHide work ▴\n0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n6.1s\nTHINK\nSingle factual question about a gene's function, directly answerable.\n6.1s\nPLAN\nsearching 3 layers for NCBIGene:6247. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search\n6.4s\nACT\nclinicaltrials_search — 5 results\n6.4s\nACT\nncbi_efetch — 10 results\n6.5s\nACT\nncbi_efetch — 1 result\n6.5s\nACT\nncbi_efetch — 5 results\n6.5s\nACT\nncbi_efetch — 10 results\n6.6s\nACT\nncbi_efetch — 1 result\n6.7s\nACT\ncypher_query — 1 result\n6.8s\nACT\ncypher_query — 5 results\n7.2s\nACT\npubtator_annotate — 1 result\n7.5s\nACT\nncbi_efetch — 5 results\n7.5s\nACT\nncbi_efetch — 2 results\n7.5s\nACT\npubtator_annotate — 5 results\n7.5s\nACT\nncbi_efetch — 10 results\n\nFound 1 gene record for RS1: retinoschisin 1.⁠2\n\nThe encoded protein is assembled and secreted from photoreceptors and bipolar cells as a homo-oligomeric protein complex.⁠1\n\nGENE RECORDS FOUND\nGENE IDENTIFIER \nretinoschisin 1 NCBIGene:6247 ⁠2\nRS1 NCBIGene:6247 ⁠3\nPUBMED RECORDS FOUND\nPAPER IDENTIFIER \nDifferential requirements of IQUB for the assembly of radial spoke 1 and the motility of mouse cilia and flagella. PMID:36417862 ⁠4\nA viral ADP-ribosyltransferase attaches RNA chains to host proteins. PMID:37587340 ⁠8\nIdentifying Multiomic Signatures of X-Linked Retinoschisis-Derived Retinal Organoids and Mice Harboring Patient-Specific Mutation Using Spatiotemporal Single-Cell Transcriptomics. PMID:39503290 ⁠12\nHeterogeneity of radial spoke components in Tetrahymena cilia. PMID:40886204 ⁠15\nAberrant recursive splicing in a human disease locus. PMID:40919386 ⁠18\nCLINVAR RECORDS FOUND\nVARIANT IDENTIFIER \nNM_000330.4(RS1):c.78+2T>C VCV001723073 ⁠5\nNM_000330.4(RS1):c.184+2T>G VCV000449510 ⁠9\nNM_000330.4(RS1):c.52G>A (p.Ala18Thr) VCV004976896 ⁠13\nNM_000330.4(RS1):c.52+2T>A VCV004976897 ⁠16\nNM_000330.4(RS1):c.52+1G>C VCV004976901 ⁠19\nOMIM RECORDS FOUND\nRECORD IDENTIFIER \nRETINOSCHISIN; RS1 omim 300839 ⁠6\nRETINOSCHISIS 1, X-LINKED, JUVENILE; RS1 omim 312700 ⁠10\nCLINICAL TRIAL RECORDS FOUND\nTRIAL IDENTIFIER STATUS \nPeople s Expectations When Enrolling in a Phase I/II RS1 Ocular Gene Transfer Clinical Trial NCT02317354 COMPLETED ⁠7\nStudy of RS1 Ocular Gene Transfer for X-linked Retinoschisis NCT02317887 COMPLETED ⁠11\nClinical Evaluation of Patients With X-linked Retinoschisis NCT02331173 COMPLETED ⁠14\nSafety and Efficacy of rAAV-hRS1 in Patients With X-linked Retinoschisis (XLRS) NCT02416622 COMPLETED ⁠17\nMothers Experiences With X-linked Retinoschisis Compared to Fathers Experiences NCT03354403 COMPLETED ⁠20\n▶\nSOURCES\n18\n▶\nKNOWLEDGE GRAPH\n1\n▶\n[1][2][3]\n\nNCBIGene 6247\n\nL1 · graph, L2 · live\n▶\nLIVE NCBI APIS\n13\n▶\nENRICHMENT\n5\n▶\n[7]\n\nclinicaltrials.gov NCT02317354\n\nL3 · literature\n▶\n[11]\n\nclinicaltrials.gov NCT02317887\n\nL3 · literature\n▶\n[14]\n\nclinicaltrials.gov NCT02331173\n\nL3 · literature\n▶\n[17]\n\nclinicaltrials.gov NCT02416622\n\nL3 · literature\n▶\n[20]\n\nclinicaltrials.gov NCT03354403\n\nL3 · literature\nSources disagree on at least one claim",
+      "answerMeta": "✓ Answered16.3s · 13 tool calls · 18 sources cited from 3 layers",
+      "trust": "Sources disagree on at least one claim",
+      "workPanel": "0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n6.1s\nTHINK\nSingle factual question about a gene's function, directly answerable.\n6.1s\nPLAN\nsearching 3 layers for NCBIGene:6247. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search\n6.4s\nACT\nclinicaltrials_search — 5 results\n6.4s\nACT\nncbi_efetch — 10 results\n6.5s\nACT\nncbi_efetch — 1 result\n6.5s\nACT\nncbi_efetch — 5 results\n6.5s\nACT\nncbi_efetch — 10 results\n6.6s\nACT\nncbi_efetch — 1 result\n6.7s\nACT\ncypher_query — 1 result\n6.8s\nACT\ncypher_query — 5 results\n7.2s\nACT\npubtator_annotate — 1 result\n7.5s\nACT\nncbi_efetch — 5 results\n7.5s\nACT\nncbi_efetch — 2 results\n7.5s\nACT\npubtator_annotate — 5 results\n7.5s\nACT\nncbi_efetch — 10 results",
+      "sources": "▶\nSOURCES\n18\n▶\nKNOWLEDGE GRAPH\n1\n▶\n[1][2][3]\n\nNCBIGene 6247\n\nL1 · graph, L2 · live\n▶\nLIVE NCBI APIS\n13\n▶\nENRICHMENT\n5\n▶\n[7]\n\nclinicaltrials.gov NCT02317354\n\nL3 · literature\n▶\n[11]\n\nclinicaltrials.gov NCT02317887\n\nL3 · literature\n▶\n[14]\n\nclinicaltrials.gov NCT02331173\n\nL3 · literature\n▶\n[17]\n\nclinicaltrials.gov NCT02416622\n\nL3 · literature\n▶\n[20]\n\nclinicaltrials.gov NCT03354403\n\nL3 · literature",
+      "notes": null,
+      "refusal": null
+    },
+    {
+      "step": "rail open at 390 after hide attempt",
+      "open": false
+    },
+    {
+      "step": "answer 390",
+      "overflow390": 0
+    }
+  ]
+}

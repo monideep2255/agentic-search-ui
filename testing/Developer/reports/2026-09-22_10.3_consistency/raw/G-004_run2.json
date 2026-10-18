@@ -1,0 +1,235 @@
+{
+ "record": {
+  "id": "G-004",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For a Salmonella enterica isolate, what SNP cluster does it belong to, which AMR genes does it carry, and which isolates are within 5 SNPs of it?",
+  "session_id": "c103-bb820d05a6d7",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:01:40+00:00",
+  "run_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "MedGen:C4551986",
+   "MedGen:C1859878"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 2,
+  "distinct_sources": 2,
+  "citations_by_layer": {
+   "layer_1_graph": 1,
+   "layer_2_api": 1
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   2
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 82,
+  "answer_start": "Found 1 gene record for AMR: alpha 2-HS glycoprotein [1], linked to 1 disease: Alopecia-intellectual disability syndrome 1 [2]. \n\nDisease records found\n\nDisease",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 5.009,
+  "seconds": 11.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 12,
+   "citation": 2,
+   "trust_signal": 3,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 0,
+   "ts": "2026-09-22T17:00:09.173582Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 2,
+   "ts": "2026-09-22T17:00:11.132852Z",
+   "payload": {
+    "narrative": "Requires graph traversal: find the isolate, get its SNP cluster, list AMR genes, then find neighboring isolates by SNP distance. (AMR: 2 MedGen records matched by name)",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "AMR",
+      "curie": "MedGen:C4551986",
+      "confidence": 1.0
+     },
+     {
+      "text": "AMR",
+      "curie": "MedGen:C1859878",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 4,
+   "ts": "2026-09-22T17:00:11.135871Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-0840c888aa94",
+      "layer": "layer_1_graph",
+      "persona": "Ehrlich",
+      "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "AMR",
+      "curie": "MedGen:C4551986",
+      "confidence": 1.0
+     },
+     {
+      "text": "AMR",
+      "curie": "MedGen:C1859878",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 6,
+   "ts": "2026-09-22T17:00:11.138080Z",
+   "payload": {
+    "call_id": "cq-0840c888aa94",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 7,
+   "ts": "2026-09-22T17:00:11.658286Z",
+   "payload": {
+    "call_id": "cq-0840c888aa94",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ehrlich",
+    "persona_about": "Created the first targeted drug, Salvarsan for syphilis, and gave medicine the idea of the magic bullet and the receptor.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Paul_Ehrlich",
+    "summary": "2 row(s) of 2",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 8,
+   "ts": "2026-09-22T17:00:11.659430Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:197",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/197",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "alpha 2-HS glycoprotein",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1859878",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1859878",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "552c381c-dd1c-4955-900e-8c5e7d9aa9eb",
+   "seq": 27,
+   "ts": "2026-09-22T17:00:17.327340Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 5009,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for AMR: alpha 2-HS glycoprotein [1], linked to 1 disease: Alopecia-intellectual disability syndrome 1 [2]. \n\nDisease records found\n\nDisease name: Alopecia-intellectual disability syndrome 1 [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:197, name: alpha 2-HS glycoprotein [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: AMR Syndrome. Ask about them individually for a complete answer."
+}

@@ -28,7 +28,13 @@ enumerates a number.
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    model_validator,
+)
 
 ToolName = Literal[
     "cypher_query",
@@ -46,6 +52,71 @@ Layer = Literal["layer_1_graph", "layer_2_api", "layer_3_enrichment"]
 # gives one enum comment ("outcome enum: ...") and done.trust_outcome takes
 # its value from the same trust vocabulary.
 TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
+
+
+class DecisionRecord(BaseModel):
+    """One classifier-seam decision (build phase 8.2, DECISIONS.md 2026-09-25,
+    cards 8, 9, 10 and 13; build phase 8.6): which closed option was chosen
+    at one decision point, and which model chose it.
+
+    Built by `harness.decide.decide` for every point except
+    "guardrail.injection", which `core/graph.py` builds itself:
+    `_jev_injection_pick` calls `call_jev` directly and `_injection_record`
+    builds the record from its result. The loop attaches one
+    record per decision it made to the `done` event's `decisions`
+    (`core/graph.py`, "classifier seam, wired"). Who decides, since build
+    phase 8.6 (DECISIONS.md 2026-09-25, "Jev decides; the guard tier is
+    Jev's fallback on failure only"):
+
+    - `CLASSIFIER_PROVIDER=jev`: Jev, reached over OpenRouter's
+      `/api/alpha/decisions` endpoint, decides alone. `decided_by` is "jev",
+      and the guard fields stay empty, since the guard tier is not asked.
+      The one exception is "guardrail.injection": there the guard
+      classifier is asked beside Jev on every question, never only on
+      failure. When Jev made a pick, `agreed` is set
+      (`jev.choice == guard_choice`) and a `decided_by` of "guard" on that
+      point means the guard tier's answer was the verdict reached, not that
+      Jev failed (F-8.6-V05). When Jev made no pick (a timeout, an HTTP
+      error, an unusable reply, the cost cap), `agreed` stays None,
+      `decided_by` is "guard" because Jev failed, and `fallback_reason`
+      names Jev's failure, as on every other point (F-8.6-RJ07).
+    - For every other point, only when Jev fails is the guard tier asked
+      the same question: `decided_by` is "guard", `guard_choice` holds its
+      pick and `fallback_reason` names Jev's failure.
+    - With the code default, `guard`, the guard tier decides alone and Jev
+      is never asked.
+    - When no model made a usable pick, both picks are None,
+      `fallback_reason` starts with "no_usable_pick" and `chosen` is the
+      caller's fail-open default.
+
+    Outside "guardrail.injection" with a Jev pick, nothing runs a second
+    model beside the first on the live path, so `agreed` stays None on every
+    other live record; the side-by-side comparison of the two models runs
+    offline only (T-8.6-03). `jev_confidence` is Jev's own `confidence`,
+    the margin between the options, not the probability of the pick
+    (F-8.6-A16).
+
+    `extra="forbid"` and a `max_length` on every string field, per
+    `production-standards.md`'s multi-agent pipeline gate: this record
+    crosses from the harness into an event payload a client reads, so it
+    gets the same schema discipline as every other payload in this file.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # The decision point's name, e.g. "guardrail.relevancy",
+    # "guardrail.injection", "think.ask_back", "think.recent_years",
+    # "think.asks_features", "plan.literature".
+    name: Annotated[str, Field(..., max_length=64)]
+    options: list[Annotated[str, Field(max_length=200)]] = Field(..., max_length=12)
+    chosen: Annotated[str, Field(..., max_length=200)]
+    decided_by: Literal["jev", "guard"]
+    jev_choice: Annotated[str | None, Field(default=None, max_length=200)] = None
+    jev_confidence: Annotated[float | None, Field(default=None, ge=0.0, le=1.0)] = None
+    guard_choice: Annotated[str | None, Field(default=None, max_length=200)] = None
+    agreed: bool | None = None
+    fallback_reason: Annotated[str | None, Field(default=None, max_length=200)] = None
+    jev_latency_ms: Annotated[int | None, Field(default=None, ge=0)] = None
 
 # Host-pinned pattern for citation.source_url, per Section 9.3's per-tool
 # host table. Build phase 3.4: widened from an NCBI-only pattern (this
@@ -89,12 +160,70 @@ TrustOutcome = Literal["answer", "flag", "ask", "refuse"]
 # to begin with.
 _URL_REMAINDER_CHARS = r"[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]"
 
+# 2026-09-20 DECISIONS.md row ("REVERSES the row above: widen the citation
+# host rule so OMIM can be cited"): `omim.org` is added as an EXACT
+# additional host, never as a loosened pattern that would admit arbitrary
+# domains. Unlike the NCBI alternative, which allows a wildcard subdomain
+# prefix, `omim\.org/` carries no such prefix, so a subdomain of omim.org
+# (for example `sub.omim.org`) does not match, matching the decision's own
+# words.
+#
+# `www.` IS admitted, and that is not a widening of the decision but a
+# closing of a silent-drop path found on 2026-09-21. The tool schema's own
+# `NCBI_EFETCH_RECORD_URL_PATTERN` accepts `(www\.)?omim\.org`, so a record
+# arriving as `https://www.omim.org/entry/113705` is schema-valid at the
+# tool boundary. Had this pattern admitted only the bare host, such a record
+# would have failed `CitationPayload` construction and been dropped
+# UNCITED and in silence, which is the failure the widening exists to end.
+# `clinicaltrials.gov` is already handled with the identical `(?:www\.)?`
+# for the same reason, so this follows the precedent rather than inventing
+# one. It is still an exact host: `www.` only, never a wildcard.
+#
+# This is a product-owner decision on a locked document
+# (`requirements/Technical_specification.md`), taken under
+# `.claude/rules/v1-scope-boundary.md`, and the host-pinned structure this
+# pattern already had stays intact: one more literal host in the
+# alternation, nothing generic added.
 NCBI_SOURCE_URL_PATTERN = (
     r"^https://(?:([A-Za-z0-9-]+\.)*ncbi\.nlm\.nih\.gov/"
-    r"|(?:www\.)?clinicaltrials\.gov/study/)"
+    r"|(?:www\.)?clinicaltrials\.gov/study/"
+    r"|(?:www\.)?omim\.org/)"
     + _URL_REMAINDER_CHARS
     + r"*$"
 )
+
+
+def source_page_key(source_url: str | None) -> str:
+    """The key that decides whether two citations point at the same page.
+
+    Card 22 (owner, 2026-10-06): every total a reader sees that says
+    "sources" counts distinct pages under this one key: the trust line's
+    "Based on N sources cited" (`synthesis/trust.py`), the opening line's
+    record count (`synthesis/answer_layout.py`), the truncation note and
+    the "more to show" count (`core/graph.py`), the history rail's count
+    after a reload (`feedback/history.py`) and the command line's
+    references block (`adapters/cli/render.py`). The web app applies the
+    identical rule in `sourcePageKey` (`frontend/src/components/screens/
+    AnswerScreen.tsx`); both are tested against the same cases.
+
+    It lives here, beside `NCBI_SOURCE_URL_PATTERN`, because it is a rule
+    about a citation's `source_url` and every consumer above already
+    imports this module; the command line in particular must not pay for
+    importing the synthesis package to print its references.
+
+    Narrow on purpose: surrounding whitespace and trailing slashes are
+    dropped, nothing else. That is the one difference measured live: the
+    graph's gene URL has no trailing slash (`cypher_provenance.py`) and the
+    live Datasets builder adds one (`ncbi_datasets_actions.py`), so the
+    BRCA1 answer of 2026-09-27 listed `.../gene/672` and `.../gene/672/` as
+    two sources. Case, query strings and fragments are left alone: a query
+    string can name a different record, and no measured duplicate differed
+    in them, so merging on them would be a guess.
+
+    An empty key means "no page"; callers fall back to their own id so a
+    record without a link is never merged with another one.
+    """
+    return (source_url or "").strip().rstrip("/")
 
 
 class GuardPayload(BaseModel):
@@ -109,6 +238,14 @@ class GuardPayload(BaseModel):
         "rate_limited",
         "cost_capped",
         "write_seeking",
+        # Added 2026-09-22 by product-owner decision: a request for a
+        # compute tool v1 does not have (BLAST, any sequence-similarity
+        # search, or VCF ingestion). Additive, so v1-legal per
+        # `system-design-patterns` rule 10, and it follows F-3.0-01's
+        # precedent of a new member over reusing `off_topic`: a caller
+        # switching on `category` can tell a missing capability from an
+        # off-topic question.
+        "compute_request",
     ]
     reason: str | None = Field(None, max_length=256)
 
@@ -130,6 +267,22 @@ class ThinkPayload(BaseModel):
     ]
     resolved_entities: list[ResolvedEntity] = Field(default_factory=list, max_length=20)
     clarifying_question: str | None = Field(None, max_length=500)
+    # Fix-plan item 12.3 (2026-09-23), the product owner's approved design: a
+    # bare one-to-three-word question that opens a conversation ("reflux
+    # disease", "GERD") gets a clarifying question PLUS a short set of full
+    # questions the reader can pick with one click, rather than only the
+    # free-text field item 7.5 already gives every clarification. ADDITIVE
+    # and OPTIONAL, default None, per system-design-patterns pattern 10: an
+    # older producer or consumer that has never heard of this field is
+    # unaffected, and every clarification that is not this bare-topic shape
+    # (item 7.5's "which gene, variant or condition do you mean") leaves it
+    # None exactly as before this field existed. Always four items when set
+    # (`core.graph._bare_topic_clarification`), capped at 4 defensively
+    # rather than trusting the producer never to grow the list, the same
+    # posture every other bounded array on this payload already takes.
+    clarifying_options: list[Annotated[str, Field(max_length=220)]] | None = Field(
+        None, max_length=4
+    )
 
 
 class ToolCall(BaseModel):
@@ -230,6 +383,13 @@ class ToolResultPayload(ToolStartPayload):
     truncated: bool
 
 
+def _placement_is_absent(value: object) -> bool:
+    """True when a token carries no placement, so it is left out of the
+    serialized payload and a request that did not ask for it gets the
+    bytes it got before build phase 8.7 (F-8.7-A01)."""
+    return value is None
+
+
 class TokenPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -259,15 +419,63 @@ class TokenPayload(BaseModel):
         ]
         | None
     ) = None
-    cells: list[Annotated[str, Field(max_length=500)]] | None = Field(None, max_length=2)
+    # Item 12.9 (2026-09-23): up to FOUR cells, widened from two. A
+    # Researcher table row carries the record's name, its identifier, the
+    # mapping column where its type has one, and a status or year where the
+    # record carries one. Additive per Section 2.6: a wider bound, so every
+    # payload that validated before still validates, and `cells` still means
+    # "the display values, in column order, labelled by the table_header".
+    cells: list[Annotated[str, Field(max_length=500)]] | None = Field(None, max_length=4)
     emphasis: list[Annotated[str, Field(max_length=200)]] | None = Field(
         None, max_length=12
+    )
+    # Build phase 8.7, T-8.7-03 (2026-09-27, card 50, option E). WHERE on the
+    # answer screen this chunk belongs, so the records can be shown the moment
+    # Act ends and the written summary placed above them when it lands:
+    #
+    #   - "listing": the code-built record listing (its headings, table and
+    #     list rows) and the notes under it. The listing is sent live before
+    #     the writing model is called, grounded in code, so nothing shown
+    #     here is ever withdrawn.
+    #   - "summary": the code-built count line ("Found N ... records") and
+    #     the written answer, placed ABOVE the listing whatever order the
+    #     two arrive in.
+    #
+    # Opt-in per request (fix round, F-8.7-A01 and F-8.7-A14). Only a client
+    # that declares it reads the field gets it: the web bundle and the
+    # command line send `POST /v1/query?reads=placement`, and the in-process
+    # surfaces (MCP, GraphQL) set `RequestContext.reads_placement`. Every
+    # other request gets None here, which is left OUT of the payload when it
+    # is serialized (`_placement_is_absent`), so its stream is byte for
+    # byte what it was before this phase: no `placement` key, and the
+    # listing after the summary. A client built before the field, whose own
+    # copy of this model forbids extra keys, therefore never meets it.
+    #
+    # Additive per Section 2.6 and `system-design-patterns` pattern 10: a
+    # payload without the field validates, and reads as "summary", which is
+    # where every token built before this phase rendered.
+    #
+    # F-8.7-V01 (2026-10-09): the field leaves itself out when None through
+    # `exclude_if`, not a wrap `model_serializer`. A wrap serializer returns
+    # `Any`, so pydantic could no longer describe what a token serializes to
+    # and `model_json_schema(mode="serialization")` read `{}`. With
+    # `exclude_if` the bytes are the same and the schema is the full object.
+    placement: Literal["listing", "summary"] | None = Field(
+        None, exclude_if=_placement_is_absent
     )
 
 
 class CitationPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # `citation_id` is the join key. F-8.7-A04, card 57 (2026-10-09): for a
+    # request that reads `placement`, the listing's citations go out before
+    # the writer, and one the summary also cites is sent again once the
+    # summary is checked: the same id, number, record and every other field,
+    # with `claim_text` grown by the words each summary sentence was checked
+    # against. A surface keeps one per id, the later in the earlier one's
+    # place (`contracts.token_order.one_per_citation_id`); a repeat that
+    # changes anything but `claim_text` is never an update.
     citation_id: str = Field(..., max_length=64)
     display_index: int = Field(..., ge=1)
     source: str = Field(..., max_length=128)
@@ -292,7 +500,7 @@ class CitationPayload(BaseModel):
     # graph_snapshot_date_from_version`, already live-confirmed and wired
     # for T-3.4-06's staleness check). It is NOT a genuine per-row
     # ingestion timestamp: F-3.4-T06-01 confirmed no such field exists
-    # anywhere this repo's ingest can read (checked live against
+    # anywhere this repository's ingest can read (checked live against
     # `ag_catalog`; no ingest-metadata table is queryable). It is the
     # closest real, non-fabricated proxy this graph has for "when was this
     # graph data current", which is what Section 7's freshness argument
@@ -361,6 +569,19 @@ class CostPayload(BaseModel):
     query_cap_usd: float = Field(..., ge=0.0)
     cap_fraction: float = Field(..., ge=0.0)
     model_tier: Literal["guard", "plan", "synth"] = Field(..., max_length=16)
+    # Build phase 8.6, T-8.6-08 (product harness review C5): how many seconds
+    # the latest completed call on `model_tier` for this question took,
+    # beside the running cost, so an analyst can read time per call by tier.
+    # It is one call's time, not the emitting step's: a step that emits a
+    # cost event without calling `model_tier` repeats an earlier call's time
+    # (Plan answering from a template repeats Think's plan-tier call), so
+    # summing it over a question's events can count a call twice (fix
+    # round, F-8.6-J11; `Harness.last_call_elapsed_s`). Additive and
+    # optional per `system-design-patterns` pattern 10; None when no call on
+    # `model_tier` has completed. The event stays operator-only: every
+    # end-user adapter filters `cost` out (`harness.cost_control`, Section
+    # 19.4).
+    call_elapsed_s: float | None = Field(default=None, ge=0.0)
 
 
 class ErrorPayload(BaseModel):
@@ -391,13 +612,23 @@ class DonePayload(BaseModel):
     trust_outcome: TrustOutcome
 
     # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
-    # answer ("Based on 1 source, not yet confirmed"), built in code by
+    # answer ("Based on 1 source cited, from MedGen"), built in code by
     # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
     # already summarises. Additive and optional; None on a refusal. Carried
     # HERE rather than on `TrustSignalPayload` because the MCP surface
     # projects that model whole under a pinned key allowlist, and a trust
     # line is a statement about the finished answer, which is this event.
     trust_line: Annotated[str | None, Field(default=None, max_length=200)] = None
+    # Fix-plan item 1, the call ceiling (2026-09-22, night). How many Layer 2
+    # and 3 calls this query spent against `call_budget`'s ceiling of twenty,
+    # counted at the transports, so it INCLUDES Think's own live lookups,
+    # which no other event shows. Measured that night: a window question
+    # crossed the ceiling on one pass in five and refused with no citations,
+    # and nothing on the stream said why. Additive and optional, within v1 by
+    # `system-design-patterns` pattern 10; None when no budget scope was
+    # bound, which is a different fact from zero. Read by the developer
+    # measurements, ignored by every surface.
+    layer_calls_used: Annotated[int | None, Field(default=None, ge=0)] = None
 
     next_step: Annotated[str | None, Field(default=None, max_length=200)] = None
     """An offer of somewhere to go next, or None when there is nowhere honest.
@@ -456,6 +687,23 @@ class DonePayload(BaseModel):
 
     `max_length=2000` matches `Query.text`, because this string becomes the
     next `Query.text` unchanged.
+    """
+
+    decisions: Annotated[list[DecisionRecord] | None, Field(default=None, max_length=16)] = None
+    """The classifier-seam decisions this query made, one `DecisionRecord`
+    each, or None when it made none.
+
+    Build phase 8.2, cards 8, 9, 10 and 13 (DECISIONS.md 2026-09-25).
+    ADDITIVE and OPTIONAL, per `system-design-patterns` pattern 10: an
+    older client that does not know this field ignores it and behaves
+    exactly as before. The loop attaches every `harness.decide.decide`
+    result it made here (`core/graph.py`, "classifier seam, wired"); since
+    build phase 8.6 each record names the one model that decided, Jev
+    alone with `CLASSIFIER_PROVIDER=jev` and the guard tier only when Jev
+    failed (see `DecisionRecord`). `max_length=16` bounds it well above
+    the decision points wired today, since a single query can revisit a
+    decision point more than once (for example two ask-back checks in one
+    turn).
     """
 
 

@@ -22,7 +22,7 @@ Also live-confirmed 2026-08-08: `designModule.phases` is a JSON array
 `phase` string. Case 1 does not over-assert a fixed value here (phase
 varies per study) but the schema-level test in `test_clinicaltrials_search_
 schemas.py` is where the array-to-string join gets pinned; this gate only
-confirms the field is populated and is a string in the OUTPUT (this repo's
+confirms the field is populated and is a string in the OUTPUT (this repository's
 own bounded projection), never that it holds one specific value.
 
 ## The arms

@@ -1,0 +1,85 @@
+clean PATH python3.11: /opt/homebrew/bin/python3.11; python3: Python 3.14.3
+Collecting git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli
+  Cloning https://github.com/monideep2255/agentic-search-ui.git to /private/tmp/pip-req-build-vbkkg02u
+  Running command git clone --filter=blob:none --quiet https://github.com/monideep2255/agentic-search-ui.git /private/tmp/pip-req-build-vbkkg02u
+  Resolved https://github.com/monideep2255/agentic-search-ui.git to commit f53b238bf4a1e7e9737278a3f77cf4d4139a56a6
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting httpx==0.28.1 (from system3-cli==0.1.0)
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting pydantic==2.13.4 (from system3-cli==0.1.0)
+  Using cached pydantic-2.13.4-py3-none-any.whl.metadata (109 kB)
+Collecting annotated-types==0.8.0 (from system3-cli==0.1.0)
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting anyio==4.14.2 (from system3-cli==0.1.0)
+  Using cached anyio-4.14.2-py3-none-any.whl.metadata (4.6 kB)
+Collecting certifi==2026.7.22 (from system3-cli==0.1.0)
+  Using cached certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+Collecting h11==0.16.0 (from system3-cli==0.1.0)
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httpcore==1.0.9 (from system3-cli==0.1.0)
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna==3.18 (from system3-cli==0.1.0)
+  Using cached idna-3.18-py3-none-any.whl.metadata (6.1 kB)
+Collecting pydantic-core==2.46.4 (from system3-cli==0.1.0)
+  Using cached pydantic_core-2.46.4-cp311-cp311-macosx_11_0_arm64.whl.metadata (6.6 kB)
+Collecting typing-extensions==4.16.0 (from system3-cli==0.1.0)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection==0.4.2 (from system3-cli==0.1.0)
+  Using cached typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached anyio-4.14.2-py3-none-any.whl (125 kB)
+Using cached certifi-2026.7.22-py3-none-any.whl (136 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached idna-3.18-py3-none-any.whl (65 kB)
+Using cached pydantic-2.13.4-py3-none-any.whl (472 kB)
+Using cached pydantic_core-2.46.4-cp311-cp311-macosx_11_0_arm64.whl (1.9 MB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Using cached typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Building wheels for collected packages: system3-cli
+  Building wheel for system3-cli (pyproject.toml): started
+  Building wheel for system3-cli (pyproject.toml): finished with status 'done'
+  Created wheel for system3-cli: filename=system3_cli-0.1.0-py3-none-any.whl size=124945 sha256=4a3cb73ce1648836be93104dff1d60dfb71e5f6ddfc4387d7339e132904c3f63
+  Stored in directory: /private/tmp/pip-ephem-wheel-cache-0w9mwoax/wheels/83/cc/23/990952a7621b5c865658f49eee3aa5031efbdfa9304b95cba0
+Successfully built system3-cli
+Installing collected packages: typing-extensions, idna, h11, certifi, annotated-types, typing-inspection, pydantic-core, httpcore, anyio, pydantic, httpx, system3-cli
+Successfully installed annotated-types-0.8.0 anyio-4.14.2 certifi-2026.7.22 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.18 pydantic-2.13.4 pydantic-core-2.46.4 system3-cli-0.1.0 typing-extensions-4.16.0 typing-inspection-0.4.2
+
+[notice] A new release of pip is available: 23.3.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+=== s3 --help
+usage: s3 <command> [options]
+
+Ask System 3 biomedical questions from a terminal, with every claim cited.
+
+commands:
+  login   sign in once and keep the session:  s3 login you@example.org
+  ask     ask a question and print the cited answer (--json for JSON):
+          s3 ask "diseases linked to BRCA1"
+  stop    stop a running question by its run id
+  mcp     run a local MCP server over stdio, so an AI agent can ask
+          System 3 with your sign-in
+
+Run 's3 <command> --help' for a command's options. s3 uses
+https://search-agent-api-production.up.railway.app unless 's3 login --base-url' or
+S3_BASE_URL names another server.
+exit=0
+=== s3 mcp --help
+usage: s3 mcp [-h]
+
+Run a local MCP server over stdin and stdout, for an AI agent that starts MCP
+servers as commands. It offers every tool System 3's remote MCP server offers,
+using the sign-in 's3 login' stored, and renews that sign-in itself. Sign in
+first with: s3 login. Point the agent at s3 by the full path that command -v
+s3 prints, with the argument mcp, since an agent app may not read your shell's
+PATH
+
+options:
+  -h, --help  show this help message and exit
+exit=0

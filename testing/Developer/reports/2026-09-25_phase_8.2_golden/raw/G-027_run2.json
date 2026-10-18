@@ -1,0 +1,1326 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-13f79dd173e0",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:16:18+00:00",
+  "run_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 48 sources, not yet confirmed",
+  "citations": 61,
+  "distinct_sources": 32,
+  "citations_by_layer": {
+   "layer_1_graph": 36,
+   "layer_2_api": 19,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 40,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 14,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   40
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 389,
+  "answer_start": "Found 16 sequence variant records and 20 derived records for Huntington disease [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 8.033,
+  "seconds": 24.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 85,
+   "citation": 61,
+   "trust_signal": 62,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 0,
+   "ts": "2026-09-25T13:14:44.275157Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 2,
+   "ts": "2026-09-25T13:14:48.463022Z",
+   "payload": {
+    "narrative": "The query asks for available genetic tests for Huntington disease, which can be answered by a direct lookup against a database of genetic tests for the condition. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 4,
+   "ts": "2026-09-25T13:14:48.465006Z",
+   "payload": {
+    "narrative": "searching 3 layers for huntington disease. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-bba0e2138fb7",
+      "layer": "layer_1_graph",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-52d137b16d00",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-11f22c7d79dd",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6599eb8c90b5",
+      "layer": "layer_2_api",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b6b85311ede9",
+      "layer": "layer_2_api",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b0955b98dbe8",
+      "layer": "layer_2_api",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-3c6bf39830a7",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-886c2da7a597",
+      "layer": "layer_2_api",
+      "persona": "Nirenberg",
+      "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 6,
+   "ts": "2026-09-25T13:14:48.465898Z",
+   "payload": {
+    "call_id": "cq-bba0e2138fb7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 7,
+   "ts": "2026-09-25T13:14:48.465928Z",
+   "payload": {
+    "call_id": "pa-52d137b16d00",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 8,
+   "ts": "2026-09-25T13:14:48.465937Z",
+   "payload": {
+    "call_id": "ct-11f22c7d79dd",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 9,
+   "ts": "2026-09-25T13:14:48.465946Z",
+   "payload": {
+    "call_id": "ne-6599eb8c90b5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 10,
+   "ts": "2026-09-25T13:14:48.465954Z",
+   "payload": {
+    "call_id": "ne-b6b85311ede9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 11,
+   "ts": "2026-09-25T13:14:48.465962Z",
+   "payload": {
+    "call_id": "ne-b0955b98dbe8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 12,
+   "ts": "2026-09-25T13:14:48.465970Z",
+   "payload": {
+    "call_id": "pa-3c6bf39830a7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 13,
+   "ts": "2026-09-25T13:14:48.465978Z",
+   "payload": {
+    "call_id": "ne-886c2da7a597",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 14,
+   "ts": "2026-09-25T13:14:48.616178Z",
+   "payload": {
+    "call_id": "ne-6599eb8c90b5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 15,
+   "ts": "2026-09-25T13:14:48.617853Z",
+   "payload": {
+    "call_id": "pa-52d137b16d00",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 16,
+   "ts": "2026-09-25T13:14:48.829857Z",
+   "payload": {
+    "call_id": "ct-11f22c7d79dd",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 17,
+   "ts": "2026-09-25T13:14:48.854731Z",
+   "payload": {
+    "call_id": "ne-b6b85311ede9",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 18,
+   "ts": "2026-09-25T13:14:50.025323Z",
+   "payload": {
+    "call_id": "cq-bba0e2138fb7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "40 row(s) of 40",
+    "result_count": 40,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 19,
+   "ts": "2026-09-25T13:14:50.172033Z",
+   "payload": {
+    "call_id": "pa-3c6bf39830a7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 20,
+   "ts": "2026-09-25T13:14:50.271003Z",
+   "payload": {
+    "call_id": "ne-886c2da7a597",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "summary: 14 record(s)",
+    "result_count": 14,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 21,
+   "ts": "2026-09-25T13:14:50.291724Z",
+   "payload": {
+    "call_id": "ne-b0955b98dbe8",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nirenberg",
+    "persona_about": "Cracked the first word of the genetic code in 1961, showing which RNA triplet specifies which amino acid.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Marshall_Warren_Nirenberg",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 22,
+   "ts": "2026-09-25T13:14:50.293571Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/409",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/409/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:21303",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/21303",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:21303",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/21303/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31915",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_002111.8(HTT):c.52CAG[27_35] (p.Gln18_Gln38delinsGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGln)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31915/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31916",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31916",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31916",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31916/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:417742",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/417742",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.2108C>T (p.Pro703Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:417742",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/417742/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:982628",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/982628/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:982633",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/982633",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.8903G>A (p.Gly2968Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:982633",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/982633/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1298952",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1298952",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.2758G>A (p.Asp920Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1298952",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1298952/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1301634",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1301634/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1405485",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1405485",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.6250G>A (p.Gly2084Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1405485",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1405485/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1355049",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1355049",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.7498G>A (p.Val2500Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1355049",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1355049/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1599166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1599166",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1599166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1599166/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1671702",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1671702",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.4638C>G (p.Val1546=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1671702",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1671702/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1687507",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1687507/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1809691",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1809691",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99_100del (p.Gln34fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1809691",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1809691/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779747",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779747",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.107del (p.Gln36fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779747",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779747/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779748",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779748",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99_102del (p.Gln33fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779748",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779748/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779749",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779749",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99del (p.Gln33fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779749",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779749/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779750",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779750/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:4278357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4278357",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.7849G>A (p.Val2617Met)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:4278357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4278357/",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27228260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27228260/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Huntington_Disease",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D006816",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00052143",
+    "source_url": "https://clinicaltrials.gov/study/NCT00052143",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28221321",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28221321/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00075140",
+    "source_url": "https://clinicaltrials.gov/study/NCT00075140",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00980694",
+    "source_url": "https://clinicaltrials.gov/study/NCT00980694",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31371566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31371566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01554033",
+    "source_url": "https://clinicaltrials.gov/study/NCT01554033",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37603337",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37603337/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02336633",
+    "source_url": "https://clinicaltrials.gov/study/NCT02336633",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "056e514d-edad-4d93-980f-dc2aed42b02c",
+   "seq": 232,
+   "ts": "2026-09-25T13:15:06.601132Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 8033,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 48 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 119
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 131
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 16 sequence variant records and 20 derived records for Huntington disease [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36]. \n\nSequence variant records found\n\nSequenceVariant record ClinVar:409 [1]. SequenceVariant record ClinVar:21303 [3]. SequenceVariant ClinVar:31915, name: NM_002111.8(HTT):c.52CAG[27_35] (p.Gln18_Gln38delinsGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGln) [5]. SequenceVariant record ClinVar:31916 [7]. SequenceVariant ClinVar:417742, name: NM_001388492.1(HTT):c.2108C>T (p.Pro703Leu) [9]. SequenceVariant ClinVar:982633, name: NM_001388492.1(HTT):c.8903G>A (p.Gly2968Asp) [12]. SequenceVariant ClinVar:1298952, name: NM_001388492.1(HTT):c.2758G>A (p.Asp920Asn) [14]. SequenceVariant ClinVar:1405485, name: NM_001388492.1(HTT):c.6250G>A (p.Gly2084Arg) [17]. SequenceVariant ClinVar:1355049, name: NM_001388492.1(HTT):c.7498G>A (p.Val2500Ile) [19]. SequenceVariant record ClinVar:1599166 [21]. SequenceVariant ClinVar:1671702, name: NM_001388492.1(HTT):c.4638C>G (p.Val1546=) [23]. SequenceVariant ClinVar:1809691, name: NM_001388492.1(HTT):c.99_100del (p.Gln34fs) [26]. SequenceVariant ClinVar:3779747, name: NM_001388492.1(HTT):c.107del (p.Gln36fs) [28]. SequenceVariant ClinVar:3779748, name: NM_001388492.1(HTT):c.99_102del (p.Gln33fs) [30]. SequenceVariant ClinVar:3779749, name: NM_001388492.1(HTT):c.99del (p.Gln33fs) [32]. SequenceVariant ClinVar:4278357, name: NM_001388492.1(HTT):c.7849G>A (p.Val2617Met) [35]. \n\nDerived records found\n\nDerived record ClinVar:409 [2]. Derived record ClinVar:21303 [4]. Derived record ClinVar:31915 [6]. Derived record ClinVar:31916 [8]. Derived record ClinVar:417742 [10]. Derived record ClinVar:982628 [11]. Derived record ClinVar:982633 [13]. Derived record ClinVar:1298952 [15]. Derived record ClinVar:1301634 [16]. Derived record ClinVar:1405485 [18]. Derived record ClinVar:1355049 [20]. Derived record ClinVar:1599166 [22]. Derived record ClinVar:1671702 [24]. Derived record ClinVar:1687507 [25]. Derived record ClinVar:1809691 [27]. Derived record ClinVar:3779747 [29]. Derived record ClinVar:3779748 [31]. Derived record ClinVar:3779749 [33]. Derived record ClinVar:3779750 [34]. Derived record ClinVar:4278357 [36]. \n\nPubmed records found\n\nPubmed title: Huntington disease [37]. Pubmed title: Huntington disease [54]. Pubmed title: Huntington disease [56]. Pubmed title: Huntington disease: When does it begin [58]. Pubmed title: What Is Huntington Disease [60]. \n\nMedgen records found\n\nMedgen title: Huntington disease [38]. \n\nClinical features MedGen lists for Huntington disease\n\nMedgen clinical_features: Chorea [39]. Medgen clinical_features: Depression [40]. Medgen clinical_features: Gliosis [41]. Medgen clinical_features: Rigidity [42]. Medgen clinical_features: Seizure [43]. Medgen clinical_features: Hyperreflexia [44]. Medgen clinical_features: Bradykinesia [45]. Medgen clinical_features: Personality changes [46]. Medgen clinical_features: Abnormality of eye movement [47]. Medgen clinical_features: Dementia [48]. Medgen clinical_features: Cerebellar atrophy [49]. Medgen clinical_features: Gait ataxia [50]. Medgen clinical_features: Neuronal loss in central nervous system [51]. \n\nLiterature entity records found\n\nLiterature entity name: Huntington Disease [52]. \n\nClinical trial records found\n\nClinical trial name: Prospective Huntington At Risk Observational Study [53]. Clinical trial name: Family Health After Predictive Huntington Disease (HD) Testing [55]. Clinical trial name: Bioavailability of Ubiquinol in Huntington Disease [57]. Clinical trial name: Study of Huntington Patients in Connection With European Huntington's Disease Network (EHDN) [59]. Clinical trial name: Resveratrol and Huntington Disease [61]. \n\nNote: 4 further sequence variant records were found for this question and are not covered in the summary above"
+}

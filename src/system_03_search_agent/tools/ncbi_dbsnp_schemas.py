@@ -161,7 +161,7 @@ truncation-policy fix made ANY over-cap field, an over-length
 `status: "error"`, discarding gene linkage, SPDI, and population data that
 had already fetched successfully. Live-measured to cost roughly 10.4
 percent of real clinically-cited variants their entire record over a
-single over-cap field, including flagship variants this repo already uses
+single over-cap field, including flagship variants this repository already uses
 as ground truth (rs429358, rs6025, rs1801133, rs1800562, rs1042522,
 rs80359198). `fields_withheld` is round 2's fix: a plain string list, each
 entry the name of an output field whose value was withheld because it

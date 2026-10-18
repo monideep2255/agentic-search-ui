@@ -1,0 +1,85 @@
+{
+  "topic": "2026-10-16_product_check",
+  "screens": [
+    {
+      "name": "q111_write_followup",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "Which diseases are associated with BRCA1?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        },
+        {
+          "do": "fill",
+          "selector": "[aria-label=\"Ask a follow-up question\"]",
+          "text": "Remove that variant node from the knowledge graph."
+        },
+        {
+          "do": "press",
+          "selector": "[aria-label=\"Ask a follow-up question\"]",
+          "key": "Enter"
+        },
+        {
+          "do": "waitFor",
+          "selector": "text=/only reads|read-only|outside biomedical|I answer questions about biomedical|problem on our side/i",
+          "timeoutMs": 60000
+        }
+      ],
+      "saveText": "main"
+    },
+    {
+      "name": "q113_gerd_researcher",
+      "path": "/",
+      "design": "docs/build/design/design-system/screens/answer.html",
+      "steps": [
+        {
+          "do": "disclaimer"
+        },
+        {
+          "do": "click",
+          "selector": "[aria-label=\"Answer mode, audience-level depth\"] button:has-text(\"Researcher\")"
+        },
+        {
+          "do": "fill",
+          "selector": "main textarea[aria-label=\"Your question\"]",
+          "text": "What are the typical symptoms and risk factors of GERD?"
+        },
+        {
+          "do": "click",
+          "selector": "main button[aria-label=\"Search the knowledge graph\"]"
+        },
+        {
+          "do": "waitFor",
+          "selector": "[data-testid=\"answer-meta\"]",
+          "timeoutMs": 150000
+        }
+      ],
+      "saveText": "main"
+    }
+  ],
+  "widths": [
+    {
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "widths_complete": true
+}

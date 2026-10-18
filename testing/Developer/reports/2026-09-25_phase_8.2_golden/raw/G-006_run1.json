@@ -1,0 +1,236 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-e9442128f797",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:02:28+00:00",
+  "run_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "call did not complete within its per-step timeout budget"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 26,
+  "answer_start": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nl",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 97.591,
+  "seconds": 100.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 0,
+   "ts": "2026-09-25T13:00:56.564395Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 2,
+   "ts": "2026-09-25T13:00:59.998341Z",
+   "payload": {
+    "narrative": "The query asks for multiple types of linked data across several databases (sequence data, BioProjects, GEO series, assemblies) from a specific PMID, requiring traversal across NCBI links to answer each subtype and assign a status.",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 4,
+   "ts": "2026-09-25T13:01:00.002599Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5a90e4dea22f",
+      "layer": "layer_1_graph",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 6,
+   "ts": "2026-09-25T13:01:00.003733Z",
+   "payload": {
+    "call_id": "cq-5a90e4dea22f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 7,
+   "ts": "2026-09-25T13:02:30.004399Z",
+   "payload": {
+    "call_id": "cq-5a90e4dea22f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "call did not complete within its per-step timeout budget",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 8,
+   "ts": "2026-09-25T13:02:30.005820Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "44612d91-8a49-487d-92b8-8c73e4ee6e6f",
+   "seq": 12,
+   "ts": "2026-09-25T13:02:32.582374Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 97591,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 2,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.92,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 207
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "One of my searches did not finish, so I could not find grounded evidence this time. Ask again to retry, or try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=PMID%3A11237011"
+}

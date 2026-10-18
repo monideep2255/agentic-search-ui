@@ -1,11 +1,11 @@
 // Verification of commit e5947e0 on develop: new answer layout, writing banner,
 // clean copy (no visible "Source N, layer L" / "Sources X to Y" text), and the
 // GCK/MODY and gene-to-disease answer fixes.
-import { chromium } from "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/frontend/node_modules/playwright/index.mjs";
+import { chromium } from "<repo-root>/frontend/node_modules/playwright/index.mjs";
 import fs from "node:fs";
 
 const WEB = "https://search-agent-web-develop-2aeb.up.railway.app";
-const OUT = "/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/testing/Developer/reports/2026-09-14_live_check/after_e5947e0";
+const OUT = "<repo-root>/testing/Developer/reports/2026-09-14_live_check/after_e5947e0";
 fs.mkdirSync(OUT, { recursive: true });
 
 const results = [];

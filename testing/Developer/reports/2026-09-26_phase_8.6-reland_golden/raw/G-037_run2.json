@@ -1,0 +1,1291 @@
+{
+ "record": {
+  "id": "G-037",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86c@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find GEO expression datasets studying TP53 in human tumour samples.",
+  "session_id": "c103-117b3a52abe2",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:50:32+00:00",
+  "run_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:7157"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 24,
+  "distinct_sources": 23,
+  "citations_by_layer": {
+   "layer_2_api": 18,
+   "layer_1_graph": 1,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 59,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1,
+   59
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 329,
+  "answer_start": "Found 1 gene record for TP53, of 125 available: tumor protein p53 [2]. \n\nGene Identity\n\nThe protein responds to cellular stresses by regulating target genes inv",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 11,
+  "server_elapsed_s": 18.786,
+  "seconds": 19.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 15,
+   "tool_result": 15,
+   "step": 1,
+   "token": 48,
+   "citation": 24,
+   "trust_signal": 25,
+   "done": 1
+  },
+  "first_word_s": 18.982,
+  "first_token_ts": "2026-09-26T20:49:12.572449Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 0,
+   "ts": "2026-09-26T20:48:59.810352Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 2,
+   "ts": "2026-09-26T20:49:03.713003Z",
+   "payload": {
+    "narrative": "The question asks to find GEO datasets for a specific gene in human tumor samples, which requires one or two API calls to locate datasets.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 4,
+   "ts": "2026-09-26T20:49:03.716972Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:7157. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-e9073783771b",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1c1dfb9b6694",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-7691cd29a0b6",
+      "layer": "layer_3_enrichment",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-38dc375dc749",
+      "layer": "layer_3_enrichment",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-93ad4f5f653f",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6c4767f3a690",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8d878c5049eb",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-573f8439f7e5",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a14ac6e746fe",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-cb048a909980",
+      "layer": "layer_3_enrichment",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-010294413857",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1837f67d3798",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ef35a3fb7b1f",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e627a82d2632",
+      "layer": "layer_2_api",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-b1a05a98e2b9",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 6,
+   "ts": "2026-09-26T20:49:03.718381Z",
+   "payload": {
+    "call_id": "cq-e9073783771b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 7,
+   "ts": "2026-09-26T20:49:03.718411Z",
+   "payload": {
+    "call_id": "ne-1c1dfb9b6694",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 8,
+   "ts": "2026-09-26T20:49:03.718421Z",
+   "payload": {
+    "call_id": "pa-7691cd29a0b6",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 9,
+   "ts": "2026-09-26T20:49:03.718430Z",
+   "payload": {
+    "call_id": "ct-38dc375dc749",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 10,
+   "ts": "2026-09-26T20:49:03.718439Z",
+   "payload": {
+    "call_id": "ne-93ad4f5f653f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 11,
+   "ts": "2026-09-26T20:49:03.718448Z",
+   "payload": {
+    "call_id": "ne-6c4767f3a690",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 12,
+   "ts": "2026-09-26T20:49:03.718457Z",
+   "payload": {
+    "call_id": "ne-8d878c5049eb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 13,
+   "ts": "2026-09-26T20:49:03.718466Z",
+   "payload": {
+    "call_id": "ne-573f8439f7e5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 14,
+   "ts": "2026-09-26T20:49:03.718475Z",
+   "payload": {
+    "call_id": "ne-a14ac6e746fe",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 15,
+   "ts": "2026-09-26T20:49:03.718484Z",
+   "payload": {
+    "call_id": "pa-cb048a909980",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 16,
+   "ts": "2026-09-26T20:49:03.718493Z",
+   "payload": {
+    "call_id": "ne-010294413857",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 17,
+   "ts": "2026-09-26T20:49:03.718501Z",
+   "payload": {
+    "call_id": "ne-1837f67d3798",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 18,
+   "ts": "2026-09-26T20:49:03.718510Z",
+   "payload": {
+    "call_id": "ne-ef35a3fb7b1f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 19,
+   "ts": "2026-09-26T20:49:03.718519Z",
+   "payload": {
+    "call_id": "ne-e627a82d2632",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 20,
+   "ts": "2026-09-26T20:49:03.718529Z",
+   "payload": {
+    "call_id": "cq-b1a05a98e2b9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 21,
+   "ts": "2026-09-26T20:49:03.987603Z",
+   "payload": {
+    "call_id": "ne-6c4767f3a690",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 22,
+   "ts": "2026-09-26T20:49:04.000055Z",
+   "payload": {
+    "call_id": "ne-1c1dfb9b6694",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 23,
+   "ts": "2026-09-26T20:49:04.008289Z",
+   "payload": {
+    "call_id": "pa-7691cd29a0b6",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 24,
+   "ts": "2026-09-26T20:49:04.019077Z",
+   "payload": {
+    "call_id": "ne-93ad4f5f653f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 25,
+   "ts": "2026-09-26T20:49:04.097608Z",
+   "payload": {
+    "call_id": "ct-38dc375dc749",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 26,
+   "ts": "2026-09-26T20:49:04.166445Z",
+   "payload": {
+    "call_id": "ne-573f8439f7e5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 27,
+   "ts": "2026-09-26T20:49:04.195292Z",
+   "payload": {
+    "call_id": "cq-e9073783771b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 28,
+   "ts": "2026-09-26T20:49:04.264955Z",
+   "payload": {
+    "call_id": "ne-e627a82d2632",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 29,
+   "ts": "2026-09-26T20:49:04.330092Z",
+   "payload": {
+    "call_id": "ne-8d878c5049eb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 30,
+   "ts": "2026-09-26T20:49:04.973288Z",
+   "payload": {
+    "call_id": "cq-b1a05a98e2b9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "59 row(s) of 124",
+    "result_count": 59,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 31,
+   "ts": "2026-09-26T20:49:05.127553Z",
+   "payload": {
+    "call_id": "pa-cb048a909980",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 32,
+   "ts": "2026-09-26T20:49:05.309400Z",
+   "payload": {
+    "call_id": "ne-1837f67d3798",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 33,
+   "ts": "2026-09-26T20:49:05.385360Z",
+   "payload": {
+    "call_id": "ne-010294413857",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 34,
+   "ts": "2026-09-26T20:49:05.401227Z",
+   "payload": {
+    "call_id": "ne-ef35a3fb7b1f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 35,
+   "ts": "2026-09-26T20:49:05.430260Z",
+   "payload": {
+    "call_id": "ne-a14ac6e746fe",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 36,
+   "ts": "2026-09-26T20:49:05.433670Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 37,
+   "ts": "2026-09-26T20:49:12.572449Z",
+   "payload": {
+    "text": "Found 1 gene record for TP53, of 125 available: tumor protein p53 [2]. ",
+    "marker_ids": [
+     "cq-e9073783771b-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "tumor protein p53",
+     "TP53"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27328919",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3898631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "191170",
+    "source_url": "https://omim.org/entry/191170",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200303273",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200303273",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02289326",
+    "source_url": "https://clinicaltrials.gov/study/NCT02289326",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31365877",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31365877/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905024",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200308953",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200308953",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02612285",
+    "source_url": "https://clinicaltrials.gov/study/NCT02612285",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33300245",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33300245/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4055875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200308954",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200308954",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03149679",
+    "source_url": "https://clinicaltrials.gov/study/NCT03149679",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083530",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200308955",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200308955",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03466034",
+    "source_url": "https://clinicaltrials.gov/study/NCT03466034",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40729726",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083687",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200346694",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200346694",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03645200",
+    "source_url": "https://clinicaltrials.gov/study/NCT03645200",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "f66d63ed-c5ba-41a7-9856-669dbc2d0da3",
+   "seq": 135,
+   "ts": "2026-09-26T20:49:12.576226Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 11,
+    "elapsed_ms": 18786,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 249
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.54,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 150
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 157
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 175
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for TP53, of 125 available: tumor protein p53 [2]. \n\nGene Identity\n\nThe protein responds to cellular stresses by regulating target genes involved in cell cycle arrest, apoptosis, senescence, DNA repair, and metabolic changes [1]. \n\nGene records found\n\nGene NCBIGene:7157, name: tumor protein p53 [2]. Gene symbol: TP53 [3]. \n\nPubmed records found\n\nPubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data [4]. Pubmed title: Integrated Analysis of TP53 Gene and Pathway Alterations in The Cancer Genome Atlas [9]. Pubmed title: Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants [13]. Pubmed title: The Role of TP53 in Adaptation and Evolution [17]. Pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms [21]. \n\nClinvar records found\n\nClinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [5]. Clinvar title: NC_000017.11:g.7666193C>T [10]. Clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [14]. Clinvar title: NM_000546.6(TP53):c.1101-73G>C [18]. Clinvar title: NM_000546.6(TP53):c.-28-3132T>C [22]. \n\nOmim records found\n\nTUMOR PROTEIN p53 [6]. TP53 [6]. \n\nGds records found\n\nGds title: Epigenetic Disordering Drives Stemness, Senescence Escape and Tumor Heterogeneity [WGBS] [7]. Gds title: Activation of the TP53 pathway is a therapeutic vulnerability in NUP98::KDM5A+ pediatric AML I [11]. Gds title: Activation of the TP53 pathway is a therapeutic vulnerability in NUP98::KDM5A+ pediatric AML II [15]. Gds title: Activation of the TP53 pathway is a therapeutic vulnerability in NUP98::KDM5A+ pediatric AML III [19]. Gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas -- RNA [23]. \n\nClinical trial records found\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [8]. Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [12]. Clinical trial name: The p53 Colorectal Cancer Trial [16]. Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [20]. Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [24]. \n\nNote: this answer was truncated because only 60 of the 125 records that matched this question in the graph were retrieved"
+}

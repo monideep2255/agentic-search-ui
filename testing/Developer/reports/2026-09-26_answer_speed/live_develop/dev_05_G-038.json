@@ -1,0 +1,619 @@
+{
+ "id": "G-038",
+ "question": "Tell me about the tree of life.",
+ "started_at": "2026-09-26T21:36:18+00:00",
+ "run_id": "a78916d0-9643-44e9-a951-eb55a56d5df0",
+ "create_s": 0.235,
+ "stream_open_s": 0.452,
+ "headers": {
+  "cache-control": "no-store",
+  "content-type": "text/event-stream; charset=utf-8",
+  "server": "railway-hikari",
+  "x-accel-buffering": "no",
+  "transfer-encoding": "chunked",
+  "x-railway-edge": "iad1",
+  "connection": "close"
+ },
+ "events": [
+  {
+   "arrive_s": 1.517,
+   "type": "guard",
+   "seq": 0,
+   "ts": "2026-09-26T21:34:40.670228Z",
+   "summary": "passed=True",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   },
+   "text": null,
+   "lag_s": 0.007,
+   "server_s": 1.28
+  },
+  {
+   "arrive_s": 3.217,
+   "type": "think",
+   "seq": 2,
+   "ts": "2026-09-26T21:34:42.369940Z",
+   "summary": "class=exploratory",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.007,
+   "server_s": 2.98
+  },
+  {
+   "arrive_s": 3.217,
+   "type": "plan",
+   "seq": 4,
+   "ts": "2026-09-26T21:34:42.371851Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.005,
+   "server_s": 2.982
+  },
+  {
+   "arrive_s": 3.217,
+   "type": "tool_start",
+   "seq": 6,
+   "ts": "2026-09-26T21:34:42.372845Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.004,
+   "server_s": 2.983
+  },
+  {
+   "arrive_s": 3.217,
+   "type": "tool_start",
+   "seq": 7,
+   "ts": "2026-09-26T21:34:42.372874Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.004,
+   "server_s": 2.983
+  },
+  {
+   "arrive_s": 3.217,
+   "type": "tool_start",
+   "seq": 8,
+   "ts": "2026-09-26T21:34:42.372884Z",
+   "summary": "pubtator_annotate:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.004,
+   "server_s": 2.983
+  },
+  {
+   "arrive_s": 3.723,
+   "type": "tool_result",
+   "seq": 9,
+   "ts": "2026-09-26T21:34:42.874141Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.009,
+   "server_s": 3.484
+  },
+  {
+   "arrive_s": 3.857,
+   "type": "tool_result",
+   "seq": 10,
+   "ts": "2026-09-26T21:34:43.008860Z",
+   "summary": "pubtator_annotate:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.008,
+   "server_s": 3.619
+  },
+  {
+   "arrive_s": 4.101,
+   "type": "tool_result",
+   "seq": 11,
+   "ts": "2026-09-26T21:34:43.260115Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 3.87
+  },
+  {
+   "arrive_s": 4.101,
+   "type": "step",
+   "seq": 12,
+   "ts": "2026-09-26T21:34:43.261321Z",
+   "summary": "write:started",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   },
+   "text": null,
+   "lag_s": 0.0,
+   "server_s": 3.871
+  },
+  {
+   "arrive_s": 16.258,
+   "type": "token",
+   "seq": 13,
+   "ts": "2026-09-26T21:34:55.408868Z",
+   "summary": "len=593 kind=claim",
+   "payload": null,
+   "text": "Found 5 pubmed records: On tree longevity. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [5], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [6] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [7]. ",
+   "lag_s": 0.009,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.258,
+   "type": "token",
+   "seq": 14,
+   "ts": "2026-09-26T21:34:55.408938Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.009,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.258,
+   "type": "token",
+   "seq": 15,
+   "ts": "2026-09-26T21:34:55.408948Z",
+   "summary": "len=53 kind=heading",
+   "payload": null,
+   "text": "Productivity and Biodiversity\u2013Ecosystem Functioning\n\n",
+   "lag_s": 0.009,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.258,
+   "type": "token",
+   "seq": 16,
+   "ts": "2026-09-26T21:34:55.408956Z",
+   "summary": "len=128 kind=claim",
+   "payload": null,
+   "text": "The authors suggest that maximizing both tree and mycorrhizal diversity may increase ecosystem functioning in the long run [1]. ",
+   "lag_s": 0.009,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.259,
+   "type": "token",
+   "seq": 17,
+   "ts": "2026-09-26T21:34:55.408963Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.01,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.259,
+   "type": "token",
+   "seq": 18,
+   "ts": "2026-09-26T21:34:55.408970Z",
+   "summary": "len=45 kind=heading",
+   "payload": null,
+   "text": "Nonstructural Carbohydrate Storage Dynamics\n\n",
+   "lag_s": 0.01,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.259,
+   "type": "token",
+   "seq": 19,
+   "ts": "2026-09-26T21:34:55.408979Z",
+   "summary": "len=30 kind=claim",
+   "payload": null,
+   "text": "Massoniana, respectively [2]. ",
+   "lag_s": 0.01,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.259,
+   "type": "token",
+   "seq": 20,
+   "ts": "2026-09-26T21:34:55.408988Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.01,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.259,
+   "type": "token",
+   "seq": 21,
+   "ts": "2026-09-26T21:34:55.408997Z",
+   "summary": "len=22 kind=heading",
+   "payload": null,
+   "text": "Pubmed records found\n\n",
+   "lag_s": 0.01,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.259,
+   "type": "token",
+   "seq": 22,
+   "ts": "2026-09-26T21:34:55.409004Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.01,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "token",
+   "seq": 23,
+   "ts": "2026-09-26T21:34:55.409011Z",
+   "summary": "len=37 kind=table_row",
+   "payload": null,
+   "text": "Pubmed title: On tree longevity [3]. ",
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "token",
+   "seq": 24,
+   "ts": "2026-09-26T21:34:55.409019Z",
+   "summary": "len=93 kind=table_row",
+   "payload": null,
+   "text": "Pubmed title: Tree mycorrhizal type and tree diversity shape the forest soil microbiota [4]. ",
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "token",
+   "seq": 25,
+   "ts": "2026-09-26T21:34:55.409026Z",
+   "summary": "len=222 kind=table_row",
+   "payload": null,
+   "text": "Pubmed title: Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer [5]. ",
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "token",
+   "seq": 26,
+   "ts": "2026-09-26T21:34:55.409033Z",
+   "summary": "len=133 kind=table_row",
+   "payload": null,
+   "text": "Pubmed title: Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment [6]. ",
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "token",
+   "seq": 27,
+   "ts": "2026-09-26T21:34:55.409040Z",
+   "summary": "len=146 kind=table_row",
+   "payload": null,
+   "text": "Pubmed title: Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits [7]. ",
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 28,
+   "ts": "2026-09-26T21:34:55.409050Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 29,
+   "ts": "2026-09-26T21:34:55.409075Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 30,
+   "ts": "2026-09-26T21:34:55.409086Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 31,
+   "ts": "2026-09-26T21:34:55.409094Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 32,
+   "ts": "2026-09-26T21:34:55.409102Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 33,
+   "ts": "2026-09-26T21:34:55.409110Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "citation",
+   "seq": 34,
+   "ts": "2026-09-26T21:34:55.409118Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 35,
+   "ts": "2026-09-26T21:34:55.409136Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 36,
+   "ts": "2026-09-26T21:34:55.409154Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 37,
+   "ts": "2026-09-26T21:34:55.409163Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 38,
+   "ts": "2026-09-26T21:34:55.409172Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 39,
+   "ts": "2026-09-26T21:34:55.409180Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 40,
+   "ts": "2026-09-26T21:34:55.409188Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 41,
+   "ts": "2026-09-26T21:34:55.409196Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "trust_signal",
+   "seq": 42,
+   "ts": "2026-09-26T21:34:55.409210Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  },
+  {
+   "arrive_s": 16.263,
+   "type": "done",
+   "seq": 44,
+   "ts": "2026-09-26T21:34:55.409290Z",
+   "summary": "elapsed_ms=16019 outcome=answer",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 16019,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "on_topic",
+      "decided_by": "jev",
+      "jev_choice": "on_topic",
+      "jev_confidence": 0.88,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 193
+     },
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.96,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 181
+     }
+    ]
+   },
+   "text": null,
+   "lag_s": 0.014,
+   "server_s": 16.019
+  }
+ ],
+ "moments": {
+  "first_event": {
+   "arrive_s": 1.517,
+   "server_s": 1.28,
+   "lag_s": 0.007
+  },
+  "guard": {
+   "arrive_s": 1.517,
+   "server_s": 1.28,
+   "lag_s": 0.007
+  },
+  "think": {
+   "arrive_s": 3.217,
+   "server_s": 2.98,
+   "lag_s": 0.007
+  },
+  "plan": {
+   "arrive_s": 3.217,
+   "server_s": 2.982,
+   "lag_s": 0.005
+  },
+  "first_tool_start": {
+   "arrive_s": 3.217,
+   "server_s": 2.983,
+   "lag_s": 0.004
+  },
+  "last_tool_result": {
+   "arrive_s": 4.101,
+   "server_s": 3.87,
+   "lag_s": 0.001
+  },
+  "write_started": {
+   "arrive_s": 4.101,
+   "server_s": 3.871,
+   "lag_s": 0.0
+  },
+  "first_token": {
+   "arrive_s": 16.258,
+   "server_s": 16.019,
+   "lag_s": 0.009
+  },
+  "last_token": {
+   "arrive_s": 16.263,
+   "server_s": 16.019,
+   "lag_s": 0.014
+  },
+  "done": {
+   "arrive_s": 16.263,
+   "server_s": 16.019,
+   "lag_s": 0.014
+  },
+  "n_events": 41,
+  "n_tokens": 15,
+  "max_lag_s": 0.014,
+  "withdrawn": false
+ }
+}

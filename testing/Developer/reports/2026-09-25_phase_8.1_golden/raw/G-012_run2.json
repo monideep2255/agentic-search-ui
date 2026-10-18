@@ -1,0 +1,734 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-f56553c9ec7c",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T09:57:54+00:00",
+  "run_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0206693",
+   "MedGen:C1335487",
+   "MedGen:C1412014",
+   "MedGen:C1709664",
+   "MedGen:C5419191",
+   "MedGen:C5419192",
+   "MedGen:C5419517",
+   "MedGen:C5556661"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 7 sources, not yet confirmed",
+  "citations": 8,
+  "distinct_sources": 8,
+  "citations_by_layer": {
+   "layer_2_api": 3,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 300,
+  "answer_start": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 5.516,
+  "seconds": 16.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 22,
+   "citation": 8,
+   "trust_signal": 9,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 0,
+   "ts": "2026-09-25T09:56:19.858149Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 2,
+   "ts": "2026-09-25T09:56:21.290996Z",
+   "payload": {
+    "narrative": "The query asks to find clinical trials for a specific disease, which can be answered by a direct API call to a clinical trials database. (carcinoma not otherwise specified: 8 of 15 MedGen records matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 4,
+   "ts": "2026-09-25T09:56:21.296155Z",
+   "payload": {
+    "narrative": "searching 3 layers for medullary carcinoma, not otherwise specified. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8b0fc228ac96",
+      "layer": "layer_1_graph",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-dbd53eb7125a",
+      "layer": "layer_3_enrichment",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-eef6854d3528",
+      "layer": "layer_3_enrichment",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-c96ec1f69843",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-c48a3e5e850e",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a7de42629020",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-14ad676da593",
+      "layer": "layer_3_enrichment",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1596798c09e2",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 6,
+   "ts": "2026-09-25T09:56:21.299882Z",
+   "payload": {
+    "call_id": "cq-8b0fc228ac96",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 7,
+   "ts": "2026-09-25T09:56:21.300030Z",
+   "payload": {
+    "call_id": "pa-dbd53eb7125a",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 8,
+   "ts": "2026-09-25T09:56:21.300059Z",
+   "payload": {
+    "call_id": "ct-eef6854d3528",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 9,
+   "ts": "2026-09-25T09:56:21.300084Z",
+   "payload": {
+    "call_id": "ne-c96ec1f69843",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 10,
+   "ts": "2026-09-25T09:56:21.300107Z",
+   "payload": {
+    "call_id": "ne-c48a3e5e850e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 11,
+   "ts": "2026-09-25T09:56:21.300130Z",
+   "payload": {
+    "call_id": "ne-a7de42629020",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 12,
+   "ts": "2026-09-25T09:56:21.300153Z",
+   "payload": {
+    "call_id": "pa-14ad676da593",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 13,
+   "ts": "2026-09-25T09:56:21.300173Z",
+   "payload": {
+    "call_id": "ne-1596798c09e2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 14,
+   "ts": "2026-09-25T09:56:21.498760Z",
+   "payload": {
+    "call_id": "pa-dbd53eb7125a",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 15,
+   "ts": "2026-09-25T09:56:21.540890Z",
+   "payload": {
+    "call_id": "ne-c96ec1f69843",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 16,
+   "ts": "2026-09-25T09:56:21.633369Z",
+   "payload": {
+    "call_id": "ne-c48a3e5e850e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 17,
+   "ts": "2026-09-25T09:56:21.891162Z",
+   "payload": {
+    "call_id": "ct-eef6854d3528",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 18,
+   "ts": "2026-09-25T09:56:24.024205Z",
+   "payload": {
+    "call_id": "cq-8b0fc228ac96",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 19,
+   "ts": "2026-09-25T09:56:24.192790Z",
+   "payload": {
+    "call_id": "pa-14ad676da593",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 20,
+   "ts": "2026-09-25T09:56:24.285980Z",
+   "payload": {
+    "call_id": "ne-1596798c09e2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 21,
+   "ts": "2026-09-25T09:56:24.321113Z",
+   "payload": {
+    "call_id": "ne-a7de42629020",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "fetch: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 22,
+   "ts": "2026-09-25T09:56:24.324515Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00004048",
+    "source_url": "https://clinicaltrials.gov/study/NCT00004048",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00026533",
+    "source_url": "https://clinicaltrials.gov/study/NCT00026533",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00100828",
+    "source_url": "https://clinicaltrials.gov/study/NCT00100828",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00118248",
+    "source_url": "https://clinicaltrials.gov/study/NCT00118248",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00134043",
+    "source_url": "https://clinicaltrials.gov/study/NCT00134043",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15365566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15365566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "104918",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "25f0468e-9ad7-4d23-b8cc-5b4df5652ba6",
+   "seq": 63,
+   "ts": "2026-09-25T09:56:34.419380Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 5516,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 7 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [2], Thalidomide in Treating Patients With Thyroid Cancer [3], Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [4], Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [5] and Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [6]. \n\nMedGen lists no clinical features for Medullary Carcinoma, Not Otherwise Specified [1]. \n\nClinical trial records found\n\nClinical trial name: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [2]. Clinical trial name: Thalidomide in Treating Patients With Thyroid Cancer [3]. Clinical trial name: Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [4]. Clinical trial name: Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [5]. Clinical trial name: Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [6]. \n\nPubmed records found\n\nPubmed title: Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study [7]. \n\nMedgen records found\n\nMedgen title: Medullary Carcinoma, Not Otherwise Specified [8]. Medgen clinical_features: MedGen lists no clinical features for Medullary Carcinoma, Not Otherwise Specified [1]. \n\nNote: this answer does not address the following entities named in the question: Medullary Carcinoma, Not Otherwise Specified, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst, Infiltrating duct carcinoma of breast, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst, Advanced Renal Cell Carcinoma, Not Otherwise Specified, Metastatic Renal Cell Carcinoma, Not Otherwise Specified, Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified, Cervical Squamous Cell Carcinoma, Not Otherwise Specified. Ask about them individually for a complete answer."
+}

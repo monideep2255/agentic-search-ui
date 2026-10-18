@@ -63,6 +63,37 @@ describe("AgentEvent union: every non-cost payload shape", () => {
     expect(parseAgentEvent("think", event)).toEqual(event);
   });
 
+  it("accepts a think event with a bare-topic clarification's four options (fix-plan item 12.3)", () => {
+    const payload: ThinkPayload = {
+      narrative: "the question is a bare topic of three words or fewer",
+      query_class: "lookup",
+      resolved_entities: [],
+      clarifying_question: "What would you like to know about GERD?",
+      clarifying_options: [
+        "What is GERD and what are its symptoms?",
+        "Which genes or variants are linked to GERD?",
+        "Are there clinical trials for GERD?",
+        "What does recent research say about GERD?",
+      ],
+    };
+    const event = { ...BASE, type: "think" as const, payload } satisfies AgentEvent;
+    expect(parseAgentEvent("think", event)).toEqual(event);
+  });
+
+  it("accepts a think event omitting clarifying_options, an older backend's shape", () => {
+    // The field is optional AND nullable. Omitted entirely is a real wire
+    // shape, distinct from the explicit `null` the test above's sibling
+    // ("with resolved entities") already covers, and both must validate.
+    const payload = {
+      narrative: "ok",
+      query_class: "lookup",
+      resolved_entities: [],
+      clarifying_question: null,
+    };
+    const event = { ...BASE, type: "think" as const, payload };
+    expect(parseAgentEvent("think", event)).toEqual(event);
+  });
+
   it("accepts a plan event with tool calls", () => {
     const payload: PlanPayload = {
       narrative: "Querying the graph, then confirming against dbSNP.",
@@ -159,6 +190,28 @@ describe("AgentEvent union: every non-cost payload shape", () => {
     };
     const event = { ...BASE, type: "token" as const, payload } satisfies AgentEvent;
     expect(parseAgentEvent("token", event)).toEqual(event);
+  });
+
+  it("accepts a token carrying either placement, build phase 8.7", () => {
+    for (const placement of ["listing", "summary"] as const) {
+      const payload: TokenPayload = { text: "Found 4 disease records.", marker_ids: [], placement };
+      const event = { ...BASE, type: "token" as const, payload } satisfies AgentEvent;
+      expect(parseAgentEvent("token", event)).toEqual(event);
+    }
+  });
+
+  it("accepts a token with no placement and one with a null placement, an older producer's shapes", () => {
+    const without = { ...BASE, type: "token" as const, payload: { text: "A sentence.", marker_ids: [], kind: "claim" } };
+    expect(parseAgentEvent("token", without)).toEqual(without);
+    const nullPlacement = { ...BASE, type: "token" as const, payload: { text: "A sentence.", marker_ids: [], placement: null } };
+    expect(parseAgentEvent("token", nullPlacement)).toEqual(nullPlacement);
+  });
+
+  it("rejects a token whose placement is outside the two values", () => {
+    for (const placement of ["header", "", "LISTING", 1]) {
+      const malformed = { ...BASE, type: "token", payload: { text: "ok", marker_ids: [], placement } };
+      expect(() => parseAgentEvent("token", malformed)).toThrow(/does not match/);
+    }
   });
 
   it("accepts a citation event", () => {
@@ -344,6 +397,21 @@ describe("parseAgentEvent: rejects malformed or unexpected frames", () => {
       payload: { passed: true, category: "not_a_real_category", reason: null },
     };
     expect(() => parseAgentEvent("guard", malformed)).toThrow(/does not match/);
+  });
+
+  it("rejects a think event whose clarifying_options is not an array of strings", () => {
+    const malformed = {
+      ...BASE,
+      type: "think",
+      payload: {
+        narrative: "ok",
+        query_class: "lookup",
+        resolved_entities: [],
+        clarifying_question: "What would you like to know about GERD?",
+        clarifying_options: ["a real question?", 42],
+      },
+    };
+    expect(() => parseAgentEvent("think", malformed)).toThrow(/does not match/);
   });
 
   it("rejects a frame whose data.type does not match the SSE event: name", () => {

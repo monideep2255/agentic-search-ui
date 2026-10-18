@@ -1,0 +1,72 @@
+{
+ "clipboardConfig": "{\n  \"mcpServers\": {\n    \"ncbi-search\": {\n      \"type\": \"http\",\n      \"url\": \"https://search-agent-api-develop-43b3.up.railway.app/mcp/\",\n      \"headers\": {\n        \"Authorization\": \"Bearer <your token>\"\n      }\n    }\n  }\n}",
+ "clipboardCurl": "curl -X POST https://search-agent-api-develop-43b3.up.railway.app/v1/query \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"text\": \"Which diseases are associated with BRCA1?\", \"session_id\": \"demo-1\"}'",
+ "cards": [
+  270,
+  270,
+  946,
+  946
+ ],
+ "noticesStatus": 200,
+ "noticesType": "text/plain; charset=utf-8",
+ "notices": {
+  "length": 30490,
+  "startsHtml": false,
+  "packages": 25,
+  "versions": 25,
+  "licenses": 25,
+  "noLicenseFile": 1,
+  "react": true,
+  "reactDom": true,
+  "mui": true,
+  "sorted": true,
+  "sortedStrict": true,
+  "first5": [
+   "@babel/runtime",
+   "@emotion/cache",
+   "@emotion/hash",
+   "@emotion/is-prop-valid",
+   "@emotion/memoize"
+  ],
+  "sampleHead": "================================================================================\nPACKAGE: @babel/runtime\nVERSION: 7.29.7\nLICENSE:\nMIT License\n\nCopyright (c) 2014-present Sebastian McKenzie and other contributors\n\nPermission is hereby granted, free of charge, to any person obtaining\na copy of this software and associated documentation files (the\n\"Software\"), to deal in the Software without restrict",
+  "reactSnippet": "PACKAGE: react\nVERSION: 19.2.8\nLICENSE:"
+ },
+ "phone": {
+  "home": {
+   "sw": 390,
+   "cw": 390
+  },
+  "navVisible": [
+   "NCBI Agentic Search",
+   "Search",
+   "More pages",
+   "Log in"
+  ],
+  "morePresent": 1,
+  "moreItems": [
+   "Integrations",
+   "About"
+  ],
+  "afterMoreUrl": "https://search-agent-web-develop-2aeb.up.railway.app/integrations",
+  "integrations": {
+   "sw": 390,
+   "cw": 390
+  },
+  "about": {
+   "sw": 390,
+   "cw": 390
+  },
+  "architecture": {
+   "sw": 390,
+   "cw": 390
+  }
+ },
+ "panel": {
+  "btnCount": 1,
+  "openVisible": true,
+  "afterEscape": false,
+  "afterOutside": false,
+  "closeCount": 1,
+  "afterClose": false
+ }
+}

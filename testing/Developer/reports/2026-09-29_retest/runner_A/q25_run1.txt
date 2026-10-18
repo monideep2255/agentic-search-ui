@@ -1,0 +1,110 @@
+QUESTION: Find GEO expression datasets studying TP53 in human tumour samples.
+LANDED=answer SECONDS=35.5
+
++ New search
+
+YOUR SEARCHES
+
+Find GEO expression datasets studying TP53 in human tumour samples.
+15 tools · 23 sources from 2 layers
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+Find GEO expression datasets studying TP53 in human tumour samples.
+New search
+
+? Answered15.4s · 15 tools · 23 sources from 2 layers
+
+Show work ▾
+
+Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record, 5 gds records and 5 clinical trial records for TP53, of 124 available[21][22][23].⁠1–20
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+TP53	NCBIGene:7157	⁠1
+TP53	NCBIGene:7157	⁠6
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.	PMID:27328919	⁠2
+Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants.	PMID:33300245	⁠8
+Molecular characterization of mutant TP53 acute myeloid leukemia and high-risk myelodysplastic syndrome.	PMID:35108372	⁠12
+The Role of TP53 in Adaptation and Evolution.	PMID:36766853	⁠16
+A clinical guide to TP53 mutations in myeloid neoplasms.	PMID:40729726	⁠20
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000546.6(TP53):c.247G>T (p.Ala83Ser)	VCV003898631	⁠3
+NC_000017.11:g.7666193C>T	VCV003905024	⁠9
+NM_000546.6(TP53):c.816_864del (p.Arg273fs)	VCV004055875	⁠13
+NM_000546.6(TP53):c.1101-73G>C	VCV004083530	⁠17
+NM_000546.6(TP53):c.-28-3132T>C	VCV004083687	⁠21
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+TUMOR PROTEIN p53; TP53	omim 191170	⁠4
+TUMOR PROTEIN p53; TP53	omim 191170	⁠4
+GDS RECORDS FOUND
+RECORD	IDENTIFIER	
+XPO1 Over-expression Drives Resistance to Eprenetapopt and Azacitidine and can be Therapeutically Exploited in TP53 Mutated Myeloid Malignancies	GSE288828	⁠5
+Epigenetic Disordering Drives Stemness, Senescence Escape and Tumor Heterogeneity [WGBS]	GSE303273	⁠10
+Tumor-intrinsic and extrinsic immune mechanisms define resistance to immune checkpoint blockade in metastatic melanoma [lpWGS]	GSE308433	⁠14
+Tumor-intrinsic and extrinsic immune mechanisms define resistance to immune checkpoint blockade in metastatic melanoma [snRNA]	GSE308434	⁠18
+Tumor-intrinsic and extrinsic immune mechanisms define resistance to immune checkpoint blockade in metastatic melanoma [tcr]	GSE308435	⁠22
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Biomarker Monitoring in TP53 Mutation Carriers	NCT02289326	COMPLETED	⁠7
+Study of SNX-5422 in TP53 Null Cancers	NCT02612285	TERMINATED	⁠11
+The p53 Colorectal Cancer Trial	NCT03149679	TERMINATED	⁠15
+The Role of Hypoxia as a Selective Pressure for TP53 Mutations	NCT03466034	TERMINATED	⁠19
+Treatment of Carrying TP53 Harmful Mutations	NCT03645200	UNKNOWN	⁠23
+NOTES
+Note: this answer was truncated because only 59 of the 124 records that matched this question in the graph were retrieved
+One of the background searches did not finish, so this answer may be missing sources. Ask again to retry.
+▶
+SOURCES
+23
+Based on 23 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/gene/7157/
+https://pubmed.ncbi.nlm.nih.gov/27328919/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/
+https://www.ncbi.nlm.nih.gov/gds/200288828
+https://www.ncbi.nlm.nih.gov/gene/7157
+https://pubmed.ncbi.nlm.nih.gov/33300245/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/
+https://www.ncbi.nlm.nih.gov/gds/200303273
+https://pubmed.ncbi.nlm.nih.gov/35108372/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/
+https://www.ncbi.nlm.nih.gov/gds/200308433
+https://pubmed.ncbi.nlm.nih.gov/36766853/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/
+https://www.ncbi.nlm.nih.gov/gds/200308434
+https://pubmed.ncbi.nlm.nih.gov/40729726/
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/
+https://www.ncbi.nlm.nih.gov/gds/200308435
+https://clinicaltrials.gov/study/NCT02289326
+https://clinicaltrials.gov/study/NCT02612285
+https://clinicaltrials.gov/study/NCT03149679
+https://clinicaltrials.gov/study/NCT03466034
+https://clinicaltrials.gov/study/NCT03645200
+=== CITATION ARIA (first 6) ===
+Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 3; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 3; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 3; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 3; Source 20, layer 2
+Sources
+Source 1, layer 2
+Source 6, layer 2
+Sources
+Source 2, layer 2

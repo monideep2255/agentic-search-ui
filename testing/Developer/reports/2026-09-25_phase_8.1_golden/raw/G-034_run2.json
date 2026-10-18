@@ -1,0 +1,674 @@
+{
+ "record": {
+  "id": "G-034",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p81@example.com",
+  "category": "kiss",
+  "query_class": "aggregate",
+  "expected_outcome": "answer",
+  "question": "How many genes in the graph are associated with breast cancer?",
+  "session_id": "c103-554bc9cafcaf",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T10:01:55+00:00",
+  "run_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1320450",
+   "MedGen:C1861471",
+   "MedGen:C1968974",
+   "MedGen:C2675521",
+   "MedGen:C2676677",
+   "MedGen:C3469522",
+   "MedGen:C4016360",
+   "MedGen:C4016581"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "citations": 3,
+  "distinct_sources": 3,
+  "citations_by_layer": {
+   "layer_2_api": 2,
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 130,
+  "answer_start": "Found 1 derived record for breast cancer: MedGen:C2675521 [2]. \n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nMedGen lists no clinic",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 8.424,
+  "seconds": 13.9,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 16,
+   "citation": 3,
+   "trust_signal": 4,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 0,
+   "ts": "2026-09-25T10:00:21.508721Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 2,
+   "ts": "2026-09-25T10:00:23.014074Z",
+   "payload": {
+    "narrative": "The query asks for a count of genes associated with a disease, which requires aggregating over multiple records. (breast cancer: 8 of at least 20 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 4,
+   "ts": "2026-09-25T10:00:23.018182Z",
+   "payload": {
+    "narrative": "searching 3 layers for seen by breast cancer nurse. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-35fd7b6a5b56",
+      "layer": "layer_1_graph",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-c2f77fb4c5c2",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-73cb848af72f",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0830a779714c",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b77dc350cf91",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1bd981371b4e",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-ac18ae05db3f",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5b0fe897a5ab",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1320450",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1861471",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C1968974",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2675521",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C2676677",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C3469522",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016360",
+      "confidence": 1.0
+     },
+     {
+      "text": "breast cancer",
+      "curie": "MedGen:C4016581",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 6,
+   "ts": "2026-09-25T10:00:23.020359Z",
+   "payload": {
+    "call_id": "cq-35fd7b6a5b56",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 7,
+   "ts": "2026-09-25T10:00:23.020427Z",
+   "payload": {
+    "call_id": "pa-c2f77fb4c5c2",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 8,
+   "ts": "2026-09-25T10:00:23.020444Z",
+   "payload": {
+    "call_id": "ct-73cb848af72f",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 9,
+   "ts": "2026-09-25T10:00:23.020458Z",
+   "payload": {
+    "call_id": "ne-0830a779714c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 10,
+   "ts": "2026-09-25T10:00:23.020472Z",
+   "payload": {
+    "call_id": "ne-b77dc350cf91",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 11,
+   "ts": "2026-09-25T10:00:23.020488Z",
+   "payload": {
+    "call_id": "ne-1bd981371b4e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 12,
+   "ts": "2026-09-25T10:00:23.020504Z",
+   "payload": {
+    "call_id": "pa-ac18ae05db3f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 13,
+   "ts": "2026-09-25T10:00:23.020524Z",
+   "payload": {
+    "call_id": "ne-5b0fe897a5ab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 14,
+   "ts": "2026-09-25T10:00:23.209307Z",
+   "payload": {
+    "call_id": "pa-c2f77fb4c5c2",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 15,
+   "ts": "2026-09-25T10:00:23.212821Z",
+   "payload": {
+    "call_id": "ct-73cb848af72f",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 16,
+   "ts": "2026-09-25T10:00:23.515696Z",
+   "payload": {
+    "call_id": "ne-0830a779714c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 17,
+   "ts": "2026-09-25T10:00:23.619211Z",
+   "payload": {
+    "call_id": "ne-b77dc350cf91",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 18,
+   "ts": "2026-09-25T10:00:28.434263Z",
+   "payload": {
+    "call_id": "cq-35fd7b6a5b56",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 19,
+   "ts": "2026-09-25T10:00:28.434414Z",
+   "payload": {
+    "call_id": "ne-1bd981371b4e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 20,
+   "ts": "2026-09-25T10:00:28.434449Z",
+   "payload": {
+    "call_id": "pa-ac18ae05db3f",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 21,
+   "ts": "2026-09-25T10:00:28.589186Z",
+   "payload": {
+    "call_id": "ne-5b0fe897a5ab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 22,
+   "ts": "2026-09-25T10:00:28.590958Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C2675521",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2675521",
+    "layer": "layer_1_graph",
+    "source": "MedGen",
+    "field": "n",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "729095",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/729095",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "52c31057-e84c-4d10-8a30-57f50ac88504",
+   "seq": 47,
+   "ts": "2026-09-25T10:00:33.595938Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 8424,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 2 sources, not yet confirmed",
+    "layer_calls_used": 5,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 derived record for breast cancer: MedGen:C2675521 [2]. \n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nMedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nDerived records found\n\nDerived MedGen:C2675521, n: 0 [2]. \n\nMedgen records found\n\nMedgen title: Seen by breast cancer nurse [3]. Medgen clinical_features: MedGen lists no clinical features for Seen by breast cancer nurse [1]. \n\nNote: this answer does not address the following entities named in the question: Seen by breast cancer nurse, Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer."
+}

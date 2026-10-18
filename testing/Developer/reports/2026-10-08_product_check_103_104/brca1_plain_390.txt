@@ -1,0 +1,42 @@
+? Answered21.3s · 13 tool calls · 21 sources cited from 2 layers
+
+Show work ▾
+
+I found 4 conditions related to BRCA1.⁠2–5
+
+The gene encodes a protein that helps keep genetic material stable and acts as a tumor suppressor, playing roles in DNA repair of double-stranded breaks and recombination.⁠1 Mutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Familial cancer of breast⁠2
+Familial breast-ovarian cancer susceptibility 1⁠3
+Pancreatic cancer susceptibility 4⁠4
+Fanconi anemia complementation group S⁠5
+BRCA1⁠6, 10
+BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing.⁠7
+NM_007294.4(BRCA1):c.5243_5277+2788del⁠8
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠9
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠11
+BRCA1: An Endocrine and Metabolic Regulator.⁠12
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources cited, not yet confirmed
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

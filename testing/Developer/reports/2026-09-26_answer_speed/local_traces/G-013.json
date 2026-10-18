@@ -1,0 +1,1797 @@
+{
+ "id": "G-013",
+ "question": "what diseases are linked to brca1?",
+ "depth": "researcher",
+ "wall_s": 15.358,
+ "done": {
+  "total_cost_usd": 0.017827010719999998,
+  "total_tool_calls": 10,
+  "elapsed_ms": 15314,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 22 sources, not yet confirmed",
+  "layer_calls_used": 14,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 544
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 581
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.99,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 698
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.99,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 698
+   }
+  ]
+ },
+ "withdrawn": false,
+ "citations": 22,
+ "stamps": [
+  {
+   "t": 15.327,
+   "emitted": 3.166,
+   "type": "guard",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 3.167,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.176,
+   "type": "think",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.176,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.332,
+   "type": "plan",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.332,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.374,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 5.375,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.325,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.367,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.45,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.45,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.61,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.965,
+   "type": "tool_result",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.967,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.969,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 6.969,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 7.516,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 7.602,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 7.607,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 7.608,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.327,
+   "emitted": 7.636,
+   "type": "step",
+   "step": "write",
+   "tool": null,
+   "status": "started"
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.313,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.327,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.315,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.316,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.328,
+   "emitted": 15.317,
+   "type": "done",
+   "step": null,
+   "tool": null,
+   "status": null
+  }
+ ],
+ "rec": {
+  "model": [
+   {
+    "t": 1.191,
+    "site": "other: You are an input classifier for a biomedical evidence search",
+    "role": "guard_or_plan",
+    "prompt_chars": 3821,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 797,
+    "completion_tokens": 35,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.933
+   },
+   {
+    "t": 3.21,
+    "site": "think: classification",
+    "role": "guard_or_plan",
+    "prompt_chars": 4313,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 989,
+    "completion_tokens": 61,
+    "cached_tokens": 768,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.524
+   },
+   {
+    "t": 8.308,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 41999,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11352,
+    "completion_tokens": 418,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": "BRCA1 is linked to four diseases in the knowledge graph: familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. These associations span hereditary cancer predisposition syndromes and a bone-marrow-failure disorder, consistent with BRCA1's broad role in genome maintenance.\n\n## Disease Associations\n\nThe familial cancer of breast record [1] and the familial breast-ovarian cancer susceptibility 1 record [2] reflect the major hereditary cancer syndromes attributed to BRCA1 mutations. Pancreatic cancer susceptibility 4 [3] extends the tumor spectrum beyond breast and ovarian cancer. Fanconi anemia complementation group S [4] places BRCA1 within the Fanconi anemia pathway, linking it to a recessive DNA-repair disorder.\n\n## Gene Function\n\nBRCA1 encodes a nuclear phosphoprotein that maintains genomic stability and acts as a tumor suppressor [15: \"plays a role in maintaining genomic stability, and it also acts as a tumor suppressor\"]. Its protein participates in double-strand break repair via homologous recombination [12], DNA repair [18], and regulation of DNA repair [23]. Mutations in this gene account for approximately 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers [15: \"responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers\"].\n\n## Clinical and Research Evidence\n\nClinical trials are investigating BRCA1 in contexts including breast cancer prevention with letrozole [26], haploinsufficiency effects [16], and treatment customization in lung carcinoma [21]. Recent publications describe BRCA1-BARD1 promotion of RAD51-mediated homologous DNA pairing [6], ferroptosis targeting in BRCA1-deficient cells [29], and preneoplastic stromal cells promoting BRCA1-mediated breast tumorigenesis [19].",
+    "dur": 2.646
+   },
+   {
+    "t": 11.429,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 45190,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12249,
+    "completion_tokens": 682,
+    "cached_tokens": 11264,
+    "finish": "stop",
+    "reply": "BRCA1 is linked to four diseases: familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. The gene symbol BRCA1 [5] and gene name BRCA1 [9] are identified in records alongside the OMIM entry BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1 [8], consistent with a tumor suppressor whose mutations account for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [15: \"approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers\"].\n\n## Gene Function and DNA Repair\n\nBRCA1 encodes a 190 kD nuclear phosphoprotein that maintains genomic stability and acts as a tumor suppressor [15: \"plays a role in maintaining genomic stability, and it also acts as a tumor suppressor\"]. It participates in DNA repair [18], regulation of DNA repair [23], double-strand break repair via homologous recombination [12], and DNA damage tolerance [28]. Publications describe the BRCA1-BARD1 complex promoting RAD51-mediated homologous DNA pairing [6] and its mechanism in DNA end resection and DNA protection [24].\n\n## Variants and Clinical Evidence\n\nClinVar records include NM_007294.4(BRCA1):c.5243_5277+2788del [7], NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [14], GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [25], and NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [30]. Preneoplastic stromal cells have been shown to promote BRCA1-mediated breast tumorigenesis [19], and targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [29]. BRCA1 is also described as an endocrine and metabolic regulator [13].\n\n## Clinical Trials and Publications\n\nClinical trials include a study of germline BRCA1 and BRCA2 mutations in Jewish women affected by breast cancer [10], an investigation of BRCA1 haploinsufficiency and gene expression [16], a study customizing treatment according to RAP80 and BRCA1 in advanced lung carcinoma [21], and a letrozole prevention trial in postmenopausal women with a BRCA1 or BRCA2 mutation [26]. Additional publications are identified by PMID 28976962 [11], PMID 35432218 [17], PMID 36914836 [22], and PMID 39261728 [27]. A large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex forms through combination with other tumor suppressors, DNA damage sensors, and signal transducers [15: \"large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex (BASC)\"].",
+    "dur": 3.436
+   },
+   {
+    "t": 15.358,
+    "site": "write: sentence check (guard)",
+    "role": "guard_or_plan",
+    "prompt_chars": 1590,
+    "max_tokens": 256,
+    "ok": true,
+    "prompt_tokens": 355,
+    "completion_tokens": 10,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 0.875
+   },
+   {
+    "t": 16.233,
+    "site": "write: sentence check (guard)",
+    "role": "guard_or_plan",
+    "prompt_chars": 1714,
+    "max_tokens": 256,
+    "ok": true,
+    "prompt_tokens": 373,
+    "completion_tokens": 10,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.989
+   }
+  ],
+  "jev": [
+   {
+    "t": 3.21,
+    "kind": "decide",
+    "key": "think.recent_years",
+    "ok": true,
+    "dur": 0.582
+   },
+   {
+    "t": 3.21,
+    "kind": "decide",
+    "key": "think.asks_features",
+    "ok": true,
+    "dur": 0.698
+   },
+   {
+    "t": 3.21,
+    "kind": "decide",
+    "key": "plan.literature",
+    "ok": true,
+    "dur": 0.698
+   },
+   {
+    "t": 10.984,
+    "kind": "sentence_batch",
+    "questions": 2,
+    "timeout_s": 3.0,
+    "ok": true,
+    "dur": 0.439
+   },
+   {
+    "t": 14.882,
+    "kind": "sentence_batch",
+    "questions": 2,
+    "timeout_s": 3.0,
+    "ok": true,
+    "dur": 0.389
+   }
+  ],
+  "http": [
+   {
+    "t": 1.33,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.414
+   },
+   {
+    "t": 1.417,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.657
+   },
+   {
+    "t": 3.262,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.524
+   },
+   {
+    "t": 3.457,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.441
+   },
+   {
+    "t": 3.324,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.584
+   },
+   {
+    "t": 3.467,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.256
+   },
+   {
+    "t": 4.763,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/symbol/BRCA1/taxon/human",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.373
+   },
+   {
+    "t": 5.498,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/entity/autocomplete/",
+    "params": [
+     [
+      "limit",
+      "5"
+     ],
+     [
+      "query",
+      "BRCA1"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.782
+   },
+   {
+    "t": 5.857,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "BRCA1"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.462
+   },
+   {
+    "t": 5.98,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "gene"
+     ],
+     [
+      "id",
+      "672"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.4
+   },
+   {
+    "t": 5.434,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/id/672",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.948
+   },
+   {
+    "t": 5.641,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "retmax",
+      "5"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "BRCA1[Title/Abstract]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.935
+   },
+   {
+    "t": 5.55,
+    "host": "clinicaltrials.gov",
+    "path": "/api/v2/studies",
+    "params": [
+     [
+      "countTotal",
+      "true"
+     ],
+     [
+      "pageSize",
+      "50"
+     ],
+     [
+      "query.cond",
+      "BRCA1"
+     ],
+     [
+      "sort",
+      "@relevance"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.052
+   },
+   {
+    "t": 5.965,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "BRCA1[gene]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 1.002
+   },
+   {
+    "t": 7.224,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/publications/export/biocjson",
+    "params": [
+     [
+      "pmids",
+      "39265497,39261728,36914836,35432218,28976962"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.261
+   },
+   {
+    "t": 7.009,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/efetch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "id",
+      "39265497,39261728,36914836,35432218,28976962"
+     ],
+     [
+      "retmode",
+      "xml"
+     ],
+     [
+      "rettype",
+      "abstract"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.582
+   },
+   {
+    "t": 7.367,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "id",
+      "618708,612766,611180,611143,610497,605422,604986,300617,166945,113705"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.231
+   },
+   {
+    "t": 7.244,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "id",
+      "4890846,4871869,4853057,4851364,4851359,4848411,4823850,373892,267741,267740"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.358
+   },
+   {
+    "t": 7.758,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "medgen"
+     ],
+     [
+      "retmax",
+      "8"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "C0346153[ConceptId] OR C2676676[ConceptId] OR C3280442[ConceptId] OR C4554406[ConceptId]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.322
+   },
+   {
+    "t": 8.115,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "medgen"
+     ],
+     [
+      "id",
+      "1632414,482072,382914,87542"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.164
+   },
+   {
+    "t": 8.327,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 2.581
+   },
+   {
+    "t": 11.023,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.399
+   },
+   {
+    "t": 11.438,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 3.417
+   },
+   {
+    "t": 14.91,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.354
+   },
+   {
+    "t": 15.37,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.862
+   },
+   {
+    "t": 16.241,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.942
+   }
+  ],
+  "write": [
+   {
+    "t": 7.638,
+    "what": "resolve_concept_ids",
+    "dur": 0.651,
+    "ids": 4
+   },
+   {
+    "t": 8.288,
+    "what": "resolve_descriptor_ids",
+    "dur": 0.0,
+    "ids": 4
+   },
+   {
+    "t": 8.289,
+    "what": "features_decision_wait",
+    "dur": 0.0,
+    "asked": false
+   },
+   {
+    "t": 10.956,
+    "what": "ground_with_sentence_check",
+    "dur": 0.467,
+    "claims": 8,
+    "stripped": 15
+   },
+   {
+    "t": 14.874,
+    "what": "ground_with_sentence_check",
+    "dur": 0.397,
+    "claims": 11,
+    "stripped": 21
+   }
+  ],
+  "grounding": [
+   {
+    "t": 10.956,
+    "dur": 0.028,
+    "narrative_chars": 1634,
+    "findings": 30,
+    "claims": 8,
+    "stripped": 15,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 11.424,
+    "dur": 0.0041,
+    "narrative_chars": 1677,
+    "findings": 73,
+    "claims": 23,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   },
+   {
+    "t": 14.875,
+    "dur": 0.0068,
+    "narrative_chars": 2184,
+    "findings": 30,
+    "claims": 11,
+    "stripped": 21,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 15.275,
+    "dur": 0.0025,
+    "narrative_chars": 1677,
+    "findings": 73,
+    "claims": 23,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 10.984,
+    "candidates": [
+     {
+      "sentence": "BRCA1 encodes a nuclear phosphoprotein that maintains genomic stability and acts as a tumor suppressor",
+      "quotes": [
+       "plays a role in maintaining genomic stability, and it also acts as a tumor suppressor"
+      ]
+     },
+     {
+      "sentence": "Mutations in this gene account for approximately 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers",
+      "quotes": [
+       "responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers"
+      ]
+     }
+    ],
+    "budget_s": 12.0,
+    "approved": [],
+    "ok": true,
+    "dur": 0.439
+   },
+   {
+    "t": 14.881,
+    "candidates": [
+     {
+      "sentence": "consistent with a tumor suppressor whose mutations account for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers",
+      "quotes": [
+       "approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers"
+      ]
+     },
+     {
+      "sentence": "A large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex forms through combination with other tumor suppressors, DNA damage sensors, and signal transducers",
+      "quotes": [
+       "large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex (BASC)"
+      ]
+     }
+    ],
+    "budget_s": 12.0,
+    "approved": [],
+    "ok": true,
+    "dur": 0.39
+   }
+  ],
+  "reader": []
+ },
+ "guard_sentence_check": [
+  {
+   "ok": true,
+   "dur": 0.875,
+   "approved": [
+    "BRCA1 encodes a nuclear phosphoprotein that maintains genomic stability and acts as a tumor suppressor",
+    "Mutations in this gene account for approximately 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers"
+   ]
+  },
+  {
+   "ok": true,
+   "dur": 1.989,
+   "approved": [
+    "consistent with a tumor suppressor whose mutations account for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers",
+    "A large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex forms through combination with other tumor suppressors, DNA damage sensors, and signal transducers"
+   ]
+  }
+ ],
+ "answer_text": "Found 4 disease records for brca1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4]. \n\nBRCA1 is linked to four diseases: familial cancer of breast [1], familial breast-ovarian cancer susceptibility 1 [2], pancreatic cancer susceptibility 4 [3], and Fanconi anemia complementation group S [4]. The gene symbol BRCA1 [5] and gene name BRCA1 [6]. \n\nVariants and Clinical Evidence\n\nClinVar records include NM_007294.4(BRCA1):c.5243_5277+2788del [7], NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [8], GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [9], and NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [10]. \n\nDisease records found\n\nDisease name: Familial cancer of breast [1]. Disease name: Familial breast-ovarian cancer susceptibility 1 [2]. Disease name: Pancreatic cancer susceptibility 4 [3]. Disease name: Fanconi anemia complementation group S [4]. \n\nGene records found\n\nGene symbol: BRCA1 [5]. Gene name: BRCA1 [6]. \n\nPubmed records found\n\nPubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [11]. Pubmed title: BRCA1: An Endocrine and Metabolic Regulator [14]. Pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [16]. Pubmed title: Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection [19]. Pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [21]. \n\nClinvar records found\n\nClinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [7]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [8]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [17]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [9]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [10]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [12]. BRCA1 [12]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [13]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [15]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [18]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [20]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [22]. "
+}

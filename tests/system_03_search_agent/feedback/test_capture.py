@@ -23,6 +23,7 @@ from system_03_search_agent.core.session_memory import (
     session_row_key,
 )
 from system_03_search_agent.feedback.capture import assemble_interaction
+from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER
 
 _SEQ = iter(range(10_000))
 
@@ -88,10 +89,15 @@ def _cost_event(*, trace_id: str = "trace-1", model_tier: str = "plan"):
     )
 
 
-def _citation_payload(*, citation_id: str = "call-1-1", claim_text: str = "BRCA1 is a gene."):
+def _citation_payload(
+    *,
+    citation_id: str = "call-1-1",
+    claim_text: str = "BRCA1 is a gene.",
+    display_index: int = 1,
+):
     return {
         "citation_id": citation_id,
-        "display_index": 1,
+        "display_index": display_index,
         "source": "NCBIGene",
         "source_id": "NCBIGene:672",
         "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
@@ -324,25 +330,47 @@ def test_citations_are_dumped_verbatim() -> None:
     assert row.citations == [payload]
 
 
-def test_citations_are_capped_at_fifty() -> None:
-    """More than fifty citation events truncate rather than overflow the column.
+def test_a_long_answer_keeps_every_citation_it_showed() -> None:
+    """Card 54: 61 citations (the HNF1A answer) are all stored, not the first 50.
 
-    Mutation run: changed `_MAX_CITATIONS` from `50` to `1000`. The call
-    below went red (`InteractionRow` construction raised a Pydantic
-    `ValidationError`, "citations: List should have at most 50 items after
-    validation, not 60", since nothing truncated the list before it reached
-    the model's own cap). Reverted after confirming the failure.
+    Red before the fix: the row held 50 and the reopened answer lost [51] on.
     """
     events = [
-        _citation_event(citation_id=f"call-1-{i}") for i in range(60)
+        _citation_event(citation_id=f"call-1-{i}") for i in range(61)
     ] + [_done_event()]
     row = assemble_interaction(_query(), events)
     assert row is not None
-    assert len(row.citations) == 50
+    assert len(row.citations) == 61
+
+
+def test_citations_are_still_bounded_at_the_runs_own_ceiling() -> None:
+    """More than one answer can ever cite is truncated, not raised on."""
+    events = [
+        _citation_event(citation_id=f"call-1-{i}")
+        for i in range(MAX_CITATIONS_PER_ANSWER + 20)
+    ] + [_done_event()]
+    row = assemble_interaction(_query(), events)
+    assert row is not None
+    assert len(row.citations) == MAX_CITATIONS_PER_ANSWER == 100
 
 
 # ---------------------------------------------------------------------------
 # rubric_outcome and the one deterministic hard-fail check.
+def test_citations_keep_the_live_answers_order_and_its_first_hundred() -> None:
+    """A-54-06: the stored citations are the live answer's, in its order.
+
+    120 citations arrive numbered 1 to 120. The row must hold numbers 1 to
+    100 in that order, so markers [1] to [100] have rows. Mutation: storing
+    `reversed(events)`, or keeping the last 100, turns this red.
+    """
+    events = [
+        _citation_event(citation_id=f"call-1-{i}", display_index=i) for i in range(1, 121)
+    ] + [_done_event()]
+    row = assemble_interaction(_query(), events)
+    assert row is not None
+    assert [c["display_index"] for c in row.citations] == list(range(1, 101))
+
+
 # ---------------------------------------------------------------------------
 
 

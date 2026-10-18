@@ -1,0 +1,196 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-3c2cc2f69a6d",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:59:11+00:00",
+  "run_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC0020179",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 15.445,
+  "seconds": 17.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 0,
+   "ts": "2026-09-22T16:57:40.204778Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 2,
+   "ts": "2026-09-22T16:57:43.883519Z",
+   "payload": {
+    "narrative": "Asks for a list of genetic tests available for a specific disease, which requires a direct lookup in a genetic testing registry. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 4,
+   "ts": "2026-09-22T16:57:43.884920Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-06de63bcf8eb",
+      "layer": "layer_1_graph",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 6,
+   "ts": "2026-09-22T16:57:43.885845Z",
+   "payload": {
+    "call_id": "cq-06de63bcf8eb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 7,
+   "ts": "2026-09-22T16:57:53.685745Z",
+   "payload": {
+    "call_id": "cq-06de63bcf8eb",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 8,
+   "ts": "2026-09-22T16:57:53.686888Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "9ee0f80b-924c-4290-87bf-a58eef9eb529",
+   "seq": 12,
+   "ts": "2026-09-22T16:57:54.800253Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 15445,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC0020179"
+}

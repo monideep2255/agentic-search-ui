@@ -1,0 +1,96 @@
+LANDED=answer SECONDS=15
+
++ New search
+
+YOUR SEARCHES
+
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+2 tools · 6 sources from 1 layer
+What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?
+2 sources · Sep 29
+Which E. coli isolates in Pathogen Detection carry colistin resistance genes?
+1 source · Sep 29
+Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+0 sources · Sep 29
+Show me the ones from 2023
+0 sources · Sep 29
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+21 sources · Sep 29
+ESBL E. coli isolates?
+21 sources · Sep 29
+Which E. coli isolates are in Pathogen Detection?
+0 sources · Sep 29
+Which tomato isolates in Pathogen Detection carry resistance genes?
+0 sources · Sep 29
+Which Listeria isolates in Pathogen Detection carry blaKPC?
+1 source · Sep 29
+Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+21 sources · Sep 29
+Which Salmonella isolates carry blaCTX-M-15?
+21 sources · Sep 29
+What is in BioProject PRJNA999999999?
+0 sources · Sep 29
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+New search
+
+? Answered9.4s · 2 tools · 6 sources from 1 layer
+
+Show work ▾
+
+I found 1 biological sample and 5 sequencing datasets on this topic.⁠1–6
+
+WHERE THIS ANSWER COMES FROM
+Sample from Homo sapiens	⁠1
+SRR9504670	⁠2
+SRR9504671	⁠3
+SRR9504672	⁠4
+SRR9504673	⁠5
+SRR9504674	⁠6
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+6
+Based on 6 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/biosample/12121739
+https://www.ncbi.nlm.nih.gov/sra/8332329
+https://www.ncbi.nlm.nih.gov/sra/8332330
+https://www.ncbi.nlm.nih.gov/sra/8332331
+https://www.ncbi.nlm.nih.gov/sra/8332332
+https://www.ncbi.nlm.nih.gov/sra/8332333
+=== CITATION ARIA (first 6) ===
+Sources 1 to 6: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2
+Source 1, layer 2
+Source 2, layer 2
+Source 3, layer 2
+Source 4, layer 2
+Source 5, layer 2

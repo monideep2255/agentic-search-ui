@@ -1,0 +1,1914 @@
+{
+ "record": {
+  "id": "G-021",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which papers in the graph mention the CFTR gene, and what do they cover?",
+  "session_id": "c103-3a79c662161f",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:15:56+00:00",
+  "run_id": "216d699f-96f4-448d-be64-19f86765827b",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_1_graph": 72,
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   17,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1050,
+  "answer_start": "Found 20 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nAdditional records include PMID:",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 20.247,
+  "seconds": 31.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 135,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 0,
+   "ts": "2026-09-22T17:14:25.763852Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 2,
+   "ts": "2026-09-22T17:14:28.494039Z",
+   "payload": {
+    "narrative": "The query asks about papers mentioning a gene and their coverage, requiring broad search and summarization across multiple papers.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 4,
+   "ts": "2026-09-22T17:14:28.496209Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8a6304019b40",
+      "layer": "layer_1_graph",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-44c861f69c15",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-435b8601b5c6",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-081949b75268",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ec7615e9fc34",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ecdd59aa1096",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-96094c1ad5be",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-51cd80c26e21",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ab344105068f",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e2420509039c",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-1715308b18f7",
+      "layer": "layer_1_graph",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 6,
+   "ts": "2026-09-22T17:14:28.497261Z",
+   "payload": {
+    "call_id": "cq-8a6304019b40",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 7,
+   "ts": "2026-09-22T17:14:28.497288Z",
+   "payload": {
+    "call_id": "ne-44c861f69c15",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 8,
+   "ts": "2026-09-22T17:14:28.497298Z",
+   "payload": {
+    "call_id": "pa-435b8601b5c6",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 9,
+   "ts": "2026-09-22T17:14:28.497307Z",
+   "payload": {
+    "call_id": "ct-081949b75268",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 10,
+   "ts": "2026-09-22T17:14:28.497315Z",
+   "payload": {
+    "call_id": "ne-ec7615e9fc34",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 11,
+   "ts": "2026-09-22T17:14:28.497323Z",
+   "payload": {
+    "call_id": "ne-ecdd59aa1096",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 12,
+   "ts": "2026-09-22T17:14:28.497330Z",
+   "payload": {
+    "call_id": "ne-96094c1ad5be",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 13,
+   "ts": "2026-09-22T17:14:28.497338Z",
+   "payload": {
+    "call_id": "pa-51cd80c26e21",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 14,
+   "ts": "2026-09-22T17:14:28.497346Z",
+   "payload": {
+    "call_id": "ne-ab344105068f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 15,
+   "ts": "2026-09-22T17:14:28.497355Z",
+   "payload": {
+    "call_id": "ne-e2420509039c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 16,
+   "ts": "2026-09-22T17:14:28.497363Z",
+   "payload": {
+    "call_id": "cq-1715308b18f7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 17,
+   "ts": "2026-09-22T17:14:28.715832Z",
+   "payload": {
+    "call_id": "pa-435b8601b5c6",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 18,
+   "ts": "2026-09-22T17:14:28.809131Z",
+   "payload": {
+    "call_id": "ne-ecdd59aa1096",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 19,
+   "ts": "2026-09-22T17:14:28.879822Z",
+   "payload": {
+    "call_id": "ct-081949b75268",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 20,
+   "ts": "2026-09-22T17:14:28.882590Z",
+   "payload": {
+    "call_id": "ne-ec7615e9fc34",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 21,
+   "ts": "2026-09-22T17:14:28.883024Z",
+   "payload": {
+    "call_id": "ne-44c861f69c15",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 22,
+   "ts": "2026-09-22T17:14:28.907701Z",
+   "payload": {
+    "call_id": "ne-e2420509039c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 23,
+   "ts": "2026-09-22T17:14:29.047583Z",
+   "payload": {
+    "call_id": "cq-1715308b18f7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 24,
+   "ts": "2026-09-22T17:14:39.722340Z",
+   "payload": {
+    "call_id": "cq-8a6304019b40",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "100 row(s) of 1945",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 25,
+   "ts": "2026-09-22T17:14:40.220982Z",
+   "payload": {
+    "call_id": "pa-51cd80c26e21",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 26,
+   "ts": "2026-09-22T17:14:40.329844Z",
+   "payload": {
+    "call_id": "ne-ab344105068f",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 27,
+   "ts": "2026-09-22T17:14:40.343895Z",
+   "payload": {
+    "call_id": "ne-96094c1ad5be",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 28,
+   "ts": "2026-09-22T17:14:43.628001Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10561583",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10561583/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10581360",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10581360/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10651488",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10651488/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10666020",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10666020/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10893422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10893422/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10982807",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10982807/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11025834",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11025834/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11051556",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11051556/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10075921",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10075921/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10094564",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10094564/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10200050",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10200050/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10766763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10766763/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10799517",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10799517/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10852925",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10852925/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:10862786",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/10862786/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11095651",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11095651/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11104661",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11104661/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11109941",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11109941/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11115825",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11115825/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11117575",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11117575/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11134427",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11134427/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11146634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11146634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11158634",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11158634/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11168024",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11168024/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11175304",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11175304/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11186891",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11186891/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11243954",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11243954/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11304524",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11304524/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11333866",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11333866/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11354633",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11354633/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11356077",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11356077/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11379874",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11379874/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11397675",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11397675/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11400707",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11400707/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462247",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462247/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11462248",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11462248/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11524016",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11524016/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11529289",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11529289/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11536079",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11536079/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11569691",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11569691/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11574497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11574497/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11597137",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11597137/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11667976",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11667976/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11680956",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11680956/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11683083",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11683083/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11686989",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11686989/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11688981",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11688981/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11707463",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11707463/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713441",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713441/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11713719",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11713719/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11715005",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11715005/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11748227",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11748227/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11756355",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11756355/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11773581",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11773581/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11788089",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11788089/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006811",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006821",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006833",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0015701",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "bicarbonate transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034220",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034976",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035377",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transepithelial water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048240",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "sperm capacitation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050891",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "multicellular organismal-level water homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051454",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intracellular pH elevation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0055085",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "membrane hyperpolarization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070175",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of enamel mineralization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071320",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to cAMP",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0097186",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "amelogenesis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1902476",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1904322",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to forskolin",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "216d699f-96f4-448d-be64-19f86765827b",
+   "seq": 366,
+   "ts": "2026-09-22T17:14:53.783324Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 20247,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 20 article records for CFTR, of 1962 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nAdditional records include PMID:10561583 [1], PMID:10581360 [2], PMID:10651488 [3], and PMID:10666020 [4]. Further records are PMID:10893422 [5], PMID:10982807 [6], PMID:11025834 [7], and PMID:11051556 [8]. \n\nArticle records found\n\nArticle record PMID:10075921 [9]. Article record PMID:10094564 [10]. Article record PMID:10200050 [11]. Article record PMID:10561583 [1]. Article record PMID:10581360 [2]. Article record PMID:10651488 [3]. Article record PMID:10666020 [4]. Article record PMID:10766763 [12]. Article record PMID:10799517 [13]. Article record PMID:10852925 [14]. Article record PMID:10862786 [15]. Article record PMID:10893422 [5]. Article record PMID:10982807 [6]. Article record PMID:11025834 [7]. Article record PMID:11051556 [8]. Article record PMID:11095651 [16]. Article record PMID:11104661 [17]. Article record PMID:11109941 [18]. Article record PMID:11115825 [19]. Article record PMID:11117575 [20]. Article record PMID:11134427 [21]. Article record PMID:11146634 [22]. Article record PMID:11158634 [23]. Article record PMID:11168024 [24]. Article record PMID:11175304 [25]. Article record PMID:11186891 [26]. Article record PMID:11243954 [27]. Article record PMID:11304524 [28]. Article record PMID:11333866 [29]. Article record PMID:11354633 [30]. Article record PMID:11356077 [31]. Article record PMID:11379874 [32]. Article record PMID:11397675 [33]. Article record PMID:11400707 [34]. Article record PMID:11462247 [35]. Article record PMID:11462248 [36]. Article record PMID:11524016 [37]. Article record PMID:11529289 [38]. Article record PMID:11536079 [39]. Article record PMID:11569691 [40]. Article record PMID:11574497 [41]. Article record PMID:11597137 [42]. Article record PMID:11667976 [43]. Article record PMID:11680956 [44]. Article record PMID:11683083 [45]. Article record PMID:11686989 [46]. Article record PMID:11688981 [47]. Article record PMID:11707463 [48]. Article record PMID:11713441 [49]. Article record PMID:11713719 [50]. Article record PMID:11715005 [51]. Article record PMID:11748227 [52]. Article record PMID:11756355 [53]. Article record PMID:11773581 [54]. Article record PMID:11788089 [55]. \n\nGene records found\n\ngene symbol: CFTR [56]. gene name: CFTR [59]. This gene encodes a member of the ATP-binding cassette (ABC) transporter superfamily [65]. The encoded protein functions as a chloride channel, making it unique among members of this protein family, and controls ion and water secretion and absorption in epithelial tissues [65]. Channel activation is mediated by cycles of regulatory domain phosphorylation, ATP-binding by the nucleotide-binding domains, and ATP hydrolysis [65]. Mutations in this gene cause cystic fibrosis, the most common lethal genetic disorder [65]. \n\nPubmed records found\n\npubmed title: Molecular Structure of the Human CFTR Ion Channel [57]. pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [63]. pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [69]. pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [74]. pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [79]. The cystic fibrosis transmembrane conductance regulator (CFTR) is an ATP-binding cassette (ABC) transporter that uniquely functions as an ion channel [84]. Here, we present a 3.9\u00a0\u00c5 structure of dephosphorylated human CFTR without nucleotides, determined by electron cryomicroscopy (cryo-EM) [84]. Close resemblance of this human CFTR structure to zebrafish CFTR under identical conditions reinforces its relevance for understanding CFTR function [84]. The human CFTR structure reveals a previously unresolved helix [84]. The spectrum of disorders involving CFTR (cystic fibrosis transmembrane conductance regulator) dysfunction correlates with a continuous gradient of CFTR function defined by the combination of two allelic CFTR variants [86]. CFTR-related disorders are clinical entities with features of cystic fibrosis (CF) and evidence for presence of CFTR dysfunction but not meeting criteria for diagnosis of CF [86]. Individuals with CFTR-RDs demonstrate a wide range of CFTR activity and are still under-recognized or misc [86]. This paper is the first in a series providing updated guidance on the definition, evaluation and management of people with a Cystic Fibrosis Transmembrane conductance Regulator (CFTR)-Related Disorder (CFTR-RD) [88]. The need for this update relates to more precise characterisation of CFTR gene variants and improved assessment of CFTR protein dysfunction [88]. The exercise is co-ordinated by the European CF Society Standards of Care Committee and Diagnostic Network Working Group and involves stakeholder e [88]. The predominant mutation causing cystic fibrosis, a deletion of phenylalanine 508 (\u0394508) in the cystic fibrosis transmembrane conductance regulator (CFTR), leads to severe defects in CFTR biogenesis and function [90]. The advanced therapy Trikafta combines the folding corrector tezacaftor (VX-661), the channel potentiator ivacaftor (VX-770), and the dual-function modulator elexacaftor (VX-445) [90]. However, it is unclear how elexacaftor exerts its effects, in part because the structure of \u0394508 CFTR is un [90]. In 2017, the US Food and Drug Administration initiated expansion of drug labels for the treatment of cystic fibrosis (CF) to include CF transmembrane conductance regulator (CFTR) gene variants based on in vitro functional studies [92]. This study aims to identify CFTR variants that result in increased chloride (Cl-) transport function by the CFTR protein after treatment with the CFTR modulator combination elexacaftor/tezacaftor/ivacaftor (ELX/TEZ/IVA) [92]. These data may benefit people with CF (pwCF) who [92]. \n\nClinvar records found\n\nclinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [58]. clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [64]. clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [70]. clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [75]. clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [80]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [66]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [71]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [76]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [81]. \n\nPublication records found\n\nPublication pmid: 28340353 [61]. Publication pmid: 36207272 [67]. Publication pmid: 36220763 [72]. Publication pmid: 36264792 [77]. Publication pmid: 38388235 [82]. \n\nBiological process records found\n\nBiologicalProcess GO:0006811, name: monoatomic ion transport [62]. BiologicalProcess GO:0006821, name: chloride transport [68]. BiologicalProcess GO:0006833, name: water transport [73]. BiologicalProcess GO:0015701, name: bicarbonate transport [78]. BiologicalProcess GO:0034220, name: monoatomic ion transmembrane transport [83]. BiologicalProcess GO:0034976, name: response to endoplasmic reticulum stress [85]. BiologicalProcess GO:0035377, name: transepithelial water transport [87]. BiologicalProcess GO:0048240, name: sperm capacitation [89]. BiologicalProcess GO:0050891, name: multicellular organismal-level water homeostasis [91]. BiologicalProcess GO:0051454, name: intracellular pH elevation [93]. BiologicalProcess GO:0055085, name: transmembrane transport [94]. BiologicalProcess GO:0060081, name: membrane hyperpolarization [95]. BiologicalProcess GO:0070175, name: positive regulation of enamel mineralization [96]. BiologicalProcess GO:0071320, name: cellular response to cAMP [97]. BiologicalProcess GO:0097186, name: amelogenesis [98]. BiologicalProcess GO:1902476, name: chloride transmembrane transport [99]. BiologicalProcess GO:1904322, name: cellular response to forskolin [100]. \n\nNote: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved"
+}

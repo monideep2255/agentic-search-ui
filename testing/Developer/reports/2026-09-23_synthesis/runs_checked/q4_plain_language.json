@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "papers on the effects of caffeine on exercise performance",
+  "outcome": "answer",
+  "words": 309,
+  "paragraphs": 5,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "11583104",
+    "25355191",
+    "32589582",
+    "33388079",
+    "36615805"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \nCaffeine is described as a widely consumed substance that can be a powerful ergogenic aid, meaning it helps people train at a greater power output or train longer, with benefits seen in activities lasting anywhere from 60 seconds to 2 hours [1]. It does not directly improve the body's maximum oxygen capacity, but it has been shown to increase speed or power output in simulated race conditions [1]. For strength specifically, the evidence suggests it does not boost maximal ability but may enhance endurance or resistance to fatigue [1]. \nLower doses of caffeine, under about 3 mg per kilogram of body mass or roughly 200 mg, can also improve exercise performance, and these low doses appear to work mainly by affecting the brain rather than the muscles [2]. These low doses improve alertness, mood, and cognitive processes during and after exercise and come with few side effects [2]. \nThe International Society of Sports Nutrition published a position stand concluding that caffeine acutely enhances many aspects of exercise performance, with aerobic endurance showing the most consistent benefits [3]. The most common timing is 60 minutes before exercise, and caffeine appears to help both trained and untrained individuals [3]. Differences between people in how they respond may be due to genetics and habitual caffeine intake [3]. Caffeine also has antioxidant and anti-inflammatory actions and its performance benefits may come from enhanced substrate utilization, delayed fatigue, and alertness [4]. \nThe study notes that most prior evidence for caffeine and endurance came from cycling trials in laboratory settings, leaving endurance running less well studied [5]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- Exercise and sport performance with low doses of caffeine.\n- Caffeine effects on systemic metabolism, oxidative-inflammatory pathways, and exercise performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- Effects of Caffeine Intake on Endurance Running Performance and Time to Exhaustion: A Systematic Review and Meta-Analysis.\n\n(This is a research summary, not medical advice.)\n",
+  "key": "q4"
+}

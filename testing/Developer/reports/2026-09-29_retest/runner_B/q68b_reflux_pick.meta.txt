@@ -1,0 +1,34 @@
+{
+ "modes": [
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=reflux%20disease -> https://www.ncbi.nlm.nih.gov/search/all/?term=reflux%20disease",
+  "https://pubmed.ncbi.nlm.nih.gov/29132520/ -> https://pubmed.ncbi.nlm.nih.gov/29132520/",
+  "https://www.ncbi.nlm.nih.gov/medgen/6553 -> https://www.ncbi.nlm.nih.gov/medgen/6553",
+  "https://pubmed.ncbi.nlm.nih.gov/33351044/ -> https://pubmed.ncbi.nlm.nih.gov/33351044/",
+  "https://pubmed.ncbi.nlm.nih.gov/35605234/ -> https://pubmed.ncbi.nlm.nih.gov/35605234/",
+  "https://pubmed.ncbi.nlm.nih.gov/36170502/ -> https://pubmed.ncbi.nlm.nih.gov/36170502/",
+  "https://pubmed.ncbi.nlm.nih.gov/37516506/ -> https://pubmed.ncbi.nlm.nih.gov/37516506/",
+  "https://www.ncbi.nlm.nih.gov/mesh/D005764 -> https://www.ncbi.nlm.nih.gov/mesh/D005764",
+  "https://clinicaltrials.gov/study/NCT00141960 -> https://clinicaltrials.gov/study/NCT00141960",
+  "https://clinicaltrials.gov/study/NCT00163306 -> https://clinicaltrials.gov/study/NCT00163306",
+  "https://clinicaltrials.gov/study/NCT00184522 -> https://clinicaltrials.gov/study/NCT00184522",
+  "https://clinicaltrials.gov/study/NCT00405119 -> https://clinicaltrials.gov/study/NCT00405119",
+  "https://clinicaltrials.gov/study/NCT00551473 -> https://clinicaltrials.gov/study/NCT00551473"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

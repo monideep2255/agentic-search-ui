@@ -1,0 +1,462 @@
+{
+ "plain": {
+  "answers": 20,
+  "live_prose": {
+   "total": 58,
+   "mean": 2.9,
+   "min": 0,
+   "max": 6
+  },
+  "item1": {
+   "total": 62,
+   "mean": 3.1,
+   "min": 0,
+   "max": 7
+  },
+  "item2": {
+   "total": 61,
+   "mean": 3.05,
+   "min": 0,
+   "max": 7
+  },
+  "pair1": {
+   "total": 47,
+   "mean": 2.35,
+   "min": 0,
+   "max": 6
+  },
+  "pair2": {
+   "total": 49,
+   "mean": 2.45,
+   "min": 0,
+   "max": 7
+  },
+  "item1_B": {
+   "total": 64,
+   "mean": 3.2,
+   "min": 0,
+   "max": 7
+  },
+  "item2_B": {
+   "total": 63,
+   "mean": 3.15,
+   "min": 0,
+   "max": 7
+  },
+  "pair1_B": {
+   "total": 51,
+   "mean": 2.55,
+   "min": 0,
+   "max": 6
+  },
+  "pair2_B": {
+   "total": 53,
+   "mean": 2.65,
+   "min": 0,
+   "max": 7
+  },
+  "pair1_itemcall": {
+   "total": 62,
+   "mean": 3.1,
+   "min": 0,
+   "max": 7
+  },
+  "pair2_itemcall": {
+   "total": 62,
+   "mean": 3.1,
+   "min": 0,
+   "max": 7
+  },
+  "zero_pair_not_item_A": [],
+  "item_noise_A": [
+   1,
+   1
+  ],
+  "pair_noise_A": [
+   4,
+   4
+  ],
+  "zero_pair_not_item_B": [],
+  "item_noise_B": [
+   1,
+   1
+  ],
+  "pair_noise_B": [
+   4,
+   4
+  ],
+  "zero_pair_not_item": [],
+  "zero_by_run": {
+   "item1": [
+    "cm2",
+    "cm3"
+   ],
+   "item2": [
+    "cm2",
+    "cm3"
+   ],
+   "pair1": [
+    "cm2",
+    "cm3"
+   ],
+   "pair2": [
+    "cm2",
+    "cm3"
+   ]
+  },
+  "item_noise_answers_differ": 1,
+  "item_noise_abs_sum": 1,
+  "pair_noise_answers_differ": 4,
+  "pair_noise_abs_sum": 4
+ },
+ "researcher": {
+  "answers": 9,
+  "live_prose": {
+   "total": 47,
+   "mean": 5.22,
+   "min": 1,
+   "max": 9
+  },
+  "item1": {
+   "total": 49,
+   "mean": 5.44,
+   "min": 2,
+   "max": 9
+  },
+  "item2": {
+   "total": 50,
+   "mean": 5.56,
+   "min": 3,
+   "max": 9
+  },
+  "pair1": {
+   "total": 50,
+   "mean": 5.56,
+   "min": 2,
+   "max": 9
+  },
+  "pair2": {
+   "total": 49,
+   "mean": 5.44,
+   "min": 2,
+   "max": 9
+  },
+  "item1_B": {
+   "total": 49,
+   "mean": 5.44,
+   "min": 2,
+   "max": 9
+  },
+  "item2_B": {
+   "total": 50,
+   "mean": 5.56,
+   "min": 3,
+   "max": 9
+  },
+  "pair1_B": {
+   "total": 50,
+   "mean": 5.56,
+   "min": 2,
+   "max": 9
+  },
+  "pair2_B": {
+   "total": 49,
+   "mean": 5.44,
+   "min": 2,
+   "max": 9
+  },
+  "pair1_itemcall": {
+   "total": 50,
+   "mean": 5.56,
+   "min": 2,
+   "max": 9
+  },
+  "pair2_itemcall": {
+   "total": 49,
+   "mean": 5.44,
+   "min": 2,
+   "max": 9
+  },
+  "zero_pair_not_item_A": [],
+  "item_noise_A": [
+   3,
+   3
+  ],
+  "pair_noise_A": [
+   1,
+   1
+  ],
+  "zero_pair_not_item_B": [],
+  "item_noise_B": [
+   3,
+   3
+  ],
+  "pair_noise_B": [
+   1,
+   1
+  ],
+  "zero_pair_not_item": [],
+  "zero_by_run": {
+   "item1": [],
+   "item2": [],
+   "pair1": [],
+   "pair2": []
+  },
+  "item_noise_answers_differ": 3,
+  "item_noise_abs_sum": 3,
+  "pair_noise_answers_differ": 1,
+  "pair_noise_abs_sum": 1
+ }
+}
+{
+ "candidates": 304,
+ "item1": 145,
+ "item2": 143,
+ "pair1": 119,
+ "pair2": 119,
+ "item_call_in_pair1": 145,
+ "item_call_in_pair2": 143,
+ "item1_xor_item2": 10,
+ "pair1_xor_pair2": 12,
+ "flip_in_any_of_4_item_readings": 16
+}
+spend {'item1': 0.00508, 'item2': 0.00508, 'pair1': 0.04234, 'pair2': 0.04234} failed 0 not asked 0
+
+per answer: label depth shown_check/n live code_only | item1 item2 pair1 pair2 | live_ok_not_shown
+  gp1 plain c1/2 match 4/4 live 4 code 0 | 4 4 2 3 | B 4 4 2 3 | in-run item 4 5 vetoed ['gp1c1i4', 'gp1c1i6'] ['gp1c1i4', 'gp1c1i6'] | ['gp1c1i5']
+  gp2 plain c2/2 match 3/3 live 3 code 0 | 3 3 2 2 | B 3 3 2 2 | in-run item 3 3 vetoed ['gp2c2i5'] ['gp2c2i5'] | ['gp2c2i4']
+  gp3 plain c2/2 match 4/4 live 4 code 0 | 4 4 2 2 | B 4 4 3 3 | in-run item 4 4 vetoed ['gp3c2i3', 'gp3c2i4'] ['gp3c2i3', 'gp3c2i4'] | ['gp3c2i6']
+  gp4 plain c2/2 match 2/2 live 2 code 0 | 2 2 1 1 | B 4 4 3 3 | in-run item 2 2 vetoed ['gp4c2i6'] ['gp4c2i6'] | []
+  gp5 plain c1/1 match 5/5 live 5 code 0 | 5 5 3 3 | B 5 5 3 3 | in-run item 5 5 vetoed ['gp5c1i4', 'gp5c1i5'] ['gp5c1i4', 'gp5c1i5'] | []
+  gr1 resea c2/2 match 6/6 live 6 code 1 | 6 6 6 6 | B 6 6 6 6 | in-run item 6 6 vetoed [] [] | []
+  gr2 resea c1/2 match 5/5 live 5 code 1 | 5 5 5 5 | B 5 5 5 5 | in-run item 5 5 vetoed [] [] | ['gr2c1i4']
+  gr3 resea c1/1 match 5/5 live 5 code 0 | 6 5 5 5 | B 6 5 5 5 | in-run item 5 5 vetoed [] [] | ['gr3c1i9']
+  gr4 resea c1/2 match 5/5 live 5 code 2 | 5 5 5 5 | B 5 5 5 5 | in-run item 5 5 vetoed [] [] | []
+  gr5 resea c1/2 match 7/7 live 7 code 2 | 7 7 7 7 | B 7 7 7 7 | in-run item 7 7 vetoed [] [] | []
+  md1 plain c1/2 match 2/2 live 2 code 1 | 2 2 2 2 | B 2 2 2 2 | in-run item 2 2 vetoed [] [] | []
+  md2 plain c2/2 match 5/5 live 5 code 4 | 7 7 6 7 | B 7 7 6 7 | in-run item 7 7 vetoed ['md2c2i3'] [] | []
+  md3 plain c2/2 match 3/3 live 3 code 0 | 3 3 2 2 | B 3 3 2 2 | in-run item 3 2 vetoed ['md3c2i5'] [] | []
+  md4 plain c1/2 match 4/4 live 4 code 0 | 4 4 4 4 | B 4 4 4 4 | in-run item 4 4 vetoed [] [] | []
+  md5 plain c1/2 match 2/2 live 2 code 2 | 2 2 2 2 | B 2 2 2 2 | in-run item 2 2 vetoed [] [] | []
+  cm1 plain c1/2 match 1/1 live 1 code 1 | 1 1 1 1 | B 1 1 1 1 | in-run item 1 1 vetoed [] [] | []
+  cm2 plain c2/2 match 0/0 live 0 code 0 | 0 0 0 0 | B 0 0 0 0 | in-run item 0 0 vetoed [] [] | []
+  cm3 plain c2/2 match 0/0 live 0 code 0 | 0 0 0 0 | B 0 0 0 0 | in-run item 0 0 vetoed [] [] | []
+  cm4 plain c2/2 match 6/6 live 6 code 5 | 7 6 6 7 | B 7 6 6 7 | in-run item 6 7 vetoed [] [] | ['cm4c2i2']
+  cm5 plain c1/2 match 3/3 live 3 code 1 | 3 3 3 3 | B 3 3 3 3 | in-run item 3 3 vetoed [] [] | []
+  cp1 plain c1/2 match 1/1 live 1 code 0 | 2 2 3 2 | B 2 2 3 2 | in-run item 3 2 vetoed [] [] | []
+  cp2 plain c1/2 match 3/3 live 3 code 0 | 3 3 2 2 | B 3 3 3 3 | in-run item 3 3 vetoed ['cp2c1i4'] ['cp2c1i4'] | ['cp2c1i1', 'cp2c1i5']
+  cp3 plain c2/2 match 3/3 live 3 code 0 | 3 3 2 2 | B 3 3 2 2 | in-run item 3 3 vetoed ['cp3c2i5'] ['cp3c2i5'] | ['cp3c2i4']
+  cp4 plain c2/2 match 4/4 live 4 code 1 | 4 4 3 3 | B 4 4 3 3 | in-run item 4 4 vetoed ['cp4c2i6'] ['cp4c2i6'] | []
+  cp5 plain c1/2 match 3/3 live 3 code 0 | 3 3 1 1 | B 3 3 1 1 | in-run item 3 3 vetoed ['cp5c1i3', 'cp5c1i4'] ['cp5c1i3', 'cp5c1i4'] | []
+  cr1 resea c2/2 match 9/9 live 9 code 9 | 9 9 9 9 | B 9 9 9 9 | in-run item 9 9 vetoed [] [] | []
+  cr2: no check ran, outcome None
+  cr3 resea c1/2 match 1/1 live 1 code 0 | 2 3 2 2 | B 2 3 2 2 | in-run item 2 2 vetoed [] [] | []
+  cr4 resea c1/2 match 3/3 live 3 code 0 | 3 4 5 4 | B 3 4 5 4 | in-run item 5 4 vetoed [] [] | []
+  cr5 resea c1/2 match 6/6 live 6 code 2 | 6 6 6 6 | B 6 6 6 6 | in-run item 6 6 vetoed [] [] | []
+
+flags (arm could change which draft is kept):
+   ('gp3', 'pair', 1, 'model B shows draft c1 (3) over the live draft c2 (2)')
+   ('gp3', 'pair', 2, 'model B shows draft c1 (3) over the live draft c2 (2)')
+   ('gp4', 'item', 1, 'model B shows draft c1 (4) over the live draft c2 (2)')
+   ('gp4', 'item', 2, 'model B shows draft c1 (4) over the live draft c2 (2)')
+   ('gp4', 'pair', 1, 'model B shows draft c1 (3) over the live draft c2 (1)')
+   ('gp4', 'pair', 2, 'model B shows draft c1 (3) over the live draft c2 (1)')
+   ('cm2', '-', 0, 'no prose on screen live; last draft assumed')
+   ('cm3', '-', 0, 'no prose on screen live; last draft assumed')
+   ('cp2', 'pair', 1, 'model B shows draft c2 (3) over the live draft c1 (2)')
+   ('cp2', 'pair', 2, 'model B shows draft c2 (3) over the live draft c1 (2)')
+
+dropped by the pair check (item call in the same run approved it):
+
+[cp1c2i4] runs [1, 2] S: These symptoms are among the most commonly reported to primary care providers, and management may include proton pump inhibitor trials or referral to gastroenterology specialists
+   rep1 PAIR 'symptoms potentially' p_no=0.28
+   rep1 PAIR 'attributable to' p_no=0.43
+   rep1 PAIR 'those most' p_no=0.43
+   rep1 PAIR 'among those' p_no=0.47
+   rep1 PAIR 'warrant referral' p_no=0.48
+   rep2 PAIR 'symptoms potentially' p_no=0.34
+   rep2 PAIR 'attributable to' p_no=0.45
+   rep2 PAIR 'those most' p_no=0.4
+   rep2 PAIR 'the outpatient' p_no=0.48
+   rep2 PAIR 'warrant referral' p_no=0.46
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting
+   Q: proton pump inhibitor trials as well as specific indications or clinical settings that warrant referral to Gastroenterology specialists
+
+[cp1c2i5] runs [1] S: Long-term use of proton pump inhibitors, the most effective treatment, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection
+   rep1 PAIR 'effectively treated' p_no=0.34
+   Q: most effectively treated with proton-pump inhibitors (PPIs)
+   Q: Long-term use of PPIs is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection
+
+[cp2c1i4] runs [1, 2] S: In children, GERD symptoms can be varied and nonspecific, making careful diagnostic evaluation important
+   rep1 PAIR 'in young' p_no=0.13
+   rep1 PAIR 'young children' p_no=0.15
+   rep1 PAIR 'nonspecific prompting' p_no=0.39
+   rep2 PAIR 'young children' p_no=0.13
+   rep2 PAIR 'nonspecific prompting' p_no=0.41
+   rep2 PAIR 'in young' p_no=0.17
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation
+
+[cp2c1i5] runs [2] S: Symptoms that may be related to GERD are among the most commonly reported complaints in outpatient primary care visits
+   rep2 PAIR 'attributable to' p_no=0.46
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting
+
+[cp2c2i4] runs [1] S: Symptoms possibly caused by GERD are among the most common reasons people visit their primary care providers
+   rep1 PAIR 'the outpatient' p_no=0.49
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting
+
+[cp3c1i5] runs [2] S: Symptoms that might come from GERD are among the most common reasons people report problems to their primary care doctors
+   rep2 PAIR 'symptoms potentially' p_no=0.46
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers
+
+[cp3c2i4] runs [1, 2] S: Symptoms that may be caused by GERD are among the most common complaints people bring to their primary care doctors
+   rep1 PAIR 'symptoms potentially' p_no=0.42
+   rep1 PAIR 'the outpatient' p_no=0.48
+   rep2 PAIR 'symptoms potentially' p_no=0.5
+   rep2 PAIR 'attributable to' p_no=0.49
+   rep2 PAIR 'the outpatient' p_no=0.43
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting
+
+[cp3c2i5] runs [1, 2] S: Risk factors for GERD include abnormal relaxations of the valve between the esophagus and stomach, weaknesses in the esophagus's protective lining, problems with how the esophagus and stomach move and clear contents, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'transient relaxations' p_no=0.44
+   rep2 PAIR 'transient relaxations' p_no=0.49
+   Q: abnormal transient relaxations of the lower esophageal sphincter
+   Q: defects in esophageal mucosal defense
+   Q: impaired esophageal and gastric motility and clearance
+   Q: anatomical defects of the lower esophageal reflux barrier such as hiatal hernia
+
+[cp4c1i4] runs [1, 2] S: Several factors can contribute to GERD, including abnormal relaxations of the muscular valve between the esophagus and stomach, weaknesses in the esophageal lining's defenses, problems with stomach and esophageal movement and clearing, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'abnormal transient' p_no=0.32
+   rep1 PAIR 'transient relaxations' p_no=0.33
+   rep2 PAIR 'transient relaxations' p_no=0.47
+   rep2 PAIR 'abnormal transient' p_no=0.44
+   Q: abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia
+
+[cp4c2i6] runs [1, 2] S: Children's symptoms are varied and nonspecific, requiring careful diagnostic evaluation
+   rep1 PAIR 'young children' p_no=0.2
+   rep2 PAIR 'young children' p_no=0.2
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation
+
+[cp5c1i3] runs [1, 2] S: In children, symptoms can be varied and nonspecific, making careful diagnosis important
+   rep1 PAIR 'gerd in' p_no=0.32
+   rep1 PAIR 'in young' p_no=0.34
+   rep1 PAIR 'young children' p_no=0.32
+   rep2 PAIR 'gerd in' p_no=0.26
+   rep2 PAIR 'in young' p_no=0.25
+   rep2 PAIR 'young children' p_no=0.22
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation
+
+[cp5c1i4] runs [1, 2] S: Factors that contribute to GERD include abnormal relaxation of the lower esophageal sphincter, weakened esophageal lining defenses, impaired movement and clearance of the esophagus and stomach, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'abnormal transient' p_no=0.41
+   rep1 PAIR 'transient relaxations' p_no=0.36
+   rep2 PAIR 'abnormal transient' p_no=0.38
+   rep2 PAIR 'transient relaxations' p_no=0.36
+   Q: abnormal transient relaxations of the lower esophageal sphincter
+   Q: defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia
+
+[gp1c1i4] runs [1, 2] S: Several factors can contribute to GERD, including abnormal relaxation of the lower esophageal sphincter (the valve between the esophagus and stomach), weaknesses in the esophageal lining's defense, impaired movement and clearing of the esophagus and stomach, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'from abnormal' p_no=0.44
+   rep1 PAIR 'abnormal transient' p_no=0.22
+   rep1 PAIR 'transient relaxations' p_no=0.19
+   rep2 PAIR 'from abnormal' p_no=0.41
+   rep2 PAIR 'abnormal transient' p_no=0.18
+   rep2 PAIR 'transient relaxations' p_no=0.21
+   Q: Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia.
+
+[gp1c1i5] runs [1, 2] S: Symptoms that may be related to GERD are among the most common complaints reported to primary care providers
+   rep1 PAIR 'the outpatient' p_no=0.34
+   rep2 PAIR 'the outpatient' p_no=0.29
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting.
+
+[gp1c1i6] runs [1, 2] S: In children, GERD symptoms can be varied and nonspecific, which makes careful diagnostic evaluation important
+   rep1 PAIR 'in young' p_no=0.15
+   rep1 PAIR 'young children' p_no=0.16
+   rep2 PAIR 'in young' p_no=0.15
+   rep2 PAIR 'young children' p_no=0.16
+   rep2 PAIR 'nonspecific prompting' p_no=0.5
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation.
+
+[gp1c2i6] runs [1, 2] S: GERD symptoms are among the most common reasons people visit their primary care doctor
+   rep1 PAIR 'symptoms potentially' p_no=0.16
+   rep2 PAIR 'symptoms potentially' p_no=0.2
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting.
+
+[gp2c1i5] runs [1, 2] S: The most effective treatment is a class of drugs called proton-pump inhibitors, but long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection
+   rep1 PAIR 'effectively treated' p_no=0.31
+   rep2 PAIR 'effectively treated' p_no=0.32
+   Q: GERD is a clinical diagnosis and is most effectively treated with proton-pump inhibitors (PPIs).
+   Q: Long-term use of PPIs is associated with bone fractures, chronic renal disease, acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection.
+
+[gp2c2i4] runs [1, 2] S: Risk factors and underlying causes include abnormal relaxation of the valve between the stomach and esophagus, weakness in the esophageal lining's defenses, poor movement and clearing of the esophagus and stomach, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'from abnormal' p_no=0.4
+   rep1 PAIR 'transient relaxations' p_no=0.23
+   rep1 PAIR 'abnormal transient' p_no=0.24
+   rep2 PAIR 'from abnormal' p_no=0.39
+   rep2 PAIR 'abnormal transient' p_no=0.19
+   rep2 PAIR 'transient relaxations' p_no=0.22
+   Q: Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia.
+
+[gp2c2i5] runs [1, 2] S: In children, the symptoms can be varied and nonspecific, requiring careful evaluation
+   rep1 PAIR 'the clinical' p_no=0.46
+   rep1 PAIR 'in young' p_no=0.29
+   rep1 PAIR 'young children' p_no=0.22
+   rep2 PAIR 'in young' p_no=0.24
+   rep2 PAIR 'young children' p_no=0.17
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation.
+
+[gp3c1i6] runs [2] S: Symptoms that may be caused by GERD are among the most commonly reported to primary care providers
+   rep2 PAIR 'the outpatient' p_no=0.49
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting.
+
+[gp3c2i3] runs [1, 2] S: In children, GERD shows varied and nonspecific signs, making careful diagnosis important
+   rep1 PAIR 'in young' p_no=0.13
+   rep1 PAIR 'young children' p_no=0.16
+   rep2 PAIR 'in young' p_no=0.13
+   rep2 PAIR 'young children' p_no=0.11
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation.
+
+[gp3c2i4] runs [1, 2] S: Risk factors and underlying causes include abnormal relaxations of the valve between the esophagus and stomach, weakness in the esophageal lining's defenses, problems with stomach and esophageal movement and clearing, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'from abnormal' p_no=0.46
+   rep1 PAIR 'abnormal transient' p_no=0.25
+   rep1 PAIR 'transient relaxations' p_no=0.19
+   rep2 PAIR 'abnormal transient' p_no=0.27
+   rep2 PAIR 'transient relaxations' p_no=0.19
+   Q: Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia.
+
+[gp4c1i3] runs [1, 2] S: The condition can lower quality of life and may lead to inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can precede esophageal cancer
+   rep1 PAIR 'affects quality' p_no=0.47
+   rep2 PAIR 'affects quality' p_no=0.49
+   Q: GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+
+[gp4c2i6] runs [1, 2] S: Reflux symptoms are among the most common reasons people visit their primary care doctor
+   rep1 PAIR 'symptoms potentially' p_no=0.13
+   rep2 PAIR 'the outpatient' p_no=0.43
+   rep2 PAIR 'symptoms potentially' p_no=0.14
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting.
+
+[gp5c1i4] runs [1, 2] S: In children, GERD has varied and nonspecific signs that require careful evaluation
+   rep1 PAIR 'in young' p_no=0.14
+   rep1 PAIR 'young children' p_no=0.2
+   rep2 PAIR 'young children' p_no=0.19
+   rep2 PAIR 'in young' p_no=0.13
+   Q: The clinical manifestations of GERD in young children are varied and nonspecific prompting the necessity for careful diagnostic evaluation.
+
+[gp5c1i5] runs [1, 2] S: Factors that contribute to GERD include abnormal relaxations of the lower esophageal sphincter, defects in the esophageal lining's defense, impaired movement and clearance of the esophagus and stomach, and anatomical defects such as hiatal hernia
+   rep1 PAIR 'abnormal transient' p_no=0.27
+   rep1 PAIR 'transient relaxations' p_no=0.22
+   rep2 PAIR 'abnormal transient' p_no=0.22
+   rep2 PAIR 'transient relaxations' p_no=0.19
+   rep2 PAIR 'from abnormal' p_no=0.48
+   Q: Apart from abnormal transient relaxations of the lower esophageal sphincter, other factors that play a role in the pathogenesis of GERD include defects in esophageal mucosal defense, impaired esophageal and gastric motility and clearance, as well as anatomical defects of the lower esophageal reflux barrier such as hiatal hernia.
+
+[md2c2i3] runs [1] S: A large consortium study of 27,504 patients from 35 institutions in Turkey and Northern Cyprus combined MEFV gene analysis results and clinical findings to examine how specific variants contribute to clinical findings in FMF patients
+   rep1 PAIR 'to certain' p_no=0.46
+   Q: In this study, MEFV gene analysis results and clinical findings of 27,504 patients from 35 universities and institutions in Turkey and Northern Cyprus are combined in an effort to provide a better insight into the genotype-phenotype correlation and how a specific variant contributes to certain clinical findings in FMF patients.
+
+[md3c2i5] runs [1] S: Research on hemoglobin variants found that ancestry and geography play a significant role in the incidence and nature of these blood disorders, with Mediterranean populations among the most affected
+   rep1 PAIR 'and their' p_no=0.22
+   Q: Ancestry and geography play a significant role in the incidence and nature of hemoglobinopathies, with African, Asian, and Mediterranean populations and their descendants being amongst the most affected.
+
+[md5c2i2] runs [1] S: Another study reports that Familial Mediterranean fever, caused by mutations in the MEFV gene, mainly affects people of Mediterranean descent, including Turkish, Jewish, Arabic, and Armenian populations, leading to repeated fevers, abdominal pain, and kidney complications
+   rep1 PAIR 'descent with' p_no=0.5
+   Q: Familial Mediterranean fever (FMF) is a monogenic autoinflammatory disorder with recurrent fever, abdominal pain, serositis, articular manifestations, erysipelas-like erythema, and renal complications as its main features.
+   Q: Caused by the mutations in the MEditerranean FeVer (MEFV) gene, it mainly affects people of Mediterranean descent with a higher incidence in the Turkish, Jewish, Arabic, and Armenian populations.

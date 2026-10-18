@@ -1,0 +1,2874 @@
+{
+ "id": "G-025",
+ "question": "What does the MTHFR C677T variant do, and what is the evidence quality around it?",
+ "depth": "researcher",
+ "wall_s": 27.818,
+ "done": {
+  "total_cost_usd": 0.018608427919999997,
+  "total_tool_calls": 10,
+  "elapsed_ms": 27558,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 76 sources, not yet confirmed",
+  "layer_calls_used": 12,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 316
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 302
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "wants_literature",
+    "decided_by": "jev",
+    "jev_choice": "wants_literature",
+    "jev_confidence": 0.78,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 331
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.91,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 393
+   }
+  ]
+ },
+ "withdrawn": true,
+ "citations": 76,
+ "stamps": [
+  {
+   "t": 27.657,
+   "emitted": 1.775,
+   "type": "guard",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 1.775,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.019,
+   "type": "think",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.019,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.021,
+   "type": "plan",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.021,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.022,
+   "type": "tool_start",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "running"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.358,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.371,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.397,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.547,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.561,
+   "type": "tool_result",
+   "step": null,
+   "tool": "clinicaltrials_search",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.612,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.642,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 6.762,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 8.694,
+   "type": "tool_result",
+   "step": null,
+   "tool": "cypher_query",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 8.981,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 8.982,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 9.074,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 9.094,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 27.657,
+   "emitted": 9.098,
+   "type": "step",
+   "step": "write",
+   "tool": null,
+   "status": "started"
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.535,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.536,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.537,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.539,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.54,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.541,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.542,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.543,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.544,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.546,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.547,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.549,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.55,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.557,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.558,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.559,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 27.657,
+   "emitted": 27.559,
+   "type": "done",
+   "step": null,
+   "tool": null,
+   "status": null
+  }
+ ],
+ "rec": {
+  "model": [
+   {
+    "t": 0.146,
+    "site": "other: You are an input classifier for a biomedical evidence search",
+    "role": "guard_or_plan",
+    "prompt_chars": 3868,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 809,
+    "completion_tokens": 40,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.628
+   },
+   {
+    "t": 1.786,
+    "site": "think: classification",
+    "role": "guard_or_plan",
+    "prompt_chars": 4360,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1009,
+    "completion_tokens": 90,
+    "cached_tokens": 929,
+    "finish": "stop",
+    "reply": null,
+    "dur": 4.001
+   },
+   {
+    "t": 9.106,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 40487,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11406,
+    "completion_tokens": 404,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": "The retrieved findings consist of ClinVar sequence variant records for MTHFR, but none corresponds to the well-known C677T variant (NM_005957.5:c.665C>T, p.Ala222Val) [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30].\n\n## Variant Identification\n\nThe C677T variant is not represented among the returned ClinVar records, which instead list missense, nonsense, frameshift, deletion, and synonymous substitutions at other positions throughout the MTHFR coding sequence [2][3][4][5][6][7][8][10][11][12][13][14][15][16][17][18][19][20][21][22][23][25][26][27][28][29][30]. Two records carry no variant name beyond their ClinVar accession identifiers, and neither maps to the C677T position [1][9]. Consequently, no functional consequence, clinical significance, or evidence quality for C677T can be drawn from these findings.\n\n## Evidence Quality\n\nThe findings provide no evidence-quality assessment, ClinVar assertion criteria, review status, or clinical significance interpretation for any MTHFR variant, including C677T [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. The records are sequence variant identifiers or HGVS names without associated assertion or significance fields.\n\nI could not find information on the MTHFR C677T variant's function or its evidence quality in the retrieved findings.",
+    "dur": 6.348
+   },
+   {
+    "t": 15.469,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 42503,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12371,
+    "completion_tokens": 1057,
+    "cached_tokens": 11379,
+    "finish": "stop",
+    "reply": "I could not find information on the MTHFR C677T variant specifically, as the retrieved findings do not include a ClinVar record matching that variant. The findings instead comprise 30 ClinVar sequence variant records for MTHFR (transcript NM_005957.5) representing diverse variant classes, none of which corresponds to the C677T change.\n\n## Retrieved MTHFR Missense Variants\n\nThe graph returned multiple missense substitutions spanning the MTHFR coding region, including NM_005957.5(MTHFR):c.1622T>C (p.Val541Ala) [2], NM_005957.5(MTHFR):c.265C>G (p.Leu89Val) [3], NM_005957.5(MTHFR):c.782G>T (p.Gly261Val) [4], NM_005957.5(MTHFR):c.1621G>T (p.Val541Phe) [6], NM_005957.5(MTHFR):c.177G>T (p.Trp59Cys) [8], NM_005957.5(MTHFR):c.400C>T (p.Arg134Cys) [10], and NM_005957.5(MTHFR):c.584C>T (p.Ala195Val) [11]. Additional missense variants include NM_005957.5(MTHFR):c.202C>T (p.Arg68Ter) [14] and NM_005957.5(MTHFR):c.1750A>T (p.Lys584Ter) [12], both of which introduce premature termination codons.\n\n## Frameshift and Deletion Variants\n\nSeveral deletion variants causing frameshifts were identified: NM_005957.5(MTHFR):c.552del (p.Ser184fs) [7], NM_005957.5(MTHFR):c.1114_1115del (p.Lys372fs) [15], NM_005957.5(MTHFR):c.191del (p.Phe64fs) [16], NM_005957.5(MTHFR):c.1304_1305del (p.Phe435fs) [17], NM_005957.5(MTHFR):c.1063_1075del (p.Pro355fs) [18], NM_005957.5(MTHFR):c.1144del (p.Asp382fs) [19], and NM_005957.5(MTHFR):c.1228_1242del (p.Ser410_Lys414del) [5]. ClinVar also holds records for variants without retrieved names, specifically ClinVar:1004148 [1], ClinVar:1042278 [9], and ClinVar:1079684 [24].\n\n## Synonymous Variants\n\nMultiple synonymous variants with no predicted amino acid change were returned: NM_005957.5(MTHFR):c.474A>T (p.Gly158=) [13], NM_005957.5(MTHFR):c.417G>T (p.Thr139=) [20], NM_005957.5(MTHFR):c.1698G>A (p.Gly566=) [21], NM_005957.5(MTHFR):c.1416G>T (p.Leu472=) [22], NM_005957.5(MTHFR):c.1668G>A (p.Pro556=) [23], NM_005957.5(MTHFR):c.1839C>T (p.His613=) [25], NM_005957.5(MTHFR):c.819G>A (p.Lys273=) [26], NM_005957.5(MTHFR):c.69T>C (p.Ser23=) [27], NM_005957.5(MTHFR):c.1062C>T (p.His354=) [28], NM_005957.5(MTHFR):c.1968A>G (p.Pro656=) [29], and NM_005957.5(MTHFR):c.997C>T (p.Leu333=) [30].\n\n## Evidence Quality Assessment\n\nNone of the retrieved findings pertain to the C677T variant, and no clinical significance, functional annotation, or literature evidence was returned for any of the listed records. Consequently, the evidence quality surrounding the C677T variant cannot be assessed from these findings alone; a targeted query for the specific rsid or ClinVar submission corresponding to C677T would be required.",
+    "dur": 11.957
+   }
+  ],
+  "jev": [
+   {
+    "t": 1.786,
+    "kind": "decide",
+    "key": "think.recent_years",
+    "ok": true,
+    "dur": 0.303
+   },
+   {
+    "t": 1.786,
+    "kind": "decide",
+    "key": "plan.literature",
+    "ok": true,
+    "dur": 0.331
+   },
+   {
+    "t": 1.786,
+    "kind": "decide",
+    "key": "think.asks_features",
+    "ok": true,
+    "dur": 0.394
+   }
+  ],
+  "http": [
+   {
+    "t": 0.198,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.301
+   },
+   {
+    "t": 0.207,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.555
+   },
+   {
+    "t": 1.806,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.282
+   },
+   {
+    "t": 1.82,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.296
+   },
+   {
+    "t": 1.838,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.341
+   },
+   {
+    "t": 1.841,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 3.945
+   },
+   {
+    "t": 5.802,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/symbol/MTHFR/taxon/human",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.217
+   },
+   {
+    "t": 6.056,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/entity/autocomplete/",
+    "params": [
+     [
+      "limit",
+      "5"
+     ],
+     [
+      "query",
+      "MTHFR"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.301
+   },
+   {
+    "t": 6.182,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "MTHFR[gene]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.188
+   },
+   {
+    "t": 6.033,
+    "host": "api.ncbi.nlm.nih.gov",
+    "path": "/datasets/v2/gene/id/4524",
+    "params": [],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.363
+   },
+   {
+    "t": 6.081,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "retmax",
+      "5"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "MTHFR[Title/Abstract]"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.466
+   },
+   {
+    "t": 6.068,
+    "host": "clinicaltrials.gov",
+    "path": "/api/v2/studies",
+    "params": [
+     [
+      "countTotal",
+      "true"
+     ],
+     [
+      "pageSize",
+      "50"
+     ],
+     [
+      "query.cond",
+      "MTHFR"
+     ],
+     [
+      "sort",
+      "@relevance"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.485
+   },
+   {
+    "t": 6.282,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "retmax",
+      "10"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "MTHFR"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.318
+   },
+   {
+    "t": 6.381,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "gene"
+     ],
+     [
+      "id",
+      "4524"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.261
+   },
+   {
+    "t": 8.719,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/publications/export/biocjson",
+    "params": [
+     [
+      "pmids",
+      "38908773,34214447,31370354,30397195,23288205"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.257
+   },
+   {
+    "t": 8.809,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "clinvar"
+     ],
+     [
+      "id",
+      "4888114,4881730,4526047,4071719,3896204,3896160,3389646,3384941,3345787,3336183"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.167
+   },
+   {
+    "t": 8.708,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/efetch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "id",
+      "38908773,34214447,31370354,30397195,23288205"
+     ],
+     [
+      "retmode",
+      "xml"
+     ],
+     [
+      "rettype",
+      "abstract"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.355
+   },
+   {
+    "t": 8.909,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esummary.fcgi",
+    "params": [
+     [
+      "db",
+      "omim"
+     ],
+     [
+      "id",
+      "608516,608307,607093,603174,601634,250940,236250,181500,157300,119530"
+     ],
+     [
+      "retmode",
+      "json"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.184
+   },
+   {
+    "t": 9.111,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 6.333
+   },
+   {
+    "t": 15.493,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 11.887
+   }
+  ],
+  "write": [
+   {
+    "t": 9.101,
+    "what": "resolve_concept_ids",
+    "dur": 0.0,
+    "ids": 6
+   },
+   {
+    "t": 9.101,
+    "what": "resolve_descriptor_ids",
+    "dur": 0.0,
+    "ids": 6
+   },
+   {
+    "t": 9.103,
+    "what": "features_decision_wait",
+    "dur": 0.0,
+    "asked": false
+   },
+   {
+    "t": 15.464,
+    "what": "ground_with_sentence_check",
+    "dur": 0.003,
+    "claims": 0,
+    "stripped": 7
+   },
+   {
+    "t": 27.431,
+    "what": "ground_with_sentence_check",
+    "dur": 0.011,
+    "claims": 0,
+    "stripped": 36
+   }
+  ],
+  "grounding": [
+   {
+    "t": 15.464,
+    "dur": 0.0025,
+    "narrative_chars": 1372,
+    "findings": 30,
+    "claims": 0,
+    "stripped": 7,
+    "refused": true,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 27.431,
+    "dur": 0.0104,
+    "narrative_chars": 2517,
+    "findings": 30,
+    "claims": 0,
+    "stripped": 36,
+    "refused": true,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 27.443,
+    "dur": 0.0155,
+    "narrative_chars": 6061,
+    "findings": 100,
+    "claims": 77,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   }
+  ],
+  "sentence_check": [],
+  "reader": []
+ },
+ "guard_sentence_check": [],
+ "answer_text": "Found 58 sequence variant records for MTHFR, of 990 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43][44][45][46][47][48][49][50][51][52][53][54][55][56][57][58]. \n\nSequence variant records found\n\nSequenceVariant record ClinVar:1004148 [1]. SequenceVariant ClinVar:1004806, name: NM_005957.5(MTHFR):c.1622T>C (p.Val541Ala) [2]. SequenceVariant ClinVar:1011084, name: NM_005957.5(MTHFR):c.265C>G (p.Leu89Val) [3]. SequenceVariant ClinVar:1017181, name: NM_005957.5(MTHFR):c.782G>T (p.Gly261Val) [4]. SequenceVariant ClinVar:1024006, name: NM_005957.5(MTHFR):c.1228_1242del (p.Ser410_Lys414del) [5]. SequenceVariant ClinVar:1030042, name: NM_005957.5(MTHFR):c.1621G>T (p.Val541Phe) [6]. SequenceVariant ClinVar:1034230, name: NM_005957.5(MTHFR):c.552del (p.Ser184fs) [7]. SequenceVariant ClinVar:1041980, name: NM_005957.5(MTHFR):c.177G>T (p.Trp59Cys) [8]. SequenceVariant record ClinVar:1042278 [9]. SequenceVariant ClinVar:1042820, name: NM_005957.5(MTHFR):c.400C>T (p.Arg134Cys) [10]. SequenceVariant ClinVar:1048667, name: NM_005957.5(MTHFR):c.584C>T (p.Ala195Val) [11]. SequenceVariant ClinVar:1066378, name: NM_005957.5(MTHFR):c.1750A>T (p.Lys584Ter) [12]. SequenceVariant ClinVar:1066379, name: NM_005957.5(MTHFR):c.474A>T (p.Gly158=) [13]. SequenceVariant ClinVar:1068525, name: NM_005957.5(MTHFR):c.202C>T (p.Arg68Ter) [14]. SequenceVariant ClinVar:1068573, name: NM_005957.5(MTHFR):c.1114_1115del (p.Lys372fs) [15]. SequenceVariant ClinVar:1070453, name: NM_005957.5(MTHFR):c.191del (p.Phe64fs) [16]. SequenceVariant ClinVar:1072666, name: NM_005957.5(MTHFR):c.1304_1305del (p.Phe435fs) [17]. SequenceVariant ClinVar:1073018, name: NM_005957.5(MTHFR):c.1063_1075del (p.Pro355fs) [18]. SequenceVariant ClinVar:1073673, name: NM_005957.5(MTHFR):c.1144del (p.Asp382fs) [19]. SequenceVariant ClinVar:1078639, name: NM_005957.5(MTHFR):c.417G>T (p.Thr139=) [20]. SequenceVariant ClinVar:1079166, name: NM_005957.5(MTHFR):c.1698G>A (p.Gly566=) [21]. SequenceVariant ClinVar:1079518, name: NM_005957.5(MTHFR):c.1416G>T (p.Leu472=) [22]. SequenceVariant ClinVar:1079525, name: NM_005957.5(MTHFR):c.1668G>A (p.Pro556=) [23]. SequenceVariant record ClinVar:1079684 [24]. SequenceVariant ClinVar:1080275, name: NM_005957.5(MTHFR):c.1839C>T (p.His613=) [25]. SequenceVariant ClinVar:1081151, name: NM_005957.5(MTHFR):c.819G>A (p.Lys273=) [26]. SequenceVariant ClinVar:1081419, name: NM_005957.5(MTHFR):c.69T>C (p.Ser23=) [27]. SequenceVariant ClinVar:1081582, name: NM_005957.5(MTHFR):c.1062C>T (p.His354=) [28]. SequenceVariant ClinVar:1087028, name: NM_005957.5(MTHFR):c.1968A>G (p.Pro656=) [29]. SequenceVariant ClinVar:1087054, name: NM_005957.5(MTHFR):c.997C>T (p.Leu333=) [30]. SequenceVariant ClinVar:1087299, name: NM_005957.5(MTHFR):c.198T>A (p.Pro66=) [31]. SequenceVariant ClinVar:1087385, name: NM_005957.5(MTHFR):c.534G>A (p.Leu178=) [32]. SequenceVariant record ClinVar:1087771 [33]. SequenceVariant ClinVar:1088221, name: NM_005957.5(MTHFR):c.1362C>G (p.Pro454=) [34]. SequenceVariant ClinVar:1090921, name: NM_005957.5(MTHFR):c.675C>T (p.Ile225=) [35]. SequenceVariant ClinVar:1091668, name: NM_005957.5(MTHFR):c.1722A>T (p.Val574=) [36]. SequenceVariant ClinVar:1091686, name: NM_005957.5(MTHFR):c.681G>A (p.Thr227=) [37]. SequenceVariant ClinVar:1092804, name: NM_005957.5(MTHFR):c.906C>T (p.Ala302=) [38]. SequenceVariant ClinVar:1093049, name: NM_005957.5(MTHFR):c.1674T>C (p.Ala558=) [39]. SequenceVariant ClinVar:1093321, name: NM_005957.5(MTHFR):c.345C>A (p.Thr115=) [40]. SequenceVariant ClinVar:1094123, name: NM_005957.5(MTHFR):c.1356C>T (p.Cys452=) [41]. SequenceVariant ClinVar:1094475, name: NM_005957.5(MTHFR):c.345C>T (p.Thr115=) [42]. SequenceVariant ClinVar:1097958, name: NM_005957.5(MTHFR):c.157T>C (p.Leu53=) [43]. SequenceVariant record ClinVar:1098087 [44]. SequenceVariant ClinVar:1098292, name: NM_005957.5(MTHFR):c.1316T>C (p.Leu439Pro) [45]. SequenceVariant ClinVar:1099292, name: NM_005957.5(MTHFR):c.1155T>C (p.Pro385=) [46]. SequenceVariant ClinVar:1100078, name: NM_005957.5(MTHFR):c.57C>A (p.Ala19=) [47]. SequenceVariant ClinVar:1102612, name: NM_005957.5(MTHFR):c.843G>A (p.Lys281=) [48]. SequenceVariant ClinVar:1108193, name: NM_005957.5(MTHFR):c.18A>G (p.Arg6=) [49]. SequenceVariant ClinVar:1109006, name: NM_005957.5(MTHFR):c.1083T>C (p.Asp361=) [50]. SequenceVariant ClinVar:1109214, name: NM_005957.5(MTHFR):c.9C>T (p.Asn3=) [51]. SequenceVariant record ClinVar:1109767 [52]. SequenceVariant ClinVar:1109793, name: NM_005957.5(MTHFR):c.1248G>A (p.Glu416=) [53]. SequenceVariant ClinVar:1110919, name: NM_005957.5(MTHFR):c.1734C>G (p.Val578=) [54]. SequenceVariant ClinVar:1111281, name: NM_005957.5(MTHFR):c.1182C>A (p.Ser394=) [55]. SequenceVariant ClinVar:1111364, name: NM_005957.5(MTHFR):c.957C>T (p.His319=) [56]. SequenceVariant ClinVar:1112859, name: NM_005957.5(MTHFR):c.1059C>T (p.Ala353=) [57]. SequenceVariant ClinVar:1114195, name: NM_005957.5(MTHFR):c.1344C>T (p.His448=) [58]. \n\nGene records found\n\nGene symbol: MTHFR [59]. Gene name: MTHFR [63]. \n\nPubmed records found\n\nPubmed title: ACMG Practice Guideline: lack of evidence for MTHFR polymorphism testing [60]. Pubmed title: Methylenetetrahydrofolate reductase and psychiatric diseases [65]. Pubmed title: Association of Polymorphisms in Genes Involved in One-Carbon Metabolism with MTHFR Methylation Levels [68]. Pubmed title: Shifting landscapes of human MTHFR missense-variant effects [71]. Pubmed title: MTHFR gene polymorphisms in diabetes mellitus [74]. \n\nClinvar records found\n\nClinvar title: NM_005957.5(MTHFR):c.1262G>T (p.Trp421Leu) [61]. Clinvar title: NM_005957.5(MTHFR):c.512G>A (p.Gly171Asp) [66]. Clinvar title: NM_005957.5(MTHFR):c.1163G>T (p.Arg388Leu) [69]. Clinvar title: NM_005957.5(MTHFR):c.750C>T (p.Cys250=) [72]. Clinvar title: NM_005957.5(MTHFR):c.1003C>A (p.Arg335Ser) [75]. \n\nOmim records found\n\n5,10-@METHYLENETETRAHYDROFOLATE REDUCTASE [62]. MTHFR [62]. \n\nClinical trial records found\n\nClinical trial name: Genetic Causes of Male Infertility [64]. Clinical trial name: Study on the Influence of Electroconvulsive Therapy (ECT) on Homocysteine Levels [67]. Clinical trial name: Homocysteine After Nitrous Oxide Anesthesia [70]. Clinical trial name: Examining B12 Deficiency Associated With C677T Mutation on MTHFR Gene in Terms of Commonness and Endothelial Function [73]. Clinical trial name: China Stroke Primary Prevention Trial [76]. \n\nNote: this answer was truncated because only 113 of the 990 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

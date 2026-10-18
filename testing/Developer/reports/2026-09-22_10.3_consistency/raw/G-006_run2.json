@@ -1,0 +1,211 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-e26e73fa3cdf",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:30:25+00:00",
+  "run_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 37,
+  "answer_start": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. \n\nArticle records found\n\nArticle record PMID:11237011 [1]. \n\nNote: the written summary of these rec",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 7.984,
+  "seconds": 12.1,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 6,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 0,
+   "ts": "2026-09-22T17:28:53.876207Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 2,
+   "ts": "2026-09-22T17:28:56.635701Z",
+   "payload": {
+    "narrative": "The query asks for the specific linked data records for a single PMID, which is answered directly by a single API call returning the links.",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 4,
+   "ts": "2026-09-22T17:28:56.637600Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-b155ee3948c3",
+      "layer": "layer_1_graph",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 6,
+   "ts": "2026-09-22T17:28:56.638500Z",
+   "payload": {
+    "call_id": "cq-b155ee3948c3",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 7,
+   "ts": "2026-09-22T17:28:57.294040Z",
+   "payload": {
+    "call_id": "cq-b155ee3948c3",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 8,
+   "ts": "2026-09-22T17:29:00.366032Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11237011",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11237011/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "81d122cf-a39b-48ea-b812-8c8c93ad9d95",
+   "seq": 19,
+   "ts": "2026-09-22T17:29:04.086227Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 7984,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. \n\nArticle records found\n\nArticle record PMID:11237011 [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

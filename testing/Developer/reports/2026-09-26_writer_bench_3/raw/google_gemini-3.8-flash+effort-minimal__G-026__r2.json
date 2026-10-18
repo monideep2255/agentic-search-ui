@@ -1,0 +1,1667 @@
+{
+ "record": {
+  "model": "google/gemini-3.8-flash+effort-minimal",
+  "model_id": "google/gemini-3.8-flash",
+  "synth_effort": "minimal",
+  "question_id": "G-026",
+  "run": 2,
+  "question": "Which genes are associated with cystic fibrosis?",
+  "trace_id": "trace-wb3-G-026-r2-5ce63f8e295b4cf6",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:49:56Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 47,
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 1,
+  "prose_kept": [
+   "Another identified trial is Pregnancies and Cystic Fibrosis [1]."
+  ],
+  "prose_text": "",
+  "jev_sent": 3,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   4.845492084001307,
+   4.8154680830011785
+  ],
+  "writer_completion_tokens": [
+   376,
+   454
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 15.947,
+  "done_elapsed_s": 15.927,
+  "metered_cost_usd": 0.021078859919999998,
+  "done_cost_usd": 0.021078859919999998,
+  "openrouter_cost_usd": 0.020908,
+  "writer_openrouter_cost_usd": 0.020843,
+  "writer_metered_cost_usd": 0.020843,
+  "answer_text": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [3] and transforming growth factor beta 1 [4], linked to 1 disease: Cystic fibrosis [2]. \n\nDisease records found\n\nDisease name: Cystic fibrosis [2]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1080, name: CF transmembrane conductance regulator [1]. Gene NCBIGene:2212, name: Fc gamma receptor IIa [3]. Gene NCBIGene:7040, name: transforming growth factor beta 1 [4]. \n\nPubmed records found\n\nPubmed title: Encephalopathy in cystic fibrosis [5]. Pubmed title: 3.22 Nutrition in Cystic Fibrosis [40]. Pubmed title: Editorial: Cystic Fibrosis in Children [42]. Pubmed title: Azithromycin and cystic fibrosis [44]. Pubmed title: Editorial: Cystic fibrosis-related diabetes [46]. \n\nMedgen records found\n\nMedgen title: Cystic fibrosis [6]. \n\nClinical features MedGen lists for Cystic fibrosis\n\nMedgen clinical_features: Asthma [7]. Medgen clinical_features: Bronchiectasis [8]. Medgen clinical_features: Clubbing of fingers [9]. Medgen clinical_features: Dehydration [10]. Medgen clinical_features: Diarrhea [11]. Medgen clinical_features: Hemoptysis [12]. Medgen clinical_features: Hepatomegaly [13]. Medgen clinical_features: Hepatosplenomegaly [14]. Medgen clinical_features: Hypercalciuria [15]. Medgen clinical_features: Male infertility [16]. Medgen clinical_features: Cirrhosis of liver [17]. Medgen clinical_features: Biliary cirrhosis [18]. Medgen clinical_features: Nasal polyposis [19]. Medgen clinical_features: Pancreatitis [20]. Medgen clinical_features: Cor pulmonale [21]. Medgen clinical_features: Rectal prolapse [22]. Medgen clinical_features: Steatorrhea [23]. Medgen clinical_features: Chronic sinusitis [24]. Medgen clinical_features: Exocrine pancreatic insufficiency [25]. Medgen clinical_features: Recurrent pneumonia [26]. Medgen clinical_features: Chronic lung disease [27]. Medgen clinical_features: Ileus [28]. Medgen clinical_features: Reduced forced vital capacity [29]. Medgen clinical_features: Elevated sweat chloride [30]. Medgen clinical_features: Recurrent bronchopulmonary infections [31]. Medgen clinical_features: Failure to thrive [32]. Medgen clinical_features: Meconium ileus [33]. Medgen clinical_features: Reduced forced expiratory volume in one second [34]. Medgen clinical_features: Decreased forced expiratory flow 25-75% [35]. Medgen clinical_features: Hyperpolarized transepithelial nasal potential difference [36]. Medgen clinical_features: Salty tasting skin [37]. \n\nLiterature entity records found\n\nLiterature entity name: Cystic Fibrosis [38]. \n\nClinical trial records found\n\nClinical trial name: Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [39]. Clinical trial name: A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease [41]. Clinical trial name: Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease [43]. Clinical trial name: A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule [45]. Clinical trial name: Pregnancies and Cystic Fibrosis [47]. "
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.051,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 800,
+    "completion_tokens": 37,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 4.111296e-05,
+    "reply": null,
+    "dur": 1.59
+   },
+   {
+    "t": 1.645,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 988,
+    "completion_tokens": 68,
+    "cached_tokens": 768,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 2.3971584e-05,
+    "reply": null,
+    "dur": 2.033
+   },
+   {
+    "t": 5.492,
+    "model": "openrouter/google/gemini-3.8-flash",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11498,
+    "completion_tokens": 376,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.0100335,
+    "reply": "Cystic fibrosis is linked to several specific genes identified in genetic records [2]. A key associated locus is NCBIGene:1080 [1]. Genetic associations also include NCBIGene:2212 and NCBIGene:7040 [3][4].\n\n## Associated Genes\n\nThe primary causal locus is NCBIGene:1080, known by the name CF transmembrane conductance regulator [1]. In addition, the condition is associated with NCBIGene:2212, which carries the name Fc gamma receptor IIa [3]. Another associated locus is NCBIGene:7040, designated by the name transforming growth factor beta 1 [4].\n\n## Clinical Manifestations\n\nPatients diagnosed with Cystic fibrosis exhibit widespread phenotypic effects across organ systems [2]. Documented clinical features in medical genetics include Bronchiectasis and Asthma [15][11]. Patients can also present with Clubbing of fingers, Dehydration, and Diarrhea [19][23][27]. Additional manifestations include Hemoptysis, Hepatomegaly, and Hepatosplenomegaly [28][29][30].\n\n## Hepatic Complications\n\nHepatic disease affects many individuals with this disorder, although brain dysfunction remains an uncommon outcome [26: \"CFLD) affects a large proportion of cystic fibrosis (CF) patients; however encephalopathy is a rare complication\"]. A rapid rise in ammonia levels causing brain dysfunction may be triggered in patients with established liver disease by systemic steroid treatments [26: \"hyperammonemic encephalopathy\\\" can be precipitated in previously stable CFLD by various triggers including systemic corticosteroids\"]. Severe end-stage liver involvement can also typically present with hepatic encephalopathy [26: \"classical hepatic encephalopathy can be a feature of end-stage liver disease\"].",
+    "dur": 4.845
+   },
+   {
+    "t": 10.657,
+    "model": "openrouter/google/gemini-3.8-flash",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12143,
+    "completion_tokens": 454,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.01080975,
+    "reply": "Genetic associations for the disease Cystic fibrosis [2] include CF transmembrane conductance regulator [1], Fc gamma receptor IIa [3], and transforming growth factor beta 1 [4]. Supporting context identifies the condition under medgen title Cystic fibrosis [6] and literature entity Cystic Fibrosis [7].\n\n## Clinical Manifestations\nCystic fibrosis liver disease affects many individuals, yet encephalopathy remains an uncommon outcome [26: \"encephalopathy is a rare complication\"]. A documented clinical feature is Asthma [11]. Another clinical feature is Bronchiectasis [15]. Documented features also include Clubbing of fingers [19] and Dehydration [23]. Additional recognized manifestations include Diarrhea [27], Hemoptysis [28], Hepatomegaly [29], and Hepatosplenomegaly [30].\n\n## Literature Evidence\nResearch includes the publication Encephalopathy in cystic fibrosis [5]. Additional studies include 3.22 Nutrition in Cystic Fibrosis [10] and Editorial: Cystic Fibrosis in Children [14]. Further published work includes Azithromycin and cystic fibrosis [18] and Editorial: Cystic fibrosis-related diabetes [22]. Relevant indexed literature includes publication 32800451 [9], publication 35240644 [13], publication 35592838 [17], publication 35853636 [21], and publication 39129918 [25].\n\n## Clinical Studies\nA relevant registered study is Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [8]. Another identified trial is Pregnancies and Cystic Fibrosis [24]. Related clinical evaluations include A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease [12]. Other registered studies include Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease [16] and A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule [20].",
+    "dur": 4.815
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.049,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 1.58992175000094,
+    "prompt_tokens": 800,
+    "completion_tokens": 37,
+    "cost_usd": 4.111296e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.593
+   },
+   {
+    "t": 1.645,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 2.0334961250009655,
+    "prompt_tokens": 988,
+    "completion_tokens": 68,
+    "cost_usd": 5.2872960000000004e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 2.034
+   },
+   {
+    "t": 5.492,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 4.845492084001307,
+    "prompt_tokens": 11498,
+    "completion_tokens": 376,
+    "cost_usd": 0.0100335,
+    "model": "google/gemini-3.8-flash",
+    "dur": 4.846
+   },
+   {
+    "t": 10.656,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 4.8154680830011785,
+    "prompt_tokens": 12143,
+    "completion_tokens": 454,
+    "cost_usd": 0.01080975,
+    "model": "google/gemini-3.8-flash",
+    "dur": 4.816
+   }
+  ],
+  "grounding": [
+   {
+    "t": 10.339,
+    "dur": 0.3169,
+    "narrative_chars": 1424,
+    "narrative": "Cystic fibrosis is linked to several specific genes identified in genetic records [2]. A key associated locus is NCBIGene:1080 [1]. Genetic associations also include NCBIGene:2212 and NCBIGene:7040 [3][4]. The primary causal locus is NCBIGene:1080, known by the name CF transmembrane conductance regulator [1]. In addition, the condition is associated with NCBIGene:2212, which carries the name Fc gamma receptor IIa [3]. Another associated locus is NCBIGene:7040, designated by the name transforming growth factor beta 1 [4]. Patients diagnosed with Cystic fibrosis exhibit widespread phenotypic effects across organ systems [2]. Documented clinical features in medical genetics include Bronchiectasis and Asthma [15][11]. Patients can also present with Clubbing of fingers, Dehydration, and Diarrhea [19][23][27]. Additional manifestations include Hemoptysis, Hepatomegaly, and Hepatosplenomegaly [28][29][30]. Hepatic disease affects many individuals with this disorder, although brain dysfunction remains an uncommon outcome [26#0]. A rapid rise in ammonia levels causing brain dysfunction may be triggered in patients with established liver disease by systemic steroid treatments [26: \"hyperammonemic encephalopathy\\\" can be precipitated in previously stable CFLD by various triggers including systemic corticosteroids\"]. Severe end-stage liver involvement can also typically present with hepatic encephalopathy [26#1].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 13,
+    "refused": true
+   },
+   {
+    "t": 15.475,
+    "dur": 0.39,
+    "narrative_chars": 1786,
+    "narrative": "Genetic associations for the disease Cystic fibrosis [2] include CF transmembrane conductance regulator [1], Fc gamma receptor IIa [3], and transforming growth factor beta 1 [4]. Supporting context identifies the condition under medgen title Cystic fibrosis [6] and literature entity Cystic Fibrosis [7]. Cystic fibrosis liver disease affects many individuals, yet encephalopathy remains an uncommon outcome [26#0]. A documented clinical feature is Asthma [11]. Another clinical feature is Bronchiectasis [15]. Documented features also include Clubbing of fingers [19] and Dehydration [23]. Additional recognized manifestations include Diarrhea [27], Hemoptysis [28], Hepatomegaly [29], and Hepatosplenomegaly [30]. Research includes the publication Encephalopathy in cystic fibrosis [5]. Additional studies include 3.22 Nutrition in Cystic Fibrosis [10] and Editorial: Cystic Fibrosis in Children [14]. Further published work includes Azithromycin and cystic fibrosis [18] and Editorial: Cystic fibrosis-related diabetes [22]. Relevant indexed literature includes publication 32800451 [9], publication 35240644 [13], publication 35592838 [17], publication 35853636 [21], and publication 39129918 [25]. A relevant registered study is Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [8]. Another identified trial is Pregnancies and Cystic Fibrosis [24]. Related clinical evaluations include A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease [12]. Other registered studies include Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease [16] and A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule [20].",
+    "sentences": [
+     "Another identified trial is Pregnancies and Cystic Fibrosis [1]."
+    ],
+    "claims": 1,
+    "claim_ids": [
+     "ct-514f1ab37296-24"
+    ],
+    "claim_detail": [
+     {
+      "text": "Another identified trial is Pregnancies and Cystic Fibrosis",
+      "quote": "",
+      "ref": 24,
+      "field": "name",
+      "value": "Pregnancies and Cystic Fibrosis"
+     }
+    ],
+    "stripped": 29,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 10.345,
+    "sent": 2,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.311
+   },
+   {
+    "t": 15.481,
+    "sent": 1,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.384
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "CF transmembrane conductance regulator",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Cystic fibrosis",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C0010674"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Fc gamma receptor IIa",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/2212"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "transforming growth factor beta 1",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/7040"
+   },
+   {
+    "ref": 5,
+    "field": "title",
+    "value": "Encephalopathy in cystic fibrosis.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/32800451/"
+   },
+   {
+    "ref": 6,
+    "field": "title",
+    "value": "Cystic fibrosis",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "Cystic Fibrosis",
+    "url": "https://www.ncbi.nlm.nih.gov/mesh/D003550"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis",
+    "url": "https://clinicaltrials.gov/study/NCT00391703"
+   },
+   {
+    "ref": 9,
+    "field": "pmid",
+    "value": "32800451",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/32800451/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "3.22 Nutrition in Cystic Fibrosis.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35240644/"
+   },
+   {
+    "ref": 11,
+    "field": "clinical_features",
+    "value": "Asthma",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease",
+    "url": "https://clinicaltrials.gov/study/NCT00744276"
+   },
+   {
+    "ref": 13,
+    "field": "pmid",
+    "value": "35240644",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35240644/"
+   },
+   {
+    "ref": 14,
+    "field": "title",
+    "value": "Editorial: Cystic Fibrosis in Children.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35592838/"
+   },
+   {
+    "ref": 15,
+    "field": "clinical_features",
+    "value": "Bronchiectasis",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease",
+    "url": "https://clinicaltrials.gov/study/NCT00967681"
+   },
+   {
+    "ref": 17,
+    "field": "pmid",
+    "value": "35592838",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35592838/"
+   },
+   {
+    "ref": 18,
+    "field": "title",
+    "value": "Azithromycin and cystic fibrosis.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35853636/"
+   },
+   {
+    "ref": 19,
+    "field": "clinical_features",
+    "value": "Clubbing of fingers",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule",
+    "url": "https://clinicaltrials.gov/study/NCT02929420"
+   },
+   {
+    "ref": 21,
+    "field": "pmid",
+    "value": "35853636",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/35853636/"
+   },
+   {
+    "ref": 22,
+    "field": "title",
+    "value": "Editorial: Cystic fibrosis-related diabetes.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39129918/"
+   },
+   {
+    "ref": 23,
+    "field": "clinical_features",
+    "value": "Dehydration",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "Pregnancies and Cystic Fibrosis",
+    "url": "https://clinicaltrials.gov/study/NCT03290144"
+   },
+   {
+    "ref": 25,
+    "field": "pmid",
+    "value": "39129918",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/39129918/"
+   },
+   {
+    "ref": 26,
+    "field": "abstract",
+    "value": "Cystic fibrosis liver disease (CFLD) affects a large proportion of cystic fibrosis (CF) patients; however encephalopathy is a rare complication. While classical hepatic encephalopathy can be a feature of end-stage liver disease, \"hyperammonemic encephalopathy\" can be precipitated in previously stabl",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/32800451/"
+   },
+   {
+    "ref": 27,
+    "field": "clinical_features",
+    "value": "Diarrhea",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 28,
+    "field": "clinical_features",
+    "value": "Hemoptysis",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 29,
+    "field": "clinical_features",
+    "value": "Hepatomegaly",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   },
+   {
+    "ref": 30,
+    "field": "clinical_features",
+    "value": "Hepatosplenomegaly",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/41393"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 1.642,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 1.642,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 4.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.06,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 4.436,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 4.436,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 4.437,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.601,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.624,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.699,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.902,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 4.947,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.103,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.168,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.49,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 5.491,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.913,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.914,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.925,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.926,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 15.927,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 15.928,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 15.928,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.021078859919999998,
+  "total_tool_calls": 6,
+  "elapsed_ms": 15927,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 16 sources, not yet confirmed",
+  "layer_calls_used": 11,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 246
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 269
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 302
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 485
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/gene/1080",
+  "https://www.ncbi.nlm.nih.gov/medgen/C0010674",
+  "https://www.ncbi.nlm.nih.gov/gene/2212",
+  "https://www.ncbi.nlm.nih.gov/gene/7040",
+  "https://pubmed.ncbi.nlm.nih.gov/32800451/",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/medgen/41393",
+  "https://www.ncbi.nlm.nih.gov/mesh/D003550",
+  "https://clinicaltrials.gov/study/NCT00391703",
+  "https://pubmed.ncbi.nlm.nih.gov/35240644/",
+  "https://clinicaltrials.gov/study/NCT00744276",
+  "https://pubmed.ncbi.nlm.nih.gov/35592838/",
+  "https://clinicaltrials.gov/study/NCT00967681",
+  "https://pubmed.ncbi.nlm.nih.gov/35853636/",
+  "https://clinicaltrials.gov/study/NCT02929420",
+  "https://pubmed.ncbi.nlm.nih.gov/39129918/",
+  "https://clinicaltrials.gov/study/NCT03290144"
+ ]
+}

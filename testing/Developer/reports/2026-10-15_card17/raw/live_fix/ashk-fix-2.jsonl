@@ -1,0 +1,15 @@
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Where this answer comes from\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "list_item", "text": "Disease name: Ashkenazi Jewish disorders [1]. ", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "list_item", "text": "Medgen title: BETA-THALASSEMIA, ASHKENAZI JEWISH TYPE [2]. ", "placement": "listing"}}
+{"tag": "CITATION", "data": {"display_index": 1, "citation_id": "cq-aa34613aae57-1", "source_id": "MedGen:CN118946", "source_url": "https://www.ncbi.nlm.nih.gov/medgen/CN118946", "field": "name", "claim_text": "Disease name: Ashkenazi Jewish disorders"}}
+{"tag": "CITATION", "data": {"display_index": 2, "citation_id": "ne-dee4831ce206-2", "source_id": "934939", "source_url": "https://www.ncbi.nlm.nih.gov/medgen/934939", "field": "title", "claim_text": "medgen title: BETA-THALASSEMIA, ASHKENAZI JEWISH TYPE"}}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "I found 1 condition related to Ashkenazi Jewish [1]. ", "placement": "summary"}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: no written summary could be checked against the records, so the records found are listed below with their sources", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: this answer does not address the following entities named in the question: BETA-THALASSEMIA, ASHKENAZI JEWISH TYPE. Ask about them individually for a complete answer.", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing"}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "This is a research summary, not medical advice.", "placement": "listing"}}
+{"tag": "DONE", "data": {"trust_outcome": "ask", "elapsed_ms": 7375, "total_cost_usd": 0.0022911370000000004, "message": null}}
+{"tag": "ELAPSED_S", "data": 7.4}

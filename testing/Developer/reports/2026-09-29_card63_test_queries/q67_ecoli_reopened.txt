@@ -1,0 +1,57 @@
+NCBI Agentic Search
+Search
+Integrations
+About
+Working as Koch
+S3
+s3-queries-c-20260929@example.com
+▾
++ New search
+
+YOUR SEARCHES
+
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+2 tools · 21 sources from 1 layer
+Which diseases are associated with BRCA1?
+23 sources · Sep 29
+s3-queries-c-20260929@example.com
+No search limit in effect yet
+SAVED ANSWER · ASKED SEP 29, 2026, 12:02 PM
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+Run again
+
+Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21].
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED
+C236-11 [1]	SAMN00715300	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-3677 [2]	SAMN00715303	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4404 [3]	SAMN00715305	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4522 [4]	SAMN00715306	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4623 [5]	SAMN00715307	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4632 C1 [6]	SAMN00715308	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4632 C2 [7]	SAMN00715309	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4632 C3 [8]	SAMN00715310	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4632 C4 [9]	SAMN00715311	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+11-4632 C5 [10]	SAMN00715312	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+C227-11 [11]	SAMN00715316	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+Ec11-4988 [12]	SAMN00778958	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	2011
+Ec11-5603 [13]	SAMN00778959	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	2011
+Ec11-6006 [14]	SAMN00778960	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	2011
+11-02030 [15]	SAMN01141737	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	2011
+11-02033-1 [16]	SAMN01141738	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	2011
+11-02092 [17]	SAMN01141739	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	2011
+11-02093 [18]	SAMN01141740	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2	2011
+2011C-3493 [19]	SAMN01831188	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	
+NA114 [20]	SAMN02603711	aac(6')-Ib-cr5, aadA5, acrF, blaCTX-M-15, blaEC, blaOXA-1, catB3=PARTIAL, dfrA17, gyrA_D87N=POINT, gyrA_S83L=POINT, mdtM, mph(A), mrx(A), parC_E84V=POINT, parC_S80I=POINT, parE_I529L=POINT, ptsI_V25I=POINT, sul1, tet(A), uhpT_E350Q=POINT	2009
+TAXONOMY RECORDS FOUND
+RECORD	IDENTIFIER
+Escherichia coli [21]	NCBITaxon:562
+
+Pathogen Detection lists 140,839 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+
+Note: the written summary of these records could not be verified against them, so this answer lists the records found instead
+
+Based on 21 sources, not yet confirmed
++ New search
+NCBI Agentic Search

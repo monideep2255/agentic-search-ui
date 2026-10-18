@@ -476,42 +476,75 @@ class TestEdgeLabelSkippedWhenEndpointsDoNotMatch:
 
 
 class TestMultiHopTraversal:
-    def test_two_hops_expand_the_frontier_gene_to_disease_to_phenotype(self, monkeypatch) -> None:
+    def test_two_hops_expand_the_frontier_gene_to_article_to_mesh(self, monkeypatch) -> None:
+        """Two hops really expand the frontier, over a path the graph has.
+
+        REWITNESSED 2026-09-23. This arm used to walk Gene to Disease to
+        PhenotypicFeature through `has_phenotype`, and it passed because
+        `EDGE_ENDPOINTS` said that edge joined Disease to PhenotypicFeature.
+        It does not. Measured against the live graph that night: no Disease
+        vertex anywhere has an outgoing `has_phenotype` edge, every
+        PhenotypicFeature vertex is an unpopulated `[stub]`, and
+        `has_phenotype` actually joins SequenceVariant to Disease.
+
+        So the arm was exercising a traversal the exporter can never perform
+        against real data, while agreeing with a constant that was wrong. The
+        PROPERTY it exists for is untouched and still asserted here: a
+        two-hop request must reach a vertex that is two hops out, not stop at
+        one. Only the witness moved, to Gene through `mentioned_in` to
+        Article through `has_mesh_annotation` to OntologyClass, which is a
+        real path on both edges (probed the same night: 25 articles for
+        BRCA1, 14 MeSH annotations for a sampled PMID).
+        """
         fake = FakeGraph()
         fake.register_seed("NCBIGene:1", _gene_entity(1, "NCBIGene:1", "TP53"))
 
-        edge1 = _edge_entity(501, "gene_associated_with_condition", start_id=1, end_id=2)
-        disease = _disease_entity(2, "MedGen:C0001")
+        edge1 = _edge_entity(501, "mentioned_in", start_id=1, end_id=2)
+        article = {
+            "id": 2,
+            "label": "Article",
+            "properties": {
+                "id": "PMID:1",
+                "name": "some article",
+                "source": "PubMed",
+            },
+        }
         fake.register_hop(
             "NCBIGene:1",
-            "gene_associated_with_condition",
+            "mentioned_in",
             "out",
-            [{"r": edge1, "b": disease}],
+            [{"r": edge1, "b": article}],
         )
 
-        edge2 = _edge_entity(502, "has_phenotype", start_id=2, end_id=3)
-        phenotype = {
+        edge2 = _edge_entity(502, "has_mesh_annotation", start_id=2, end_id=3)
+        mesh_term = {
             "id": 3,
-            "label": "PhenotypicFeature",
-            "properties": {"id": "HP:0001", "name": "some phenotype", "source": "HPO"},
+            "label": "OntologyClass",
+            "properties": {
+                "id": "MeSH:D000001",
+                "name": "[MeSH] D000001",
+                "source": "MeSH (via PubMed)",
+            },
         }
-        fake.register_hop("MedGen:C0001", "has_phenotype", "out", [{"r": edge2, "b": phenotype}])
+        fake.register_hop(
+            "PMID:1", "has_mesh_annotation", "out", [{"r": edge2, "b": mesh_term}]
+        )
 
         monkeypatch.setattr(traversal, "execute_cypher", fake)
 
         result = traversal.traverse_subgraph(
             seeds=["NCBIGene:1"],
             hops=2,
-            edge_labels=("gene_associated_with_condition", "has_phenotype"),
+            edge_labels=("mentioned_in", "has_mesh_annotation"),
         )
 
-        assert set(result.nodes.keys()) == {"NCBIGene:1", "MedGen:C0001", "HP:0001"}
+        assert set(result.nodes.keys()) == {"NCBIGene:1", "PMID:1", "MeSH:D000001"}
         assert len(result.edges) == 2
         subjects_objects = {
             (edge["subject_curie"], edge["object_curie"]) for edge in result.edges
         }
-        assert ("NCBIGene:1", "MedGen:C0001") in subjects_objects
-        assert ("MedGen:C0001", "HP:0001") in subjects_objects
+        assert ("NCBIGene:1", "PMID:1") in subjects_objects
+        assert ("PMID:1", "MeSH:D000001") in subjects_objects
         assert result.truncated is False
 
     def test_hops_zero_returns_only_the_resolved_seed_no_edges(self, monkeypatch) -> None:

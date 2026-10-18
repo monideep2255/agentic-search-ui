@@ -1,0 +1,13 @@
+| Call site | Calls | Median s | Min s | Max s |
+|---|---|---|---|---|
+| comparison only: guard-tier sentence judge | 5 | 0.88 | 0.56 | 1.99 |
+| jev: decide | 25 | 0.41 | 0.30 | 0.83 |
+| jev: sentence_batch | 5 | 0.34 | 0.26 | 0.44 |
+| other: You are an input classifier for a biomedical evidence | 8 | 2.02 | 1.35 | 2.83 |
+| other: You are the Cypher generation step for a read-only bi | 1 | 2.42 | 2.42 | 2.42 |
+| think: classification | 8 | 1.86 | 1.41 | 4.00 |
+| write: resolve_concept_ids | 14 | 0.00 | 0.00 | 0.65 |
+| write: resolve_descriptor_ids | 8 | 0.00 | 0.00 | 0.00 |
+| write: sentence check (guard) | 5 | 0.88 | 0.56 | 1.99 |
+| write: writer, first reply | 8 | 2.89 | 0.98 | 8.89 |
+| write: writer, repair | 8 | 4.52 | 1.95 | 11.96 |

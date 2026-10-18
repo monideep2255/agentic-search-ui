@@ -1,0 +1,1075 @@
+{
+ "id": "G-038",
+ "question": "Tell me about the tree of life.",
+ "depth": "researcher",
+ "wall_s": 15.297,
+ "done": {
+  "total_cost_usd": 0.02109652656,
+  "total_tool_calls": 2,
+  "elapsed_ms": 15281,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "layer_calls_used": 3,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.relevancy",
+    "options": [
+     "on_topic",
+     "off_topic"
+    ],
+    "chosen": "on_topic",
+    "decided_by": "jev",
+    "jev_choice": "on_topic",
+    "jev_confidence": 0.88,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 375
+   },
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 281
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.96,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 513
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.95,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 529
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 557
+   }
+  ]
+ },
+ "withdrawn": false,
+ "citations": 7,
+ "stamps": [
+  {
+   "t": 15.285,
+   "emitted": 3.255,
+   "type": "guard",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 3.256,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.176,
+   "type": "think",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.177,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.192,
+   "type": "plan",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.192,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.195,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.195,
+   "type": "tool_start",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "running"
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.195,
+   "type": "tool_start",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "running"
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.664,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.285,
+   "emitted": 5.873,
+   "type": "tool_result",
+   "step": null,
+   "tool": "pubtator_annotate",
+   "status": "ok"
+  },
+  {
+   "t": 15.285,
+   "emitted": 6.027,
+   "type": "tool_result",
+   "step": null,
+   "tool": "ncbi_efetch",
+   "status": "ok"
+  },
+  {
+   "t": 15.285,
+   "emitted": 6.029,
+   "type": "step",
+   "step": "write",
+   "tool": null,
+   "status": "started"
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.28,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "token",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "citation",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.285,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.282,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.283,
+   "type": "trust_signal",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.283,
+   "type": "cost",
+   "step": null,
+   "tool": null,
+   "status": null
+  },
+  {
+   "t": 15.286,
+   "emitted": 15.283,
+   "type": "done",
+   "step": null,
+   "tool": null,
+   "status": null
+  }
+ ],
+ "rec": {
+  "model": [
+   {
+    "t": 0.413,
+    "site": "other: You are an input classifier for a biomedical evidence search",
+    "role": "guard_or_plan",
+    "prompt_chars": 3818,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 798,
+    "completion_tokens": 52,
+    "cached_tokens": 512,
+    "finish": "stop",
+    "reply": null,
+    "dur": 2.827
+   },
+   {
+    "t": 3.287,
+    "site": "think: classification",
+    "role": "guard_or_plan",
+    "prompt_chars": 4310,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 992,
+    "completion_tokens": 40,
+    "cached_tokens": 768,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.889
+   },
+   {
+    "t": 6.031,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 48301,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12300,
+    "completion_tokens": 559,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": "The retrieved literature does not address the phylogenetic \"tree of life\" concept. Instead, the five publications returned by the search all concern literal trees\u2014forest ecology, mycorrhizal associations, longevity, and carbohydrate storage\u2014reflecting a lexical ambiguity in the query [1][2][3][4][5].\n\n## Tree Longevity\n\nTrees do not appear to die from genetically programmed meristem senescence but rather from extrinsic agents or disturbance events, with longevity enabled by life-history trait combinations that resist or avoid external mortality [6: \"trees do not die because of genetically programmed senescence in their meristems, but rather are killed by an external agent or a disturbance event\"]. Sustained growth or growth-rate plasticity is a further prerequisite, and the authors challenge the classical view that shade-tolerant, late-successional species invariably outlive early-successional ones [6: \"we challenge the long-held notion that shade-tolerant, late-successional species have longer lifespans than early-successional species\"].\n\n## Mycorrhizal Type and Soil Microbiota\n\nMycorrhizal association type significantly shapes fungal but not bacterial alpha diversity, and only ectomycorrhizal tree species pairs show increased fungal diversity with greater tree species richness [7: \"tree mycorrhizal type had a significant effect on fungal but not bacterial alpha diversity\"]. Higher tree diversity promotes convergence of soil microbial communities, erasing differences seen at lower diversity levels [7: \"higher tree diversity levels promote convergence of the soil microbial communities\"].\n\n## Mycorrhizal Type and Productivity\n\nSpecies richness correlates positively with community productivity, strengthening over time, but arbuscular and ectomycorrhizal trees influence productivity through dissimilar mechanisms and showed no overyielding when grown together [9: \"there was no overyielding when AM and EM trees grew together\"]. Maximising both tree and mycorrhizal diversity may nonetheless enhance ecosystem functioning in the long run [9: \"maximizing tree and mycorrhizal diversity may increase ecosystem functioning in the long run\"].\n\n## Nonstructural Carbohydrate Dynamics\n\nSeasonal NSC pools peaked in autumn in a deciduous broadleaf species and in summer in an evergreen coniferous species, and larger storage was not associated with more pronounced seasonal fluctuation [10: \"larger storage was not associated with more pronounced seasonal fluctuations\"]. Branches and roots served as the principal dynamic NSC suppliers in the two respective species [10: \"the branch and root were the most dynamic organs\"].\n\nOne additional retrieved publication concerns gradient boosted tree machine-learning methods for mapping cancer quality-of-life questionnaires and is unrelated to forest ecology [3][8].",
+    "dur": 2.986
+   },
+   {
+    "t": 9.291,
+    "site": "write: synth",
+    "role": "synth",
+    "prompt_chars": 56944,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 14014,
+    "completion_tokens": 1153,
+    "cached_tokens": 10112,
+    "finish": "stop",
+    "reply": "The published literature retrieved for the phrase \"tree of life\" does not address the phylogenetic concept; instead, it returns studies on tree biology, tree ecology, and one methodological paper using \"tree\" as a machine-learning algorithm name [1][2][3][4][5]. The five PubMed articles bear identifiers PMID 33305422, PMID 34327789, PMID 36096966, PMID 36215064, and PMID 38602710 [11][12][13][14][15].\n\n## Tree Longevity\n\nPublished evidence indicates that trees do not die from genetically programmed meristem senescence but are instead killed by external agents or disturbance events, with long lifespans sustained by life history trait combinations that resist extrinsic mortality [6: \"trees do not die because of genetically programmed senescence in their meristems, but rather are killed by an external agent or a disturbance event\"][6: \"Long tree lifespans are therefore allowed by specific combinations of life history traits within realized niches that support resistance to, or avoidance of, extrinsic mortality\"]. The study challenges the classic paradigm that shade-tolerant, late-successional species live longest, noting that extremely long-lived species do not fit this pattern [6: \"we challenge the long-held notion that shade-tolerant, late-successional species have longer lifespans than early-successional species by pointing out that tree species with extreme longevity do not fit this paradigm\"]. Growth plasticity and modularity are described as evolutionary advantages enabling survival over centuries and millennia [6: \"The growth plasticity and modularity of trees can then be viewed as an evolutionary advantage that allows them to survive and reproduce for centuries and millennia\"].\n\n## Mycorrhizal Type and Soil Microbiota\n\nA subtropical diversity experiment found that mycorrhizal type significantly affected fungal but not bacterial alpha diversity, with only ectomycorrhizal tree species pairs showing increased fungal diversity at higher tree diversity [7: \"tree mycorrhizal type had a significant effect on fungal but not bacterial alpha diversity\"][7: \"only EcM but not AM TSPs fungal alpha diversity increased with tree diversity\"]. Differences between arbuscular and ectomycorrhizal pairs disappeared in multi-species mixtures, suggesting that higher tree diversity promotes convergence of soil microbial communities [7: \"the differences between AM and EcM TSPs disappeared in multi-species mixtures\"][7: \"higher tree diversity levels promote convergence of the soil microbial communities\"].\n\n## Productivity and Mycorrhizal Diversity\n\nA separate tree-diversity experiment reported significant positive relationships between tree species richness and community productivity that strengthened over time, with arbuscular and ectomycorrhizal tree species influencing productivity through dissimilar mechanisms [9: \"significant positive relationships between tree species richness and community productivity, which strengthened over time\"][9: \"AM and EM tree species differently influenced productivity\"]. Ectomycorrhizal communities showed low initial productivity but increasing increments over time, whereas arbuscular mycorrhizal communities showed the opposite trend [9: \"EM tree communities were characterized by low productivity in the beginning but an increase of increment over time\"][9: \"For AM tree communities the opposite was true\"]. No overyielding occurred when both mycorrhizal types grew together, but the authors suggest maximizing both tree and mycorrhizal diversity may benefit ecosystem functioning long-term [9: \"there was no overyielding when AM and EM trees grew together\"][9: \"maximizing tree and mycorrhizal diversity may increase ecosystem functioning in the long run\"].\n\n## Nonstructural Carbohydrate Dynamics\n\nA study comparing a deciduous broadleaf (Quercus acutissima) and an evergreen conifer (Pinus massoniana) found that whole-tree nonstructural carbohydrate pools peaked in autumn and summer, respectively, with starch pools supplemented during the growing season and soluble sugar pools largest in the dormant season [10: \"whole-tree NSC of Q. acutissima and P. massoniana reached the peak in autumn and summer, respectively\"][10: \"starch pools of the two species were supplemented in the growing season while the soluble sugar pools were the largest in the dormant season\"]. The evergreen conifer maintained larger NSC pools overall, while the deciduous species showed larger seasonal fluctuations, indicating that larger storage did not correspond to more pronounced seasonal variation [10: \"whole-tree NSC pools of P. massoniana were larger but Q. acutissima showed larger seasonal fluctuations\"][10: \"larger storage was not associated with more pronounced seasonal fluctuations\"]. Branches and roots were the most dynamic organs in Q. acutissima and P. massoniana, respectively, serving as major NSC suppliers for growth [10: \"branch and root were the most dynamic organs of Q. acutissima and P. massoniana, respectively, and were the major suppliers of NSC to support tree growth activities\"].\n\n## Machine Learning \"Tree\" Method\n\nOne retrieved study applies gradient boosted tree methods to map a cancer quality-of-life questionnaire onto a health utility index, finding that the approach did not improve root mean squared error or mean absolute error over regression-based methods, though it showed potential to reduce overprediction and underprediction at health extremes [8: \"predictive performances in the RMSE and MAE did not improve by the GBT approaches compared with regression approaches\"][8: \"flexibility of the GBT approaches had the potential to reduce overprediction and underprediction in poor and good health, respectively\"].",
+    "dur": 5.604
+   },
+   {
+    "t": 15.297,
+    "site": "write: sentence check (guard)",
+    "role": "guard_or_plan",
+    "prompt_chars": 3463,
+    "max_tokens": 256,
+    "ok": true,
+    "prompt_tokens": 724,
+    "completion_tokens": 28,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 0.777
+   },
+   {
+    "t": 16.074,
+    "site": "write: sentence check (guard)",
+    "role": "guard_or_plan",
+    "prompt_chars": 6387,
+    "max_tokens": 256,
+    "ok": true,
+    "prompt_tokens": 1294,
+    "completion_tokens": 39,
+    "cached_tokens": 0,
+    "finish": "stop",
+    "reply": null,
+    "dur": 1.156
+   }
+  ],
+  "jev": [
+   {
+    "t": 0.424,
+    "kind": "decide",
+    "key": "guardrail.relevancy",
+    "ok": true,
+    "dur": 0.375
+   },
+   {
+    "t": 3.287,
+    "kind": "decide",
+    "key": "plan.literature",
+    "ok": true,
+    "dur": 0.513
+   },
+   {
+    "t": 3.287,
+    "kind": "decide",
+    "key": "think.asks_features",
+    "ok": true,
+    "dur": 0.529
+   },
+   {
+    "t": 3.287,
+    "kind": "decide",
+    "key": "think.recent_years",
+    "ok": true,
+    "dur": 0.558
+   },
+   {
+    "t": 9.026,
+    "kind": "sentence_batch",
+    "questions": 8,
+    "timeout_s": 3.0,
+    "ok": true,
+    "dur": 0.259
+   },
+   {
+    "t": 14.908,
+    "kind": "sentence_batch",
+    "questions": 12,
+    "timeout_s": 3.0,
+    "ok": true,
+    "dur": 0.339
+   }
+  ],
+  "http": [
+   {
+    "t": 0.454,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.252
+   },
+   {
+    "t": 0.437,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.362
+   },
+   {
+    "t": 0.456,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 2.699
+   },
+   {
+    "t": 3.461,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.338
+   },
+   {
+    "t": 3.524,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.29
+   },
+   {
+    "t": 3.335,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.509
+   },
+   {
+    "t": 3.531,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.642
+   },
+   {
+    "t": 5.21,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/esearch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "retmax",
+      "5"
+     ],
+     [
+      "retmode",
+      "json"
+     ],
+     [
+      "sort",
+      "relevance"
+     ],
+     [
+      "term",
+      "tree AND life"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.451
+   },
+   {
+    "t": 5.71,
+    "host": "www.ncbi.nlm.nih.gov",
+    "path": "/research/pubtator3-api/publications/export/biocjson",
+    "params": [
+     [
+      "pmids",
+      "38602710,36215064,36096966,34327789,33305422"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.162
+   },
+   {
+    "t": 5.688,
+    "host": "eutils.ncbi.nlm.nih.gov",
+    "path": "/entrez/eutils/efetch.fcgi",
+    "params": [
+     [
+      "db",
+      "pubmed"
+     ],
+     [
+      "id",
+      "38602710,36215064,36096966,34327789,33305422"
+     ],
+     [
+      "retmode",
+      "xml"
+     ],
+     [
+      "rettype",
+      "abstract"
+     ]
+    ],
+    "method": "GET",
+    "status": 200,
+    "dur": 0.331
+   },
+   {
+    "t": 6.035,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 2.975
+   },
+   {
+    "t": 9.041,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.243
+   },
+   {
+    "t": 9.295,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 5.597
+   },
+   {
+    "t": 14.92,
+    "host": "openrouter.ai",
+    "path": "/api/alpha/decisions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.326
+   },
+   {
+    "t": 15.3,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 0.772
+   },
+   {
+    "t": 16.076,
+    "host": "openrouter.ai",
+    "path": "/api/v1/chat/completions",
+    "params": [],
+    "method": "POST",
+    "status": 200,
+    "dur": 1.152
+   }
+  ],
+  "write": [
+   {
+    "t": 6.029,
+    "what": "resolve_concept_ids",
+    "dur": 0.0,
+    "ids": 0
+   },
+   {
+    "t": 6.029,
+    "what": "resolve_descriptor_ids",
+    "dur": 0.0,
+    "ids": 0
+   },
+   {
+    "t": 6.03,
+    "what": "features_decision_wait",
+    "dur": 0.0,
+    "asked": false
+   },
+   {
+    "t": 9.018,
+    "what": "ground_with_sentence_check",
+    "dur": 0.272,
+    "claims": 1,
+    "stripped": 10
+   },
+   {
+    "t": 14.897,
+    "what": "ground_with_sentence_check",
+    "dur": 0.365,
+    "claims": 2,
+    "stripped": 15
+   }
+  ],
+  "grounding": [
+   {
+    "t": 9.018,
+    "dur": 0.0073,
+    "narrative_chars": 1944,
+    "findings": 15,
+    "claims": 0,
+    "stripped": 11,
+    "refused": true,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 9.285,
+    "dur": 0.0051,
+    "narrative_chars": 1944,
+    "findings": 15,
+    "claims": 1,
+    "stripped": 10,
+    "refused": false,
+    "with_verified": true,
+    "collects_candidates": false
+   },
+   {
+    "t": 9.29,
+    "dur": 0.0005,
+    "narrative_chars": 630,
+    "findings": 15,
+    "claims": 5,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   },
+   {
+    "t": 14.897,
+    "dur": 0.0106,
+    "narrative_chars": 3147,
+    "findings": 15,
+    "claims": 0,
+    "stripped": 17,
+    "refused": true,
+    "with_verified": false,
+    "collects_candidates": true
+   },
+   {
+    "t": 15.247,
+    "dur": 0.0144,
+    "narrative_chars": 3147,
+    "findings": 15,
+    "claims": 2,
+    "stripped": 15,
+    "refused": false,
+    "with_verified": true,
+    "collects_candidates": false
+   },
+   {
+    "t": 15.263,
+    "dur": 0.001,
+    "narrative_chars": 630,
+    "findings": 15,
+    "claims": 5,
+    "stripped": 0,
+    "refused": false,
+    "with_verified": false,
+    "collects_candidates": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 9.026,
+    "candidates": [
+     {
+      "sentence": "Trees do not appear to die from genetically programmed meristem senescence but rather from extrinsic agents or disturbance events, with longevity enabled by life-history trait combinations that resist or avoid external mortality",
+      "quotes": [
+       "trees do not die because of genetically programmed senescence in their meristems, but rather are killed by an external agent or a disturbance event"
+      ]
+     },
+     {
+      "sentence": "Sustained growth or growth-rate plasticity is a further prerequisite, and the authors challenge the classical view that shade-tolerant, late-successional species invariably outlive early-successional ones",
+      "quotes": [
+       "we challenge the long-held notion that shade-tolerant, late-successional species have longer lifespans than early-successional species"
+      ]
+     },
+     {
+      "sentence": "Mycorrhizal association type significantly shapes fungal but not bacterial alpha diversity, and only ectomycorrhizal tree species pairs show increased fungal diversity with greater tree species richness",
+      "quotes": [
+       "tree mycorrhizal type had a significant effect on fungal but not bacterial alpha diversity"
+      ]
+     },
+     {
+      "sentence": "Higher tree diversity promotes convergence of soil microbial communities, erasing differences seen at lower diversity levels",
+      "quotes": [
+       "higher tree diversity levels promote convergence of the soil microbial communities"
+      ]
+     },
+     {
+      "sentence": "Species richness correlates positively with community productivity, strengthening over time, but arbuscular and ectomycorrhizal trees influence productivity through dissimilar mechanisms and showed no overyielding when grown together",
+      "quotes": [
+       "there was no overyielding when AM and EM trees grew together"
+      ]
+     },
+     {
+      "sentence": "Maximising both tree and mycorrhizal diversity may nonetheless enhance ecosystem functioning in the long run",
+      "quotes": [
+       "maximizing tree and mycorrhizal diversity may increase ecosystem functioning in the long run"
+      ]
+     },
+     {
+      "sentence": "Seasonal NSC pools peaked in autumn in a deciduous broadleaf species and in summer in an evergreen coniferous species, and larger storage was not associated with more pronounced seasonal fluctuation",
+      "quotes": [
+       "larger storage was not associated with more pronounced seasonal fluctuations"
+      ]
+     },
+     {
+      "sentence": "Branches and roots served as the principal dynamic NSC suppliers in the two respective species",
+      "quotes": [
+       "the branch and root were the most dynamic organs"
+      ]
+     }
+    ],
+    "budget_s": 12.0,
+    "approved": [
+     "Maximising both tree and mycorrhizal diversity may nonetheless enhance ecosystem functioning in the long run"
+    ],
+    "ok": true,
+    "dur": 0.259
+   },
+   {
+    "t": 14.907,
+    "candidates": [
+     {
+      "sentence": "Published evidence indicates that trees do not die from genetically programmed meristem senescence but are instead killed by external agents or disturbance events, with long lifespans sustained by life history trait combinations that resist extrinsic mortality",
+      "quotes": [
+       "trees do not die because of genetically programmed senescence in their meristems, but rather are killed by an external agent or a disturbance event",
+       "Long tree lifespans are therefore allowed by specific combinations of life history traits within realized niches that support resistance to, or avoidance of, extrinsic mortality"
+      ]
+     },
+     {
+      "sentence": "The study challenges the classic paradigm that shade-tolerant, late-successional species live longest, noting that extremely long-lived species do not fit this pattern",
+      "quotes": [
+       "we challenge the long-held notion that shade-tolerant, late-successional species have longer lifespans than early-successional species by pointing out that tree species with extreme longevity do not fit this paradigm"
+      ]
+     },
+     {
+      "sentence": "Growth plasticity and modularity are described as evolutionary advantages enabling survival over centuries and millennia",
+      "quotes": [
+       "The growth plasticity and modularity of trees can then be viewed as an evolutionary advantage that allows them to survive and reproduce for centuries and millennia"
+      ]
+     },
+     {
+      "sentence": "A subtropical diversity experiment found that mycorrhizal type significantly affected fungal but not bacterial alpha diversity, with only ectomycorrhizal tree species pairs showing increased fungal diversity at higher tree diversity",
+      "quotes": [
+       "tree mycorrhizal type had a significant effect on fungal but not bacterial alpha diversity",
+       "only EcM but not AM TSPs fungal alpha diversity increased with tree diversity"
+      ]
+     },
+     {
+      "sentence": "Differences between arbuscular and ectomycorrhizal pairs disappeared in multi-species mixtures, suggesting that higher tree diversity promotes convergence of soil microbial communities",
+      "quotes": [
+       "the differences between AM and EcM TSPs disappeared in multi-species mixtures",
+       "higher tree diversity levels promote convergence of the soil microbial communities"
+      ]
+     },
+     {
+      "sentence": "A separate tree-diversity experiment reported significant positive relationships between tree species richness and community productivity that strengthened over time, with arbuscular and ectomycorrhizal tree species influencing productivity through dissimilar mechanisms",
+      "quotes": [
+       "significant positive relationships between tree species richness and community productivity, which strengthened over time",
+       "AM and EM tree species differently influenced productivity"
+      ]
+     },
+     {
+      "sentence": "Ectomycorrhizal communities showed low initial productivity but increasing increments over time, whereas arbuscular mycorrhizal communities showed the opposite trend",
+      "quotes": [
+       "EM tree communities were characterized by low productivity in the beginning but an increase of increment over time",
+       "For AM tree communities the opposite was true"
+      ]
+     },
+     {
+      "sentence": "No overyielding occurred when both mycorrhizal types grew together, but the authors suggest maximizing both tree and mycorrhizal diversity may benefit ecosystem functioning long-term",
+      "quotes": [
+       "there was no overyielding when AM and EM trees grew together",
+       "maximizing tree and mycorrhizal diversity may increase ecosystem functioning in the long run"
+      ]
+     },
+     {
+      "sentence": "A study comparing a deciduous broadleaf (Quercus acutissima) and an evergreen conifer (Pinus massoniana) found that whole-tree nonstructural carbohydrate pools peaked in autumn and summer, respectively, with starch pools supplemented during the growing season and soluble sugar pools largest in the dormant season",
+      "quotes": [
+       "whole-tree NSC of Q. acutissima and P. massoniana reached the peak in autumn and summer, respectively",
+       "starch pools of the two species were supplemented in the growing season while the soluble sugar pools were the largest in the dormant season"
+      ]
+     },
+     {
+      "sentence": "The evergreen conifer maintained larger NSC pools overall, while the deciduous species showed larger seasonal fluctuations, indicating that larger storage did not correspond to more pronounced seasonal variation",
+      "quotes": [
+       "whole-tree NSC pools of P. massoniana were larger but Q. acutissima showed larger seasonal fluctuations",
+       "larger storage was not associated with more pronounced seasonal fluctuations"
+      ]
+     },
+     {
+      "sentence": "massoniana, respectively, serving as major NSC suppliers for growth",
+      "quotes": [
+       "branch and root were the most dynamic organs of Q. acutissima and P. massoniana, respectively, and were the major suppliers of NSC to support tree growth activities"
+      ]
+     },
+     {
+      "sentence": "One retrieved study applies gradient boosted tree methods to map a cancer quality-of-life questionnaire onto a health utility index, finding that the approach did not improve root mean squared error or mean absolute error over regression-based methods, though it showed potential to reduce overprediction and underprediction at health extremes",
+      "quotes": [
+       "predictive performances in the RMSE and MAE did not improve by the GBT approaches compared with regression approaches",
+       "flexibility of the GBT approaches had the potential to reduce overprediction and underprediction in poor and good health, respectively"
+      ]
+     }
+    ],
+    "budget_s": 12.0,
+    "approved": [
+     "The study challenges the classic paradigm that shade-tolerant, late-successional species live longest, noting that extremely long-lived species do not fit this pattern",
+     "Growth plasticity and modularity are described as evolutionary advantages enabling survival over centuries and millennia",
+     "Ectomycorrhizal communities showed low initial productivity but increasing increments over time, whereas arbuscular mycorrhizal communities showed the opposite trend",
+     "The evergreen conifer maintained larger NSC pools overall, while the deciduous species showed larger seasonal fluctuations, indicating that larger storage did not correspond to more pronounced seasonal variation",
+     "massoniana, respectively, serving as major NSC suppliers for growth"
+    ],
+    "ok": true,
+    "dur": 0.34
+   }
+  ],
+  "reader": []
+ },
+ "guard_sentence_check": [
+  {
+   "ok": true,
+   "dur": 0.777,
+   "approved": [
+    "Trees do not appear to die from genetically programmed meristem senescence but rather from extrinsic agents or disturbance events, with longevity enabled by life-history trait combinations that resist or avoid external mortality",
+    "Sustained growth or growth-rate plasticity is a further prerequisite, and the authors challenge the classical view that shade-tolerant, late-successional species invariably outlive early-successional ones",
+    "Mycorrhizal association type significantly shapes fungal but not bacterial alpha diversity, and only ectomycorrhizal tree species pairs show increased fungal diversity with greater tree species richness",
+    "Higher tree diversity promotes convergence of soil microbial communities, erasing differences seen at lower diversity levels",
+    "Species richness correlates positively with community productivity, strengthening over time, but arbuscular and ectomycorrhizal trees influence productivity through dissimilar mechanisms and showed no overyielding when grown together",
+    "Maximising both tree and mycorrhizal diversity may nonetheless enhance ecosystem functioning in the long run",
+    "Seasonal NSC pools peaked in autumn in a deciduous broadleaf species and in summer in an evergreen coniferous species, and larger storage was not associated with more pronounced seasonal fluctuation",
+    "Branches and roots served as the principal dynamic NSC suppliers in the two respective species"
+   ]
+  },
+  {
+   "ok": true,
+   "dur": 1.156,
+   "approved": [
+    "Published evidence indicates that trees do not die from genetically programmed meristem senescence but are instead killed by external agents or disturbance events, with long lifespans sustained by life history trait combinations that resist extrinsic mortality",
+    "The study challenges the classic paradigm that shade-tolerant, late-successional species live longest, noting that extremely long-lived species do not fit this pattern",
+    "Growth plasticity and modularity are described as evolutionary advantages enabling survival over centuries and millennia",
+    "A subtropical diversity experiment found that mycorrhizal type significantly affected fungal but not bacterial alpha diversity, with only ectomycorrhizal tree species pairs showing increased fungal diversity at higher tree diversity",
+    "Differences between arbuscular and ectomycorrhizal pairs disappeared in multi-species mixtures, suggesting that higher tree diversity promotes convergence of soil microbial communities",
+    "A separate tree-diversity experiment reported significant positive relationships between tree species richness and community productivity that strengthened over time, with arbuscular and ectomycorrhizal tree species influencing productivity through dissimilar mechanisms",
+    "Ectomycorrhizal communities showed low initial productivity but increasing increments over time, whereas arbuscular mycorrhizal communities showed the opposite trend",
+    "No overyielding occurred when both mycorrhizal types grew together, but the authors suggest maximizing both tree and mycorrhizal diversity may benefit ecosystem functioning long-term",
+    "A study comparing a deciduous broadleaf (Quercus acutissima) and an evergreen conifer (Pinus massoniana) found that whole-tree nonstructural carbohydrate pools peaked in autumn and summer, respectively, with starch pools supplemented during the growing season and soluble sugar pools largest in the dormant season",
+    "The evergreen conifer maintained larger NSC pools overall, while the deciduous species showed larger seasonal fluctuations, indicating that larger storage did not correspond to more pronounced seasonal variation",
+    "massoniana, respectively, serving as major NSC suppliers for growth",
+    "One retrieved study applies gradient boosted tree methods to map a cancer quality-of-life questionnaire onto a health utility index, finding that the approach did not improve root mean squared error or mean absolute error over regression-based methods, though it showed potential to reduce overprediction and underprediction at health extremes"
+   ]
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: On tree longevity. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [5], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [6] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [7]. \n\nProductivity and Mycorrhizal Diversity\n\nEctomycorrhizal communities showed low initial productivity but increasing increments over time, whereas arbuscular mycorrhizal communities showed the opposite trend [1]. \n\nNonstructural Carbohydrate Dynamics\n\nThe evergreen conifer maintained larger NSC pools overall, while the deciduous species showed larger seasonal fluctuations, indicating that larger storage did not correspond to more pronounced seasonal variation [2]. \n\nPubmed records found\n\nPubmed title: On tree longevity [3]. Pubmed title: Tree mycorrhizal type and tree diversity shape the forest soil microbiota [4]. Pubmed title: Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer [5]. Pubmed title: Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment [6]. Pubmed title: Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits [7]. "
+}

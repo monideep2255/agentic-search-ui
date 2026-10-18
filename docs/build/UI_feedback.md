@@ -2,7 +2,7 @@
 
 Product owner feedback on the user experience, raised 2026-08-31, plus what was verified rather than taken on trust.
 
-Last updated: 2026-09-05.
+Last updated: 2026-10-17.
 
 ## Read this first
 
@@ -53,7 +53,7 @@ REWRITTEN 2026-09-05 by product-owner decision: test the WHOLE FLOW, not one que
 
 Where to test: DEVELOP, `https://search-agent-web-develop-2aeb.up.railway.app`. Production is checked only when confirming a release shipped what it claimed.
 
-How to record what you saw: drop a screenshot into `feedback/inbox/` and put the verdict in the filename, for example `J1 step 3 lost the thread.png`. Longer thoughts go in `feedback/inbox/notes.md`. The convention is in `feedback/README.md`.
+How to record what you saw: drop a screenshot into `testing/Product/feedback/inbox/` and put the verdict in the filename, for example `J1 step 3 lost the thread.png`. Longer thoughts go in `testing/Product/feedback/inbox/notes.md`. The convention is in `testing/Product/feedback/README.md`.
 
 ### Before you start: the allowance shapes the journey
 

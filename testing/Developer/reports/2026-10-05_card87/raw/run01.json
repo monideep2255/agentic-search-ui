@@ -1,0 +1,746 @@
+{
+ "q": "recent-onset diabetes treatment",
+ "seconds": 41.5,
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 0,
+   "ts": "2026-10-05T16:30:09.381726Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 2,
+   "ts": "2026-10-05T16:30:22.346002Z",
+   "payload": {
+    "narrative": "Broad, open-ended question about treatment for recent-onset diabetes without specifying a single database or structured path.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 4,
+   "ts": "2026-10-05T16:30:22.348426Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: recent-onset, diabetes, treatment",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-483431d730cb",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ac935571af90",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-2df009bf45f1",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 6,
+   "ts": "2026-10-05T16:30:22.349523Z",
+   "payload": {
+    "call_id": "ne-483431d730cb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 7,
+   "ts": "2026-10-05T16:30:22.349571Z",
+   "payload": {
+    "call_id": "ne-ac935571af90",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 8,
+   "ts": "2026-10-05T16:30:22.349581Z",
+   "payload": {
+    "call_id": "pa-2df009bf45f1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 9,
+   "ts": "2026-10-05T16:30:22.739645Z",
+   "payload": {
+    "call_id": "ne-483431d730cb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 10,
+   "ts": "2026-10-05T16:30:22.981005Z",
+   "payload": {
+    "call_id": "pa-2df009bf45f1",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 11,
+   "ts": "2026-10-05T16:30:23.042952Z",
+   "payload": {
+    "call_id": "ne-ac935571af90",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 12,
+   "ts": "2026-10-05T16:30:23.044212Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 13,
+   "ts": "2026-10-05T16:30:48.736903Z",
+   "payload": {
+    "text": "Found 5 pubmed records: Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study. [2], Anti-interleukin-21 antibody and liraglutide for the preservation of \u03b2-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial. [3], Diabetic peripheral neuropathy essentials: a narrative review. [4], A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab. [5] and Baricitinib and \u03b2-Cell Function in Patients with New-Onset Type 1 Diabetes. [6]. ",
+    "marker_ids": [
+     "ne-ac935571af90-1",
+     "ne-ac935571af90-2",
+     "ne-ac935571af90-3",
+     "ne-ac935571af90-4",
+     "ne-ac935571af90-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Anti-interleukin-21 antibody and liraglutide for the preservation of \u03b2-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial.",
+     "A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab.",
+     "Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study.",
+     "Baricitinib and \u03b2-Cell Function in Patients with New-Onset Type 1 Diabetes.",
+     "Diabetic peripheral neuropathy essentials: a narrative review."
+    ]
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 14,
+   "ts": "2026-10-05T16:30:48.736976Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 15,
+   "ts": "2026-10-05T16:30:48.736986Z",
+   "payload": {
+    "text": "Oral antigen-specific therapy\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 16,
+   "ts": "2026-10-05T16:30:48.736994Z",
+   "payload": {
+    "text": "No serious adverse events were reported, no participants discontinued due to adverse events, and no systemic exposure to AG019 bacteria, proinsulin, or IL-10 was demonstrated [1]. ",
+    "marker_ids": [
+     "ne-ac935571af90-9"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 17,
+   "ts": "2026-10-05T16:30:48.737002Z",
+   "payload": {
+    "text": "\n\n",
+    "marker_ids": [],
+    "kind": "paragraph_break",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 18,
+   "ts": "2026-10-05T16:30:48.737010Z",
+   "payload": {
+    "text": "Pubmed records found\n\n",
+    "marker_ids": [],
+    "kind": "heading",
+    "cells": null,
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 19,
+   "ts": "2026-10-05T16:30:48.737017Z",
+   "payload": {
+    "text": "",
+    "marker_ids": [],
+    "kind": "table_header",
+    "cells": [
+     "Paper",
+     "Identifier"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 20,
+   "ts": "2026-10-05T16:30:48.737025Z",
+   "payload": {
+    "text": "Pubmed title: Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study [2]. ",
+    "marker_ids": [
+     "ne-ac935571af90-1"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study.",
+     "PMID:31345776"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 21,
+   "ts": "2026-10-05T16:30:48.737034Z",
+   "payload": {
+    "text": "Pubmed title: Anti-interleukin-21 antibody and liraglutide for the preservation of \u03b2-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial [3]. ",
+    "marker_ids": [
+     "ne-ac935571af90-2"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Anti-interleukin-21 antibody and liraglutide for the preservation of \u03b2-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial.",
+     "PMID:33662334"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 22,
+   "ts": "2026-10-05T16:30:48.737042Z",
+   "payload": {
+    "text": "Pubmed title: Diabetic peripheral neuropathy essentials: a narrative review [4]. ",
+    "marker_ids": [
+     "ne-ac935571af90-3"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Diabetic peripheral neuropathy essentials: a narrative review.",
+     "PMID:36786097"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 23,
+   "ts": "2026-10-05T16:30:48.737050Z",
+   "payload": {
+    "text": "Pubmed title: A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab [5]. ",
+    "marker_ids": [
+     "ne-ac935571af90-4"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab.",
+     "PMID:37782353"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 24,
+   "ts": "2026-10-05T16:30:48.737058Z",
+   "payload": {
+    "text": "Pubmed title: Baricitinib and \u03b2-Cell Function in Patients with New-Onset Type 1 Diabetes [6]. ",
+    "marker_ids": [
+     "ne-ac935571af90-5"
+    ],
+    "kind": "table_row",
+    "cells": [
+     "Baricitinib and \u03b2-Cell Function in Patients with New-Onset Type 1 Diabetes.",
+     "PMID:38055252"
+    ],
+    "emphasis": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 25,
+   "ts": "2026-10-05T16:30:48.737068Z",
+   "payload": {
+    "citation_id": "ne-ac935571af90-9",
+    "display_index": 1,
+    "source": "pubmed",
+    "source_id": "37782353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37782353/",
+    "layer": "layer_2_api",
+    "field": "abstract",
+    "claim_text": "No serious adverse events were reported, no participants discontinued due to adverse events, and no systemic exposure to AG019 bacteria, proinsulin, or IL-10 was demonstrated",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 26,
+   "ts": "2026-10-05T16:30:48.737094Z",
+   "payload": {
+    "citation_id": "ne-ac935571af90-1",
+    "display_index": 2,
+    "source": "pubmed",
+    "source_id": "31345776",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31345776/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Risk of diabetes-associated diseases in subgroups of patients with recent-onset diabetes: a 5-year follow-up study",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 27,
+   "ts": "2026-10-05T16:30:48.737104Z",
+   "payload": {
+    "citation_id": "ne-ac935571af90-2",
+    "display_index": 3,
+    "source": "pubmed",
+    "source_id": "33662334",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33662334/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Anti-interleukin-21 antibody and liraglutide for the preservation of \u03b2-cell function in adults with recent-onset type 1 diabetes: a randomised, double-blind, placebo-controlled, phase 2 trial",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 28,
+   "ts": "2026-10-05T16:30:48.737112Z",
+   "payload": {
+    "citation_id": "ne-ac935571af90-3",
+    "display_index": 4,
+    "source": "pubmed",
+    "source_id": "36786097",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36786097/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Diabetic peripheral neuropathy essentials: a narrative review",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 29,
+   "ts": "2026-10-05T16:30:48.737120Z",
+   "payload": {
+    "citation_id": "ne-ac935571af90-4",
+    "display_index": 5,
+    "source": "pubmed",
+    "source_id": "37782353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37782353/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: A first-in-human, open-label Phase 1b and a randomised, double-blind Phase 2a clinical trial in recent-onset type 1 diabetes with AG019 as monotherapy and in combination with teplizumab",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "citation",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 30,
+   "ts": "2026-10-05T16:30:48.737128Z",
+   "payload": {
+    "citation_id": "ne-ac935571af90-5",
+    "display_index": 6,
+    "source": "pubmed",
+    "source_id": "38055252",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38055252/",
+    "layer": "layer_2_api",
+    "field": "title",
+    "claim_text": "pubmed title: Baricitinib and \u03b2-Cell Function in Patients with New-Onset Type 1 Diabetes",
+    "evidence_kind": "primary_assertion",
+    "assertion_confidence": "asserted",
+    "population_ancestry_context": null,
+    "license": "public_domain_us_gov",
+    "snapshot_date": null,
+    "entity_name": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 31,
+   "ts": "2026-10-05T16:30:48.737147Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-ac935571af90-9",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 32,
+   "ts": "2026-10-05T16:30:48.737163Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-ac935571af90-1",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 33,
+   "ts": "2026-10-05T16:30:48.737174Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-ac935571af90-2",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 34,
+   "ts": "2026-10-05T16:30:48.737182Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-ac935571af90-3",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 35,
+   "ts": "2026-10-05T16:30:48.737191Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-ac935571af90-4",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 36,
+   "ts": "2026-10-05T16:30:48.737199Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": "ne-ac935571af90-5",
+    "scope": "claim",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "trust_signal",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 37,
+   "ts": "2026-10-05T16:30:48.737212Z",
+   "payload": {
+    "outcome": "answer",
+    "risk_tier": "low",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "0a5c4aa5-1253-4fe1-91cf-2e42268fa5cf",
+   "seq": 39,
+   "ts": "2026-10-05T16:30:48.737291Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 41254,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 117
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 127
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.94,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 144
+     },
+     {
+      "name": "think.ask_back",
+      "options": [
+       "ask_back",
+       "proceed"
+      ],
+      "chosen": "ask_back",
+      "decided_by": "jev",
+      "jev_choice": "ask_back",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 176
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.93,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 187
+     }
+    ]
+   }
+  }
+ ]
+}

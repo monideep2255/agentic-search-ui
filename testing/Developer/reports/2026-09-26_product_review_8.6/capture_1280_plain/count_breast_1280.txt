@@ -1,0 +1,31 @@
+How many genes in the graph are associated with breast cancer?
+New search
+
+? Answered12.5s · 8 tools · 2 sources from 2 layers
+
+Show work ▾
+
+I found 1 record related to breast cancer.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Record	⁠1
+Seen by breast cancer nurse	⁠2
+NOTES
+Note: this answer does not address the following entities named in the question: Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+2
+Based on 2 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

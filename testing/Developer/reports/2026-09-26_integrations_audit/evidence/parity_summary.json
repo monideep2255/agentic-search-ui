@@ -1,0 +1,219 @@
+{
+  "REST": [
+    {
+      "name": "rest_01_brca1_page_snippet",
+      "question": "Which diseases are associated with BRCA1?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 23,
+      "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast [2], Familial breast-ovarian cancer susceptibility 1 [3], Pancreatic cancer susceptibility 4 [4] and Fanconi anemia complementation group S [5].",
+      "wall_s": 14.0,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "rest_02_what",
+      "question": "What variants of it are pathogenic?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 58,
+      "first_sentence": "Found 40 sequence variant records for BRCA1, of 15350 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40].",
+      "wall_s": 14.1,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "rest_03_what",
+      "question": "What are the clinical features of Marfan syndrome?",
+      "outcome": "answered",
+      "trust_outcome": "answer",
+      "citation_count": 93,
+      "first_sentence": "Found 22 sequence variant records, 3 gene records and 21 derived records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][56][57][58][59][60][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82].",
+      "wall_s": 10.2,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "rest_04_tell",
+      "question": "Tell me about black holes.",
+      "outcome": "refused",
+      "trust_outcome": "refuse",
+      "citation_count": 0,
+      "first_sentence": "",
+      "wall_s": 1.3,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "rest_05_gerd",
+      "question": "GERD",
+      "outcome": "refused",
+      "trust_outcome": "refuse",
+      "citation_count": 0,
+      "first_sentence": "What would you like to know about GERD?",
+      "wall_s": 3.4,
+      "graphql_errors": null,
+      "error": null
+    }
+  ],
+  "GraphQL": [
+    {
+      "name": "graphql_01_brca1_page_snippet",
+      "question": "Which diseases are associated with BRCA1?",
+      "outcome": "answered",
+      "trust_outcome": null,
+      "citation_count": 23,
+      "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4].",
+      "wall_s": 15.2,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "graphql_02_what",
+      "question": "What variants of it are pathogenic?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 50,
+      "first_sentence": "Found 40 sequence variant records for BRCA1, of 15350 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40].",
+      "wall_s": 13.5,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "graphql_03_what",
+      "question": "What are the clinical features of Marfan syndrome?",
+      "outcome": "answered",
+      "trust_outcome": "answer",
+      "citation_count": 50,
+      "first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [2].",
+      "wall_s": 12.3,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "graphql_04_tell",
+      "question": "Tell me about black holes.",
+      "outcome": "refused",
+      "trust_outcome": "refuse",
+      "citation_count": 0,
+      "first_sentence": "This question could not be answered: it did not pass this system's content guardrail (I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.).",
+      "wall_s": 1.8,
+      "graphql_errors": null,
+      "error": null
+    }
+  ],
+  "s3": [
+    {
+      "name": "s3_01_page_line_2",
+      "question": "diseases linked to BRCA1",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 26,
+      "first_sentence": "or roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers [3].",
+      "wall_s": 18.2,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "s3_02_brca1",
+      "question": "Which diseases are associated with BRCA1?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 23,
+      "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast [3], Familial breast-ovarian cancer susceptibility 1 [4], Pancreatic cancer susceptibility 4 [5] and Fanconi anemia complementation group S [6].",
+      "wall_s": 19.1,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "s3_03_followup",
+      "question": "What variants of it are pathogenic?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 58,
+      "first_sentence": "gainst them, so this answer lists the records found instead",
+      "wall_s": 21.5,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "s3_04_marfan",
+      "question": "What are the clinical features of Marfan syndrome?",
+      "outcome": "answered",
+      "trust_outcome": null,
+      "citation_count": 70,
+      "first_sentence": "87 [14] medgen - https://www.ncbi.nlm.nih.gov/medgen/44287 [15] medgen - https://www.ncbi.nlm.nih.gov/medgen/44287 [16] medgen - https://www.ncbi.nlm.nih.gov/medgen/44287 [17] medgen - https://www.ncbi.nlm.nih.gov/medgen/44287 [18] medgen - https://www.ncbi.nlm.nih.gov/medgen/44287 [19] medgen - htt",
+      "wall_s": 25.8,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "s3_05_black",
+      "question": "Tell me about black holes.",
+      "outcome": "no citations (None)",
+      "trust_outcome": null,
+      "citation_count": 0,
+      "first_sentence": "",
+      "wall_s": 3.9,
+      "graphql_errors": null,
+      "error": null
+    }
+  ],
+  "MCP": [
+    {
+      "name": "mcp_11_which",
+      "question": "Which diseases are associated with BRCA1?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 22,
+      "first_sentence": "Found 4 disease records for BRCA1: Familial cancer of breast [1], Familial breast-ovarian cancer susceptibility 1 [2], Pancreatic cancer susceptibility 4 [3] and Fanconi anemia complementation group S [4].",
+      "wall_s": 19.0,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "mcp_12_what",
+      "question": "What variants of it are pathogenic?",
+      "outcome": "answered",
+      "trust_outcome": "ask",
+      "citation_count": 50,
+      "first_sentence": "Found 40 sequence variant records for BRCA1, of 15350 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40].",
+      "wall_s": 18.9,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "mcp_13_what",
+      "question": "What are the clinical features of Marfan syndrome?",
+      "outcome": "answered",
+      "trust_outcome": "answer",
+      "citation_count": 50,
+      "first_sentence": "Found 1 disease record for Marfan syndrome: Marfan syndrome [13].",
+      "wall_s": 12.5,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "mcp_14_tell",
+      "question": "Tell me about black holes.",
+      "outcome": "refused",
+      "trust_outcome": "refuse",
+      "citation_count": 0,
+      "first_sentence": "This question could not be answered: it did not pass this system's content guardrail (I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.).",
+      "wall_s": 2.7,
+      "graphql_errors": null,
+      "error": null
+    },
+    {
+      "name": "mcp_15_gerd",
+      "question": "GERD",
+      "outcome": "refused",
+      "trust_outcome": "refuse",
+      "citation_count": 0,
+      "first_sentence": "What would you like to know about GERD?",
+      "wall_s": 3.3,
+      "graphql_errors": null,
+      "error": null
+    }
+  ]
+}

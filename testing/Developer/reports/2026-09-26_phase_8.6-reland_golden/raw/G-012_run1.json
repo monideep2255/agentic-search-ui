@@ -1,0 +1,813 @@
+{
+ "record": {
+  "id": "G-012",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "kisses",
+  "query_class": "lookup",
+  "expected_outcome": "answer",
+  "question": "Find clinical trials for carcinoma not otherwise specified.",
+  "session_id": "c103-4e40b4014ed1",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:39:55+00:00",
+  "run_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0206693",
+   "MedGen:C1335487",
+   "MedGen:C1412014",
+   "MedGen:C1709664",
+   "MedGen:C5419191",
+   "MedGen:C5419192",
+   "MedGen:C5419517",
+   "MedGen:C5556661"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 7 sources, not yet confirmed",
+  "citations": 7,
+  "distinct_sources": 7,
+  "citations_by_layer": {
+   "layer_3_enrichment": 5,
+   "layer_2_api": 2
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 295,
+  "answer_start": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 19.517,
+  "seconds": 20.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 21,
+   "citation": 7,
+   "trust_signal": 8,
+   "done": 1
+  },
+  "first_word_s": 19.717,
+  "first_token_ts": "2026-09-26T20:38:35.911152Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 0,
+   "ts": "2026-09-26T20:38:24.328829Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 2,
+   "ts": "2026-09-26T20:38:25.893577Z",
+   "payload": {
+    "narrative": "Asking for clinical trials directly, likely requires one API call to a trials database. (carcinoma not otherwise specified: 8 of 15 MedGen records matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 4,
+   "ts": "2026-09-26T20:38:26.155949Z",
+   "payload": {
+    "narrative": "searching 3 layers for medullary carcinoma, not otherwise specified. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-a73ba95e09d5",
+      "layer": "layer_1_graph",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-13bbfee26919",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-5e9a215a1b6d",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-89adff940fa6",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ce0308923c69",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-aa3cbf8a214c",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-85eea27a4473",
+      "layer": "layer_3_enrichment",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-07fa3eed38c6",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C0206693",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1335487",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1412014",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C1709664",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419191",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419192",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5419517",
+      "confidence": 1.0
+     },
+     {
+      "text": "carcinoma not otherwise specified",
+      "curie": "MedGen:C5556661",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 6,
+   "ts": "2026-09-26T20:38:26.157393Z",
+   "payload": {
+    "call_id": "cq-a73ba95e09d5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 7,
+   "ts": "2026-09-26T20:38:26.157426Z",
+   "payload": {
+    "call_id": "pa-13bbfee26919",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 8,
+   "ts": "2026-09-26T20:38:26.157437Z",
+   "payload": {
+    "call_id": "ct-5e9a215a1b6d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 9,
+   "ts": "2026-09-26T20:38:26.157446Z",
+   "payload": {
+    "call_id": "ne-89adff940fa6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 10,
+   "ts": "2026-09-26T20:38:26.157455Z",
+   "payload": {
+    "call_id": "ne-ce0308923c69",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 11,
+   "ts": "2026-09-26T20:38:26.157464Z",
+   "payload": {
+    "call_id": "ne-aa3cbf8a214c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 12,
+   "ts": "2026-09-26T20:38:26.157472Z",
+   "payload": {
+    "call_id": "pa-85eea27a4473",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 13,
+   "ts": "2026-09-26T20:38:26.157481Z",
+   "payload": {
+    "call_id": "ne-07fa3eed38c6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 14,
+   "ts": "2026-09-26T20:38:26.313850Z",
+   "payload": {
+    "call_id": "ne-89adff940fa6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 15,
+   "ts": "2026-09-26T20:38:26.544793Z",
+   "payload": {
+    "call_id": "ct-5e9a215a1b6d",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 16,
+   "ts": "2026-09-26T20:38:26.598104Z",
+   "payload": {
+    "call_id": "ne-ce0308923c69",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 17,
+   "ts": "2026-09-26T20:38:26.975623Z",
+   "payload": {
+    "call_id": "pa-13bbfee26919",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 18,
+   "ts": "2026-09-26T20:38:27.702175Z",
+   "payload": {
+    "call_id": "cq-a73ba95e09d5",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 19,
+   "ts": "2026-09-26T20:38:27.929212Z",
+   "payload": {
+    "call_id": "ne-07fa3eed38c6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 20,
+   "ts": "2026-09-26T20:38:28.029682Z",
+   "payload": {
+    "call_id": "ne-aa3cbf8a214c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "fetch: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 21,
+   "ts": "2026-09-26T20:38:28.741757Z",
+   "payload": {
+    "call_id": "pa-85eea27a4473",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 22,
+   "ts": "2026-09-26T20:38:28.743149Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 23,
+   "ts": "2026-09-26T20:38:35.911152Z",
+   "payload": {
+    "text": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1], Thalidomide in Treating Patients With Thyroid Cancer [2], Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3], Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4] and Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. ",
+    "marker_ids": [
+     "ct-5e9a215a1b6d-1",
+     "ct-5e9a215a1b6d-2",
+     "ct-5e9a215a1b6d-3",
+     "ct-5e9a215a1b6d-4",
+     "ct-5e9a215a1b6d-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer",
+     "Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer",
+     "Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer",
+     "Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer",
+     "Thalidomide in Treating Patients With Thyroid Cancer",
+     "carcinoma not otherwise specified"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00004048",
+    "source_url": "https://clinicaltrials.gov/study/NCT00004048",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00026533",
+    "source_url": "https://clinicaltrials.gov/study/NCT00026533",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00100828",
+    "source_url": "https://clinicaltrials.gov/study/NCT00100828",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00118248",
+    "source_url": "https://clinicaltrials.gov/study/NCT00118248",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00134043",
+    "source_url": "https://clinicaltrials.gov/study/NCT00134043",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "15365566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/15365566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "104918",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/104918",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "1493acaa-4ba0-4348-80c4-750b193ade59",
+   "seq": 60,
+   "ts": "2026-09-26T20:38:35.911692Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 19517,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 7 sources, not yet confirmed",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 113
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 125
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1], Thalidomide in Treating Patients With Thyroid Cancer [2], Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3], Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4] and Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. \n\nClinical trial records found\n\nClinical trial name: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1]. Clinical trial name: Thalidomide in Treating Patients With Thyroid Cancer [2]. Clinical trial name: Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3]. Clinical trial name: Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4]. Clinical trial name: Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. \n\nPubmed records found\n\nPubmed title: Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study [6]. \n\nMedgen records found\n\nMedgen title: Medullary Carcinoma, Not Otherwise Specified [7]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: Medullary Carcinoma, Not Otherwise Specified, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst, Infiltrating duct carcinoma of breast, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst, Advanced Renal Cell Carcinoma, Not Otherwise Specified, Metastatic Renal Cell Carcinoma, Not Otherwise Specified, Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified, Cervical Squamous Cell Carcinoma, Not Otherwise Specified. Ask about them individually for a complete answer."
+}

@@ -1,0 +1,1615 @@
+{
+ "record": {
+  "id": "G-016",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What are the known orthologs of TP53 in other species?",
+  "session_id": "c103-211dd0cde31e",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:40:24+00:00",
+  "run_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "NCBIGene:7157"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 58 sources, not yet confirmed",
+  "citations": 58,
+  "distinct_sources": 57,
+  "citations_by_layer": {
+   "layer_1_graph": 40,
+   "layer_2_api": 13,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 59,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   59,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 510,
+  "answer_start": "Found 40 gene records for TP53, of 715 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 10,
+  "server_elapsed_s": 20.397,
+  "seconds": 21.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 13,
+   "tool_result": 13,
+   "step": 1,
+   "token": 79,
+   "citation": 58,
+   "trust_signal": 59,
+   "done": 1
+  },
+  "first_word_s": 20.692,
+  "first_token_ts": "2026-09-26T20:39:06.326653Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 0,
+   "ts": "2026-09-26T20:38:47.105598Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 2,
+   "ts": "2026-09-26T20:38:49.359885Z",
+   "payload": {
+    "narrative": "requires traversal from TP53 to ortholog records across species, involving gene-to-gene links",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 4,
+   "ts": "2026-09-26T20:38:49.362653Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:7157. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-5e074f98fadf",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-268cc03a8029",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-70b4d0b16626",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-9af67c1f1d6a",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5c5e193c7e4a",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-dbf66f02bdc6",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d25a7ef348a4",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-552cf3e56224",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-1621db2a04d8",
+      "layer": "layer_3_enrichment",
+      "persona": "Chain",
+      "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f906bb48f711",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e440da2024e0",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-c86b1632fc38",
+      "layer": "layer_2_api",
+      "persona": "Salk",
+      "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-508bb8f7b061",
+      "layer": "layer_1_graph",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 6,
+   "ts": "2026-09-26T20:38:49.365267Z",
+   "payload": {
+    "call_id": "cq-5e074f98fadf",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 7,
+   "ts": "2026-09-26T20:38:49.365302Z",
+   "payload": {
+    "call_id": "ne-268cc03a8029",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 8,
+   "ts": "2026-09-26T20:38:49.365313Z",
+   "payload": {
+    "call_id": "pa-70b4d0b16626",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 9,
+   "ts": "2026-09-26T20:38:49.365323Z",
+   "payload": {
+    "call_id": "ct-9af67c1f1d6a",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 10,
+   "ts": "2026-09-26T20:38:49.365332Z",
+   "payload": {
+    "call_id": "ne-5c5e193c7e4a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 11,
+   "ts": "2026-09-26T20:38:49.365341Z",
+   "payload": {
+    "call_id": "ne-dbf66f02bdc6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 12,
+   "ts": "2026-09-26T20:38:49.365349Z",
+   "payload": {
+    "call_id": "ne-d25a7ef348a4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 13,
+   "ts": "2026-09-26T20:38:49.365358Z",
+   "payload": {
+    "call_id": "ne-552cf3e56224",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 14,
+   "ts": "2026-09-26T20:38:49.365367Z",
+   "payload": {
+    "call_id": "pa-1621db2a04d8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 15,
+   "ts": "2026-09-26T20:38:49.365376Z",
+   "payload": {
+    "call_id": "ne-f906bb48f711",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 16,
+   "ts": "2026-09-26T20:38:49.365385Z",
+   "payload": {
+    "call_id": "ne-e440da2024e0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 17,
+   "ts": "2026-09-26T20:38:49.365394Z",
+   "payload": {
+    "call_id": "ne-c86b1632fc38",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 18,
+   "ts": "2026-09-26T20:38:49.365403Z",
+   "payload": {
+    "call_id": "cq-508bb8f7b061",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 19,
+   "ts": "2026-09-26T20:38:49.525260Z",
+   "payload": {
+    "call_id": "pa-70b4d0b16626",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 20,
+   "ts": "2026-09-26T20:38:49.616425Z",
+   "payload": {
+    "call_id": "ne-dbf66f02bdc6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 21,
+   "ts": "2026-09-26T20:38:49.657220Z",
+   "payload": {
+    "call_id": "ne-5c5e193c7e4a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 22,
+   "ts": "2026-09-26T20:38:49.702575Z",
+   "payload": {
+    "call_id": "ne-268cc03a8029",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 23,
+   "ts": "2026-09-26T20:38:49.709773Z",
+   "payload": {
+    "call_id": "ct-9af67c1f1d6a",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 24,
+   "ts": "2026-09-26T20:38:49.712107Z",
+   "payload": {
+    "call_id": "ne-d25a7ef348a4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 25,
+   "ts": "2026-09-26T20:38:50.223658Z",
+   "payload": {
+    "call_id": "ne-c86b1632fc38",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 26,
+   "ts": "2026-09-26T20:38:50.621255Z",
+   "payload": {
+    "call_id": "cq-508bb8f7b061",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "59 row(s) of 124",
+    "result_count": 59,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 27,
+   "ts": "2026-09-26T20:38:58.776555Z",
+   "payload": {
+    "call_id": "cq-5e074f98fadf",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "100 row(s) of 591",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 28,
+   "ts": "2026-09-26T20:38:58.942099Z",
+   "payload": {
+    "call_id": "pa-1621db2a04d8",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Chain",
+    "persona_about": "Worked out how to extract and stabilise penicillin and determined its chemical structure, sharing the 1945 Nobel Prize.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Ernst_Chain",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 29,
+   "ts": "2026-09-26T20:38:59.089619Z",
+   "payload": {
+    "call_id": "ne-f906bb48f711",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 30,
+   "ts": "2026-09-26T20:38:59.120120Z",
+   "payload": {
+    "call_id": "ne-e440da2024e0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 31,
+   "ts": "2026-09-26T20:38:59.143008Z",
+   "payload": {
+    "call_id": "ne-552cf3e56224",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Salk",
+    "persona_about": "Developed the first safe polio vaccine, an injected inactivated virus, tested on nearly two million children in 1954 and never patented.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Jonas_Salk",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 32,
+   "ts": "2026-09-26T20:38:59.149065Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 33,
+   "ts": "2026-09-26T20:39:06.326653Z",
+   "payload": {
+    "text": "Found 40 gene records for TP53, of 715 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40]. ",
+    "marker_ids": [
+     "cq-5e074f98fadf-1",
+     "cq-5e074f98fadf-2",
+     "cq-5e074f98fadf-3",
+     "cq-5e074f98fadf-4",
+     "cq-5e074f98fadf-5",
+     "cq-5e074f98fadf-6",
+     "cq-5e074f98fadf-7",
+     "cq-5e074f98fadf-8",
+     "cq-5e074f98fadf-9",
+     "cq-5e074f98fadf-10",
+     "cq-5e074f98fadf-11",
+     "cq-5e074f98fadf-12",
+     "cq-5e074f98fadf-13",
+     "cq-5e074f98fadf-14",
+     "cq-5e074f98fadf-15",
+     "cq-5e074f98fadf-16",
+     "cq-5e074f98fadf-17",
+     "cq-5e074f98fadf-18",
+     "cq-5e074f98fadf-19",
+     "cq-5e074f98fadf-20"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "TP53"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100009292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100009292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100049321",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100049321",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100062044",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100062044",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100092821",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100092821",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100136737",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100136737",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100304476",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100304476",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100379269",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100379269",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100415710",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100415710",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100435218",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100435218",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100468516",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100468516",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100583326",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100583326",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100663725",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100663725",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100682525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100682525",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100702587",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100702587",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100922473",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100922473",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100963622",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100963622",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:100973941",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/100973941",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101006608",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101006608",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101043647",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101043647",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101133524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101133524",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101285670",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101285670",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101319146",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101319146",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101351852",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101351852",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101362427",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101362427",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101399576",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101399576",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101416069",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101416069",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101480650",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101480650",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101528346",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101528346",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101558045",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101558045",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101589830",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101589830",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101609339",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101609339",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101632504",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101632504",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101656530",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101656530",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101677794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101677794",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101701769",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101701769",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101833915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101833915",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101942845",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101942845",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101957738",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101957738",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:101978980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/101978980",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:102005455",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/102005455",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27328919",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3898631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "191170",
+    "source_url": "https://omim.org/entry/191170",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02289326",
+    "source_url": "https://clinicaltrials.gov/study/NCT02289326",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31365877",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31365877/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905024",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02612285",
+    "source_url": "https://clinicaltrials.gov/study/NCT02612285",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33300245",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33300245/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4055875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03149679",
+    "source_url": "https://clinicaltrials.gov/study/NCT03149679",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083530",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03466034",
+    "source_url": "https://clinicaltrials.gov/study/NCT03466034",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40729726",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083687",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03645200",
+    "source_url": "https://clinicaltrials.gov/study/NCT03645200",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "d2185fb0-d2f4-4723-a789-28f2477308d1",
+   "seq": 230,
+   "ts": "2026-09-26T20:39:06.328490Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 10,
+    "elapsed_ms": 20397,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 58 sources, not yet confirmed",
+    "layer_calls_used": 12,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 157
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 138
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 153
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 147
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 40 gene records for TP53, of 715 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40]. \n\nGene records found\n\nGene NCBIGene:100009292, name: tumor protein p53 [1]. Gene NCBIGene:100049321, name: tumor protein p53 [2]. Gene NCBIGene:100062044, name: tumor protein p53 [3]. Gene NCBIGene:100092821, name: tumor protein p53 [4]. Gene NCBIGene:100136737, name: tumor protein p53 [5]. Gene NCBIGene:100304476, name: tumor protein p53 [6]. Gene NCBIGene:100379269, name: tumor protein p53 [7]. Gene NCBIGene:100415710, name: tumor protein p53 [8]. Gene NCBIGene:100435218, name: tumor protein p53 [9]. Gene NCBIGene:100468516, name: tumor protein p53 [10]. Gene NCBIGene:100583326, name: tumor protein p53 [11]. Gene NCBIGene:100663725, name: tumor protein p53 [12]. Gene NCBIGene:100682525, name: tumor protein p53 [13]. Gene NCBIGene:100702587, name: tumor protein p53 [14]. Gene NCBIGene:100922473, name: tumor protein p53 [15]. Gene NCBIGene:100963622, name: tumor protein p53 [16]. Gene NCBIGene:100973941, name: tumor protein p53 [17]. Gene NCBIGene:101006608, name: tumor protein p53 [18]. Gene NCBIGene:101043647, name: tumor protein p53 [19]. Gene NCBIGene:101133524, name: tumor protein p53 [20]. Gene NCBIGene:101285670, name: tumor protein p53 [21]. Gene NCBIGene:101319146, name: tumor protein p53 [22]. Gene NCBIGene:101351852, name: tumor protein p53 [23]. Gene NCBIGene:101362427, name: tumor protein p53 [24]. Gene NCBIGene:101399576, name: tumor protein p53 [25]. Gene NCBIGene:101416069, name: tumor protein p53 [26]. Gene NCBIGene:101480650, name: tumor protein p53 [27]. Gene NCBIGene:101528346, name: tumor protein p53 [28]. Gene NCBIGene:101558045, name: tumor protein p53 [29]. Gene NCBIGene:101589830, name: tumor protein p53 [30]. Gene NCBIGene:101609339, name: tumor protein p53 [31]. Gene NCBIGene:101632504, name: tumor protein p53 [32]. Gene NCBIGene:101656530, name: tumor protein p53 [33]. Gene NCBIGene:101677794, name: tumor protein p53 [34]. Gene NCBIGene:101701769, name: tumor protein p53 [35]. Gene NCBIGene:101833915, name: tumor protein p53 [36]. Gene NCBIGene:101942845, name: tumor protein p53 [37]. Gene NCBIGene:101957738, name: tumor protein p53 [38]. Gene NCBIGene:101978980, name: tumor protein p53 [39]. Gene NCBIGene:102005455, name: tumor protein p53 [40]. Gene symbol: TP53 [41]. Gene name: TP53 [45]. \n\nPubmed records found\n\nPubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data [42]. Pubmed title: Integrated Analysis of TP53 Gene and Pathway Alterations in The Cancer Genome Atlas [47]. Pubmed title: Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants [50]. Pubmed title: The Role of TP53 in Adaptation and Evolution [53]. Pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms [56]. \n\nClinvar records found\n\nClinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [43]. Clinvar title: NC_000017.11:g.7666193C>T [48]. Clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [51]. Clinvar title: NM_000546.6(TP53):c.1101-73G>C [54]. Clinvar title: NM_000546.6(TP53):c.-28-3132T>C [57]. \n\nOmim records found\n\nTUMOR PROTEIN p53 [44]. TP53 [44]. \n\nClinical trial records found\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [46]. Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [49]. Clinical trial name: The p53 Colorectal Cancer Trial [52]. Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [55]. Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [58]. \n\nNote: this answer was truncated because only 159 of the 715 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

@@ -364,10 +364,27 @@ def test_fetch_rejects_a_db_outside_its_documented_8_value_list() -> None:
         NcbiEfetchInput.model_validate({**FETCH_DICT, "db": "taxonomy"})
 
 
-def test_summary_rejects_a_db_outside_its_documented_12_value_list() -> None:
-    # "mesh" is in search's 14 and not in summary's 12.
+def test_summary_rejects_a_db_outside_its_documented_14_value_list() -> None:
+    """A db legal for `search` must not be legal for `summary` by default.
+
+    The example moved from `mesh` to `pmc` on 2026-09-23, and the arm's JOB
+    is unchanged: `pmc` is now the value that is in search's 15 and not in
+    summary's 14, exactly as `mesh` used to be.
+
+    Why it moved rather than being deleted. `mesh` became a legal summary db
+    in the same change, live-verified (ESummary on `db=mesh` returns
+    `ds_meshui` and `ds_meshterms`), because golden question G-019 needs it:
+    the graph's `OntologyClass.name` is the identifier `[MeSH] D000818` for
+    all 30,790 vertices, so the term can only come from the live record.
+    This arm's old comment stated the old state as a fact and that fact
+    changed, which `goal-contracts.md` calls the second case: the check was
+    measuring something that is no longer true, so the check is what gets
+    fixed. Deleting the arm instead would have removed the per-action
+    vocabulary separation it exists to prove, which is the weakening that
+    same rule forbids.
+    """
     with pytest.raises(ValidationError):
-        NcbiEfetchInput.model_validate({**SUMMARY_DICT, "db": "mesh"})
+        NcbiEfetchInput.model_validate({**SUMMARY_DICT, "db": "pmc"})
 
 
 def test_each_action_accepts_every_db_its_spec_enum_lists() -> None:
@@ -376,14 +393,15 @@ def test_each_action_accepts_every_db_its_spec_enum_lists() -> None:
     # full documented vocabulary per action, not just one member.
     search_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
                   "gtr", "sra", "bioproject", "biosample", "assembly", "gds",
-                  "taxonomy", "mesh")
+                  "taxonomy", "mesh", "pmc")
     fetch_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
                  "gtr", "sra")
     summary_dbs = ("pubmed", "gene", "clinvar", "dbvar", "omim", "medgen",
-                   "gtr", "sra", "bioproject", "biosample", "assembly", "gds")
-    assert len(search_dbs) == 14
+                   "gtr", "sra", "bioproject", "biosample", "assembly", "gds",
+                   "taxonomy", "mesh")
+    assert len(search_dbs) == 15
     assert len(fetch_dbs) == 8
-    assert len(summary_dbs) == 12
+    assert len(summary_dbs) == 14
     for db in search_dbs:
         assert NcbiEfetchInput.model_validate({**SEARCH_DICT, "db": db}).root.db == db
     for db in fetch_dbs:
@@ -889,6 +907,40 @@ def test_coordinate_overlap_accepts_a_zero_length_window() -> None:
         {**COORDINATE_OVERLAP_DICT, "start": 1000, "end": 1000}
     )
     assert validated.root.start == validated.root.end == 1000
+
+
+# ---------------------------------------------------------------------------
+# failure_kind (card 63): an additive optional output field in a fixed set.
+# ---------------------------------------------------------------------------
+
+
+def test_output_failure_kind_defaults_to_none_and_takes_only_the_fixed_set() -> None:
+    from typing import get_args
+
+    from system_03_search_agent.tools import ncbi_transport
+
+    plain = NcbiEfetchOutput(
+        status="ok", action="search", records=[], record_count=0, truncated=False
+    )
+    assert plain.failure_kind is None
+
+    # The schema writes the set out rather than importing the transport;
+    # this pins the two equal, so neither can drift from the other.
+    annotation = NcbiEfetchOutput.model_fields["failure_kind"].annotation
+    literal = next(arg for arg in get_args(annotation) if arg is not type(None))
+    assert set(get_args(literal)) == set(ncbi_transport.FAILURE_KINDS)
+
+    for kind in ncbi_transport.FAILURE_KINDS:
+        output = NcbiEfetchOutput(
+            status="error", action="search", records=[], record_count=0,
+            truncated=False, failure_kind=kind,
+        )
+        assert output.failure_kind == kind
+    with pytest.raises(ValidationError):
+        NcbiEfetchOutput(
+            status="error", action="search", records=[], record_count=0,
+            truncated=False, failure_kind="Cannot connect to SOLR",
+        )
 
 
 # ---------------------------------------------------------------------------

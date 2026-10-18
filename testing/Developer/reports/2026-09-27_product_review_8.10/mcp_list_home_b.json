@@ -1,0 +1,30 @@
+{
+ "items": [
+  {
+   "trace_id": "d0fad790-9323-4f57-8152-60bb704c286e",
+   "question": "Which diseases are associated with BRCA1?",
+   "asked_at": "2026-09-27T02:38:31.330153Z",
+   "trust_signal": "ask",
+   "citation_count": 17,
+   "has_saved_answer": false
+  },
+  {
+   "trace_id": "8d5a399b-5393-4a08-a56f-25894f8cf2e6",
+   "question": "Which diseases are associated with BRCA1?",
+   "asked_at": "2026-09-27T02:38:30.066468Z",
+   "trust_signal": "ask",
+   "citation_count": 18,
+   "has_saved_answer": false
+  },
+  {
+   "trace_id": "2c1de801-46e7-40a6-be9d-90655f69e986",
+   "question": "Which diseases are associated with BRCA1?",
+   "asked_at": "2026-09-27T02:38:25.870039Z",
+   "trust_signal": "ask",
+   "citation_count": 17,
+   "has_saved_answer": false
+  }
+ ],
+ "count": 3,
+ "omitted_count": 0
+}

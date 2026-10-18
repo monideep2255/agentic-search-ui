@@ -1,0 +1,10 @@
+{
+ "modes": [
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=What%20variants%20cause%20ZZZFAKE1 -> https://www.ncbi.nlm.nih.gov/search/all/?term=What%20variants%20cause%20ZZZFAKE1%3F"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

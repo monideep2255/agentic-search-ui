@@ -1,0 +1,101 @@
+{
+ "record": {
+  "id": "G-047",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "Here is my VCF file, tell me which variants are concerning.",
+  "session_id": "c103-fa6a55af1bb6",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:08:29+00:00",
+  "run_id": "3c26d9ef-1d41-428e-bcb3-a385282639b8",
+  "outcome": "refused_compute_request",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "compute_request",
+  "guard_reason": "This product cannot read or interpret a VCF file; v1 searches NCBI records. Ask about a gene or variant from the file by symbol or rs number and I will assemble cited evidence.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 1.114,
+  "seconds": 1.9,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  },
+  "first_word_s": null,
+  "first_token_ts": null
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "3c26d9ef-1d41-428e-bcb3-a385282639b8",
+   "seq": 0,
+   "ts": "2026-09-26T17:06:51.553808Z",
+   "payload": {
+    "passed": false,
+    "category": "compute_request",
+    "reason": "This product cannot read or interpret a VCF file; v1 searches NCBI records. Ask about a gene or variant from the file by symbol or rs number and I will assemble cited evidence."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "3c26d9ef-1d41-428e-bcb3-a385282639b8",
+   "seq": 2,
+   "ts": "2026-09-26T17:06:51.553912Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 1114,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "layer_calls_used": 0,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 124
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": ""
+}

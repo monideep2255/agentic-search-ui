@@ -1,0 +1,511 @@
+{
+ "record": {
+  "id": "G-019",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What MeSH terms are assigned to PMID 11237011?",
+  "session_id": "c103-4d96b57d5ac9",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:51:35+00:00",
+  "run_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 26,
+  "distinct_sources": 26,
+  "citations_by_layer": {
+   "layer_1_graph": 26
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 26,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   26
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 190,
+  "answer_start": "Found 20 ontology class records for PMID 11237011 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nOntology class records found\n\nOntol",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 3.302,
+  "seconds": 15.7,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 31,
+   "citation": 26,
+   "trust_signal": 27,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 0,
+   "ts": "2026-09-22T16:50:02.900024Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 2,
+   "ts": "2026-09-22T16:50:04.541782Z",
+   "payload": {
+    "narrative": "The query asks for MeSH terms assigned to a single PMID, which is directly answerable with one API call to PubMed.",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 4,
+   "ts": "2026-09-22T16:50:04.544009Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-b494058bbd4e",
+      "layer": "layer_1_graph",
+      "persona": "Delbruck",
+      "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 6,
+   "ts": "2026-09-22T16:50:04.544922Z",
+   "payload": {
+    "call_id": "cq-b494058bbd4e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 7,
+   "ts": "2026-09-22T16:50:05.187501Z",
+   "payload": {
+    "call_id": "cq-b494058bbd4e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Delbruck",
+    "persona_about": "Used viruses that infect bacteria to make genetics quantitative and founded the phage group at the root of molecular biology.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Max_Delbr%C3%BCck",
+    "summary": "26 row(s) of 26",
+    "result_count": 26,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 8,
+   "ts": "2026-09-22T16:50:05.189247Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D000818",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D000818",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D000818",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D002874",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D002874",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D002874",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D004251",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D004251",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D004251",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D004345",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D004345",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D004345",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D005544",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D005544",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D005544",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D005796",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D005796",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D005796",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D005826",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D005826",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D005826",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D006801",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D006801",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D006801",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D009154",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D009154",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D009154",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D011506",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D011506",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D011506",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D012091",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D012091",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D012091",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D012313",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D012313",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D012313",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D013045",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D013045",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D013045",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D015894",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D015894",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D015894",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D016045",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D016045",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D016045",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D016208",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D016208",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D016208",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D017124",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017124",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D017124",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D017149",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017149",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D017149",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D017150",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017150",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D017150",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D017422",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D017422",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D017422",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D018899",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D018899",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D018899",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D019143",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D019143",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D019143",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D020440",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D020440",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D020440",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D020543",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D020543",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D020543",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D020862",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D020862",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D020862",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MeSH:D030342",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/?term=D030342",
+    "layer": "layer_1_graph",
+    "source": "MeSH",
+    "field": "name",
+    "entity_name": "[MeSH] D030342",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "3395c667-9fab-45d8-aa93-c1f6e6b128c3",
+   "seq": 94,
+   "ts": "2026-09-22T16:50:17.170493Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 3302,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 20 ontology class records for PMID 11237011 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nOntology class records found\n\nOntologyClass MeSH:D000818, name: [MeSH] D000818 [1]. OntologyClass MeSH:D002874, name: [MeSH] D002874 [2]. OntologyClass MeSH:D004251, name: [MeSH] D004251 [3]. OntologyClass MeSH:D004345, name: [MeSH] D004345 [4]. OntologyClass MeSH:D005544, name: [MeSH] D005544 [5]. OntologyClass MeSH:D005796, name: [MeSH] D005796 [6]. OntologyClass MeSH:D005826, name: [MeSH] D005826 [7]. OntologyClass MeSH:D006801, name: [MeSH] D006801 [8]. OntologyClass MeSH:D009154, name: [MeSH] D009154 [9]. OntologyClass MeSH:D011506, name: [MeSH] D011506 [10]. OntologyClass MeSH:D012091, name: [MeSH] D012091 [11]. OntologyClass MeSH:D012313, name: [MeSH] D012313 [12]. OntologyClass MeSH:D013045, name: [MeSH] D013045 [13]. OntologyClass MeSH:D015894, name: [MeSH] D015894 [14]. OntologyClass MeSH:D016045, name: [MeSH] D016045 [15]. OntologyClass MeSH:D016208, name: [MeSH] D016208 [16]. OntologyClass MeSH:D017124, name: [MeSH] D017124 [17]. OntologyClass MeSH:D017149, name: [MeSH] D017149 [18]. OntologyClass MeSH:D017150, name: [MeSH] D017150 [19]. OntologyClass MeSH:D017422, name: [MeSH] D017422 [20]. OntologyClass MeSH:D018899, name: [MeSH] D018899 [21]. OntologyClass MeSH:D019143, name: [MeSH] D019143 [22]. OntologyClass MeSH:D020440, name: [MeSH] D020440 [23]. OntologyClass MeSH:D020543, name: [MeSH] D020543 [24]. OntologyClass MeSH:D020862, name: [MeSH] D020862 [25]. OntologyClass MeSH:D030342, name: [MeSH] D030342 [26]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

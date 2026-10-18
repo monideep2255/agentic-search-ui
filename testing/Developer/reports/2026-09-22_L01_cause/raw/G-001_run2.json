@@ -1,0 +1,188 @@
+{
+ "record": {
+  "id": "G-001",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-l01-local-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.",
+  "session_id": "c103-4b615f8bb21e",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "local-l01-summary",
+  "started_at": "2026-09-22T18:26:19+00:00",
+  "run_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "0 row(s) of 0: no entity could be identified in this query, so no graph lookup was attempted. Supply a CURIE such as NCBIGene:672, or wait for symbol resolution, which needs the Layer 2 NCBI lookup that build phase 3.1 adds. Retrying this query unchanged will not help."
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20ACMG-relevant%20evidence%20i",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 1.88,
+  "seconds": 2.8,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 0,
+   "ts": "2026-09-22T18:26:20.852829Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 2,
+   "ts": "2026-09-22T18:26:21.399374Z",
+   "payload": {
+    "narrative": "Assembles evidence across multiple databases (genes, dbVar, ClinVar) for a specific genomic region; requires gathering and correlating multiple record types",
+    "query_class": "aggregate",
+    "resolved_entities": [],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 4,
+   "ts": "2026-09-22T18:26:21.401620Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8bb93a7228e7",
+      "layer": "layer_1_graph",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 6,
+   "ts": "2026-09-22T18:26:21.403540Z",
+   "payload": {
+    "call_id": "cq-8bb93a7228e7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 7,
+   "ts": "2026-09-22T18:26:21.403830Z",
+   "payload": {
+    "call_id": "cq-8bb93a7228e7",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "0 row(s) of 0: no entity could be identified in this query, so no graph lookup was attempted. Supply a CURIE such as NCBIGene:672, or wait for symbol resolution, which needs the Layer 2 NCBI lookup that build phase 3.1 adds. Retrying this query unchanged will not help.",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 8,
+   "ts": "2026-09-22T18:26:21.405186Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "656dbd32-62c0-4e82-bb01-b4fe00496f5b",
+   "seq": 12,
+   "ts": "2026-09-22T18:26:22.206602Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 1880,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20ACMG-relevant%20evidence%20is%20available%20for%20a%20copy%20number%20variant%20spanning%20chr17%3A43%2C044%2C295-43%2C125%2C364%20on%20GRCh38%3F%20List%20the%20overlapping%20genes%2C%20dbVar%20records%20and%20ClinVar%20entries."
+}

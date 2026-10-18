@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "Does coffee help make exercise more effective?",
+  "outcome": "answer",
+  "words": 275,
+  "paragraphs": 5,
+  "headings": 2,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "11583104",
+    "33388079",
+    "36870101",
+    "38466174",
+    "40626862"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \n\n## Ergogenic Effects of Caffeine\nCaffeine supplementation acutely enhances various aspects of exercise performance, with aerobic endurance showing the most consistent moderate-to-large benefits [1]. Caffeine permits training at greater power output or longer duration and improves speed in simulated race conditions lasting from 60 seconds to 2 hours, though it does not directly increase maximal oxygen capacity [2]. \nPure caffeine appears more effective than coffee for ergogenic purposes, as ingestion of caffeine as coffee seems ineffective compared with pure caffeine [2]. Moderate coffee consumption is nonetheless associated with reduced risk of hypertension, type 2 diabetes, myocardial infarction, and overall mortality, though many of these benefits appear independent of caffeine [3]. \nCaffeine consumption reduces total sleep time by 45 minutes and sleep efficiency by 7%, with deep sleep duration decreasing by 11.4 minutes [4]. To avoid reductions in total sleep time, coffee should be consumed at least 8.8 hours before bedtime, and pre-workout supplements at least 13.2 hours prior [4]. There is no evidence that caffeine ingestion before exercise leads to dehydration or ion imbalance [2]. \nDespite extensive research, uncertainties remain regarding caffeine's effectiveness and safety, including whether habitual consumption influences acute performance responses, whether effects differ between upper and lower body performance, and whether there are sex differences in caffeine's effects [5]. The mechanism by which caffeine elicits ergogenic effects remains unknown, and the popular theory of enhanced fat oxidation and glycogen sparing has little support [2]. \n\n## Pubmed records found\n\n- Caffeine and exercise: metabolism, endurance and performance.\n- International society of sports nutrition position stand: caffeine and exercise performance.\n- The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.\n- Common questions and misconceptions about caffeine supplementation: what does the scientific evidence really show?\n- Coffee and cardiovascular disease.\n",
+  "key": "q5"
+}

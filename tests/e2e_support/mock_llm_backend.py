@@ -29,7 +29,7 @@ Writes:
 ---------------------------------------------------------------------------
 WHY THIS FILE EXISTS AT ALL (the in-process-monkeypatch problem)
 ---------------------------------------------------------------------------
-Every other test in this repo that needs a fast, deterministic,
+Every other test in this repository that needs a fast, deterministic,
 no-real-API-key model response uses `monkeypatch.setattr(harness_module
 .litellm, "acompletion", mock_acompletion)` (see
 `tests/system_03_search_agent/adapters/web_sse/test_streaming_endpoints.py`,

@@ -1,0 +1,121 @@
+{
+  "question": "What diseases are caused by variants in the HNF1A gene?",
+  "run": 2,
+  "run_id": "da6fab36-5e3f-42fb-9ce1-b7093fd9933a",
+  "outcome": "flag",
+  "elapsed": 19.3,
+  "error_payload": null,
+  "layer_1_slots": [
+    {
+      "slot": 0,
+      "call_id": "cq-93437d46c660",
+      "status": "ok",
+      "result_count": 100,
+      "summary": "100 row(s) of 100",
+      "truncated": true
+    },
+    {
+      "slot": 1,
+      "call_id": "cq-c3e1bc64ca4d",
+      "status": "ok",
+      "result_count": 25,
+      "summary": "25 row(s) of 25",
+      "truncated": false
+    }
+  ],
+  "source_count": 86,
+  "l1_citation_count": 63,
+  "all_tool_results": [
+    {
+      "tool": "clinicaltrials_search",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "ok: 5 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 10,
+      "summary": "search: 10 id(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "search: 5 id(s)"
+    },
+    {
+      "tool": "pubtator_annotate",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "ok: 1 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 10,
+      "summary": "search: 10 id(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "dataset_report: 1 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "summary: 1 record(s)"
+    },
+    {
+      "tool": "cypher_query",
+      "layer": "layer_1_graph",
+      "status": "ok",
+      "result_count": 25,
+      "summary": "25 row(s) of 25"
+    },
+    {
+      "tool": "cypher_query",
+      "layer": "layer_1_graph",
+      "status": "ok",
+      "result_count": 100,
+      "summary": "100 row(s) of 100"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "summary: 5 record(s)"
+    },
+    {
+      "tool": "pubtator_annotate",
+      "layer": "layer_3_enrichment",
+      "status": "ok",
+      "result_count": 5,
+      "summary": "ok: 5 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 1,
+      "summary": "summary: 1 record(s)"
+    },
+    {
+      "tool": "ncbi_efetch",
+      "layer": "layer_2_api",
+      "status": "ok",
+      "result_count": 10,
+      "summary": "fetch: 10 record(s)"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "depth": "researcher",
+  "question": "What positive and negative genes do ashkenazi jewish people have?",
+  "outcome": "answer",
+  "words": 278,
+  "paragraphs": 5,
+  "headings": 5,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 5 sources",
+  "sources": [
+    "10926794",
+    "1828838",
+    "19690183",
+    "34870614",
+    "35944511"
+  ],
+  "notes": [],
+  "errors": [],
+  "answer": "Found 10 pubmed records [1][2][3][4][5][6][7][8][9][10]. \n\n## BRCA Founder Mutations\nThree founder mutations\u2014185delAG, 5382insC, and 6174delT\u2014were detected in 25% of 92 unselected Ashkenazi Jewish ovarian cancer patients, with the 185delAG mutation accounting for 61% of positive cases [1]. None of these patients carried more than one founder mutation [1]. Among 403 women who tested negative for founder mutations and subsequently underwent complete gene analysis, 12 (3.0%) tested positive for alternate pathogenic or likely pathogenic BRCA1 or BRCA2 variants [2]. \n\n## Tay-Sachs Disease Mutations\nTay-Sachs disease carriers are ten times more frequent in the Ashkenazi Jewish community than in the general population, with over 90% of North American Ashkenazi carriers carrying either a splice site mutation at the exon 12\u2013intron 12 boundary or a 4-base-pair insertion in exon 11 of the beta-hexosaminidase alpha subunit gene [3]. In 41 UK Ashkenazi carriers, the splice and insert mutation frequencies were 20% and 80%, respectively, similar to the North American distribution [3]. Twelve Ashkenazi subjects classified as non-carriers on enzyme assay were negative for both mutations [3]. \n\n## 6q22.33 Breast Cancer Susceptibility Locus\nThe association was slightly stronger with estrogen receptor-positive tumors than with estrogen receptor-negative tumors [4]. The candidate gene RNF146 diminished expression of an estrogen receptor response element reporter construct when overexpressed in MCF-7 cells [4]. \n\n## Telehealth BRCA Testing in Low-Risk Individuals\nSatisfaction with the telehealth model was high, with 96.9 out of 100 overall satisfaction and 99.5% of participants finding post-test genetic counseling valuable [5]. \n\n## Pubmed records found\n\n- Founder BRCA 1 and 2 mutations among a consecutive series of Ashkenazi Jewish ovarian cancer patients.\n- Frequency of the Tay-Sachs disease splice and insertion mutations in the UK Ashkenazi Jewish population.\n- The 6q22.33 locus and breast cancer susceptibility.\n- Building the What Comes Next Cohort for BRCA1 and BRCA2 testing: a descriptive analysis.\n- Evaluating the Effectiveness of a Telehealth Cancer Genetics Program: A BRCA Pilot Study.\n",
+  "key": "q7"
+}

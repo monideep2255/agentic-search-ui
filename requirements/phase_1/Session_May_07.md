@@ -24,7 +24,7 @@
 ### Step 1.1
 
 1. Innovation proposal (`Proposals/Innovation_proposal_2026.md`)
-2. NCBI strategic alignment (`NCBI strategy/` - 5 documents: FY26 guiding principles, Gold Standard Science, AI Action Plan, the Acting Director's email, first-principles breakdown)
+2. NCBI strategic alignment (internal NCBI strategy documents, kept private)
 3. Two-track plan (`Plan/Two_track_plan.md`)
 
 ---
@@ -97,11 +97,7 @@ Architecture:
 
 Three directives treated as requirements that constrain system behavior, not aspirational positioning:
 
-FY26 guiding principles (from NCBI's Acting Director):
-- Simplify content discovery for users
-- Eliminate the need for users to understand NCBI's internal architecture
-- Optimize content and metadata for AI and machine consumption
-- Four primary use cases: archiving/publishing, reference collection, discovery (exploration), data reuse (analysis)
+FY26 guiding principles: an internal NCBI directive, kept in the local notes file (`requirements/context/Private_NCBI_context.md`, gitignored) and not published.
 
 Gold Standard Science (NIH, August 2025):
 - Reproducible: every answer traceable to specific database records (our provenance model)
@@ -167,8 +163,8 @@ The OpenRouter + LiteLLM decision enables this: each agent or tier can use a dif
 
 1. System 3 architecture brainstorming (`docs/architecture/System_3_architecture_brainstorming.md`) - 544 lines, first-principles design from April 20
 2. Three-layer data architecture (`docs/architecture/Three_layer_data_architecture.md`) - layer boundaries, costs, connection patterns
-3. Architecture QA (`reference/personal-os-work/NIH/Agentic-Search/Data/Agentic_search_architecture_QA.md`) - 10 Q&As: database selection, BioLink, ontology, build order
-4. CQ planning (`reference/personal-os-work/NIH/Agentic-Search/Reference/system-3-brainstorming/00_Plan_and_discussion.md`) - competency question framework, persona mapping
+3. Architecture QA (from the owner's private notes (not published)) - 10 Q&As: database selection, BioLink, ontology, build order
+4. CQ planning (from the owner's private notes (not published)) - competency question framework, persona mapping
 
 ### Decisions made (all logged to DECISIONS.md)
 
@@ -448,7 +444,7 @@ The UI will be grounded in two inputs: (1) the reference repo's React component 
 
 ### Source 2: contractor 8-layer architecture
 
-The contractor's architecture (`reference/personal-os-work/NIH/KG/Contractor/`) defines an 8-layer system: Entry, Guarded Planning, Context Retrieval, Public Surface (GraphQL), Backend Compilation, Knowledge Modules, Provenance Response, Governance. This was assessed as too intense for V1. Instead of adopting the architecture, we extracted individual ideas worth using.
+The contractor's architecture (from the owner's private notes (not published)) defines an 8-layer system: Entry, Guarded Planning, Context Retrieval, Public Surface (GraphQL), Backend Compilation, Knowledge Modules, Provenance Response, Governance. This was assessed as too intense for V1. Instead of adopting the architecture, we extracted individual ideas worth using.
 
 **Ideas extracted and adopted (simplified):**
 
@@ -490,7 +486,7 @@ What System 3 inherits:
 - Plus ~81K NamedThing stubs (dangling endpoint fill from merger, 0.07% of total nodes)
 - 14 edge predicates: gene_associated_with_condition, is_sequence_variant_of, has_phenotype, participates_in, actively_involved_in, located_in, mentioned_in, has_mesh_annotation, in_taxon, subclass_of, close_match, exact_match, orthologous_to, cited_in
 - 9 CURIE prefixes: NCBIGene, ClinVar, MedGen, PMID, NCBITaxon, GO, MeSH, HP, MONDO (most diseases use MedGen prefix, not MONDO)
-- Connection: `postgresql://kg_reader@46.225.128.133:5432/ncbi_kg` with AGE prelude (`LOAD 'age'; SET search_path = ag_catalog, "$user", public;`)
+- Connection: `postgresql://kg_reader@<server-ip>:5432/ncbi_kg` with AGE prelude (`LOAD 'age'; SET search_path = ag_catalog, "$user", public;`)
 - Provenance: every node/edge has `source` + `source_url` (required in schema). BioLink 4.x compliant with knowledge_level and agent_type on edges.
 - Indexes: GIN on 4 largest vertex labels (Gene, Disease, BiologicalProcess, SequenceVariant); B-tree on start_id/end_id for all 14 edge tables
 - Three Cypher performance rules: always specify edge labels (never untyped `[r]`), match by `id` property, keep regex narrow on large labels
@@ -549,7 +545,7 @@ UX requirement: the user must never see nothing. If Layer 1 has bad data, fall b
 
 ### Overview
 
-Reviewed all 22 research documents in `reference/personal-os-work/NIH/Agentic-Search/Reference/system/`. Two passes: first pass extracted surface-level ideas, second deep dive focused on harness engineering architecture (tools, memory/SOUL, MCPs, API patterns, middleware) after Monideep pushed for deeper introspection.
+Reviewed all 22 research documents in the owner's private notes (not published). Two passes: first pass extracted surface-level ideas, second deep dive focused on harness engineering architecture (tools, memory/SOUL, MCPs, API patterns, middleware) after Monideep pushed for deeper introspection.
 
 ### Core philosophy (from discussion)
 

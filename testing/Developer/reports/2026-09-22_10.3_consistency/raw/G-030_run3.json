@@ -1,0 +1,1914 @@
+{
+ "record": {
+  "id": "G-030",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+  "session_id": "c103-e6f594aaa258",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:23:24+00:00",
+  "run_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "NCBIGene:1956"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_1_graph": 72,
+   "layer_3_enrichment": 10,
+   "layer_2_api": 18
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 3,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 41,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   41,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1295,
+  "answer_start": "Found 5 clinical trial records and 15 sequence variant records for EGFR, of 4002 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][2",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 9,
+  "server_elapsed_s": 9.143,
+  "seconds": 24.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 139,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 0,
+   "ts": "2026-09-22T17:21:52.531428Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 2,
+   "ts": "2026-09-22T17:21:55.996804Z",
+   "payload": {
+    "narrative": "The question asks broadly about EGFR mutations in NSCLC and recruiting trials, requiring synthesis across multiple sources.",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "EGFR",
+      "curie": "NCBIGene:1956",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 4,
+   "ts": "2026-09-22T17:21:55.998952Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1956. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-ccd77f8be61b",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2f2598df4958",
+      "layer": "layer_2_api",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e36f3baa695a",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-8639d36d79fa",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0b865ab23f91",
+      "layer": "layer_2_api",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0fc90d50c5b3",
+      "layer": "layer_2_api",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-693740c300dd",
+      "layer": "layer_2_api",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-4d3b619e3c85",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1e11c581271c",
+      "layer": "layer_2_api",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-40aac620d58e",
+      "layer": "layer_2_api",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-35b470799cb9",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "EGFR",
+      "curie": "NCBIGene:1956",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 6,
+   "ts": "2026-09-22T17:21:55.999841Z",
+   "payload": {
+    "call_id": "cq-ccd77f8be61b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 7,
+   "ts": "2026-09-22T17:21:55.999871Z",
+   "payload": {
+    "call_id": "ne-2f2598df4958",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 8,
+   "ts": "2026-09-22T17:21:55.999880Z",
+   "payload": {
+    "call_id": "pa-e36f3baa695a",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 9,
+   "ts": "2026-09-22T17:21:55.999888Z",
+   "payload": {
+    "call_id": "ct-8639d36d79fa",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 10,
+   "ts": "2026-09-22T17:21:55.999896Z",
+   "payload": {
+    "call_id": "ne-0b865ab23f91",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 11,
+   "ts": "2026-09-22T17:21:55.999903Z",
+   "payload": {
+    "call_id": "ne-0fc90d50c5b3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 12,
+   "ts": "2026-09-22T17:21:55.999911Z",
+   "payload": {
+    "call_id": "ne-693740c300dd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 13,
+   "ts": "2026-09-22T17:21:55.999919Z",
+   "payload": {
+    "call_id": "pa-4d3b619e3c85",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 14,
+   "ts": "2026-09-22T17:21:55.999926Z",
+   "payload": {
+    "call_id": "ne-1e11c581271c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 15,
+   "ts": "2026-09-22T17:21:55.999935Z",
+   "payload": {
+    "call_id": "ne-40aac620d58e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 16,
+   "ts": "2026-09-22T17:21:55.999943Z",
+   "payload": {
+    "call_id": "cq-35b470799cb9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 17,
+   "ts": "2026-09-22T17:21:56.211694Z",
+   "payload": {
+    "call_id": "pa-e36f3baa695a",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 18,
+   "ts": "2026-09-22T17:21:56.237208Z",
+   "payload": {
+    "call_id": "ne-2f2598df4958",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 19,
+   "ts": "2026-09-22T17:21:56.310932Z",
+   "payload": {
+    "call_id": "ne-0fc90d50c5b3",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 20,
+   "ts": "2026-09-22T17:21:56.324242Z",
+   "payload": {
+    "call_id": "ne-0b865ab23f91",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 21,
+   "ts": "2026-09-22T17:21:56.351382Z",
+   "payload": {
+    "call_id": "ct-8639d36d79fa",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 22,
+   "ts": "2026-09-22T17:21:56.404737Z",
+   "payload": {
+    "call_id": "ne-40aac620d58e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 23,
+   "ts": "2026-09-22T17:21:56.690806Z",
+   "payload": {
+    "call_id": "cq-35b470799cb9",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "41 row(s) of 41",
+    "result_count": 41,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 24,
+   "ts": "2026-09-22T17:21:59.767822Z",
+   "payload": {
+    "call_id": "cq-ccd77f8be61b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "100 row(s) of 3961",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 25,
+   "ts": "2026-09-22T17:21:59.980484Z",
+   "payload": {
+    "call_id": "pa-4d3b619e3c85",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 26,
+   "ts": "2026-09-22T17:22:00.191331Z",
+   "payload": {
+    "call_id": "ne-693740c300dd",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 27,
+   "ts": "2026-09-22T17:22:00.210250Z",
+   "payload": {
+    "call_id": "ne-1e11c581271c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 28,
+   "ts": "2026-09-22T17:22:00.221990Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000851",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000851",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000960",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000960",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001152",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001152",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.991G>A (p.Gly331Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01994057",
+    "source_url": "https://clinicaltrials.gov/study/NCT01994057",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT04324164",
+    "source_url": "https://clinicaltrials.gov/study/NCT04324164",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT05037331",
+    "source_url": "https://clinicaltrials.gov/study/NCT05037331",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT05257967",
+    "source_url": "https://clinicaltrials.gov/study/NCT05257967",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT05341492",
+    "source_url": "https://clinicaltrials.gov/study/NCT05341492",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000076",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000076",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.840C>A (p.Asn280Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000203",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000203",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.664C>T (p.Arg222Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000496",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000496",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.494G>A (p.Arg165Gln)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000546",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000546",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.652C>A (p.Gln218Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001187",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001187",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1822T>A (p.Trp608Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001705",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001705",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1559C>T (p.Pro520Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001710",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001710",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2741C>G (p.Pro914Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001782",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001782",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2619A>T (p.Gly873=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002380",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002380",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2339T>C (p.Ile780Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002493",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002493",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1670A>G (p.Gln557Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002562",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002562",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.721A>G (p.Thr241Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002578",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002578",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3031G>C (p.Val1011Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002794",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3209G>A (p.Ser1070Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003132",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003132",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1463C>G (p.Thr488Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003262",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003262",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2917C>G (p.Arg973Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003305",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003305",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1049C>G (p.Ser350Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003743",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003743",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1675C>T (p.His559Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003794",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1975G>C (p.Val659Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004032",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004032",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2833A>G (p.Met945Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004363",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004363",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.541C>G (p.Gln181Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004409",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1739T>C (p.Ile580Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004521",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004521",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1582A>G (p.Asn528Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005378",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2161G>A (p.Gly721Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005727",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005727",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1605C>A (p.Cys535Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005794",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005794",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3437G>T (p.Cys1146Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1006525",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006525",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1006618",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006618",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.268C>T (p.Leu90Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1006728",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006728",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.437G>A (p.Gly146Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007379",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007379",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3056C>T (p.Pro1019Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007424",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007424",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2091A>C (p.Glu697Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007797",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007797",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2150T>C (p.Val717Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008399",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008399",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3574G>A (p.Ala1192Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008401",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008401",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.2537A>G (p.Lys846Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009011",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009011",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.1795G>A (p.Val599Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009550",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009550",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_005228.5(EGFR):c.3575C>G (p.Ala1192Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24353160",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24353160/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905791",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905791/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24353160",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24353160/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000165",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "MAPK cascade",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32124699",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32124699/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4535271",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4535271/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32124699",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32124699/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0001503",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "ossification",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33096270",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33096270/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4535946",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4535946/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33096270",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33096270/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0001934",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of protein phosphorylation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36535904",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36535904/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4685791",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4685791/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36535904",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36535904/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007165",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "signal transduction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40373998",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40373998/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4856933",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856933/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40373998",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40373998/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cell surface receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24353160",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24353160/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007169",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cell surface receptor protein tyrosine kinase signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32124699",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32124699/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007173",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "epidermal growth factor receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33096270",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33096270/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007611",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "learning or memory",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36535904",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36535904/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008284",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of cell population proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40373998",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40373998/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030182",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "neuron differentiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030307",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of cell growth",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030335",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of cell migration",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033138",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of peptidyl-serine phosphorylation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034165",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of toll-like receptor 9 signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0038134",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "ERBB2-EGFR signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042059",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of epidermal growth factor receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042177",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of protein catabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042327",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of phosphorylation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043066",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043410",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of MAPK cascade",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043491",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "phosphatidylinositol 3-kinase/protein kinase B signal transduction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045739",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045740",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA replication",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045944",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048146",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of fibroblast proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050679",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of epithelial cell proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050730",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of peptidyl-tyrosine phosphorylation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051205",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein insertion into membrane",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051897",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of phosphatidylinositol 3-kinase/protein kinase B signal transduction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070141",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to UV-A",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070374",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of ERK1 and ERK2 cascade",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071230",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to amino acid stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071364",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to epidermal growth factor stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071392",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1956",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to estradiol stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "b19c5444-f7ce-4ce8-9019-27b50cefdfbb",
+   "seq": 370,
+   "ts": "2026-09-22T17:22:14.824259Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 9143,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records and 15 sequence variant records for EGFR, of 4002 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nOthers are ClinVar:1000851, named NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala) [1], ClinVar:1000960, named NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala) [2], and ClinVar:1001152, named NM_005228.5(EGFR):c.991G>A (p.Gly331Arg) [3]. \n\nClinical Trials in EGFR-Mutant NSCLC\n\nThe retrieved trials include a retrospective study named A Retrospective Study of EGFR-TKIs,Gefitinib, Erlotinib and Osimertinib in NSCLC Patients Treatment [4]. \n\nClinical trial records found\n\nClinical trial name: A Retrospective Study of EGFR-TKIs,Gefitinib, Erlotinib and Osimertinib in NSCLC Patients Treatment [4]. Clinical trial name: Survival Outcome of EGFR-TKI in Uncommon EGFR Mutant Advanced NSCLC [5]. Clinical trial name: Osimertinib for Advanced EGFR-positive NSCLC Patients [6]. Clinical trial name: CSF Analysis in EGFR Mutant Non-Small Cell Lung Cancer With Leptomeningeal Disease [7]. Clinical trial name: EGFR/B7H3 CAR-T on Lung Cancer and Triple Negative Breast Cancer [8]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000076, name: NM_005228.5(EGFR):c.840C>A (p.Asn280Lys) [9]. SequenceVariant ClinVar:1000203, name: NM_005228.5(EGFR):c.664C>T (p.Arg222Cys) [10]. SequenceVariant ClinVar:1000496, name: NM_005228.5(EGFR):c.494G>A (p.Arg165Gln) [11]. SequenceVariant ClinVar:1000546, name: NM_005228.5(EGFR):c.652C>A (p.Gln218Lys) [12]. SequenceVariant ClinVar:1000851, name: NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala) [1]. SequenceVariant ClinVar:1000960, name: NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala) [2]. SequenceVariant ClinVar:1001152, name: NM_005228.5(EGFR):c.991G>A (p.Gly331Arg) [3]. SequenceVariant ClinVar:1001187, name: NM_005228.5(EGFR):c.1822T>A (p.Trp608Arg) [13]. SequenceVariant ClinVar:1001705, name: NM_005228.5(EGFR):c.1559C>T (p.Pro520Leu) [14]. SequenceVariant ClinVar:1001710, name: NM_005228.5(EGFR):c.2741C>G (p.Pro914Arg) [15]. SequenceVariant ClinVar:1001782, name: NM_005228.5(EGFR):c.2619A>T (p.Gly873=) [16]. SequenceVariant ClinVar:1002380, name: NM_005228.5(EGFR):c.2339T>C (p.Ile780Thr) [17]. SequenceVariant ClinVar:1002493, name: NM_005228.5(EGFR):c.1670A>G (p.Gln557Arg) [18]. SequenceVariant ClinVar:1002562, name: NM_005228.5(EGFR):c.721A>G (p.Thr241Ala) [19]. SequenceVariant ClinVar:1002578, name: NM_005228.5(EGFR):c.3031G>C (p.Val1011Leu) [20]. SequenceVariant ClinVar:1002794, name: NM_005228.5(EGFR):c.3209G>A (p.Ser1070Asn) [21]. SequenceVariant ClinVar:1003132, name: NM_005228.5(EGFR):c.1463C>G (p.Thr488Ser) [22]. SequenceVariant ClinVar:1003262, name: NM_005228.5(EGFR):c.2917C>G (p.Arg973Gly) [23]. SequenceVariant ClinVar:1003305, name: NM_005228.5(EGFR):c.1049C>G (p.Ser350Cys) [24]. SequenceVariant ClinVar:1003743, name: NM_005228.5(EGFR):c.1675C>T (p.His559Tyr) [25]. SequenceVariant ClinVar:1003794, name: NM_005228.5(EGFR):c.1975G>C (p.Val659Leu) [26]. SequenceVariant ClinVar:1004032, name: NM_005228.5(EGFR):c.2833A>G (p.Met945Val) [27]. SequenceVariant ClinVar:1004363, name: NM_005228.5(EGFR):c.541C>G (p.Gln181Glu) [28]. SequenceVariant ClinVar:1004409, name: NM_005228.5(EGFR):c.1739T>C (p.Ile580Thr) [29]. SequenceVariant ClinVar:1004521, name: NM_005228.5(EGFR):c.1582A>G (p.Asn528Asp) [30]. SequenceVariant ClinVar:1005378, name: NM_005228.5(EGFR):c.2161G>A (p.Gly721Ser) [31]. SequenceVariant ClinVar:1005727, name: NM_005228.5(EGFR):c.1605C>A (p.Cys535Ter) [32]. SequenceVariant ClinVar:1005794, name: NM_005228.5(EGFR):c.3437G>T (p.Cys1146Phe) [33]. SequenceVariant record ClinVar:1006525 [34]. SequenceVariant ClinVar:1006618, name: NM_005228.5(EGFR):c.268C>T (p.Leu90Phe) [35]. SequenceVariant ClinVar:1006728, name: NM_005228.5(EGFR):c.437G>A (p.Gly146Asp) [36]. SequenceVariant ClinVar:1007379, name: NM_005228.5(EGFR):c.3056C>T (p.Pro1019Leu) [37]. SequenceVariant ClinVar:1007424, name: NM_005228.5(EGFR):c.2091A>C (p.Glu697Asp) [38]. SequenceVariant ClinVar:1007797, name: NM_005228.5(EGFR):c.2150T>C (p.Val717Ala) [39]. SequenceVariant ClinVar:1008399, name: NM_005228.5(EGFR):c.3574G>A (p.Ala1192Thr) [40]. SequenceVariant ClinVar:1008401, name: NM_005228.5(EGFR):c.2537A>G (p.Lys846Arg) [41]. SequenceVariant ClinVar:1009011, name: NM_005228.5(EGFR):c.1795G>A (p.Val599Ile) [42]. SequenceVariant ClinVar:1009550, name: NM_005228.5(EGFR):c.3575C>G (p.Ala1192Gly) [43]. \n\nGene records found\n\ngene symbol: EGFR [44]. gene name: EGFR [47]. The protein encoded by this gene is a transmembrane glycoprotein that is a member of the protein kinase superfamily [52]. This protein is a receptor for members of the epidermal growth factor family [52]. EGFR is a cell surface protein that binds to epidermal growth factor, thus inducing receptor dimerization and tyrosine autophosphorylation leading to cell proliferation [52]. Mutations in this gene are associated with lung cancer [52]. EGFR is a component of the cytokine storm which contributes to a severe form of [52]. \n\nPubmed records found\n\npubmed title: Structural, biochemical, and clinical characterization of epidermal growth factor receptor (EGFR) exon 20 insertion mutations in lung cancer [45]. pubmed title: Review on Epidermal Growth Factor Receptor (EGFR) Structure, Signaling Pathways, Interactions, and Recent Updates of EGFR Inhibitors [50]. pubmed title: Dual EGFR-VEGF Pathway Inhibition: A Promising Strategy for Patients With EGFR-Mutant NSCLC [55]. pubmed title: Three-tiered EGFr domain risk stratification for individualized NOTCH3-small vessel disease prediction [59]. pubmed title: Complex Etiologies of the Discordance Between Cystatin C- and Creatinine-Based Estimated GFR and Its Adverse Associations: Findings From the CRIC Study [63]. Epidermal growth factor receptor (EGFR) gene mutations (G719X, exon 19 deletions/insertions, L858R, and L861Q) predict favorable responses to EGFR tyrosine kinase inhibitors (TKIs) in advanced non-small cell lung cancer (NSCLC) [67]. However, EGFR exon 20 insertion mutations (~10% of all EGFR mutations) are generally associated with insensitivity to available TKIs (gefitinib, erlotinib, and afatinib) [67]. The basis of this primary resistance is poorly understood [67]. We studied a broad subset of exon 20 inse [67]. The epidermal growth factor receptor (EGFR) belongs to the ERBB family of tyrosine kinase receptors [69]. EGFR signaling cascade is a key regulator in cell proliferation, differentiation, division, survival, and cancer development [69]. In this review, the EGFR structure and its mutations, signaling pathway, ligand binding and EGFR dimerization, EGF/EGFR interaction, and the progress in the development of EGFR inhibitors have been explored [69]. The VEGF pathway has been recognized as a key mediator of angiogenesis to support tumorigenesis [71]. Multiple therapeutic agents targeting VEGF and VEGF receptors have been developed and approved for use in NSCLCs [71]. Preclinical studies have found that the VEGF and EGFR pathways share common downstream signaling, and these pathways can function exclusively of one another during oncogenesis [71]. In EGFR-mutant NSCLCs, up-regulated EGFR signaling increases VEGF through hypoxia-independent mechanisms, and el [71]. Cysteine-altering missense variants (NOTCH3cys) in one of the 34 epidermal growth-factor-like repeat (EGFr) domains of the NOTCH3 protein are the cause of NOTCH3-associated small vessel disease (NOTCH3-SVD) [73]. NOTCH3-SVD is highly variable, ranging from cerebral autosomal dominant arteriopathy with subcortical infarcts and leukoencephalopathy (CADASIL) at the severe end of the spectrum to non-penetrance [73]. The strongest known NOTCH3-SVD modifier is NOTCH3cys variant position: NOTCH3cys variants loca [73]. The difference between glomerular filtration rate (GFR) estimated by cystatin C and creatinine (eGFRdiff, defined as eGFRcys-eGFRcr) has been repeatedly associated with adverse outcomes, often ascribed to low muscle mass [75]. However, it is unclear to what extent putative determinants of eGFRdiff, such as low muscle mass, explain associations between eGFRdiff and the outcomes of death and heart failure [75]. Determinants of eGFRdiff have not been investigated to assess their impacts on eGFRcys, eGFRcr, a [75]. \n\nClinvar records found\n\nclinvar title: NM_005228.5(EGFR):c.3271+62C>G [46]. clinvar title: NM_005228.5(EGFR):c.1881-2649C>T [51]. clinvar title: NC_000007.13:g.(?_55086709)_(55220358_55221703)dup [56]. clinvar title: NM_005228.5(EGFR):c.1912A>G (p.Thr638Ala) [60]. clinvar title: NM_005228.5(EGFR):c.1632-87A>G [64]. \n\nPublication records found\n\nPublication pmid: 24353160 [48]. Publication pmid: 32124699 [53]. Publication pmid: 33096270 [57]. Publication pmid: 36535904 [61]. Publication pmid: 40373998 [65]. \n\nBiological process records found\n\nBiologicalProcess GO:0000165, name: MAPK cascade [49]. BiologicalProcess GO:0001503, name: ossification [54]. BiologicalProcess GO:0001934, name: positive regulation of protein phosphorylation [58]. BiologicalProcess GO:0007165, name: signal transduction [62]. BiologicalProcess GO:0007166, name: cell surface receptor signaling pathway [66]. BiologicalProcess GO:0007169, name: cell surface receptor protein tyrosine kinase signaling pathway [68]. BiologicalProcess GO:0007173, name: epidermal growth factor receptor signaling pathway [70]. BiologicalProcess GO:0007611, name: learning or memory [72]. BiologicalProcess GO:0008284, name: positive regulation of cell population proliferation [74]. BiologicalProcess GO:0030182, name: neuron differentiation [76]. BiologicalProcess GO:0030307, name: positive regulation of cell growth [77]. BiologicalProcess GO:0030335, name: positive regulation of cell migration [78]. BiologicalProcess GO:0033138, name: positive regulation of peptidyl-serine phosphorylation [79]. BiologicalProcess GO:0034165, name: positive regulation of toll-like receptor 9 signaling pathway [80]. BiologicalProcess GO:0038134, name: ERBB2-EGFR signaling pathway [81]. BiologicalProcess GO:0042059, name: negative regulation of epidermal growth factor receptor signaling pathway [82]. BiologicalProcess GO:0042177, name: negative regulation of protein catabolic process [83]. BiologicalProcess GO:0042327, name: positive regulation of phosphorylation [84]. BiologicalProcess GO:0043066, name: negative regulation of apoptotic process [85]. BiologicalProcess GO:0043410, name: positive regulation of MAPK cascade [86]. BiologicalProcess GO:0043491, name: phosphatidylinositol 3-kinase/protein kinase B signal transduction [87]. BiologicalProcess GO:0045739, name: positive regulation of DNA repair [88]. BiologicalProcess GO:0045740, name: positive regulation of DNA replication [89]. BiologicalProcess GO:0045944, name: positive regulation of transcription by RNA polymerase II [90]. BiologicalProcess GO:0048146, name: positive regulation of fibroblast proliferation [91]. BiologicalProcess GO:0050679, name: positive regulation of epithelial cell proliferation [92]. BiologicalProcess GO:0050730, name: regulation of peptidyl-tyrosine phosphorylation [93]. BiologicalProcess GO:0051205, name: protein insertion into membrane [94]. BiologicalProcess GO:0051897, name: positive regulation of phosphatidylinositol 3-kinase/protein kinase B signal transduction [95]. BiologicalProcess GO:0070141, name: response to UV-A [96]. BiologicalProcess GO:0070374, name: positive regulation of ERK1 and ERK2 cascade [97]. BiologicalProcess GO:0071230, name: cellular response to amino acid stimulus [98]. BiologicalProcess GO:0071364, name: cellular response to epidermal growth factor stimulus [99]. BiologicalProcess GO:0071392, name: cellular response to estradiol stimulus [100]. \n\nNote: this answer was truncated because only 128 of the 4002 records that matched this question in the graph were retrieved"
+}

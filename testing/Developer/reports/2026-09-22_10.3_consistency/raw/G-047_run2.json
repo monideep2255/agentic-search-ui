@@ -1,0 +1,207 @@
+{
+ "record": {
+  "id": "G-047",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "Here is my VCF file, tell me which variants are concerning.",
+  "session_id": "c103-a217a6648c53",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:20:51+00:00",
+  "run_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C1861129",
+   "MedGen:C0220704"
+  ],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 1,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC1861129%20MedGen%3AC02207",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 11.333,
+  "seconds": 13.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 0,
+   "ts": "2026-09-22T17:19:19.298064Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 2,
+   "ts": "2026-09-22T17:19:24.046184Z",
+   "payload": {
+    "narrative": "User asks for interpretation of variants from a VCF file, which requires understanding of the file content, context, and potentially multiple sources of evidence. (VCF: 2 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "VCF",
+      "curie": "MedGen:C1861129",
+      "confidence": 1.0
+     },
+     {
+      "text": "VCF",
+      "curie": "MedGen:C0220704",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 4,
+   "ts": "2026-09-22T17:19:24.048622Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-1fbc10bd84db",
+      "layer": "layer_1_graph",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "VCF",
+      "curie": "MedGen:C1861129",
+      "confidence": 1.0
+     },
+     {
+      "text": "VCF",
+      "curie": "MedGen:C0220704",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 6,
+   "ts": "2026-09-22T17:19:24.049804Z",
+   "payload": {
+    "call_id": "cq-1fbc10bd84db",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 7,
+   "ts": "2026-09-22T17:19:28.970014Z",
+   "payload": {
+    "call_id": "cq-1fbc10bd84db",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "empty",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 8,
+   "ts": "2026-09-22T17:19:28.971172Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "ac50ca97-4efb-4958-8f2e-2e297d4592d6",
+   "seq": 12,
+   "ts": "2026-09-22T17:19:30.864793Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 11333,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=MedGen%3AC1861129%20MedGen%3AC0220704"
+}

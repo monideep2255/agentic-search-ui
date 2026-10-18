@@ -1,0 +1,72 @@
+Which E. coli isolates in Pathogen Detection carry colistin resistance genes?
+New search
+
+✓ Answered31.0s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+I found 20 pathogen samples and 1 organism related to Escherichia coli.⁠1–20
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED	
+KTE156	SAMN00854682	acrF, blaEC, mcr-9.1, mdtM, qseB, qseC	2010	⁠1
+UMEA 3318-1	SAMN01885952	aadA1, acrF, aph(3'')-Ib=PARTIAL_END_OF_CONTIG, aph(6)-Id, blaEC, dfrA1, mcr-9.1, mdtM, qseB, qseC, sat2	1995	⁠2
+BIDMC 2B	SAMN02138622	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠3
+BIDMC 3	SAMN02138623	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠4
+BIDMC 6	SAMN02138626	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠5
+BIDMC 9	SAMN02138630	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠6
+BIDMC 15	SAMN02138638	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠7
+BIDMC 17A	SAMN02138640	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠8
+BIDMC 17B	SAMN02138641	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠9
+BIDMC 19A	SAMN02138646	aac(3)-IIg, aac(6')-IIc, acrF, arr, blaEC, blaKPC-2, blaSHV-12, blaTEM-1, cyaA_S352T=POINT, dfrA14, ere(A)=PARTIAL, gyrA_D87N=POINT, gyrA_S83L=POINT, mcr-9.1, mdtM, mph(A), mrx(A), parC_S80I=POINT, parE_S458A=POINT, sul1, sul2	Not recorded	⁠10
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+WHERE THIS ANSWER COMES FROM
+Escherichia coli	⁠21
+NOTES
+Pathogen Detection lists 12,563 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+Searching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting mcr.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00854682
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01885952
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138622
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138623
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138626
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138630
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138638
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138640
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138641
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138646
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138647
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02138648
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02356581
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02356582
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02581401
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256164
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256216
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256224
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256242
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03256245
+ -> https://www.ncbi.nlm.nih.gov/taxonomy/562
+
+TIME_TO_ANSWER_SECONDS=32.6 askback=false

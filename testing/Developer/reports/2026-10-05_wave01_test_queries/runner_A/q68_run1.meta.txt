@@ -1,0 +1,6 @@
+wall clock from ask to captured: 28.2s
+answer wait after pick or ask: 20.2s
+mode pressed: Plain language
+clarifying options: ["What are the common symptoms and complications of GERD?","Which genes or genetic variants are associated with GERD susceptibility?","Are there any ongoing clinical trials for GERD treatments?","What does recent biomedical literature say about GERD management or risk factors?"]
+matched pick candidate: symptoms
+picked: typical symptoms||symptoms||What is GERD

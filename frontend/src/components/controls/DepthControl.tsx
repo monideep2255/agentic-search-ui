@@ -31,17 +31,95 @@ export type AudienceDepth = "plain_language" | "researcher" | "clinical_brief" |
 /** The web UI's default mode, decision A3. */
 export const DEFAULT_ANSWER_MODE: AudienceDepth = "plain_language";
 
-const OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
+/** Exported so `DepthStripToggle` below reads the same two options and
+ *  labels: one list of choices, never two that could drift apart. */
+export const AUDIENCE_MODE_OPTIONS: { value: "plain_language" | "researcher"; label: string }[] = [
   { value: "plain_language", label: "Plain language" },
   { value: "researcher", label: "Researcher" },
 ];
 
-/** What the info card says about the two modes (item 9.2). */
+/** What the info card says about the two modes (item 9.2).
+ *
+ * REWRITTEN 2026-09-21 for item 11.31. The previous wording promised "about
+ * 250 words in three paragraphs", which described a depth directive that no
+ * longer exists: every length instruction was removed that day, because the
+ * product owner's criterion is audience fit rather than a count ("Number of
+ * words do not define an answer"). A number here is also a promise the
+ * product cannot keep, since the same question at the same mode measured 66,
+ * 101 and 113 words on three consecutive runs.
+ *
+ * REWRITTEN AGAIN 2026-09-25 for item 13.2, two problems with one fix. The
+ * card was a single run-on paragraph, "hard to read" in the product owner's
+ * own words, and the same day the product owner separately ruled out the
+ * wording it used to describe who each mode was for: "do not belittle the
+ * user... do not target a persona... we do not belittle our users." So this
+ * now describes WHAT EACH MODE GIVES, never who is reading it, split into
+ * one block per mode with the label set apart from its description and the
+ * closing line last. `ANSWER_MODE_BLOCKS` is the structured source of
+ * truth; `ANSWER_MODE_EXPLAINER` below stays exported as the flat string,
+ * rebuilt from the same blocks, for any caller that still wants plain text.
+ */
+export const ANSWER_MODE_BLOCKS: { testId: string; label: string; description: string }[] = [
+  {
+    testId: "answer-mode-plain_language",
+    label: "Plain language:",
+    description: "the answer in simple terms, easy to understand.",
+  },
+  {
+    testId: "answer-mode-researcher",
+    label: "Researcher:",
+    description:
+      "the answer in technical terms, with the specifics and the records listed or in tables.",
+  },
+];
+
+/** The closing block, unlabeled, always last. */
+export const ANSWER_MODE_CLOSING =
+  "Both modes cite every claim. A change applies to your next question.";
+
 export const ANSWER_MODE_EXPLAINER =
-  "Plain language: a short answer of about 250 words in three paragraphs, in everyday words, " +
-  "with every sentence tied to its source. Researcher: a full page under short topic headings, " +
-  "with the records found listed or tabled and every claim cited. " +
-  "A change applies to your next question.";
+  ANSWER_MODE_BLOCKS.map((block) => `${block.label} ${block.description}`).join(" ") +
+  " " +
+  ANSWER_MODE_CLOSING;
+
+/**
+ * The info card's body: each mode as its own block, its label set apart
+ * from its description, reusing the exact bold-`ink`-label,
+ * muted-`inkMuted`-body, 13.5px, 1.45 line-height treatment `PersonaInfo`'s
+ * own name-and-about pair already uses below in `shell/PersonaChip.tsx`,
+ * and the same "8px" gap that card already uses between its about
+ * paragraph and its Wikipedia link. Closing line last. Passed as
+ * `PersonaInfo`'s `about` in place of a plain string, which `PersonaInfo`
+ * now accepts additively (`React.ReactNode`) precisely so this card can be
+ * structured while the persona chip's own plain-string call keeps
+ * rendering exactly as before.
+ */
+function AnswerModesExplainer() {
+  return (
+    <>
+      {ANSWER_MODE_BLOCKS.map(({ testId, label, description }) => (
+        <Typography
+          key={testId}
+          component="p"
+          data-testid={testId}
+          sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, mb: "8px", lineHeight: 1.45 }}
+        >
+          <Box component="b" sx={{ fontWeight: 700, color: designTokens.ink }}>
+            {label}
+          </Box>{" "}
+          {description}
+        </Typography>
+      ))}
+      <Typography
+        component="p"
+        data-testid="answer-mode-closing"
+        sx={{ fontSize: 13.5, color: designTokens.inkMuted, m: 0, lineHeight: 1.45 }}
+      >
+        {ANSWER_MODE_CLOSING}
+      </Typography>
+    </>
+  );
+}
 
 /** The button a stored or wire value lights up. */
 export function displayedMode(value: AudienceDepth): "plain_language" | "researcher" {
@@ -99,7 +177,7 @@ export function DepthControl({
           bgcolor: designTokens.surface,
         }}
       >
-        {OPTIONS.map(({ value: option, label }, index) => {
+        {AUDIENCE_MODE_OPTIONS.map(({ value: option, label }, index) => {
           const selected = option === shown;
           return (
             <Box
@@ -131,12 +209,22 @@ export function DepthControl({
       </Box>
 
       <Box component="span" sx={{ position: "relative", display: "inline-flex" }}>
+        {/*
+          `align="right"`, not "left" as this card first shipped with the item
+          9.2 explainer (a plain string then). Measured live at 390px for
+          item 13.2: this control is CENTERED, so the "i" sits at roughly
+          x=345 of 390, and a left-aligned 358px card (`calc(100vw - 32px)`)
+          spans 345 to 703, off the right edge entirely. Anchoring the card's
+          right edge to the icon instead, the same align PersonaChip's own
+          app-bar chip already uses because its icon also sits toward a
+          screen edge, spans 5 to 363: on-screen with margin either side.
+        */}
         <PersonaInfo
           name="Answer modes"
-          about={ANSWER_MODE_EXPLAINER}
+          about={<AnswerModesExplainer />}
           wikipedia={null}
           variant={variant}
-          align="left"
+          align="right"
         />
       </Box>
 
@@ -149,6 +237,102 @@ export function DepthControl({
           Locked while this search runs
         </Typography>
       ) : null}
+    </Box>
+  );
+}
+
+export interface DepthStripToggleProps {
+  value?: AudienceDepth;
+  onChange?: (value: AudienceDepth) => void;
+  /**
+   * Called when the mode already shown is clicked. Nothing is asked and no
+   * run starts; the caller uses it to close an open cost line, so clicking
+   * back reads as "never mind" (J-24-04, A-24-03).
+   */
+  onSelectCurrent?: () => void;
+  /** True while a run is in flight. Item 9.12's lock, applied here too. */
+  locked?: boolean;
+}
+
+/**
+ * Card 24 (2026-09-25). The same Plain language / Researcher choice, drawn
+ * where the approved answer-layout mockups draw it: in the answer's own
+ * status strip, beside `Show work`
+ * (`testing/Developer/reports/2026-09-14_handover_inputs/design/Main.dc.html`
+ * and `Researcher.dc.html`, the trailing group of the "Answered 6.2s · 4
+ * tools · 11 sources from 2 layers" line). The 2026-09-14 answer-layout
+ * report named this exact gap: "not built... mode is still chosen before
+ * asking."
+ *
+ * TRANSCRIBED RATHER THAN REUSING `DepthControl` WHOLE, per
+ * `design-consistency`: the mockups draw a bare two-button pill with no
+ * "Answer mode" label and no info affordance, both of which belong to the
+ * pre-ask placement and would repeat the explainer a reader already saw
+ * once. Same tokens as `DepthControl`'s own buttons (`layer1Wash`, `layer1`,
+ * `inkMuted`, `line`), same lock treatment (`opacity: .5`, `disabled`), same
+ * `AUDIENCE_MODE_OPTIONS` list, so this is one visual language rendered
+ * twice rather than a second one invented beside it.
+ *
+ * Clicking the already-selected option is a no-op: `AnswerScreen` re-runs
+ * the question at the chosen depth as a fresh dispatch, so firing that for a
+ * depth the reader is already reading would burn a run and a cap slot for
+ * nothing the reader asked for.
+ */
+export function DepthStripToggle({ value = DEFAULT_ANSWER_MODE, onChange, onSelectCurrent, locked = false }: DepthStripToggleProps) {
+  const shown = displayedMode(value);
+  return (
+    <Box
+      role="group"
+      // J-24-08: one name for one control, the home page's.
+      aria-label="Answer mode, audience-level depth"
+      sx={{
+        display: "inline-flex",
+        flexShrink: 0,
+        border: `1px solid ${designTokens.line}`,
+        // J-24-07: 0.5 x the theme's 8px = the design's 4px (`--r-sm`).
+        borderRadius: 0.5,
+        overflow: "hidden",
+        bgcolor: designTokens.surface,
+      }}
+    >
+      {AUDIENCE_MODE_OPTIONS.map(({ value: option, label }, index) => {
+        const selected = option === shown;
+        return (
+          <Box
+            key={option}
+            component="button"
+            type="button"
+            data-testid={`answer-depth-toggle-${option}`}
+            aria-pressed={selected}
+            disabled={locked}
+            onClick={() => {
+              if (locked) return;
+              if (option === shown) {
+                onSelectCurrent?.();
+                return;
+              }
+              onChange?.(option);
+            }}
+            sx={{
+              font: "inherit",
+              fontSize: 12.5,
+              fontWeight: selected ? 700 : 400,
+              px: 1.25,
+              py: 0.5,
+              border: 0,
+              borderLeft: index === 0 ? 0 : `1px solid ${designTokens.line}`,
+              cursor: locked ? "not-allowed" : "pointer",
+              opacity: locked ? 0.5 : 1,
+              bgcolor: selected ? designTokens.layer1Wash : "transparent",
+              color: selected ? designTokens.layer1 : designTokens.inkMuted,
+              whiteSpace: "nowrap",
+              "&:hover": { color: locked ? undefined : designTokens.ink },
+            }}
+          >
+            {label}
+          </Box>
+        );
+      })}
     </Box>
   );
 }

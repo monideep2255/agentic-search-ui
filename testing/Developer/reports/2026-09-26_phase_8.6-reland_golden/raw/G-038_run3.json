@@ -1,0 +1,476 @@
+{
+ "record": {
+  "id": "G-038",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "discovery",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Tell me about the tree of life.",
+  "session_id": "c103-d254d9566be2",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:57:46+00:00",
+  "run_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 5 sources",
+  "citations": 7,
+  "distinct_sources": 5,
+  "citations_by_layer": {
+   "layer_2_api": 7
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 0,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 220,
+  "answer_start": "Found 5 pubmed records: On tree longevity. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Gradient Boosted Tree Approaches",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 20.926,
+  "seconds": 21.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 3,
+   "tool_result": 3,
+   "step": 1,
+   "token": 15,
+   "citation": 7,
+   "trust_signal": 8,
+   "done": 1
+  },
+  "first_word_s": 21.175,
+  "first_token_ts": "2026-09-26T20:56:28.915167Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 0,
+   "ts": "2026-09-26T20:56:14.863572Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 2,
+   "ts": "2026-09-26T20:56:15.889001Z",
+   "payload": {
+    "narrative": "Broad, open-ended question about biological classification with no specific databases, genes, or structured path",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 4,
+   "ts": "2026-09-26T20:56:15.891476Z",
+   "payload": {
+    "narrative": "no gene, variant or disease was named, so searching the published literature for: tree, life",
+    "tool_calls": [
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fb8337f17a86",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-49e50975a7ae",
+      "layer": "layer_2_api",
+      "persona": "Sabin",
+      "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-0432a92d87c7",
+      "layer": "layer_3_enrichment",
+      "persona": "Elion",
+      "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 6,
+   "ts": "2026-09-26T20:56:15.892744Z",
+   "payload": {
+    "call_id": "ne-fb8337f17a86",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 7,
+   "ts": "2026-09-26T20:56:15.892778Z",
+   "payload": {
+    "call_id": "ne-49e50975a7ae",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 8,
+   "ts": "2026-09-26T20:56:15.892790Z",
+   "payload": {
+    "call_id": "pa-0432a92d87c7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 9,
+   "ts": "2026-09-26T20:56:16.207602Z",
+   "payload": {
+    "call_id": "ne-fb8337f17a86",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 10,
+   "ts": "2026-09-26T20:56:16.340173Z",
+   "payload": {
+    "call_id": "pa-0432a92d87c7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Elion",
+    "persona_about": "Designed drugs from how diseased cells differ from healthy ones, giving the first leukaemia treatments, a transplant drug and aciclovir.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gertrude_B._Elion",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 11,
+   "ts": "2026-09-26T20:56:16.532753Z",
+   "payload": {
+    "call_id": "ne-49e50975a7ae",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Sabin",
+    "persona_about": "Developed the oral polio vaccine, given on a sugar cube, that drove polio towards eradication across the world.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Albert_Sabin",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 12,
+   "ts": "2026-09-26T20:56:16.534113Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 13,
+   "ts": "2026-09-26T20:56:28.915167Z",
+   "payload": {
+    "text": "Found 5 pubmed records: On tree longevity. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [5], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [6] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [7]. ",
+    "marker_ids": [
+     "ne-49e50975a7ae-1",
+     "ne-49e50975a7ae-2",
+     "ne-49e50975a7ae-3",
+     "ne-49e50975a7ae-4",
+     "ne-49e50975a7ae-5"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits.",
+     "Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment.",
+     "Tree mycorrhizal type and tree diversity shape the forest soil microbiota.",
+     "On tree longevity."
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33305422",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33305422/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34327789",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34327789/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36096966",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36096966/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36215064",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36215064/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38602710",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38602710/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "3704aa8b-5a1e-43fc-a4c4-5db4e8ae9d81",
+   "seq": 44,
+   "ts": "2026-09-26T20:56:28.915722Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 20926,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 5 sources",
+    "layer_calls_used": 3,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.relevancy",
+      "options": [
+       "on_topic",
+       "off_topic"
+      ],
+      "chosen": "on_topic",
+      "decided_by": "jev",
+      "jev_choice": "on_topic",
+      "jev_confidence": 0.87,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 121
+     },
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 172
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.96,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 159
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 163
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.95,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 161
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 pubmed records: On tree longevity. [3], Tree mycorrhizal type and tree diversity shape the forest soil microbiota. [4], Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer. [5], Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment. [6] and Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits. [7]. \n\nTree Longevity\n\nTrees do not die from genetically programmed meristem senescence but are killed by external agents or disturbance events [1]. \n\nNonstructural Carbohydrate Dynamics\n\nQuercus acutissima and Pinus massoniana showed distinct whole-tree NSC peaks in autumn and summer, respectively [2]. \n\nPubmed records found\n\nPubmed title: On tree longevity [3]. Pubmed title: Tree mycorrhizal type and tree diversity shape the forest soil microbiota [4]. Pubmed title: Gradient Boosted Tree Approaches for Mapping European Organization for Research and Treatment of Cancer Quality of Life Questionnaire Core 30 Onto 5-Level Version of EQ-5D Index for Patients With Cancer [5]. Pubmed title: Tree diversity effects on productivity depend on mycorrhizae and life strategies in a temperate forest experiment [6]. Pubmed title: Seasonal patterns of nonstructural carbohydrate storage and mobilization in two tree species with distinct life-history traits [7]. "
+}

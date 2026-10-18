@@ -1,4 +1,4 @@
-# NCBI repos deep dive
+# NCBI repositories deep dive
 
 What we learned from analyzing 13 repositories in the NCBI GitHub org (out of ~200 total), and how each finding maps to a concrete decision, code artifact, or learning for System 3.
 
@@ -12,15 +12,15 @@ What we learned from analyzing 13 repositories in the NCBI GitHub org (out of ~2
 - [What NOT to build (use hosted services instead)](#what-not-to-build-use-hosted-services-instead)
 - [Future capabilities to revisit after Phase 4](#future-capabilities-to-revisit-after-phase-4)
 - [Repo-by-repo reference card](#repo-by-repo-reference-card)
-- [Repos we filtered out](#repos-we-filtered-out)
+- [Repositories we filtered out](#repositories-we-filtered-out)
 
 ---
 
 ## How to read this doc
 
-This is not a survey of interesting repos. It is a decision-support document organized by the question "what do I do with this?" Each section maps findings to a specific action: code to copy, an architecture call to make, a tool to avoid building, or a pattern to adopt.
+This is not a survey of interesting repositories. It is a decision-support document organized by the question "what do I do with this?" Each section maps findings to a specific action: code to copy, an architecture call to make, a tool to avoid building, or a pattern to adopt.
 
-When you are implementing a specific tool (e.g., `ncbi_dbsnp`), jump to the repo reference card for that tool's upstream repo. When you are making an architecture decision (e.g., how to handle entity resolution), read the relevant section for the trade-offs we uncovered.
+When you are implementing a specific tool (e.g., `ncbi_dbsnp`), jump to the repository reference card for that tool's upstream repository. When you are making an architecture decision (e.g., how to handle entity resolution), read the relevant section for the trade-offs we uncovered.
 
 ---
 
@@ -86,7 +86,7 @@ Implication: our Layer 2 tool implementations need to know which API to call for
 
 ### Decision 2: PubTator REST API for entity resolution (not local models)
 
-Three NCBI repos offer entity resolution capabilities: AIONER (NER), GNorm2 (gene normalization), tmVar3 (variant normalization). All three are heavy:
+Three NCBI repositories offer entity resolution capabilities: AIONER (NER), GNorm2 (gene normalization), tmVar3 (variant normalization). All three are heavy:
 - AIONER: TensorFlow, 500MB models, 50-350ms
 - GNorm2: 60GB JVM heap, Java + Python hybrid
 - tmVar3: 5GB JVM, pure Java, CRF++ dependency
@@ -113,7 +113,7 @@ Our agent's responses must surface which classification system applies to each v
 
 ### Confirmed: E-utilities for ClinVar queries
 
-ClinVar access works through E-utilities with `db=clinvar` using VCV (Variation-Centric View) format. The repo confirms no alternative API exists. FTP is available for bulk downloads but not suitable for real-time agent queries.
+ClinVar access works through E-utilities with `db=clinvar` using VCV (Variation-Centric View) format. The repository confirms no alternative API exists. FTP is available for bulk downloads but not suitable for real-time agent queries.
 
 Query pattern: `esearch` to find VCV IDs, then `efetch` with `rettype=vcv` for full XML records. Parse for: VCV accession, gene(s), condition(s), classification(s), review status, citations (PMIDs), submitters.
 
@@ -123,7 +123,7 @@ GeneGPT's architecture validates our "one tool, one layer" design. GeneGPT uses 
 
 ### New: Variation Services API alongside E-utilities for dbSNP
 
-The dbsnp repo reveals a second API beyond E-utilities: the Variation Services API at `api.ncbi.nlm.nih.gov/variation/v0/`. This is more modern (proper REST, JSON responses) but has a tighter rate limit (1 rps vs 10 rps). Use Variation Services for individual variant lookups (rsID -> full record) and E-utilities for batch searches (gene name -> all pathogenic variants).
+The dbsnp repository reveals a second API beyond E-utilities: the Variation Services API at `api.ncbi.nlm.nih.gov/variation/v0/`. This is more modern (proper REST, JSON responses) but has a tighter rate limit (1 rps vs 10 rps). Use Variation Services for individual variant lookups (rsID -> full record) and E-utilities for batch searches (gene name -> all pathogenic variants).
 
 ---
 
@@ -162,7 +162,7 @@ What to avoid from GeneGPT's approach:
 
 ## What NOT to build (use hosted services instead)
 
-| Capability | Repo that offers it | Why not build locally | What to use instead |
+| Capability | Repository that offers it | Why not build locally | What to use instead |
 |-----------|--------------------|-----------------------|-------------------|
 | Gene normalization | GNorm2 | 60GB JVM heap, Java + Python hybrid, 30-60s startup | PubTator REST API |
 | Variant normalization | tmVar3 | 5GB JVM, pure Java, CRF++ dependency, no Python API | PubTator REST API |
@@ -179,7 +179,7 @@ The PubTator3 REST API endpoint: `https://www.ncbi.nlm.nih.gov/research/pubtator
 
 ## Future capabilities to revisit after Phase 4
 
-These repos offer capabilities that are not needed for the initial build but become relevant once the core agent loop is working and we are optimizing retrieval quality.
+These repositories offer capabilities that are not needed for the initial build but become relevant once the core agent loop is working and we are optimizing retrieval quality.
 
 ### MedCPT for semantic search over PubMed
 
@@ -217,11 +217,11 @@ Note: BioREx relation types do NOT map directly to BioLink model predicates. A c
 
 ## Repo-by-repo reference card
 
-Quick-lookup table for when you are implementing a specific tool and need to check the upstream repo.
+Quick-lookup table for when you are implementing a specific tool and need to check the upstream repository.
 
 ### GeneGPT (424 stars)
 
-- Repo: [ncbi/GeneGPT](https://github.com/ncbi/GeneGPT)
+- Repository: [ncbi/GeneGPT](https://github.com/ncbi/GeneGPT)
 - What: LLM + NCBI API agent. Iterative prompt-context loop with regex URL extraction.
 - Language: Python. Dependencies: openai, pandas.
 - Key files: `main_turbo.py` (agent loop), `evaluate.py` (task eval), `data/geneturing.json` (400 QA pairs)
@@ -232,7 +232,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### NCBI Datasets (530 stars)
 
-- Repo: [ncbi/datasets](https://github.com/ncbi/datasets)
+- Repository: [ncbi/datasets](https://github.com/ncbi/datasets)
 - What: modern REST API for genes, genomes, orthologs, taxonomy. 107+ endpoints.
 - Language: Jupyter Notebook (tutorials), OpenAPI spec (YAML)
 - Key files: `datasets.openapi.yaml` (full API spec), `training/NCBI_Datasets_Orthologs.ipynb` (worked examples)
@@ -242,7 +242,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### dbSNP (143 stars)
 
-- Repo: [ncbi/dbsnp](https://github.com/ncbi/dbsnp)
+- Repository: [ncbi/dbsnp](https://github.com/ncbi/dbsnp)
 - What: schemas, tutorials, Python wrappers for dbSNP data access
 - Language: Python, Jupyter Notebook, C++, Perl
 - Key files: `lib/python/navs.py` (Variation Services wrapper), `lib/python/rsatt.py` (attribute extraction), `tutorials/rsjson_demo.py` (JSON parsing)
@@ -253,7 +253,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### ClinVar (83 stars)
 
-- Repo: [ncbi/clinvar](https://github.com/ncbi/clinvar)
+- Repository: [ncbi/clinvar](https://github.com/ncbi/clinvar)
 - What: schemas, sample data, API documentation, prototypes for new classification types
 - Language: HTML, JSON schemas
 - Three classification systems: germline (Pathogenic/Benign/VUS), somatic clinical impact (Tiers I-IV, new May 2024), oncogenicity (Oncogenic/Benign, new May 2024)
@@ -264,7 +264,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### MedCPT (257 stars)
 
-- Repo: [ncbi/MedCPT](https://github.com/ncbi/MedCPT)
+- Repository: [ncbi/MedCPT](https://github.com/ncbi/MedCPT)
 - What: contrastive pre-trained transformer for zero-shot biomedical retrieval
 - Language: Python (PyTorch, Transformers)
 - Architecture: bi-encoder (110M params each for query and article) + cross-encoder re-ranker (110M params)
@@ -276,7 +276,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### AIONER (65 stars)
 
-- Repo: [ncbi/AIONER](https://github.com/ncbi/AIONER)
+- Repository: [ncbi/AIONER](https://github.com/ncbi/AIONER)
 - What: all-in-one biomedical NER. 6 entity types: gene, disease, variant, chemical, species, cell line.
 - Language: Python (TensorFlow 2.x, Transformers)
 - Models: Bioformer-softmax (faster) or PubMedBERT-CRF (more accurate). ~500MB total.
@@ -287,7 +287,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### BioREx (44 stars)
 
-- Repo: [ncbi/BioREx](https://github.com/ncbi/BioREx)
+- Repository: [ncbi/BioREx](https://github.com/ncbi/BioREx)
 - What: biomedical relation extraction (the RE engine behind PubTator3)
 - Language: Python (TensorFlow 2.x, Transformers)
 - Relations: 41 types across gene-disease, drug-gene, chemical-disease, protein-protein pairs
@@ -299,7 +299,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### GNorm2 (29 stars)
 
-- Repo: [ncbi/GNorm2](https://github.com/ncbi/GNorm2)
+- Repository: [ncbi/GNorm2](https://github.com/ncbi/GNorm2)
 - What: gene name recognition and normalization to NCBI Gene IDs
 - Language: Python (NER/species assignment) + Java (normalization scoring)
 - Architecture: 3-stage pipeline: species recognition -> gene NER (Bioformer/PubMedBERT) -> scoring-based normalization
@@ -309,7 +309,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### tmVar3 (23 stars)
 
-- Repo: [ncbi/tmVar3](https://github.com/ncbi/tmVar3)
+- Repository: [ncbi/tmVar3](https://github.com/ncbi/tmVar3)
 - What: variant mention recognition and normalization
 - Language: Pure Java (9K LOC)
 - Formats: DNA-level (HGVS c.), protein-level (p.M1V), rsIDs, indels, CNVs
@@ -319,7 +319,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### Biomedical citation selector (13 stars)
 
-- Repo: [ncbi/biomedical-citation-selector](https://github.com/ncbi/biomedical-citation-selector)
+- Repository: [ncbi/biomedical-citation-selector](https://github.com/ncbi/biomedical-citation-selector)
 - What: production ML system for MEDLINE citation classification. Processes 50K citations/day.
 - Language: Python (scikit-learn, TensorFlow/Keras)
 - Architecture: dual ensemble (4 classical ML learners via TF-IDF + CNN with word embeddings). Multiplicative fusion.
@@ -329,7 +329,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### BioConceptVec (43 stars)
 
-- Repo: [ncbi/BioConceptVec](https://github.com/ncbi/BioConceptVec)
+- Repository: [ncbi/BioConceptVec](https://github.com/ncbi/BioConceptVec)
 - What: 400K+ biomedical concept embeddings trained on full PubMed corpus
 - Dimensions: 100D vectors. Four algorithms: CBOW, Skip-gram, GloVe, fastText.
 - Coverage: genes (98% of human genes), diseases, chemicals, mutations, cell lines
@@ -339,7 +339,7 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ### bert_gt (31 stars)
 
-- Repo: [ncbi/bert_gt](https://github.com/ncbi/bert_gt)
+- Repository: [ncbi/bert_gt](https://github.com/ncbi/bert_gt)
 - What: BERT + Graph Transformer for cross-sentence n-ary relation extraction
 - Language: Python (TensorFlow 2.x)
 - Innovation: neighbor-attention mechanism reduces noise in long sequences
@@ -348,9 +348,9 @@ Quick-lookup table for when you are implementing a specific tool and need to che
 
 ---
 
-## Repos we filtered out
+## Repositories we filtered out
 
-The remaining ~187 repos in the NCBI org fall into categories irrelevant to System 3:
+The remaining ~187 repositories in the NCBI org fall into categories irrelevant to System 3:
 
 - Sequence analysis: sra-tools (1331 stars), SKESA, ngs, ngs-tools, BLAST tools, magicblast. We query structured data, not raw sequences.
 - Genome annotation: pgap (376 stars), egapx (190 stars), amr (362 stars), stxtyper. Upstream pipeline tools, not search.

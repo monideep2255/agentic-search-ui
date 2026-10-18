@@ -1,6 +1,6 @@
 # Design
 
-Everything build phase 4.8 is built against. This folder answers "what should it look like, and how does that become React code". For how a build phase runs at all, read `../Build_workflow_cadence.md` one level up.
+Everything build phase 4.8 is built against. This folder answers "what should it look like, and how does that become React code". For how a build phase runs at all, read the bossman-mode skill, `.claude/skills/bossman-mode/SKILL.md`, the one home of the build loop since 2026-09-25; `../Build_workflow_cadence.md` one level up keeps its provider mapping.
 
 Split out of `docs/build/` on 2026-08-12, when that folder hit its own nine-file revisit trigger. The cadence documents stayed put because they are referenced from 27 and 7 places respectively, including premise-gate tests and a publish script. Everything here was referenced from 2 to 6 places, all documentation, so it moved cheaply.
 
@@ -103,4 +103,4 @@ Treat it the way you would treat a test's golden files. The prototype and the ar
 
 Each card is standalone HTML carrying its own copy of the token block, so it renders correctly in isolation in the Claude Design pane, and its first line is a `@dsCard` marker naming its group. The token duplication across files is deliberate: a shared stylesheet would not survive isolated-card rendering.
 
-Last updated: 2026-09-05.
+Last updated: 2026-09-26.

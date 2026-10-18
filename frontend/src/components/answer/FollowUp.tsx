@@ -57,6 +57,43 @@ export interface FollowUpProps {
    * existed, so an older backend loses nothing.
    */
   nextStepQuery?: string | null;
+  /**
+   * UI fix set 12 (12.4). True when the run this field sits under is a
+   * refusal (including a clarification), never an answer.
+   *
+   * A refusal changes what this field is honestly for. Its own message
+   * already told the reader why nothing was found, so "Continue this
+   * conversation" and the three answer-shaped hint chips ("What variants
+   * cause it?") invite them into a conversation that has nothing to
+   * continue and a pronoun with no antecedent, a dead end this fix closes
+   * at the front door: `App.tsx` still passes the same three hints either
+   * way, so the suppression lives here, not just at the call site, or a
+   * future caller that forgets the condition reopens the defect.
+   *
+   * Chosen from the reader's chair: nothing replaces the chips. The
+   * refusal text already says what to do next, either the clarification's
+   * "Name one and I will search" or the fallback link, and a chip repeating
+   * that in different words adds a click without adding information. The
+   * field itself is the one thing that stays, since a person who was
+   * refused should still be able to type their next question without
+   * hunting for New search.
+   */
+  isRefusal?: boolean;
+  /**
+   * UI fix plan item 12.3. Four ready-made questions to pick from, set
+   * only when the run's `clarification` is a bare-topic clarification
+   * ("reflux disease", "GERD"), never for item 7.5's own "which gene,
+   * variant or condition do you mean" clarification.
+   *
+   * Rendered REGARDLESS of `isRefusal`, unlike `hints` below. A
+   * clarification counts as a refusal (see `isRefusal`'s own doc), and
+   * item 12.4 is right to hide the generic three hints under one, since
+   * their referring words ("it", "those") have no antecedent yet. These
+   * four are different: they are the answer to the clarification itself,
+   * so hiding them would turn "ask which aspect" into a second dead end
+   * rather than the one click item 12.3 exists to offer.
+   */
+  clarifyingOptions?: string[] | null;
 }
 
 export function FollowUp({
@@ -64,6 +101,8 @@ export function FollowUp({
   onAsk,
   nextStep = null,
   nextStepQuery = null,
+  isRefusal = false,
+  clarifyingOptions = null,
 }: FollowUpProps) {
   const [text, setText] = useState("");
 
@@ -86,6 +125,15 @@ export function FollowUp({
         The prototype's `<label for="fubox">Continue this conversation</label>`
         (F-4.8-D-11). The form had no heading at all, so the field read as an
         afterthought under the answer rather than the invitation it is.
+
+        UI fix set 12 (12.4). "Continue this conversation" only makes sense
+        after something was found to continue. A second tester who got
+        refused asked, in their own words, why they would "continue the
+        conversation" when it did not have an answer, and proposed "ask
+        another question" themselves. On a refusal the label switches to
+        that, plain text in the same element, which is enough on its own
+        for a screen reader: nothing here is hidden from the accessibility
+        tree, so whichever string is in the DOM is the one that gets read.
       */}
       <Typography
         component="p"
@@ -99,7 +147,7 @@ export function FollowUp({
           mb: 1,
         }}
       >
-        Continue this conversation
+        {isRefusal ? "Ask another question" : "Continue this conversation"}
       </Typography>
       <Box
         component="form"
@@ -204,7 +252,61 @@ export function FollowUp({
         </Box>
       ) : null}
 
-      {hints.length > 0 ? (
+      {/*
+        UI fix plan item 12.3. Rendered with NO `!isRefusal` guard, on
+        purpose: a clarification IS a refusal (`App.tsx` sets `isRefusal`
+        from the same `refusal || refusalLabel` check either way), and
+        these four questions are the answer to it, not a suggestion that
+        assumes something was already found. Reuses the hint chips' own
+        style below verbatim, the shipped precedent for a clickable pill in
+        this component, per this repository's design-consistency rule.
+      */}
+      {clarifyingOptions && clarifyingOptions.length > 0 ? (
+        <Box
+          data-testid="clarifying-options"
+          sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}
+        >
+          {clarifyingOptions.map((option) => (
+            <Box
+              key={option}
+              component="button"
+              type="button"
+              data-testid="clarifying-option"
+              onClick={() => onAsk?.(option)}
+              sx={{
+                font: "inherit",
+                fontSize: 12.5,
+                px: 1.4,
+                py: 0.5,
+                borderRadius: 999,
+                cursor: "pointer",
+                color: designTokens.inkMuted,
+                bgcolor: designTokens.surfaceSunk,
+                border: `1px solid ${designTokens.line}`,
+                "&:hover": { color: designTokens.ink, borderColor: designTokens.lineStrong },
+              }}
+            >
+              {option}
+            </Box>
+          ))}
+        </Box>
+      ) : null}
+
+      {/*
+        UI fix set 12 (12.4). The suppression is checked here, not only at
+        the call site, so a refusal can never show these regardless of what
+        `hints` it was handed. The three canned hints ("What variants cause
+        it?") each carry a referring word with no antecedent on a refusal,
+        the exact shape `_needs_clarification` on the backend then catches,
+        walking the reader from one dead end into another: the product's
+        own suggestion asks them a question the product itself cannot
+        answer. Decided to show nothing rather than a substitute set of
+        chips, because the refusal block above already says what to do
+        next, either the clarification's own "name one and I will search"
+        or the NCBI fallback link, and a chip repeating that in different
+        words adds a click without adding information.
+      */}
+      {!isRefusal && hints.length > 0 ? (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 1.5 }}>
           {hints.map((hint) => (
             <Box

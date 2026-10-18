@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "<scratch>/int_prefix/bin/s3",
+    "login",
+    "<throwaway-email>"
+  ],
+  "exit": 0,
+  "stdout": "logged in\n",
+  "stderr": "",
+  "wall_s": 2.8
+}

@@ -1,0 +1,15 @@
+model call point=guardrail.injection trace=probe56-5eae6535 kind=jev elapsed_ms=366 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-5eae6535 kind=guard elapsed_ms=1990 outcome=ok attempt=1 provider=GMICloud
+model call point=plan.literature trace=probe56-5eae6535 kind=jev elapsed_ms=244 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-5eae6535 kind=jev elapsed_ms=272 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-5eae6535 kind=jev elapsed_ms=287 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-40ecb0dc kind=jev elapsed_ms=307 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-40ecb0dc kind=guard elapsed_ms=1009 outcome=ok attempt=1 provider=Parasail
+model call point=plan.literature trace=probe56-40ecb0dc kind=jev elapsed_ms=226 outcome=ok attempt=1 provider=unknown
+model call point=think.recent_years trace=probe56-40ecb0dc kind=jev elapsed_ms=241 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-40ecb0dc kind=jev elapsed_ms=248 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.injection trace=probe56-2e6e7917 kind=jev elapsed_ms=233 outcome=ok attempt=1 provider=unknown
+model call point=guardrail.classify trace=probe56-2e6e7917 kind=guard elapsed_ms=2317 outcome=ok attempt=1 provider=OpenInference
+model call point=think.recent_years trace=probe56-2e6e7917 kind=jev elapsed_ms=281 outcome=ok attempt=1 provider=unknown
+model call point=plan.literature trace=probe56-2e6e7917 kind=jev elapsed_ms=282 outcome=ok attempt=1 provider=unknown
+model call point=think.asks_features trace=probe56-2e6e7917 kind=jev elapsed_ms=471 outcome=ok attempt=1 provider=unknown

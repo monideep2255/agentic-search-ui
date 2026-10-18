@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv("/Users/anuradhachakraborti/Desktop/Tech Skills/agentic-search-ui/.env")
+load_dotenv("<repo-root>/.env")
 for key in sorted(os.environ):
     if any(s in key for s in ("MODEL", "TIER", "GRAPH_QUERY_URL", "NCBI_API_KEY", "OPENROUTER", "LITELLM")):
         value = os.environ[key]

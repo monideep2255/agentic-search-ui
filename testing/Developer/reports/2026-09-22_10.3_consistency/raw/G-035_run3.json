@@ -1,0 +1,188 @@
+{
+ "record": {
+  "id": "G-035",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+  "session_id": "c103-2e626e08996f",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:26:31+00:00",
+  "run_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+  "outcome": "refused_no_evidence",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [],
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "0 row(s) of 0"
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 13,
+  "answer_start": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20Escherichia%20coli%20isolate",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 1,
+  "server_elapsed_s": 4.829,
+  "seconds": 10.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 1,
+   "trust_signal": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 0,
+   "ts": "2026-09-22T17:25:00.407690Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 2,
+   "ts": "2026-09-22T17:25:02.793167Z",
+   "payload": {
+    "narrative": "The query asks to identify Escherichia coli isolates from a specific database (Pathogen Detection) that carry a class of genes (extended-spectrum beta-lactamase), requiring searching across multiple records and possibly linking isolates to gene annotations.",
+    "query_class": "exploratory",
+    "resolved_entities": [],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 4,
+   "ts": "2026-09-22T17:25:02.795135Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-995ce2b3917f",
+      "layer": "layer_1_graph",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     }
+    ],
+    "resolved_entities": []
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 6,
+   "ts": "2026-09-22T17:25:02.796003Z",
+   "payload": {
+    "call_id": "cq-995ce2b3917f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 7,
+   "ts": "2026-09-22T17:25:02.796185Z",
+   "payload": {
+    "call_id": "cq-995ce2b3917f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "0 row(s) of 0",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 8,
+   "ts": "2026-09-22T17:25:02.796718Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7956efaf-97ef-4380-8ca7-abfa5c4127a9",
+   "seq": 12,
+   "ts": "2026-09-22T17:25:08.067921Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 1,
+    "elapsed_ms": 4829,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "I could not find grounded evidence for this. Try NCBI's cross-database search: https://www.ncbi.nlm.nih.gov/search/all/?term=What%20Escherichia%20coli%20isolates%20in%20Pathogen%20Detection%20carry%20extended-spectrum%20beta-lactamase%20genes%3F"
+}

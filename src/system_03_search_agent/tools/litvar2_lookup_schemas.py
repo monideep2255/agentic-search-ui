@@ -39,7 +39,7 @@ confirming rather than assuming.
 Design decision 2, `query` and `litvar_id` both get `minLength: 1`, added
 2026-08-08 (F-3.3-02's sibling concern). Section 6.5's own `maxLength`
 caps (100 for `query`, 60 for `litvar_id`) do not by themselves reject an
-empty string, and this repo's pre-build probes never live-verified what
+empty string, and this repository's pre-build probes never live-verified what
 LitVar2's OWN `/variant/autocomplete/` endpoint does with an empty query
 (only PubTator3's sibling endpoint was probed for that shape, returning a
 THIRD undocumented error-body shape, F-3.3-02, a bare JSON array of

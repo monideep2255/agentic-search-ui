@@ -123,6 +123,28 @@ class TestCreateRun:
         }
 
     @pytest.mark.asyncio
+    async def test_declares_that_it_reads_placement_on_the_url_not_the_body(self) -> None:
+        """Build phase 8.7 fix round, F-8.7-A01: this client lays the answer
+        out by `placement` (`render.py`), so it asks for it with
+        `?reads=placement`. Only then may the server send the records ahead of
+        the summary. On the URL, never in the body: the server's request
+        model forbids extra keys, so a body field would fail this client
+        against a server that predates it. Mutation that turns this red: drop
+        the `params` from `create_run`, or move the declaration into the body."""
+        seen: dict = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen["reads"] = request.url.params.get("reads")
+            seen["body"] = json.loads(request.content)
+            return httpx.Response(202, json={"run_id": "run-1", "persona_name": "Persona"})
+
+        client = _client_with_handler(handler)
+        await client.create_run(text="q", session_id="s1", audience_depth=None)
+
+        assert seen["reads"] == "placement"
+        assert set(seen["body"]) == {"text", "session_id", "audience_depth"}
+
+    @pytest.mark.asyncio
     async def test_a_bare_string_401_body_raises_auth_expired_with_the_servers_message(
         self,
     ) -> None:

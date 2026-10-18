@@ -1,0 +1,555 @@
+{
+ "record": {
+  "model": "openai/gpt-6-astra+effort-minimal",
+  "model_id": "openai/gpt-6-astra",
+  "synth_effort": "minimal",
+  "question_id": "G-034",
+  "run": 1,
+  "question": "How many genes in the graph are associated with breast cancer?",
+  "trace_id": "trace-wb3-G-034-r1-ae4cd1b73a484476",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-27T00:40:25Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 2,
+  "must_cite_total": 1,
+  "must_cite_hits": 1,
+  "withdrawn": true,
+  "writer_calls": 2,
+  "writer_calls_ok": 1,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 0,
+  "prose_kept": [],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   30.160326374996657
+  ],
+  "writer_completion_tokens": [
+   206
+  ],
+  "writer_reasoning_tokens": [
+   118
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [
+   "CancelledError: "
+  ],
+  "wall_s": 55.102,
+  "done_elapsed_s": 55.026,
+  "metered_cost_usd": 0.31482442888,
+  "done_cost_usd": 0.31482442888,
+  "openrouter_cost_usd": 0.024626,
+  "writer_openrouter_cost_usd": 0.02447,
+  "writer_metered_cost_usd": 0.11459,
+  "answer_text": "Found 1 derived record for breast cancer: MedGen:C1320450 [1]. \n\nDerived records found\n\nDerived MedGen:C1320450, n: 0 [1]. \n\nMedgen records found\n\nMedgen title: Seen by breast cancer nurse [2]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: Paraneoplastic SPS is associated with breast cancer and other malignancies, BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO, Familial BREAST CANCER susceptibility 2, Familial BREAST CANCER susceptibility 1, Breast cancer susceptibility, BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS, Androgen insensitivity, partial, with breast cancer. Ask about them individually for a complete answer."
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.064,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 796,
+    "completion_tokens": 46,
+    "cached_tokens": 796,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 3.4144e-05,
+    "reply": null,
+    "dur": 3.877
+   },
+   {
+    "t": 3.948,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 990,
+    "completion_tokens": 58,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 9.954e-05,
+    "reply": null,
+    "dur": 1.391
+   },
+   {
+    "t": 6.77,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1198,
+    "completion_tokens": 40,
+    "cached_tokens": 1024,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 2.1581952e-05,
+    "reply": null,
+    "dur": 1.471
+   },
+   {
+    "t": 9.5,
+    "model": "openrouter/openai/gpt-6-astra",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 10429,
+    "completion_tokens": 206,
+    "cached_tokens": 10103,
+    "reasoning_tokens": 118,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.0244705,
+    "reply": "The retrieved graph result reports 0 associated genes for MedGen:C1320450 [1]. The matched record\u2019s title is Seen by breast cancer nurse [2].\n\n## Interpretation limit\n\nThe count is specific to MedGen:C1320450 [1]. The supporting record is labeled Seen by breast cancer nurse, rather than breast cancer itself, so this result does not establish the graph-wide count requested [2].",
+    "dur": 30.16
+   },
+   {
+    "t": 39.668,
+    "model": "openrouter/openai/gpt-6-astra",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": false,
+    "error": "CancelledError",
+    "message": "",
+    "dur": 14.884
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.06,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 3.876785000000382,
+    "prompt_tokens": 796,
+    "completion_tokens": 46,
+    "cost_usd": 4.1771520000000006e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 3.881
+   },
+   {
+    "t": 3.948,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.3913725830025214,
+    "prompt_tokens": 990,
+    "completion_tokens": 58,
+    "cost_usd": 5.202624e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.391
+   },
+   {
+    "t": 6.77,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.470875667000655,
+    "prompt_tokens": 1198,
+    "completion_tokens": 40,
+    "cost_usd": 6.011712e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.471
+   },
+   {
+    "t": 9.5,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 30.160326374996657,
+    "prompt_tokens": 10429,
+    "completion_tokens": 206,
+    "cost_usd": 0.11459000000000001,
+    "model": "openai/gpt-6-astra",
+    "dur": 30.161
+   },
+   {
+    "t": 39.668,
+    "tier": "synth",
+    "ok": false,
+    "error": "CancelledError",
+    "message": "",
+    "dur": 14.885
+   }
+  ],
+  "grounding": [
+   {
+    "t": 39.666,
+    "dur": 0.0005,
+    "narrative_chars": 353,
+    "narrative": "The retrieved graph result reports 0 associated genes for MedGen:C1320450 [1]. The matched record\u2019s title is Seen by breast cancer nurse [2]. The count is specific to MedGen:C1320450 [1]. The supporting record is labeled Seen by breast cancer nurse, rather than breast cancer itself, so this result does not establish the graph-wide count requested [2].",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 4,
+    "refused": true
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "n",
+    "value": "0",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/C1320450"
+   },
+   {
+    "ref": 2,
+    "field": "title",
+    "value": "Seen by breast cancer nurse",
+    "url": "https://www.ncbi.nlm.nih.gov/medgen/729095"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 3.942,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.942,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 6.286,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 6.286,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 6.622,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 6.622,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 6.628,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.96,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.071,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.099,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 7.21,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.344,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.344,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.344,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.498,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 9.5,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 55.027,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.31482442888,
+  "total_tool_calls": 4,
+  "elapsed_ms": 55026,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 2 sources, not yet confirmed",
+  "layer_calls_used": 11,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.95,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 277
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 316
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 322
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 335
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/medgen/C1320450",
+  "https://www.ncbi.nlm.nih.gov/medgen/729095"
+ ]
+}

@@ -1,0 +1,32 @@
+[
+ {
+  "step": 1,
+  "overflow": 0,
+  "text": "STEP 1 OF 9\n\nWelcome to NCBI Agentic Search\n\nAsk a biomedical question in plain words. The answer is built from the NCBI knowledge graph and from live NCBI APIs, queried as you ask.\n\nEvery claim carries a numbered source you can open. When the records do not support an answer, the system says so rather than guessing.\n\nNext\nSkip tour"
+ },
+ {
+  "step": 2,
+  "overflow": 0,
+  "text": "STEP 2 OF 9\n\nThe question box\n\nType your question here. Enter sends it, and Shift+Enter starts a new line.\n\nThe arrow button sends it too. A question can run to about 2,000 characters.\n\nBack\nNext\nSkip tour"
+ },
+ {
+  "step": 3,
+  "overflow": 0,
+  "text": "STEP 3 OF 9\n\nAnswer mode\n\nPlain language, the default, gives the answer in simple terms, easy to understand. Researcher gives it in technical terms, with the specifics and the records listed or in tables.\n\nThe sources stay the same in both modes, and every claim is cited. A change applies to your next question.\n\nBack\nNext\nSkip tour"
+ },
+ {
+  "step": 4,
+  "overflow": 0,
+  "text": "STEP 4 OF 9\n\nExample questions\n\nNot sure where to start? Try one of these four example questions.\n\nClick one and it runs as written, at the depth you chose.\n\nBack\nNext\nSkip tour"
+ },
+ {
+  "step": 5,
+  "overflow": 0,
+  "text": "STEP 5 OF 9\n\nYour scientist\n\nEach session works as a scientist from the history of biomedical science. It is decoration only and changes nothing about the answer.\n\nThe \n beside the name tells you who they were, with a link to read more. On a phone the name sits behind the bar's menu.\n\nBack\nNext\nSkip tour"
+ },
+ {
+  "step": 6,
+  "overflow": 0,
+  "text": "STEP 6 OF 9\n\nThe app bar\n\nIntegrations lists the other ways in: the API, GraphQL, the MCP server, and the command line and the export. About explains how the system works.\n\nLog in keeps your search history across reloads. On a phone the history opens as a drawer from the bar.\n\nBack\nNext\nSkip tour"
+ }
+]

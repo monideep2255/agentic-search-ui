@@ -1,0 +1,84 @@
+QUESTION: What is GERD?
+LANDED=answer SECONDS=19.7
+
+What is GERD?
+New search
+
+✓ Answered18.3s · 8 tools · 13 sources from 2 layers
+
+Show work ▾
+
+I found 5 published papers, 1 condition, 1 literature index entry and 5 clinical trials related to GERD.⁠2–13
+
+In children, ordinary reflux is common and usually normal, while GERD is a less common problem that causes troublesome symptoms and may need treatment.⁠1 Symptoms of GERD in young children can be varied and nonspecific, requiring careful evaluation.⁠1 It can involve factors like a weak lower esophageal sphincter, problems with esophageal defense, and anatomical issues such as hiatal hernia.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Gastroesophageal Reflux Disease.	⁠2
+Gastroesophageal reflux (GERD)	⁠3
+Gastroesophageal Reflux	⁠4
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	⁠5
+Gastroesophageal Reflux Disease.	⁠6
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	⁠7
+Gastroesophageal Reflux Disease.	⁠8
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	⁠9
+Gastroesophageal reflux disease in children: What's new right now?	⁠10
+On Demand Treatment of Reflux Disease	⁠11
+Showing 1–10 of 12
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+12
+Based on 12 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+2–13
+1
+1
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+‹ Previous
+Next ›
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://pubmed.ncbi.nlm.nih.gov/37034973/
+ -> https://pubmed.ncbi.nlm.nih.gov/29132520/
+ -> https://www.ncbi.nlm.nih.gov/medgen/1795938
+ -> https://pubmed.ncbi.nlm.nih.gov/33351044/
+ -> https://pubmed.ncbi.nlm.nih.gov/36170502/
+ -> https://pubmed.ncbi.nlm.nih.gov/37516506/
+ -> https://www.ncbi.nlm.nih.gov/mesh/D005764
+ -> https://clinicaltrials.gov/study/NCT00141960
+ -> https://clinicaltrials.gov/study/NCT00163306
+ -> https://clinicaltrials.gov/study/NCT00181805
+ -> https://clinicaltrials.gov/study/NCT00184522
+ -> https://clinicaltrials.gov/study/NCT00235677

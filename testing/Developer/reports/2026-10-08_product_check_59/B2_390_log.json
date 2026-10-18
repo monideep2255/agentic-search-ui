@@ -1,0 +1,265 @@
+[
+ {
+  "step": "entered",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:57:59.138Z"
+ },
+ {
+  "step": "B1_late_tp53 late-press",
+  "question": "What does the TP53 gene do?",
+  "serverFinalEvent": "done",
+  "serverFinalSeconds": 20.679,
+  "pressAfterFinalMs": 29,
+  "screenAtPress": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "press": {
+   "enabled": true,
+   "clicked": true,
+   "t": 1791442699913
+  },
+  "at": "2026-10-08T06:58:19.948Z"
+ },
+ {
+  "step": "B1_late_tp53 after late press",
+  "transitions": [
+   {
+    "t": 1791442699950,
+    "stopping": false,
+    "stopped": false,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   },
+   {
+    "t": 1791442700054,
+    "stopping": false,
+    "stopped": false,
+    "answerMeta": true,
+    "streaming": false,
+    "overflow": 0
+   }
+  ],
+  "at": "2026-10-08T06:58:26.012Z"
+ },
+ {
+  "step": "B1_late_tp53 stop requests so far",
+  "stops": [],
+  "at": "2026-10-08T06:58:26.013Z"
+ },
+ {
+  "step": "B1_late_tp53 landed",
+  "totalSeconds": 28.404,
+  "sourcesMentions": [
+   "17 sources cited from 3 layers",
+   "125 records that matched this question in the graph",
+   "17\nSources disagree on at least one claim"
+  ],
+  "at": "2026-10-08T06:58:27.609Z"
+ },
+ {
+  "step": "B1 overflow",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": true,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:58:27.610Z"
+ },
+ {
+  "step": "B3_early_brca1 early-press",
+  "question": "Which diseases are associated with BRCA1?",
+  "pressSeconds": 2.249,
+  "press": {
+   "enabled": true,
+   "clicked": true,
+   "t": 1791442710016,
+   "stopFirstPressableSeconds": 2.247
+  },
+  "at": "2026-10-08T06:58:30.063Z"
+ },
+ {
+  "step": "B3 after early press",
+  "transitions": [
+   {
+    "t": 1791442710063,
+    "stopping": true,
+    "stopped": false,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   },
+   {
+    "t": 1791442710274,
+    "stopping": false,
+    "stopped": true,
+    "answerMeta": false,
+    "streaming": false,
+    "overflow": 0
+   }
+  ],
+  "at": "2026-10-08T06:58:33.146Z"
+ },
+ {
+  "step": "B3 overflow and stops",
+  "state": {
+   "stopping": false,
+   "stopped": true,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "stops": [
+   {
+    "t": 1791442710246,
+    "status": 200,
+    "body": "{\"stopped\":true}"
+   }
+  ],
+  "at": "2026-10-08T06:58:33.147Z"
+ },
+ {
+  "step": "B4 new question after stop",
+  "answeredSeconds": 30.67,
+  "doneSeconds": 25.966,
+  "at": "2026-10-08T06:59:04.146Z"
+ },
+ {
+  "step": "B4 overflow",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": true,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:59:06.231Z"
+ },
+ {
+  "step": "B6 memory probe started",
+  "status": 422,
+  "bodyKeys": [
+   "text",
+   "audience_depth",
+   "session_id"
+  ],
+  "at": "2026-10-08T06:59:06.442Z"
+ },
+ {
+  "step": "B6 memory probe stream ended",
+  "seconds": 0.384,
+  "hasDone": false,
+  "at": "2026-10-08T06:59:06.616Z"
+ },
+ {
+  "step": "B6 memory probe answer",
+  "status": 404,
+  "head": "",
+  "at": "2026-10-08T06:59:10.797Z"
+ },
+ {
+  "step": "B5 after reload rail text",
+  "rail": "+ New search\n\nYOUR SEARCHES\n\nWhat is the function of the HBB gene?\n17 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n0 sources cited · Oct 8\nWhat does the TP53 gene do?\n17 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n0 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n0 sources cited · Oct 8\nWhich diseases are associated with HNF1A?\n23 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 8\nwhat about it?\n17 sources cited · Oct 8\nWhich diseases are associated with CFTR?\n21 sources cited · Oct 8\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 7\nWhat diseases are caused by variants in the HNF1A gene?\n61 sources cited · Oct 7\nWhich diseases are associated with BRCA1?\n21 sources cited · Oct 7\nHere is my VCF file, tell me which variants are concerning.\n0 sources cited · Oct 7\nClassify BRCA1 c.5266dupC as pathogenic or benign and tell me the final ACMG call.\n0 sources cited · Oct 7\nDelete the BRCA1 node from the knowledge graph.\n0 sources cited · Oct 7\nWhich diseases are associated with the gene ZZQXFAKE1?\n0 sources cited · Oct 7\nI am a student. Explain in plain terms what the BRCA1 gene d",
+  "at": "2026-10-08T06:59:17.105Z"
+ },
+ {
+  "step": "B5 api history",
+  "status": 200,
+  "items": [
+   {
+    "question": "What is the function of the HBB gene?",
+    "asked_at": "2026-10-08T06:56:40.063382Z",
+    "trust_signal": "flag",
+    "citation_count": 17,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T06:56:10.854880Z",
+    "trust_signal": "refuse",
+    "citation_count": 0,
+    "has_saved_answer": false
+   },
+   {
+    "question": "What does the TP53 gene do?",
+    "asked_at": "2026-10-08T06:56:00.486881Z",
+    "trust_signal": "flag",
+    "citation_count": 17,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T06:55:27.753257Z",
+    "trust_signal": "refuse",
+    "citation_count": 0,
+    "has_saved_answer": false
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T06:52:51.274819Z",
+    "trust_signal": "refuse",
+    "citation_count": 0,
+    "has_saved_answer": false
+   },
+   {
+    "question": "Which diseases are associated with HNF1A?",
+    "asked_at": "2026-10-08T06:52:31.511303Z",
+    "trust_signal": "ask",
+    "citation_count": 23,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T06:50:34.008623Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   },
+   {
+    "question": "what about it?",
+    "asked_at": "2026-10-08T06:49:54.764586Z",
+    "trust_signal": "flag",
+    "citation_count": 17,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with CFTR?",
+    "asked_at": "2026-10-08T06:49:25.613408Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   },
+   {
+    "question": "Which diseases are associated with BRCA1?",
+    "asked_at": "2026-10-08T03:42:39.861911Z",
+    "trust_signal": "ask",
+    "citation_count": 21,
+    "has_saved_answer": true
+   }
+  ],
+  "at": "2026-10-08T06:59:17.286Z"
+ },
+ {
+  "step": "B5 overflow",
+  "state": {
+   "stopping": false,
+   "stopped": false,
+   "answerMeta": false,
+   "streaming": false,
+   "overflow": 0
+  },
+  "at": "2026-10-08T06:59:17.353Z"
+ }
+]

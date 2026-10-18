@@ -1,0 +1,27 @@
+[92m15:05:10 - LiteLLM:WARNING[0m: get_model_cost_map.py:290 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: network disabled by adversary probe. Falling back to local backup.
+think classification unusable (attempt 1 of 2, trace t-adv): the plan tier's response did not match the think classification schema (narrative: Field required; why: Extra inputs are not permitted); reply length 145, starts '{"query_class": "exploratory", "why": "asks for SRA runs", "entities": [{"text": "SARS-CoV-2", "entity_type": "organism"}], "record_type": "sra"}'
+model call point=think.recent_years trace=t-adv kind=guard elapsed_ms=3 outcome=error attempt=1 provider=unknown
+model call point=plan.literature trace=t-adv kind=guard elapsed_ms=3 outcome=error attempt=1 provider=unknown
+model call point=think.asks_features trace=t-adv kind=guard elapsed_ms=3 outcome=error attempt=1 provider=unknown
+think classification unusable (attempt 1 of 2, trace t-adv): the plan tier's response did not match the think classification schema (narrative: Field required; why: Extra inputs are not permitted; organism: Extra inputs are not permitted); reply length 106, starts '{"query_class": "exploratory", "why": "x", "entities": [], "record_type": "sra", "organism": "SARS-CoV-2"}'
+think classification unusable (attempt 2 of 2, trace t-adv): the plan tier's response did not match the think classification schema (narrative: Field required; why: Extra inputs are not permitted; organism: Extra inputs are not permitted); reply length 106, starts '{"query_class": "exploratory", "why": "x", "entities": [], "record_type": "sra", "organism": "SARS-CoV-2"}'
+model call point=think.recent_years trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=plan.literature trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=think.asks_features trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+think classification unusable (attempt 1 of 2, trace t-adv): the plan tier did not return valid JSON for query classification; reply length 8, starts 'not json'
+model call point=think.recent_years trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=plan.literature trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=think.asks_features trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+think classification unusable (attempt 1 of 2, trace t-adv): the plan tier did not return valid JSON for query classification; reply length 8, starts 'not json'
+model call point=think.recent_years trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=plan.literature trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=think.asks_features trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+think classification unusable (attempt 1 of 2, trace t-adv): the plan tier's response did not match the think classification schema (record_type: Input should be 'sra', 'assembly' or 'none'); reply length 86, starts '{"query_class": "exploratory", "narrative": "x", "entities": [], "record_type": "SRA"}'
+model call point=think.recent_years trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=plan.literature trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=think.asks_features trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+think classification unusable (attempt 1 of 2, trace t-adv): the plan tier's response did not match the think classification schema (record_type: Input should be 'sra', 'assembly' or 'none'); reply length 86, starts '{"query_class": "exploratory", "narrative": "x", "entities": [], "record_type": "SRA"}'
+think classification unusable (attempt 2 of 2, trace t-adv): the plan tier's response did not match the think classification schema (record_type: Input should be 'sra', 'assembly' or 'none'); reply length 86, starts '{"query_class": "exploratory", "narrative": "x", "entities": [], "record_type": "SRA"}'
+model call point=think.recent_years trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=plan.literature trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown
+model call point=think.asks_features trace=t-adv kind=guard elapsed_ms=0 outcome=error attempt=1 provider=unknown

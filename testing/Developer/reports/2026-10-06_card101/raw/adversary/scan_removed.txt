@@ -1,0 +1,158 @@
+== labelled set: every A and B item whose pairs changed ==
+R d-med1-c1-i1 beyond_widened_sentence
+   sentence: G6PD deficiency is described as an X-linked inherited disorder that most commonly affects persons of African, Asian, Mediterranean, or Middle-Eastern descent, causing a spectrum of disease including neonatal hyperbilirub
+   removed: [('most common', 'common<-commonly')]
+   added: ['common enzyme']
+R d-med2-c2-i1 beyond_widened_sentence
+   sentence: This condition can cause breakdown of red blood cells triggered by infections, certain drugs, or fava beans
+   removed: []
+   added: ['infection oxidative']
+R d-med2-c2-i6 beyond_widened_sentence
+   sentence: A separate study examined brain development disorders in Turkish families and found that many had harmful gene changes across multiple genes, with 51 families showing multiple damaging variants at once
+   removed: []
+   added: ['established variant', 'variant prioritization']
+A d-med3-c1-i6 added_explanation
+   sentence: Hemoglobin disorders, which affect the oxygen-carrying part of the blood, are also reported as common in African, Asian, and Mediterranean populations
+   removed: []
+   added: ['most affected']
+R d-gerd2-c2-i4 beyond_widened_sentence
+   sentence: Symptoms potentially attributable to GERD are among those most commonly reported to primary care providers in the outpatient setting, and management approaches include proton pump inhibitor trials and referral to Gastroe
+   removed: [('symptoms including', 'including<-include'), ('including proton', 'including<-include'), ('warrant referral', 'warrant<-warranted')]
+   added: ['clinical settings', 'settings that', 'that warrant']
+R d-gerd3-c2-i5 beyond_widened_sentence
+   sentence: In the pediatric population, gastroesophageal reflux is often physiological and managed conservatively, whereas GERD represents a less common pathologic process causing troublesome symptoms
+   removed: []
+   added: ['medical management']
+B w-gp1-c1-i4 added_gloss
+   sentence: Several factors can contribute to GERD, including abnormal relaxation of the lower esophageal sphincter (the valve between the esophagus and stomach), weaknesses in the esophageal lining's defense, impaired movement and 
+   removed: [('relaxations of', 'relaxations<-relaxation'), ('gerd include', 'include<-including'), ('include defects', 'include<-including')]
+   added: ['transient relaxations']
+A w-gp1-c2-i6 dropped_hedge
+   sentence: GERD symptoms are among the most common reasons people visit their primary care doctor
+   removed: [('most commonly', 'commonly<-common')]
+   added: ['commonly reported']
+B w-gp2-c1-i5 stronger_degree
+   sentence: The most effective treatment is a class of drugs called proton-pump inhibitors, but long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection
+   removed: [('most effectively', 'effectively<-effective')]
+   added: ['treated with']
+B w-gp2-c2-i4 relabelled
+   sentence: Risk factors and underlying causes include abnormal relaxation of the valve between the stomach and esophagus, weakness in the esophageal lining's defenses, poor movement and clearing of the esophagus and stomach, and an
+   removed: [('relaxations of', 'relaxations<-relaxation')]
+   added: ['transient relaxations', 'mucosal defense', 'defense impaired']
+B w-gp3-c2-i4 relabelled
+   sentence: Risk factors and underlying causes include abnormal relaxations of the valve between the esophagus and stomach, weakness in the esophageal lining's defenses, problems with stomach and esophageal movement and clearing, an
+   removed: []
+   added: ['mucosal defense', 'defense impaired']
+A w-gp4-c2-i6 dropped_hedge
+   sentence: Reflux symptoms are among the most common reasons people visit their primary care doctor
+   removed: [('most commonly', 'commonly<-common')]
+   added: ['commonly reported']
+B w-gp5-c1-i6 stronger_degree
+   sentence: While the most effective treatment is proton-pump inhibitors, long-term use carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection
+   removed: [('most effectively', 'effectively<-effective')]
+   added: ['treated with']
+A w-cm5-c1-i8 dropped_condition
+   sentence: A study of patients in Texas found that 67% of Hispanic patients carried a β-globin chain variant, spread across 10 different forms
+   removed: [('10 variants', 'variants<-variant')]
+   added: ['variants seen']
+B w-cp1-c2-i5 stronger_degree
+   sentence: Long-term use of proton pump inhibitors, the most effective treatment, carries risks including bone fractures, kidney disease, pneumonia, and intestinal infection
+   removed: [('most effectively', 'effectively<-effective')]
+   added: ['treated with']
+B w-cp4-c1-i4 added_gloss
+   sentence: Several factors can contribute to GERD, including abnormal relaxations of the muscular valve between the esophagus and stomach, weaknesses in the esophageal lining's defenses, problems with stomach and esophageal movemen
+   removed: [('gerd include', 'include<-including'), ('include defects', 'include<-including')]
+   added: ['mucosal defense', 'defense impaired']
+B w-cp5-c2-i3 relabelled
+   sentence: Risk factors for GERD include a hiatal hernia, weakened esophageal defenses, and problems with how the esophagus and stomach move and clear contents
+   removed: []
+   added: ['mucosal defense', 'defense impaired']
+== 304 recorded live candidates: every removed pair and the word that now uses it ==
+gp1c1i3: removed [('gerd affects', 'affects<-affect'), ('affects quality', 'affects<-affect')] added []
+gp1c1i4: removed [('relaxations of', 'relaxations<-relaxation'), ('gerd include', 'include<-including'), ('include defects', 'include<-including')] added ['transient relaxations']
+gp1c1i5: removed [('most commonly', 'commonly<-common'), ('commonly reported', 'commonly<-common')] added []
+gp1c2i6: removed [('most commonly', 'commonly<-common')] added ['commonly reported']
+gp2c1i5: removed [('most effectively', 'effectively<-effective')] added ['treated with']
+gp2c2i4: removed [('relaxations of', 'relaxations<-relaxation')] added ['transient relaxations', 'mucosal defense', 'defense impaired']
+gp3c1i3: removed [('gerd affects', 'affects<-affect'), ('affects quality', 'affects<-affect')] added []
+gp3c2i6: removed [('most commonly', 'commonly<-common')] added ['commonly reported']
+gp4c2i5: removed [('relaxations of', 'relaxations<-relaxation')] added ['transient relaxations']
+gp4c2i6: removed [('most commonly', 'commonly<-common')] added ['commonly reported']
+gp4c2i8: removed [('gastroenterology specialists', 'specialists<-specialist')] added []
+gp5c1i6: removed [('most effectively', 'effectively<-effective')] added ['treated with']
+gr1c2i2: removed [('gerd include', 'include<-including'), ('include defects', 'include<-including')] added []
+gr1c2i3: removed [('most effectively', 'effectively<-effective'), ('treated with', 'treated<-treatment')] added []
+gr2c2i3: removed [('gerd include', 'include<-including'), ('include defects', 'include<-including')] added []
+gr3c1i6: removed [('gerd include', 'include<-including'), ('include defects', 'include<-including')] added []
+gr3c1i9: removed [('to limit', 'limit<-limiting'), ('limit complications', 'limit<-limiting')] added []
+gr4c1i4: removed [('most effectively', 'effectively<-effective'), ('treated with', 'treated<-treatment')] added []
+gr4c1i5: removed [('to limit', 'limit<-limiting'), ('limit complications', 'limit<-limiting')] added []
+gr4c1i6: removed [('including proton', 'including<-include'), ('warrant referral', 'warrant<-warranting')] added ['symptoms including', 'that warrant']
+gr4c2i2: removed [('results from', 'results<-resulting')] added ['that results']
+gr5c1i6: removed [('most effectively', 'effectively<-effective'), ('treated with', 'treated<-treatment')] added []
+gr5c2i6: removed [('including proton', 'including<-include'), ('warrant referral', 'warrant<-warranting')] added ['discuss clinical', 'symptoms including', 'that warrant']
+md1c2i2: removed [('causes a', 'causes<-cause')] added ['worldwide causes']
+md1c2i5: removed [('identified in', 'identified<-identifying')] added ['were identified']
+md2c1i1: removed [('affected worldwide', 'affected<-affecting')] added []
+md2c1i2: removed [('oxidative stressor', 'stressor<-stressors'), ('stressor in', 'stressor<-stressors'), ('infection oxidative', 'infection<-infections')] added []
+md2c2i1: removed [('affected worldwide', 'affected<-affecting/affects')] added []
+md2c2i3: removed [('specific variant', 'variant<-variants'), ('contributes to', 'contributes<-contribute')] added []
+md2c2i4: removed [('fmf variant', 'variant<-variants')] added []
+md3c2i1: removed [('most common', 'common<-commonly')] added ['common enzyme']
+md3c2i3: removed [('fever abdominal', 'fever<-fevers')] added ['mediterranean fever', 'recurrent fever']
+md4c2i1: removed [('affected worldwide', 'affected<-affecting/affects')] added []
+md4c2i4: removed [('234 studied', 'studied<-study'), ('studied families', 'studied<-study')] added ['established variant', 'variant prioritization']
+md5c1i1: removed [('affected worldwide', 'affected<-affecting/affects')] added []
+md5c1i2: removed [('identified in', 'identified<-identifying'), ('identified 51', 'identified<-identifying')] added ['were identified', 'established variant', 'variant prioritization']
+md5c2i1: removed [('most commonly', 'commonly<-common')] added ['affects persons']
+cm2c2i1: removed [('most commonly', 'commonly<-common')] added ['affects persons']
+cm2c2i3: removed [('most affected', 'affected<-affect')] added []
+cm3c1i2: removed [('oxidative stressor', 'stressor<-stressors'), ('stressor in', 'stressor<-stressors'), ('infection oxidative', 'infection<-infections')] added []
+cm4c1i1: removed [('most commonly', 'commonly<-common')] added ['affects persons', 'infection oxidative']
+cm4c2i8: removed [('identified 51', 'identified<-identifying')] added []
+cm5c1i8: removed [('10 variants', 'variants<-variant')] added ['variants seen']
+cp1c1i3: removed [('affects quality', 'affects<-affect')] added ['gerd affects']
+cp1c2i1: removed [('relaxations of', 'relaxations<-relaxation')] added ['transient relaxations']
+cp1c2i5: removed [('most effectively', 'effectively<-effective')] added ['treated with']
+cp2c1i2: removed [('gerd affects', 'affects<-affect'), ('affects quality', 'affects<-affect')] added []
+cp2c2i4: removed [('most commonly', 'commonly<-common')] added ['commonly reported']
+cp3c1i5: removed [('most commonly', 'commonly<-common'), ('reported to', 'reported<-report')] added []
+cp3c2i4: removed [('most commonly', 'commonly<-common')] added ['commonly reported']
+cp4c1i4: removed [('gerd include', 'include<-including'), ('include defects', 'include<-including')] added ['mucosal defense', 'defense impaired']
+cp5c1i4: removed [('relaxations of', 'relaxations<-relaxation'), ('defense impaired', 'defense<-defenses')] added ['transient relaxations', 'mucosal defense']
+cp5c2i6: removed [('most commonly', 'commonly<-common')] added ['commonly reported']
+cr1c1i2: removed [('most commonly', 'commonly<-common'), ('commonly reported', 'commonly<-common')] added ['symptoms potentially']
+cr3c2i3: removed [('outpatient setting', 'setting<-settings')] added []
+cr4c1i2: removed [('most commonly', 'commonly<-common'), ('commonly reported', 'commonly<-common')] added ['symptoms potentially']
+cr4c1i6: removed [('gerd include', 'include<-including'), ('include defects', 'include<-including')] added []
+cr4c1i8: removed [('most effectively', 'effectively<-effective')] added ['treated with']
+cr4c2i6: removed [('warrant referral', 'warrant<-warranting')] added ['that warrant']
+candidates: 304
+missing word <- sentence word, counts:
+   16 commonly<-common
+   12 include<-including
+    7 affects<-affect
+    7 effectively<-effective
+    5 relaxations<-relaxation
+    4 limit<-limiting
+    4 identified<-identifying
+    4 stressor<-stressors
+    3 treated<-treatment
+    3 warrant<-warranting
+    3 affected<-affecting/affects
+    2 including<-include
+    2 infection<-infections
+    2 variant<-variants
+    2 studied<-study
+    1 specialists<-specialist
+    1 results<-resulting
+    1 causes<-cause
+    1 affected<-affecting
+    1 contributes<-contribute
+    1 common<-commonly
+    1 fever<-fevers
+    1 affected<-affect
+    1 variants<-variant
+    1 reported<-report
+    1 defense<-defenses
+    1 setting<-settings

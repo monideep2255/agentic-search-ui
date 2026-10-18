@@ -1,0 +1,9 @@
+{
+ "integration-copy-rest": "curl -X POST https://search-agent-api-develop-43b3.up.railway.app/v1/query \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"text\": \"Which diseases are associated with BRCA1?\", \"session_id\": \"demo-1\"}'",
+ "integration-copy-graphql": "curl -X POST https://search-agent-api-develop-43b3.up.railway.app/graphql \\\n  -H \"Authorization: Bearer $TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"query\": \"mutation { ask(input: { text: \\\"Which diseases are associated with BRCA1?\\\", sessionId: \\\"demo-1\\\" }) { answer citations { source sourceUrl } } }\"}'",
+ "integration-copy-mcp": "{\n  \"mcpServers\": {\n    \"ncbi-search\": {\n      \"type\": \"http\",\n      \"url\": \"https://search-agent-api-develop-43b3.up.railway.app/mcp/\",\n      \"headers\": {\n        \"Authorization\": \"Bearer <your token>\"\n      }\n    }\n  }\n}",
+ "integration-copy-install": "pip install \"git+https://github.com/monideep2255/agentic-search-ui.git#subdirectory=clients/system3-cli\"",
+ "integration-copy-cli": "s3 login --base-url https://search-agent-api-develop-43b3.up.railway.app you@example.org\ns3 ask \"diseases linked to BRCA1\"",
+ "integration-copy-mcp-stdio": "{\n  \"mcpServers\": {\n    \"system3\": {\n      \"command\": \"s3\",\n      \"args\": [\"mcp\"]\n    }\n  }\n}",
+ "integration-copy-kgx": "s3-kgx-export NCBIGene:672 \\\n  --hops 1 --output-dir ./kgx-out"
+}

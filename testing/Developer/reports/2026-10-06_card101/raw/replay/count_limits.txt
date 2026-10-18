@@ -1,0 +1,6 @@
+card99 item 1 {'young_dropped': 8, 'hedge_dropped': 3, 'hedge_kept': 11} ['cp2c1i4', 'cp4c1i3', 'cp4c2i6', 'cp5c1i3', 'gp1c1i6', 'gp2c2i5', 'gp3c2i3', 'gp5c1i4', 'gp1c2i6', 'gp4c2i6', 'gr3c1i2']
+card99 item 2 {'young_dropped': 7, 'hedge_dropped': 2, 'hedge_kept': 11} ['cp2c1i4', 'cp4c2i6', 'cp5c1i3', 'gp1c1i6', 'gp2c2i5', 'gp3c2i3', 'gp5c1i4', 'gp1c2i6', 'gp4c2i6']
+card99 pair 1 {'young_dropped': 0, 'hedge_dropped': 0, 'hedge_kept': 7} []
+card99 pair 2 {'young_dropped': 0, 'hedge_dropped': 0, 'hedge_kept': 7} []
+card101 pair 1 {'young_dropped': 0, 'hedge_dropped': 0, 'hedge_kept': 7} []
+card101 pair 2 {'young_dropped': 0, 'hedge_dropped': 0, 'hedge_kept': 8} []

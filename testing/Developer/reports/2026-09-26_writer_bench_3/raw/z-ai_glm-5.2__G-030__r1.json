@@ -1,0 +1,1883 @@
+{
+ "record": {
+  "model": "z-ai/glm-5.2",
+  "model_id": "z-ai/glm-5.2",
+  "synth_effort": "none",
+  "question_id": "G-030",
+  "run": 1,
+  "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+  "trace_id": "trace-wb3-G-030-r1-10dc00c3a7ca4461",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T23:33:40Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "answer",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 56,
+  "must_cite_total": 3,
+  "must_cite_hits": 3,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 1,
+  "prose_sentences_kept": 1,
+  "prose_kept": [
+   "A trial of osimertinib for advanced EGFR-positive NSCLC patients is also listed [1]."
+  ],
+  "prose_text": "",
+  "jev_sent": 0,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   3.3248508329998003,
+   3.9194186669992632
+  ],
+  "writer_completion_tokens": [
+   435,
+   700
+  ],
+  "writer_reasoning_tokens": [
+   0,
+   0
+  ],
+  "writer_reasoning_refused": 0,
+  "writer_errors": [],
+  "wall_s": 17.247,
+  "done_elapsed_s": 17.193,
+  "metered_cost_usd": 0.01796072136,
+  "done_cost_usd": 0.01796072136,
+  "openrouter_cost_usd": 0.025755,
+  "writer_openrouter_cost_usd": 0.025583,
+  "writer_metered_cost_usd": 0.017782,
+  "answer_text": "Found 5 clinical trial records and 38 sequence variant records for EGFR, of 4002 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30][31][32][33][34][35][36][37][38][39][40][41][42][43]. \n\nClinical trial records found\n\nClinical trial name: A Retrospective Study of EGFR-TKIs,Gefitinib, Erlotinib and Osimertinib in NSCLC Patients Treatment [1]. Clinical trial name: Survival Outcome of EGFR-TKI in Uncommon EGFR Mutant Advanced NSCLC [2]. Clinical trial name: Osimertinib for Advanced EGFR-positive NSCLC Patients [3]. Clinical trial name: CSF Analysis in EGFR Mutant Non-Small Cell Lung Cancer With Leptomeningeal Disease [4]. Clinical trial name: EGFR/B7H3 CAR-T on Lung Cancer and Triple Negative Breast Cancer [5]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000076, name: NM_005228.5(EGFR):c.840C>A (p.Asn280Lys) [6]. SequenceVariant ClinVar:1000203, name: NM_005228.5(EGFR):c.664C>T (p.Arg222Cys) [7]. SequenceVariant ClinVar:1000496, name: NM_005228.5(EGFR):c.494G>A (p.Arg165Gln) [8]. SequenceVariant ClinVar:1000546, name: NM_005228.5(EGFR):c.652C>A (p.Gln218Lys) [9]. SequenceVariant ClinVar:1000851, name: NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala) [10]. SequenceVariant ClinVar:1000960, name: NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala) [11]. SequenceVariant ClinVar:1001152, name: NM_005228.5(EGFR):c.991G>A (p.Gly331Arg) [12]. SequenceVariant ClinVar:1001187, name: NM_005228.5(EGFR):c.1822T>A (p.Trp608Arg) [13]. SequenceVariant ClinVar:1001705, name: NM_005228.5(EGFR):c.1559C>T (p.Pro520Leu) [14]. SequenceVariant ClinVar:1001710, name: NM_005228.5(EGFR):c.2741C>G (p.Pro914Arg) [15]. SequenceVariant ClinVar:1001782, name: NM_005228.5(EGFR):c.2619A>T (p.Gly873=) [16]. SequenceVariant ClinVar:1002380, name: NM_005228.5(EGFR):c.2339T>C (p.Ile780Thr) [17]. SequenceVariant ClinVar:1002493, name: NM_005228.5(EGFR):c.1670A>G (p.Gln557Arg) [18]. SequenceVariant ClinVar:1002562, name: NM_005228.5(EGFR):c.721A>G (p.Thr241Ala) [19]. SequenceVariant ClinVar:1002578, name: NM_005228.5(EGFR):c.3031G>C (p.Val1011Leu) [20]. SequenceVariant ClinVar:1002794, name: NM_005228.5(EGFR):c.3209G>A (p.Ser1070Asn) [21]. SequenceVariant ClinVar:1003132, name: NM_005228.5(EGFR):c.1463C>G (p.Thr488Ser) [22]. SequenceVariant ClinVar:1003262, name: NM_005228.5(EGFR):c.2917C>G (p.Arg973Gly) [23]. SequenceVariant ClinVar:1003305, name: NM_005228.5(EGFR):c.1049C>G (p.Ser350Cys) [24]. SequenceVariant ClinVar:1003743, name: NM_005228.5(EGFR):c.1675C>T (p.His559Tyr) [25]. SequenceVariant ClinVar:1003794, name: NM_005228.5(EGFR):c.1975G>C (p.Val659Leu) [26]. SequenceVariant ClinVar:1004032, name: NM_005228.5(EGFR):c.2833A>G (p.Met945Val) [27]. SequenceVariant ClinVar:1004363, name: NM_005228.5(EGFR):c.541C>G (p.Gln181Glu) [28]. SequenceVariant ClinVar:1004409, name: NM_005228.5(EGFR):c.1739T>C (p.Ile580Thr) [29]. SequenceVariant ClinVar:1004521, name: NM_005228.5(EGFR):c.1582A>G (p.Asn528Asp) [30]. SequenceVariant ClinVar:1005378, name: NM_005228.5(EGFR):c.2161G>A (p.Gly721Ser) [31]. SequenceVariant ClinVar:1005727, name: NM_005228.5(EGFR):c.1605C>A (p.Cys535Ter) [32]. SequenceVariant ClinVar:1005794, name: NM_005228.5(EGFR):c.3437G>T (p.Cys1146Phe) [33]. SequenceVariant record ClinVar:1006525 [34]. SequenceVariant ClinVar:1006618, name: NM_005228.5(EGFR):c.268C>T (p.Leu90Phe) [35]. SequenceVariant ClinVar:1006728, name: NM_005228.5(EGFR):c.437G>A (p.Gly146Asp) [36]. SequenceVariant ClinVar:1007379, name: NM_005228.5(EGFR):c.3056C>T (p.Pro1019Leu) [37]. SequenceVariant ClinVar:1007424, name: NM_005228.5(EGFR):c.2091A>C (p.Glu697Asp) [38]. SequenceVariant ClinVar:1007797, name: NM_005228.5(EGFR):c.2150T>C (p.Val717Ala) [39]. SequenceVariant ClinVar:1008399, name: NM_005228.5(EGFR):c.3574G>A (p.Ala1192Thr) [40]. SequenceVariant ClinVar:1008401, name: NM_005228.5(EGFR):c.2537A>G (p.Lys846Arg) [41]. SequenceVariant ClinVar:1009011, name: NM_005228.5(EGFR):c.1795G>A (p.Val599Ile) [42]. SequenceVariant ClinVar:1009550, name: NM_005228.5(EGFR):c.3575C>G (p.Ala1192Gly) [43]. \n\nGene records found\n\nGene symbol: EGFR [44]. Gene name: EGFR [48]. \n\nPubmed records found\n\nPubmed title: Review on Epidermal Growth Factor Receptor (EGFR) Structure, Signaling Pathways, Interactions, and Recent Updates of EGFR Inhibitors [45]. Pubmed title: Dual EGFR-VEGF Pathway Inhibition: A Promising Strategy for Patients With EGFR-Mutant NSCLC [49]. Pubmed title: S645C Point Mutation Suppresses Degradation of EGFR to Promote Progression of Glioblastoma [51]. Pubmed title: Three-tiered EGFr domain risk stratification for individualized NOTCH3-small vessel disease prediction [53]. Pubmed title: EGFR Pathway Expression Persists in Recurrent Glioblastoma Independent of Amplification Status [55]. \n\nClinvar records found\n\nClinvar title: NM_005228.5(EGFR):c.3271+62C>G [46]. Clinvar title: NM_005228.5(EGFR):c.1881-2649C>T [50]. Clinvar title: NC_000007.13:g.(?_55086709)_(55220358_55221703)dup [52]. Clinvar title: NM_005228.5(EGFR):c.1912A>G (p.Thr638Ala) [54]. Clinvar title: NM_005228.5(EGFR):c.1632-87A>G [56]. \n\nOmim records found\n\nEPIDERMAL GROWTH FACTOR RECEPTOR [47]. EGFR [47]. \n\nNote: this answer was truncated because only 141 of the 4002 records that matched this question in the graph were retrieved"
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.331,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 811,
+    "completion_tokens": 44,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00011775,
+    "reply": null,
+    "dur": 3.207
+   },
+   {
+    "t": 3.542,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 1003,
+    "completion_tokens": 76,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 5.41695e-05,
+    "reply": null,
+    "dur": 1.394
+   },
+   {
+    "t": 9.87,
+    "model": "openrouter/z-ai/glm-5.2",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 11414,
+    "completion_tokens": 435,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.0178936,
+    "reply": "## EGFR Variant Landscape in NSCLC\n\nThe retrieved ClinVar records enumerate numerous EGFR sequence variants of potential relevance to non-small cell lung cancer, spanning missense substitutions and one synonymous change across the coding sequence [6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. These variants are distributed throughout the EGFR protein, including the extracellular ligand-binding domain and the intracellular tyrosine kinase domain, reflecting the breadth of EGFR alteration catalogued in ClinVar [6][7][8][9][14][22][10][11]. One variant, ClinVar:1001782, is a synonymous substitution at codon 873, indicating that not all catalogued EGFR changes alter the amino acid sequence [16].\n\n## Clinical Trials Targeting EGFR-Mutant NSCLC\n\nSeveral registered trials evaluate EGFR-directed therapy in NSCLC, including a retrospective study of the TKIs gefitinib, erlotinib, and osimertinib [1]. A separate trial examines survival outcomes of EGFR-TKI treatment specifically in patients with uncommon EGFR mutations [2]. Osimertinib is being studied as a single agent for advanced EGFR-positive NSCLC [3], and another trial investigates cerebrospinal fluid analysis in EGFR-mutant NSCLC with leptomeningeal disease [4]. A trial of EGFR/B7H3 CAR-T cell therapy is also enrolling patients with lung cancer and triple-negative breast cancer [5].\n\n## Summary\n\nThe findings illustrate a dual evidence base: a broad catalogue of individual EGFR variants from ClinVar and a set of active or registered clinical trials testing EGFR-targeted interventions in NSCLC [6][1][2][3][4][5]. However, the retrieved findings do not specify which ClinVar variants are the oncogenic drivers targeted by these trials, nor do they confirm the recruitment status of each trial listed.",
+    "dur": 3.325
+   },
+   {
+    "t": 13.2,
+    "model": "openrouter/z-ai/glm-5.2",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 12393,
+    "completion_tokens": 700,
+    "cached_tokens": 10112,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.00768908,
+    "reply": "EGFR mutations in non-small cell lung cancer (NSCLC) are well-documented in ClinVar with 25 distinct variants in the EGFR gene (NM_005228.5), and at least five clinical trials are evaluating EGFR-targeted therapies for NSCLC patients [6][1].\n\n## EGFR Sequence Variants\n\nThe ClinVar registry contains numerous EGFR missense and synonymous variants catalogued under transcript NM_005228.5, including p.Asn280Lys (ClinVar:1000076), p.Arg222Cys (ClinVar:1000203), p.Arg165Gln (ClinVar:1000496), p.Gln218Lys (ClinVar:1000546), and p.Thr605Ala (ClinVar:1000851) [6][7][8][9][10]. Additional variants include p.Ser885Ala (ClinVar:1000960), p.Gly331Arg (ClinVar:1001152), p.Trp608Arg (ClinVar:1001187), p.Pro520Leu (ClinVar:1001705), and p.Pro914Arg (ClinVar:1001710) [11][12][13][14][15]. A synonymous variant, p.Gly873= (ClinVar:1001782), is also recorded alongside missense changes such as p.Ile780Thr (ClinVar:1002380), p.Gln557Arg (ClinVar:1002493), p.Thr241Ala (ClinVar:1002562), and p.Val1011Leu (ClinVar:1002578) [16][17][18][19][20]. Further variants include p.Ser1070Asn (ClinVar:1002794), p.Thr488Ser (ClinVar:1003132), p.Arg973Gly (ClinVar:1003262), p.Ser350Cys (ClinVar:1003305), and p.His559Tyr (ClinVar:1003743) [21][22][23][24][25]. Rounding out the set are p.Val659Leu (ClinVar:1003794), p.Met945Val (ClinVar:1004032), p.Gln181Glu (ClinVar:1004363), p.Ile580Thr (ClinVar:1004409), and p.Asn528Asp (ClinVar:1004521) [26][27][28][29][30].\n\n## EGFR-TKI Clinical Trials\n\nA retrospective study comparing gefitinib, erlotinib, and osimertinib in NSCLC patients is registered, as is a survival-outcome study of EGFR-TKIs in uncommon EGFR-mutant advanced NSCLC [1][2]. A trial of osimertinib for advanced EGFR-positive NSCLC patients is also listed [3].\n\n## Special-Setting and Cellular Therapy Trials\n\nA CSF analysis trial is enrolling EGFR-mutant NSCLC patients with leptomeningeal disease, and an EGFR/B7H3 CAR-T cell therapy trial targeting lung cancer and triple-negative breast cancer is registered [4][5].",
+    "dur": 3.919
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.327,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 3.2072927089975565,
+    "prompt_tokens": 811,
+    "completion_tokens": 44,
+    "cost_usd": 4.228896e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 3.211
+   },
+   {
+    "t": 3.542,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 1.393592249998619,
+    "prompt_tokens": 1003,
+    "completion_tokens": 76,
+    "cost_usd": 5.4331200000000006e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 1.394
+   },
+   {
+    "t": 9.868,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 3.3248508329998003,
+    "prompt_tokens": 11414,
+    "completion_tokens": 435,
+    "cost_usd": 0.0083026304,
+    "model": "z-ai/glm-5.2",
+    "dur": 3.327
+   },
+   {
+    "t": 13.2,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 3.9194186669992632,
+    "prompt_tokens": 12393,
+    "completion_tokens": 700,
+    "cost_usd": 0.0094796128,
+    "model": "z-ai/glm-5.2",
+    "dur": 3.92
+   }
+  ],
+  "grounding": [
+   {
+    "t": 13.198,
+    "dur": 0.001,
+    "narrative_chars": 1723,
+    "narrative": "The retrieved ClinVar records enumerate numerous EGFR sequence variants of potential relevance to non-small cell lung cancer, spanning missense substitutions and one synonymous change across the coding sequence [6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][30]. These variants are distributed throughout the EGFR protein, including the extracellular ligand-binding domain and the intracellular tyrosine kinase domain, reflecting the breadth of EGFR alteration catalogued in ClinVar [6][7][8][9][14][22][10][11]. One variant, ClinVar:1001782, is a synonymous substitution at codon 873, indicating that not all catalogued EGFR changes alter the amino acid sequence [16]. Several registered trials evaluate EGFR-directed therapy in NSCLC, including a retrospective study of the TKIs gefitinib, erlotinib, and osimertinib [1]. A separate trial examines survival outcomes of EGFR-TKI treatment specifically in patients with uncommon EGFR mutations [2]. Osimertinib is being studied as a single agent for advanced EGFR-positive NSCLC [3], and another trial investigates cerebrospinal fluid analysis in EGFR-mutant NSCLC with leptomeningeal disease [4]. A trial of EGFR/B7H3 CAR-T cell therapy is also enrolling patients with lung cancer and triple-negative breast cancer [5]. The findings illustrate a dual evidence base: a broad catalogue of individual EGFR variants from ClinVar and a set of active or registered clinical trials testing EGFR-targeted interventions in NSCLC [6][1][2][3][4][5]. However, the retrieved findings do not specify which ClinVar variants are the oncogenic drivers targeted by these trials, nor do they confirm the recruitment status of each trial listed.",
+    "sentences": [],
+    "claims": 0,
+    "claim_ids": [],
+    "claim_detail": [],
+    "stripped": 10,
+    "refused": true
+   },
+   {
+    "t": 17.121,
+    "dur": 0.0011,
+    "narrative_chars": 1906,
+    "narrative": "EGFR mutations in non-small cell lung cancer (NSCLC) are well-documented in ClinVar with 25 distinct variants in the EGFR gene (NM_005228.5), and at least five clinical trials are evaluating EGFR-targeted therapies for NSCLC patients [6][1]. The ClinVar registry contains numerous EGFR missense and synonymous variants catalogued under transcript NM_005228.5, including p.Asn280Lys (ClinVar:1000076), p.Arg222Cys (ClinVar:1000203), p.Arg165Gln (ClinVar:1000496), p.Gln218Lys (ClinVar:1000546), and p.Thr605Ala (ClinVar:1000851) [6][7][8][9][10]. Additional variants include p.Ser885Ala (ClinVar:1000960), p.Gly331Arg (ClinVar:1001152), p.Trp608Arg (ClinVar:1001187), p.Pro520Leu (ClinVar:1001705), and p.Pro914Arg (ClinVar:1001710) [11][12][13][14][15]. A synonymous variant, p.Gly873= (ClinVar:1001782), is also recorded alongside missense changes such as p.Ile780Thr (ClinVar:1002380), p.Gln557Arg (ClinVar:1002493), p.Thr241Ala (ClinVar:1002562), and p.Val1011Leu (ClinVar:1002578) [16][17][18][19][20]. Further variants include p.Ser1070Asn (ClinVar:1002794), p.Thr488Ser (ClinVar:1003132), p.Arg973Gly (ClinVar:1003262), p.Ser350Cys (ClinVar:1003305), and p.His559Tyr (ClinVar:1003743) [21][22][23][24][25]. Rounding out the set are p.Val659Leu (ClinVar:1003794), p.Met945Val (ClinVar:1004032), p.Gln181Glu (ClinVar:1004363), p.Ile580Thr (ClinVar:1004409), and p.Asn528Asp (ClinVar:1004521) [26][27][28][29][30]. A retrospective study comparing gefitinib, erlotinib, and osimertinib in NSCLC patients is registered, as is a survival-outcome study of EGFR-TKIs in uncommon EGFR-mutant advanced NSCLC [1][2]. A trial of osimertinib for advanced EGFR-positive NSCLC patients is also listed [3]. A CSF analysis trial is enrolling EGFR-mutant NSCLC patients with leptomeningeal disease, and an EGFR/B7H3 CAR-T cell therapy trial targeting lung cancer and triple-negative breast cancer is registered [4][5].",
+    "sentences": [
+     "A trial of osimertinib for advanced EGFR-positive NSCLC patients is also listed [1]."
+    ],
+    "claims": 1,
+    "claim_ids": [
+     "ct-ce8dd82ab7b1-3"
+    ],
+    "claim_detail": [
+     {
+      "text": "A trial of osimertinib for advanced EGFR-positive NSCLC patients is also listed",
+      "quote": "",
+      "ref": 3,
+      "field": "name",
+      "value": "Osimertinib for Advanced EGFR-positive NSCLC Patients"
+     }
+    ],
+    "stripped": 8,
+    "refused": false
+   }
+  ],
+  "sentence_check": [],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "name",
+    "value": "A Retrospective Study of EGFR-TKIs,Gefitinib, Erlotinib and Osimertinib in NSCLC Patients Treatment",
+    "url": "https://clinicaltrials.gov/study/NCT01994057"
+   },
+   {
+    "ref": 2,
+    "field": "name",
+    "value": "Survival Outcome of EGFR-TKI in Uncommon EGFR Mutant Advanced NSCLC",
+    "url": "https://clinicaltrials.gov/study/NCT04324164"
+   },
+   {
+    "ref": 3,
+    "field": "name",
+    "value": "Osimertinib for Advanced EGFR-positive NSCLC Patients",
+    "url": "https://clinicaltrials.gov/study/NCT05037331"
+   },
+   {
+    "ref": 4,
+    "field": "name",
+    "value": "CSF Analysis in EGFR Mutant Non-Small Cell Lung Cancer With Leptomeningeal Disease",
+    "url": "https://clinicaltrials.gov/study/NCT05257967"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "EGFR/B7H3 CAR-T on Lung Cancer and Triple Negative Breast Cancer",
+    "url": "https://clinicaltrials.gov/study/NCT05341492"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.840C>A (p.Asn280Lys)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000076"
+   },
+   {
+    "ref": 7,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.664C>T (p.Arg222Cys)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000203"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.494G>A (p.Arg165Gln)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000496"
+   },
+   {
+    "ref": 9,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.652C>A (p.Gln218Lys)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000546"
+   },
+   {
+    "ref": 10,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1813A>G (p.Thr605Ala)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000851"
+   },
+   {
+    "ref": 11,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.2653T>G (p.Ser885Ala)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000960"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.991G>A (p.Gly331Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001152"
+   },
+   {
+    "ref": 13,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1822T>A (p.Trp608Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001187"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1559C>T (p.Pro520Leu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001705"
+   },
+   {
+    "ref": 15,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.2741C>G (p.Pro914Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001710"
+   },
+   {
+    "ref": 16,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.2619A>T (p.Gly873=)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001782"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.2339T>C (p.Ile780Thr)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002380"
+   },
+   {
+    "ref": 18,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1670A>G (p.Gln557Arg)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002493"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.721A>G (p.Thr241Ala)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002562"
+   },
+   {
+    "ref": 20,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.3031G>C (p.Val1011Leu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002578"
+   },
+   {
+    "ref": 21,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.3209G>A (p.Ser1070Asn)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002794"
+   },
+   {
+    "ref": 22,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1463C>G (p.Thr488Ser)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003132"
+   },
+   {
+    "ref": 23,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.2917C>G (p.Arg973Gly)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003262"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1049C>G (p.Ser350Cys)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003305"
+   },
+   {
+    "ref": 25,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1675C>T (p.His559Tyr)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003743"
+   },
+   {
+    "ref": 26,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1975G>C (p.Val659Leu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003794"
+   },
+   {
+    "ref": 27,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.2833A>G (p.Met945Val)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004032"
+   },
+   {
+    "ref": 28,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.541C>G (p.Gln181Glu)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004363"
+   },
+   {
+    "ref": 29,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1739T>C (p.Ile580Thr)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004409"
+   },
+   {
+    "ref": 30,
+    "field": "name",
+    "value": "NM_005228.5(EGFR):c.1582A>G (p.Asn528Asp)",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004521"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 3.539,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 3.539,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 5.493,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.493,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 5.495,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 5.496,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.496,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.497,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.497,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.497,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.497,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.497,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 5.497,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.705,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.754,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.767,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.832,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.834,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.89,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 5.967,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 6.153,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.296,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.756,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.786,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.786,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 9.847,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 9.863,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.187,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.188,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.189,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.19,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.193,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.194,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.194,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.194,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 17.194,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 17.194,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 17.195,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.01796072136,
+  "total_tool_calls": 10,
+  "elapsed_ms": 17193,
+  "trust_outcome": "answer",
+  "trust_line": "Based on 56 sources",
+  "layer_calls_used": 13,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 1.0,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 302
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.43,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 319
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.85,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 346
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 0.96,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 356
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://clinicaltrials.gov/study/NCT01994057",
+  "https://clinicaltrials.gov/study/NCT04324164",
+  "https://clinicaltrials.gov/study/NCT05037331",
+  "https://clinicaltrials.gov/study/NCT05257967",
+  "https://clinicaltrials.gov/study/NCT05341492",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000076",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000203",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000496",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000546",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000851",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000960",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001152",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001187",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001705",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001710",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001782",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002380",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002493",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002562",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002578",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002794",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003132",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003262",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003305",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003743",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003794",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004032",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004363",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004409",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004521",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005378",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005727",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005794",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006525",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006618",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1006728",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007379",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007424",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007797",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008399",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008401",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009011",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009550",
+  "https://www.ncbi.nlm.nih.gov/gene/1956/",
+  "https://pubmed.ncbi.nlm.nih.gov/32124699/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905791/",
+  "https://omim.org/entry/131550",
+  "https://www.ncbi.nlm.nih.gov/gene/1956",
+  "https://pubmed.ncbi.nlm.nih.gov/33096270/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4535271/",
+  "https://pubmed.ncbi.nlm.nih.gov/35814475/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4535946/",
+  "https://pubmed.ncbi.nlm.nih.gov/36535904/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4685791/",
+  "https://pubmed.ncbi.nlm.nih.gov/36765632/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/4856933/"
+ ]
+}

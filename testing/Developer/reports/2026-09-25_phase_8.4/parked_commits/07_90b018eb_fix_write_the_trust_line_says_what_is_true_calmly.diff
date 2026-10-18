@@ -1,0 +1,168 @@
+Commit 90b018eb, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: fix(write): the trust line says what is true, calmly
+
+Card 16 (2026-09-25). The ask-tier trust line read "Based on N
+source(s), not yet confirmed" for two different situations alike: a
+claim resting on one database, and a claim resting on several
+databases whose values could not be shown to agree. Both read as a
+promise that confirmation is merely pending, which is only true of
+the first.
+
+synthesis/trust.py's answer_trust_line now says which happened, from
+the database count it already computes: "Based on N source(s) from
+one database" for a single database, "Based on N source(s) from M
+databases, which differ" for two or more. The tier logic in decide()
+and DECISION_TABLE is unchanged; only the ask-branch wording moved.
+Updated every pinned assertion of the old text under this fence, and
+the illustrative comment on DonePayload.trust_line in
+contracts/events.py. Adds builder F's phase 8.4 report, naming the
+core/graph.py wiring two other tickets need and the frontend fixtures
+still pinning the old wording, both out of this fence.
+
+
+diff --git a/src/system_03_search_agent/contracts/events.py b/src/system_03_search_agent/contracts/events.py
+index 740e854a..6fad9786 100644
+--- a/src/system_03_search_agent/contracts/events.py
++++ b/src/system_03_search_agent/contracts/events.py
+@@ -446,7 +446,7 @@ class DonePayload(BaseModel):
+     trust_outcome: TrustOutcome
+ 
+     # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
+-    # answer ("Based on 1 source, not yet confirmed"), built in code by
++    # answer ("Based on 1 source from one database"), built in code by
+     # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
+     # already summarises. Additive and optional; None on a refusal. Carried
+     # HERE rather than on `TrustSignalPayload` because the MCP surface
+diff --git a/src/system_03_search_agent/synthesis/trust.py b/src/system_03_search_agent/synthesis/trust.py
+index 95a99fb4..45e39749 100644
+--- a/src/system_03_search_agent/synthesis/trust.py
++++ b/src/system_03_search_agent/synthesis/trust.py
+@@ -561,11 +561,32 @@ def answer_trust_line(
+       concordant, and two or more independent databases: "Confirmed by N
+       independent sources". This is the only line that says "confirmed",
+       because concordance is the only verdict that means it.
+-    - `ask`: "Based on N source(s), not yet confirmed".
++    - `ask` from a single database: "Based on N source(s) from one
++      database".
++    - `ask` from two or more databases whose values could not be shown to
++      agree: "Based on N source(s) from M databases, which differ". Card 16
++      (2026-09-25): see this function's own comment below for why the wording
++      changed from "not yet confirmed".
+     - Otherwise (every claim low risk): "Based on N source(s)". Low-risk
+-      claims are never triangulated, so "not yet confirmed" would imply a
++      claims are never triangulated, so a database count would imply a
+       check that does not apply to them.
+ 
++    ## Card 16 (2026-09-25): the `ask` line says what is true, calmly
++
++    "Based on N source(s), not yet confirmed" was the whole `ask` wording,
++    for two different situations Section 8.3.2 both routes to `insufficient`
++    triangulation: a claim resting on exactly one database, and a claim
++    resting on two or more databases whose categorical values could not be
++    matched to a common bucket (Section 8.3.2's equivalence table). Naming
++    both "not yet confirmed" told the reader nothing about WHY: it reads as
++    a promise that confirmation is merely pending, which is only true of the
++    first case. In the second case there already are several sources and
++    they still could not be shown to agree, which is closer to a
++    disagreement than to a pause. The new wording states which of the two
++    happened, from the same `database_count` this function already computes,
++    with no new field and no new verdict: a single database gets "from one
++    database", two or more get "from M databases, which differ".
++
+     ## Fix-plan item 12.8 (2026-09-23): two different counts, not one
+ 
+     Measured against real runs (`testing/Developer/reports/2026-09-23_set12/
+@@ -621,5 +642,7 @@ def answer_trust_line(
+     ):
+         return f"Confirmed by {database_count} independent sources"
+     if trust_outcome == "ask":
+-        return f"Based on {citation_count} {noun}, not yet confirmed"
++        if database_count >= 2:
++            return f"Based on {citation_count} {noun} from {database_count} databases, which differ"
++        return f"Based on {citation_count} {noun} from one database"
+     return f"Based on {citation_count} {noun}"
+diff --git a/testing/Developer/reports/2026-09-25_phase_8.4/builder_F.md b/testing/Developer/reports/2026-09-25_phase_8.4/builder_F.md
+new file mode 100644
+index 00000000..ee5eb856
+--- /dev/null
++++ b/testing/Developer/reports/2026-09-25_phase_8.4/builder_F.md
+@@ -0,0 +1,57 @@
++# Builder F, build phase 8.4, "answers worth reading"
++
++Four tickets, all decided by the product owner on 2026-09-25 (DECISIONS.md rows of that date). File fence: `synthesis/answer_layout.py`, `synthesis/grounding.py`, `synthesis/trust.py`, `contracts/events.py` (wording only), tests under `tests/system_03_search_agent/synthesis/` and `tests/system_03_search_agent/contracts/`.
++
++## Card 32: the variant-to-disease table says where it comes from
++
++Added `VARIANT_TO_DISEASE_SOURCE_NOTE` (the pinned text, exact) and `variant_to_disease_source_note(entity_type, mapped)` to `synthesis/answer_layout.py`, right after `TABLE_HEADINGS`. Returns the note only for `entity_type == "SequenceVariant"` with `mapped` true, the same two conditions `core/graph.py`'s `listing()` closure already checks before choosing `TABLE_HEADINGS[entity_type]` over the generic "records found" heading, so the note lines up with exactly the table it names.
++
++Tests: `test_the_variant_to_disease_table_names_its_two_sources` (pins the exact string) and `test_the_variant_to_disease_note_is_silent_off_its_own_table` (parametrized over Gene, Clinical trial, Pathogen Detection isolate, an unmapped SequenceVariant, and the empty type, asserting `None` for every one).
++
++WIRING NEEDED IN `core/graph.py`, out of my fence, owned by another builder tonight: in the `listing()` closure, right after the block that computes `mapped` and picks `TABLE_HEADINGS.get(entity_type, records_heading)` (around line 9330 to 9364 on the branch I read), call `variant_to_disease_source_note(entity_type, mapped)` once per table group and append the result (when not `None`) to that table's own note, the same way `placeholder_note` is appended to the answer's `notes` list further down (around line 10567). It must be its own note, scoped to the Variant-to-disease table specifically, not folded into the answer-wide `notes` list unconditionally, since the ticket says "shown only when that table is shown."
++
++## Card 25: a reworded sentence never points at the wrong paper through a generic shared word
++
++`_names_its_record` in `synthesis/grounding.py` used to accept a reworded sentence that switched records on ANY shared content word with that record's title. Fixed with a structural rule, no stop-word list, per the owner's ruling ("Structure, not words"):
++
++A shared word only counts when it does NOT also appear in every OTHER cited record's title in the same answer. `_names_its_record(sentence, labels, other_labels="")` now takes the switched-to record's own title text (`labels`) and every other record's title text in the answer (`other_labels`), and returns true only when `stemmed(sentence) & stemmed(labels)` has at least one word outside `stemmed(other_labels)`. The call site (inside `run_grounding_pass`) now builds `other_labels` from `labels_by_url`, excluding the URLs cited by the current sentence.
++
++This directly fixes the measured residual (`testing/UI_fixes_done.md`, item 12.16 part 4): "patients" sat in a BRCA title and, in the replay, also in the Tay-Sachs title in the same answer, so it names nothing. A genuinely distinguishing word (unique to the record actually being switched to, "BRCA1", "breast", "cancer" in the replay) still licenses the switch.
++
++Tests added to `tests/system_03_search_agent/synthesis/test_sentence_check.py`: `test_a_generic_shared_word_does_not_name_the_switch` (replays the Tay-Sachs/BRCA case, asserts the reworded sentence is dropped) and `test_a_distinguishing_word_still_names_the_switch` (proves the fix is not a blanket ban on switching records). Existing tests (`test_the_switch_rule_can_fail`, `test_naming_the_other_record_instead_of_referring_back_stays`, and the rest of that file) still pass unchanged. Full scoped run: `python3 -m pytest tests/system_03_search_agent/synthesis -q` passes, 661 passed, 10 skipped, 1 xfailed (skips and the one xfail predate this work).
++
++Note for whoever reproduces this kind of case again: the exact substring shortcut through `ground_claim`'s strict path bypasses the switch check entirely (`reworded` only becomes true when the sentence took the quote-anchored synthesis path). A probe that is a literal prefix of its quote never exercises `_names_its_record` at all; the replay test's probe deliberately reworks a word ("carried" to "had") so it takes that path.
++
++## Card 16: the trust line says what is true, calmly
++
++`synthesis/trust.py`'s `answer_trust_line`, the `ask` branch only (the tier logic in `synthesis/trust.py`'s `decide`/`DECISION_TABLE` is untouched):
++
++- Single database: "Based on N source(s) from one database" (was "Based on N source(s), not yet confirmed").
++- Two or more databases (triangulation still came back insufficient, meaning the values could not be shown to agree): "Based on N source(s) from M databases, which differ".
++
++I chose "which differ" for the multi-database `ask` case, per the ticket's own suggested wording. From the user's chair: a reader looking at several sources from several databases that could not be confirmed to agree deserves to be told that plainly rather than "not yet confirmed", which reads as a promise that confirmation is merely pending. "Which differ" is honest without claiming more precision than the system actually computed (Section 8.3.2's bucket comparison, not a raw-value diff).
++
++Updated every pinned assertion of the old text under my fence: `test_trust_line_single_source_not_confirmed` and `test_trust_line_based_on_counts_visible_citations_not_databases` in `tests/system_03_search_agent/synthesis/test_answer_layout.py`. Also reworded the illustrative comment in `contracts/events.py` on `DonePayload.trust_line` (comment only, not a schema change).
++
++NOT IN MY FENCE, flagging rather than fixing: `tests/system_03_search_agent/core/test_layer_handoff.py` line 230 mentions "not yet confirmed" but only in a comment, not an assertion, so it needs no change. Several `frontend/` test files (`answerLayout.test.tsx`, `set9AnswerStructure.test.tsx`, `answerPagination.test.tsx`) pin the OLD wording in fixture data and one assertion (`set9AnswerStructure.test.tsx` lines 116, 224, 229). I did not touch `frontend/`, per my fence. Whoever owns the frontend surface for this phase will need to update those fixtures and that assertion to the new wording, or the frontend suite will show a stale string that no longer matches what the backend emits (though it will not itself fail, since those are fixture literals, not calls into the backend).
++
++## Card 26: a record with several sentences shows as one entry, not several list rows
++
++Investigated first, per the ticket's own instruction to report if the cause is elsewhere. It is elsewhere, split across two files, only one of which is in my fence:
++
++- `synthesis/findings.py`'s `build_structured_fallback_narrative` (item 11.34, not in my fence) marks every sentence of a multi-sentence finding value with that SAME finding's `ref_index`, so `run_grounding_pass` grounds each sentence independently instead of losing the whole value to one unreachable trailing marker. This is correct and not the defect; it is why a long abstract survives grounding as several separate grounded sentences that all point at the same citation.
++- `core/graph.py`'s `listing()` closure (not in my fence, owned by another builder tonight) is what actually builds the list rows. It loops `for sentence in sentences: ids = marker_ids(sentence); finding = finding_by_citation_id.get(ids[0]); groups.setdefault(key, []).append((sentence, finding))`, one row PER SURVIVING SENTENCE, with no dedup by citation. A three-sentence abstract that survives grounding as three sentences (all citing the same record) becomes three entries in `groups[key]` and therefore three rows under one heading.
++
++`synthesis/answer_layout.py` itself does none of the row-splitting; it only supplies the per-row label, cell and column helpers `listing()` calls. So the fix that belongs in my fence is a reusable merge function, not a change to the splitting logic itself (there is no splitting logic here to change).
++
++Added `merge_sentences_by_citation(entries)` to `synthesis/answer_layout.py`: collapses a list of `(sentence, finding_or_none)` pairs so that every entry sharing the same `finding.citation_id` becomes ONE entry, its sentences joined with a single space in survival order, keeping the group's first-occurrence position. An entry with `finding is None` (an unmarked framing sentence) is never merged with anything.
++
++Four tests in `tests/system_03_search_agent/synthesis/test_answer_layout.py`: the three-sentence-one-record case, two distinct records staying two entries, an unmarked framing sentence never merging, and a record's later sentence still folding into its FIRST row's position when another record's row sits between them.
++
++WIRING NEEDED IN `core/graph.py`, out of my fence: both `entries = groups[noun]` (around line 9315, the Researcher table/list path) and the loop inside `plain_listing()` (around line 9260, which does not even group first, it walks `sentences` directly) need to run their `(sentence, finding)` pairs through `merge_sentences_by_citation` before building rows. For `plain_listing`, the simplest correct change is to merge the raw `(sentence, finding)` pairs built from `sentences` before the `for sentence in sentences:` loop that emits `sentence_token`. For the Researcher path, `entries = merge_sentences_by_citation(groups[noun])` right where `entries = groups[noun]` is assigned.
++
++## Verification
++
++- `python3 -m pytest tests/system_03_search_agent/synthesis tests/system_03_search_agent/contracts -q`: 661 passed, 10 skipped, 1 xfailed. No test outside this run was executed, per instructions.
++- `ruff check` and `isort --check-only` on every file this ticket set touched: clean.
++- No database migration, no test question or answer text lifted into a prompt, no hardcoded decision added. The grounding gate stays exact (no fuzzy acceptance introduced): the Card 25 fix is a structural set-difference over stemmed title tokens, not a similarity score.
+diff --git a/tests/system_03_search_agent/synthesis/test_answer_layout.py b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+index 692f1199..b102c2d2 100644
+--- a/tests/system_03_search_agent/synthesis/test_answer_layout.py
++++ b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+@@ -315,7 +315,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
+ 
+ def test_trust_line_single_source_not_confirmed() -> None:
+     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
+-    assert line == "Based on 1 source, not yet confirmed"
++    assert line == "Based on 1 source from one database"
+ 
+ 
+ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+@@ -333,7 +333,7 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+     line = answer_trust_line(
+         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
+     )
+-    assert line == "Based on 3 sources, not yet confirmed"
++    assert line == "Based on 3 sources from 2 databases, which differ"
+ 
+ 
+ def test_trust_line_confirmed_still_counts_independent_databases() -> None:

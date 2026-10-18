@@ -1226,7 +1226,10 @@ class TestOmissionNotesStateTheRealReason:
         notes = _notes_text(result)
         assert result.disclosures.citations_omitted == 1
         assert "REJECTED" in notes
-        assert "50-citation limit" not in notes
+        # Read from the constant since build phase 8.10 raised the cap from
+        # 50 to 100 (T-8.10-06): a literal "50-citation limit" would pass
+        # vacuously under the very mutation named above.
+        assert f"{MAX_CITATIONS}-citation limit" not in notes
 
     @pytest.mark.asyncio
     async def test_an_unlisted_omission_reason_is_still_disclosed(

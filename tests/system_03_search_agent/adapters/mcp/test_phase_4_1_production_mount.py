@@ -30,12 +30,12 @@ imports `adapters/web_sse/app.py` (`test_health.py`,
 `test_phase_4_1_premise.py`, `auth/test_router.py`). Its session
 manager's `run()` may only be
 entered once for the lifetime of the test process. This file is the one
-and only place in the repo that enters it: `test_health.py` uses
+and only place in the repository that enters it: `test_health.py` uses
 `fastapi.testclient.TestClient(app)` WITHOUT the `with` statement (so its
 `__enter__`/`__exit__` lifespan handling never fires), and every other
 file drives `app` over `httpx.AsyncClient`/`httpx2.AsyncClient` +
 `ASGITransport`, which does not send ASGI `lifespan` scope events at all.
-Confirmed by grep before this file was written: no other test in the repo
+Confirmed by grep before this file was written: no other test in the repository
 calls `app.router.lifespan_context(app)` or uses `TestClient(app)` as a
 context manager. If that ever changes, this test (and whichever one
 collides with it) will fail loudly with `RuntimeError: Task group is not

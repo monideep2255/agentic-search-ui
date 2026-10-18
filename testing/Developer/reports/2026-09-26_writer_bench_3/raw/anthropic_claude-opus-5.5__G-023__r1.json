@@ -1,0 +1,1408 @@
+{
+ "record": {
+  "model": "anthropic/claude-opus-5.5",
+  "model_id": "anthropic/claude-opus-5.5",
+  "synth_effort": "none",
+  "question_id": "G-023",
+  "run": 1,
+  "question": "Which clinically significant variants have been reported in CFTR?",
+  "trace_id": "trace-wb3-G-023-r1-a835d7e154d94cea",
+  "tree_commit": "00f45e8e",
+  "started_at": "2026-09-26T23:12:12Z",
+  "outcome": "answered",
+  "crash": null,
+  "trust_outcome": "ask",
+  "fatal_source": null,
+  "fatal_class": null,
+  "citations": 19,
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "withdrawn": false,
+  "writer_calls": 2,
+  "writer_calls_ok": 2,
+  "repair_fired": true,
+  "shipped_draft": 0,
+  "prose_sentences_kept": 3,
+  "prose_kept": [
+   "Mutations in this gene cause cystic fibrosis [1].",
+   "One ClinVar record is NM_000492.4(CFTR):c.1209+1988_1392+2067inv [2].",
+   "Another ClinVar record is NM_000492.4(CFTR):c.1392+2072_1392+2074del [3]."
+  ],
+  "prose_text": "Mutations in this gene cause cystic fibrosis [1].",
+  "jev_sent": 4,
+  "jev_approved": 0,
+  "writer_elapsed_s": [
+   19.891155791996425,
+   19.533313790998363
+  ],
+  "writer_completion_tokens": [
+   1739,
+   1770
+  ],
+  "writer_reasoning_tokens": [
+   1110,
+   588
+  ],
+  "writer_reasoning_refused": 2,
+  "writer_errors": [],
+  "wall_s": 55.614,
+  "done_elapsed_s": 55.586,
+  "metered_cost_usd": 0.21565749015999996,
+  "done_cost_usd": 0.21565749015999996,
+  "openrouter_cost_usd": 0.215552,
+  "writer_openrouter_cost_usd": 0.215404,
+  "writer_metered_cost_usd": 0.215404,
+  "answer_text": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record and 5 clinical trial records for CFTR and clinically significant [2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19]. \n\nMutations in this gene cause cystic fibrosis [1]. \n\nGene records found\n\nGene symbol: CFTR [2]. Gene name: CFTR [6]. \n\nPubmed records found\n\nPubmed title: Molecular Structure of the Human CFTR Ion Channel [3]. Pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [8]. Pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [11]. Pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [14]. Pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [17]. \n\nClinvar records found\n\nClinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [4]. Clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [9]. Clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [12]. Clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [15]. Clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [18]. \n\nOmim records found\n\nCYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR [5]. CFTR [5]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [7]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [10]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [13]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [16]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [19]. \n\nNote: this answer does not address the following entities named in the question: Clinically significant macular edema, Severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus, High risk proliferative retinopathy with clinically significant macula edema due to diabetes mellitus, Non-high-risk proliferative retinopathy with clinically significant macular edema due to diabetes mellitus, Very severe nonproliferative retinopathy with clinically significant macular edema due to diabetes mellitus, Macular edema not clinically significant due to diabetes mellitus, Clinically Significant Indicator, Clinically significant macular edema of right eye due to diabetes mellitus. Ask about them individually for a complete answer."
+ },
+ "rec": {
+  "llm": [
+   {
+    "t": 0.641,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 128,
+    "ok": true,
+    "prompt_tokens": 797,
+    "completion_tokens": 40,
+    "cached_tokens": 0,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 8.5946e-05,
+    "reply": null,
+    "dur": 6.059
+   },
+   {
+    "t": 6.716,
+    "model": "openrouter/deepseek/deepseek-v4-flash",
+    "synth": false,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 991,
+    "completion_tokens": 93,
+    "cached_tokens": 942,
+    "reasoning_tokens": 0,
+    "finish": "stop",
+    "openrouter_cost_usd": 6.1648e-05,
+    "reply": null,
+    "dur": 5.136
+   },
+   {
+    "t": 15.037,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": false,
+    "error": "BadRequestError",
+    "message": "litellm.BadRequestError: OpenrouterException - {\"error\":{\"message\":\"Reasoning is mandatory for this endpoint and cannot be disabled.\",\"code\":400,\"metadata\":{\"provider_name\":null}}}",
+    "dur": 0.128
+   },
+   {
+    "t": 15.166,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": false,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 17502,
+    "completion_tokens": 1739,
+    "cached_tokens": 0,
+    "reasoning_tokens": 1110,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.104788,
+    "reply": "Among CFTR variants, the one the findings describe as clinically important is DeltaF508 [11: \"The most frequently occurring mutation in cystic fibrosis, DeltaF508, results in impaired folding and trafficking of the encoded protein\"]. Mutations in this gene cause cystic fibrosis [11: \"Mutations in this gene cause cystic fibrosis, the most common lethal genetic disorder in populations of Northern European descent\"]. The other variant records retrieved are ClinVar entries for CFTR rearrangements, each listed below by its record title [3].\n\n## ClinVar rearrangement records\n\nOne ClinVar record is NM_000492.4(CFTR):c.1209+1988_1392+2067inv [3]. Another ClinVar record is NM_000492.4(CFTR):c.1392+2072_1392+2074del [10]. A deletion-insertion record is NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [16]. A second deletion-insertion record is NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [21]. A deletion record is NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [26].\n\n## DeltaF508 and therapeutic rescue\n\nA trial targeting this allele is Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [12]. Structural work on its correction is titled Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [20].\n\n## Variant-level modulator response\n\nBroader variant profiling appears in a study titled In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [25].",
+    "dur": 19.762
+   },
+   {
+    "t": 35.382,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": true,
+    "max_tokens": 4000,
+    "ok": false,
+    "error": "BadRequestError",
+    "message": "litellm.BadRequestError: OpenrouterException - {\"error\":{\"message\":\"Reasoning is mandatory for this endpoint and cannot be disabled.\",\"code\":400,\"metadata\":{\"provider_name\":null}}}",
+    "dur": 0.702
+   },
+   {
+    "t": 36.093,
+    "model": "openrouter/anthropic/claude-opus-5.5",
+    "synth": true,
+    "reasoning_param": false,
+    "max_tokens": 4000,
+    "ok": true,
+    "prompt_tokens": 18804,
+    "completion_tokens": 1770,
+    "cached_tokens": 0,
+    "reasoning_tokens": 588,
+    "finish": "stop",
+    "openrouter_cost_usd": 0.110616,
+    "reply": "The ClinVar records retrieved for CFTR are mostly large structural rearrangements, and the gene record names DeltaF508 as the most common cystic fibrosis mutation, which impairs protein folding [11: \"The most frequently occurring mutation in cystic fibrosis, DeltaF508, results in impaired folding and trafficking of the encoded protein\"]. The gene symbol is CFTR [1]. The gene name is CFTR [5]. The OMIM entry is CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR [4].\n\n## ClinVar Structural Variants\n\nOne ClinVar variant is NM_000492.4(CFTR):c.1209+1988_1392+2067inv [3]. Another is NM_000492.4(CFTR):c.1392+2072_1392+2074del [10]. Another is NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [16]. Another is NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [21]. Another is NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [26]. These records do not state a clinical significance classification, so pathogenicity cannot be confirmed from them [3].\n\n## Function and Structure\n\nCFTR acts as a chloride channel in epithelia [11: \"The encoded protein functions as a chloride channel\"]. One annotated process is monoatomic ion transport [8]. Another is chloride transport [14]. Another is water transport [19]. Another is bicarbonate transport [24]. Another is monoatomic ion transmembrane transport [29]. A cryo-EM study showed an R domain helix blocking the channel in dephosphorylated CFTR [30: \"a previously unresolved helix belonging to the R domain docked inside the intracellular vestibule, precluding channel opening\"]. That study is titled Molecular Structure of the Human CFTR Ion Channel. [2]\n\n## Literature and Trials\n\nOne paper is ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction. [9] Another is ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria. [15] Another is Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators. [20] Another is In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis. [25] Related publications include PMID 28340353 [7]. Another is PMID 36207272 [13]. Another is PMID 36220763 [18]. Another is PMID 36264792 [23]. Another is PMID 38388235 [28]. One trial is Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [12]. Another is NPDT Evaluation in Children With CFTR and (PSC) [6]. Another is Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [17]. Another is Effects of Sildenafil on CFTR-dependent Ion Transport Activity [22]. Another is Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [27].",
+    "dur": 18.823
+   }
+  ],
+  "call_tier": [
+   {
+    "t": 0.613,
+    "tier": "guard",
+    "ok": true,
+    "elapsed_s": 6.058956790999218,
+    "prompt_tokens": 797,
+    "completion_tokens": 40,
+    "cost_usd": 4.125408e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 6.087
+   },
+   {
+    "t": 6.716,
+    "tier": "plan",
+    "ok": true,
+    "elapsed_s": 5.136329959001159,
+    "prompt_tokens": 991,
+    "completion_tokens": 93,
+    "cost_usd": 5.5366080000000004e-05,
+    "model": "deepseek/deepseek-v4-flash",
+    "dur": 5.136
+   },
+   {
+    "t": 15.036,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 19.891155791996425,
+    "prompt_tokens": 17502,
+    "completion_tokens": 1739,
+    "cost_usd": 0.104788,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 19.893
+   },
+   {
+    "t": 35.382,
+    "tier": "synth",
+    "ok": true,
+    "elapsed_s": 19.533313790998363,
+    "prompt_tokens": 18804,
+    "completion_tokens": 1770,
+    "cost_usd": 0.11061599999999999,
+    "model": "anthropic/claude-opus-5.5",
+    "dur": 19.534
+   }
+  ],
+  "grounding": [
+   {
+    "t": 34.933,
+    "dur": 0.398,
+    "narrative_chars": 1104,
+    "narrative": "Among CFTR variants, the one the findings describe as clinically important is DeltaF508 [11#0]. Mutations in this gene cause cystic fibrosis [11#1]. The other variant records retrieved are ClinVar entries for CFTR rearrangements, each listed below by its record title [3]. One ClinVar record is NM_000492.4(CFTR):c.1209+1988_1392+2067inv [3]. Another ClinVar record is NM_000492.4(CFTR):c.1392+2072_1392+2074del [10]. A deletion-insertion record is NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [16]. A second deletion-insertion record is NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [21]. A deletion record is NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [26]. A trial targeting this allele is Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [12]. Structural work on its correction is titled Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [20]. Broader variant profiling appears in a study titled In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [25].",
+    "sentences": [
+     "Mutations in this gene cause cystic fibrosis [1].",
+     "One ClinVar record is NM_000492.4(CFTR):c.1209+1988_1392+2067inv [2].",
+     "Another ClinVar record is NM_000492.4(CFTR):c.1392+2072_1392+2074del [3]."
+    ],
+    "claims": 3,
+    "claim_ids": [
+     "ne-1f4451a319b3-10",
+     "ne-1f4451a319b3-3",
+     "ne-a9a7911406c3-11"
+    ],
+    "claim_detail": [
+     {
+      "text": "Mutations in this gene cause cystic fibrosis",
+      "quote": "",
+      "ref": 11,
+      "field": "summary",
+      "value": "This gene encodes a member of the ATP-binding cassette (ABC) transporter superfamily. The encoded protein functions as a chloride channel, making it unique among members of this protein family, and controls ion and water secretion and absorption in epithelial tissues. Channel activation is mediated "
+     },
+     {
+      "text": "One ClinVar record is NM_000492.4(CFTR):c.1209+1988_1392+2067inv",
+      "quote": "",
+      "ref": 3,
+      "field": "title",
+      "value": "NM_000492.4(CFTR):c.1209+1988_1392+2067inv"
+     },
+     {
+      "text": "Another ClinVar record is NM_000492.4(CFTR):c.1392+2072_1392+2074del",
+      "quote": "",
+      "ref": 10,
+      "field": "title",
+      "value": "NM_000492.4(CFTR):c.1392+2072_1392+2074del"
+     }
+    ],
+    "stripped": 8,
+    "refused": false
+   },
+   {
+    "t": 54.918,
+    "dur": 0.3131,
+    "narrative_chars": 2332,
+    "narrative": "The ClinVar records retrieved for CFTR are mostly large structural rearrangements, and the gene record names DeltaF508 as the most common cystic fibrosis mutation, which impairs protein folding [11#0]. The gene symbol is CFTR [1]. The gene name is CFTR [5]. The OMIM entry is CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR [4]. One ClinVar variant is NM_000492.4(CFTR):c.1209+1988_1392+2067inv [3]. Another is NM_000492.4(CFTR):c.1392+2072_1392+2074del [10]. Another is NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [16]. Another is NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [21]. Another is NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [26]. These records do not state a clinical significance classification, so pathogenicity cannot be confirmed from them [3]. CFTR acts as a chloride channel in epithelia [11#1]. One annotated process is monoatomic ion transport [8]. Another is chloride transport [14]. Another is water transport [19]. Another is bicarbonate transport [24]. Another is monoatomic ion transmembrane transport [29]. A cryo-EM study showed an R domain helix blocking the channel in dephosphorylated CFTR [30#2]. That study is titled Molecular Structure of the Human CFTR Ion Channel. [2]. One paper is ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction. [9] Another is ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria. [15] Another is Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators. [20] Another is In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis. [25] Related publications include PMID 28340353 [7]. Another is PMID 36207272 [13]. Another is PMID 36220763 [18]. Another is PMID 36264792 [23]. Another is PMID 38388235 [28]. One trial is Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [12]. Another is NPDT Evaluation in Children With CFTR and (PSC) [6]. Another is Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [17]. Another is Effects of Sildenafil on CFTR-dependent Ion Transport Activity [22]. Another is Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [27].",
+    "sentences": [
+     "The gene symbol is CFTR [1].",
+     "The gene name is CFTR [2].",
+     "CFTR [3].",
+     "Another is NM_000492.4(CFTR):c.1392+2072_1392+2074del [4].",
+     "Another is NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [5].",
+     "Another is NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [6].",
+     "Another is NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [7].",
+     "Another is chloride transport [8].",
+     "Another is water transport [9].",
+     "Another is bicarbonate transport [10].",
+     "Another is monoatomic ion transmembrane transport [11].",
+     "Another is PMID 36207272 [12].",
+     "Another is PMID 36220763 [13].",
+     "Another is PMID 36264792 [14].",
+     "Another is PMID 38388235 [15].",
+     "One trial is Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [16].",
+     "Another is NPDT Evaluation in Children With CFTR and (PSC) [17].",
+     "Another is Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [18].",
+     "Another is Effects of Sildenafil on CFTR-dependent Ion Transport Activity [19].",
+     "Another is Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [20]."
+    ],
+    "claims": 20,
+    "claim_ids": [
+     "cq-a90f7c5d0ffb-14",
+     "cq-a90f7c5d0ffb-19",
+     "cq-a90f7c5d0ffb-24",
+     "cq-a90f7c5d0ffb-29",
+     "ct-8c3112493c26-12",
+     "ct-8c3112493c26-17",
+     "ct-8c3112493c26-22",
+     "ct-8c3112493c26-27",
+     "ct-8c3112493c26-6",
+     "ne-1e8ac408dedc-4",
+     "ne-1f4451a319b3-10",
+     "ne-1f4451a319b3-16",
+     "ne-1f4451a319b3-21",
+     "ne-1f4451a319b3-26",
+     "ne-a4a3c29457ff-1",
+     "ne-a9a7911406c3-5",
+     "pa-3799bf5028e8-13",
+     "pa-3799bf5028e8-18",
+     "pa-3799bf5028e8-23",
+     "pa-3799bf5028e8-28"
+    ],
+    "claim_detail": [
+     {
+      "text": "The gene symbol is CFTR",
+      "quote": "",
+      "ref": 1,
+      "field": "symbol",
+      "value": "CFTR"
+     },
+     {
+      "text": "The gene name is CFTR",
+      "quote": "",
+      "ref": 5,
+      "field": "name",
+      "value": "CFTR"
+     },
+     {
+      "text": "CFTR",
+      "quote": "",
+      "ref": 4,
+      "field": "title",
+      "value": "CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR"
+     },
+     {
+      "text": "Another is NM_000492.4(CFTR):c.1392+2072_1392+2074del",
+      "quote": "",
+      "ref": 10,
+      "field": "title",
+      "value": "NM_000492.4(CFTR):c.1392+2072_1392+2074del"
+     },
+     {
+      "text": "Another is NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA",
+      "quote": "",
+      "ref": 16,
+      "field": "title",
+      "value": "NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA"
+     },
+     {
+      "text": "Another is NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT",
+      "quote": "",
+      "ref": 21,
+      "field": "title",
+      "value": "NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT"
+     },
+     {
+      "text": "Another is NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del",
+      "quote": "",
+      "ref": 26,
+      "field": "title",
+      "value": "NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del"
+     },
+     {
+      "text": "Another is chloride transport",
+      "quote": "",
+      "ref": 14,
+      "field": "name",
+      "value": "chloride transport"
+     },
+     {
+      "text": "Another is water transport",
+      "quote": "",
+      "ref": 19,
+      "field": "name",
+      "value": "water transport"
+     },
+     {
+      "text": "Another is bicarbonate transport",
+      "quote": "",
+      "ref": 24,
+      "field": "name",
+      "value": "bicarbonate transport"
+     },
+     {
+      "text": "Another is monoatomic ion transmembrane transport",
+      "quote": "",
+      "ref": 29,
+      "field": "name",
+      "value": "monoatomic ion transmembrane transport"
+     },
+     {
+      "text": "Another is PMID 36207272",
+      "quote": "",
+      "ref": 13,
+      "field": "pmid",
+      "value": "36207272"
+     },
+     {
+      "text": "Another is PMID 36220763",
+      "quote": "",
+      "ref": 18,
+      "field": "pmid",
+      "value": "36220763"
+     },
+     {
+      "text": "Another is PMID 36264792",
+      "quote": "",
+      "ref": 23,
+      "field": "pmid",
+      "value": "36264792"
+     },
+     {
+      "text": "Another is PMID 38388235",
+      "quote": "",
+      "ref": 28,
+      "field": "pmid",
+      "value": "38388235"
+     },
+     {
+      "text": "One trial is Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation",
+      "quote": "",
+      "ref": 12,
+      "field": "name",
+      "value": "Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation"
+     },
+     {
+      "text": "Another is NPDT Evaluation in Children With CFTR and (PSC)",
+      "quote": "",
+      "ref": 6,
+      "field": "name",
+      "value": "NPDT Evaluation in Children With CFTR and (PSC)"
+     },
+     {
+      "text": "Another is Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects",
+      "quote": "",
+      "ref": 17,
+      "field": "name",
+      "value": "Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects"
+     },
+     {
+      "text": "Another is Effects of Sildenafil on CFTR-dependent Ion Transport Activity",
+      "quote": "",
+      "ref": 22,
+      "field": "name",
+      "value": "Effects of Sildenafil on CFTR-dependent Ion Transport Activity"
+     },
+     {
+      "text": "Another is Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators",
+      "quote": "",
+      "ref": 27,
+      "field": "name",
+      "value": "Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators"
+     }
+    ],
+    "stripped": 13,
+    "refused": false
+   }
+  ],
+  "sentence_check": [
+   {
+    "t": 34.939,
+    "sent": 1,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.391
+   },
+   {
+    "t": 54.94,
+    "sent": 3,
+    "approved": 0,
+    "ok": true,
+    "dur": 0.291
+   }
+  ],
+  "findings": [
+   {
+    "ref": 1,
+    "field": "symbol",
+    "value": "CFTR",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080/"
+   },
+   {
+    "ref": 2,
+    "field": "title",
+    "value": "Molecular Structure of the Human CFTR Ion Channel.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28340353/"
+   },
+   {
+    "ref": 3,
+    "field": "title",
+    "value": "NM_000492.4(CFTR):c.1209+1988_1392+2067inv",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/"
+   },
+   {
+    "ref": 4,
+    "field": "title",
+    "value": "CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR",
+    "url": "https://omim.org/entry/602421"
+   },
+   {
+    "ref": 5,
+    "field": "name",
+    "value": "CFTR",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 6,
+    "field": "name",
+    "value": "NPDT Evaluation in Children With CFTR and (PSC)",
+    "url": "https://clinicaltrials.gov/study/NCT00179439"
+   },
+   {
+    "ref": 7,
+    "field": "pmid",
+    "value": "28340353",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28340353/"
+   },
+   {
+    "ref": 8,
+    "field": "name",
+    "value": "monoatomic ion transport",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 9,
+    "field": "title",
+    "value": "ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36207272/"
+   },
+   {
+    "ref": 10,
+    "field": "title",
+    "value": "NM_000492.4(CFTR):c.1392+2072_1392+2074del",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/"
+   },
+   {
+    "ref": 11,
+    "field": "summary",
+    "value": "This gene encodes a member of the ATP-binding cassette (ABC) transporter superfamily. The encoded protein functions as a chloride channel, making it unique among members of this protein family, and controls ion and water secretion and absorption in epithelial tissues. Channel activation is mediated ",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 12,
+    "field": "name",
+    "value": "Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation",
+    "url": "https://clinicaltrials.gov/study/NCT00865904"
+   },
+   {
+    "ref": 13,
+    "field": "pmid",
+    "value": "36207272",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36207272/"
+   },
+   {
+    "ref": 14,
+    "field": "name",
+    "value": "chloride transport",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 15,
+    "field": "title",
+    "value": "ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36220763/"
+   },
+   {
+    "ref": 16,
+    "field": "title",
+    "value": "NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/"
+   },
+   {
+    "ref": 17,
+    "field": "name",
+    "value": "Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects",
+    "url": "https://clinicaltrials.gov/study/NCT01078740"
+   },
+   {
+    "ref": 18,
+    "field": "pmid",
+    "value": "36220763",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36220763/"
+   },
+   {
+    "ref": 19,
+    "field": "name",
+    "value": "water transport",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 20,
+    "field": "title",
+    "value": "Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36264792/"
+   },
+   {
+    "ref": 21,
+    "field": "title",
+    "value": "NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/"
+   },
+   {
+    "ref": 22,
+    "field": "name",
+    "value": "Effects of Sildenafil on CFTR-dependent Ion Transport Activity",
+    "url": "https://clinicaltrials.gov/study/NCT01132482"
+   },
+   {
+    "ref": 23,
+    "field": "pmid",
+    "value": "36264792",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/36264792/"
+   },
+   {
+    "ref": 24,
+    "field": "name",
+    "value": "bicarbonate transport",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 25,
+    "field": "title",
+    "value": "In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38388235/"
+   },
+   {
+    "ref": 26,
+    "field": "title",
+    "value": "NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del",
+    "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/"
+   },
+   {
+    "ref": 27,
+    "field": "name",
+    "value": "Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators",
+    "url": "https://clinicaltrials.gov/study/NCT01348204"
+   },
+   {
+    "ref": 28,
+    "field": "pmid",
+    "value": "38388235",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/38388235/"
+   },
+   {
+    "ref": 29,
+    "field": "name",
+    "value": "monoatomic ion transmembrane transport",
+    "url": "https://www.ncbi.nlm.nih.gov/gene/1080"
+   },
+   {
+    "ref": 30,
+    "field": "abstract",
+    "value": "The cystic fibrosis transmembrane conductance regulator (CFTR) is an ATP-binding cassette (ABC) transporter that uniquely functions as an ion channel. Here, we present a 3.9\u00a0\u00c5 structure of dephosphorylated human CFTR without nucleotides, determined by electron cryomicroscopy (cryo-EM). Close resembl",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/28340353/"
+   }
+  ]
+ },
+ "events": [
+  {
+   "type": "guard",
+   "emitted": 6.702,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 6.702,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "think",
+   "emitted": 12.522,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 12.522,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "plan",
+   "emitted": 12.534,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 12.546,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_start",
+   "emitted": 12.55,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 12.845,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 12.894,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 12.895,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 13.038,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 13.039,
+   "step": null,
+   "tool": "clinicaltrials_search"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 13.039,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 13.12,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 13.188,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 14.649,
+   "step": null,
+   "tool": "cypher_query"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 14.863,
+   "step": null,
+   "tool": "pubtator_annotate"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 14.93,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.025,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "tool_result",
+   "emitted": 15.027,
+   "step": null,
+   "tool": "ncbi_efetch"
+  },
+  {
+   "type": "step",
+   "emitted": 15.034,
+   "step": "write",
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.585,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "token",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "citation",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.586,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "trust_signal",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "cost",
+   "emitted": 55.587,
+   "step": null,
+   "tool": null
+  },
+  {
+   "type": "done",
+   "emitted": 55.588,
+   "step": null,
+   "tool": null
+  }
+ ],
+ "done": {
+  "total_cost_usd": 0.21565749015999996,
+  "total_tool_calls": 10,
+  "elapsed_ms": 55586,
+  "trust_outcome": "ask",
+  "trust_line": "Based on 18 sources, not yet confirmed",
+  "layer_calls_used": 16,
+  "next_step": null,
+  "next_step_query": null,
+  "decisions": [
+   {
+    "name": "guardrail.injection",
+    "options": [
+     "injection",
+     "not_injection"
+    ],
+    "chosen": "not_injection",
+    "decided_by": "jev",
+    "jev_choice": "not_injection",
+    "jev_confidence": 0.99,
+    "guard_choice": "not_injection",
+    "agreed": true,
+    "fallback_reason": null,
+    "jev_latency_ms": 441
+   },
+   {
+    "name": "think.recent_years",
+    "options": [
+     "recent_unbounded",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 321
+   },
+   {
+    "name": "plan.literature",
+    "options": [
+     "wants_literature",
+     "not_literature"
+    ],
+    "chosen": "not_literature",
+    "decided_by": "jev",
+    "jev_choice": "not_literature",
+    "jev_confidence": 0.86,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 340
+   },
+   {
+    "name": "think.asks_features",
+    "options": [
+     "asks_features",
+     "not_applicable"
+    ],
+    "chosen": "not_applicable",
+    "decided_by": "jev",
+    "jev_choice": "not_applicable",
+    "jev_confidence": 1.0,
+    "guard_choice": null,
+    "agreed": null,
+    "fallback_reason": null,
+    "jev_latency_ms": 371
+   }
+  ]
+ },
+ "guard": {
+  "passed": true,
+  "category": "ok",
+  "reason": null
+ },
+ "citation_urls": [
+  "https://www.ncbi.nlm.nih.gov/gene/1080",
+  "https://www.ncbi.nlm.nih.gov/gene/1080/",
+  "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+  "https://omim.org/entry/602421",
+  "https://www.ncbi.nlm.nih.gov/gene/1080",
+  "https://clinicaltrials.gov/study/NCT00179439",
+  "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+  "https://clinicaltrials.gov/study/NCT00865904",
+  "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+  "https://clinicaltrials.gov/study/NCT01078740",
+  "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+  "https://clinicaltrials.gov/study/NCT01132482",
+  "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+  "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+  "https://clinicaltrials.gov/study/NCT01348204"
+ ]
+}

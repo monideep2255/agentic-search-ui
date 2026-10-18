@@ -1,0 +1,27 @@
+{
+  "resolved_synth_model": "anthropic/claude-opus-5.5",
+  "requests_sent": [
+    {
+      "model": "openrouter/anthropic/claude-opus-5.5",
+      "reasoning": {
+        "effort": "minimal"
+      },
+      "max_tokens": 200,
+      "finish": "stop",
+      "reasoning_tokens": 0,
+      "openrouter_cost_usd": 0.002172
+    }
+  ],
+  "request_count": 1,
+  "reasoning_refusal_fallback_logged": false,
+  "succeeded": true,
+  "error": null,
+  "seconds": 4.45,
+  "harness_elapsed_s": 4.43,
+  "prompt_tokens": 28,
+  "completion_tokens": 103,
+  "reply_chars": 285,
+  "harness_metered_cost_usd": 0.002172,
+  "balance_before_usd": 42.7792,
+  "balance_after_usd": 42.7792
+}

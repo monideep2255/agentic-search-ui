@@ -1,0 +1,683 @@
+{
+ "record": {
+  "id": "G-005",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-golden-a-20260929@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+  "session_id": "c103-c72271121433",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "bae5d1bd",
+  "started_at": "2026-09-29T16:15:31+00:00",
+  "run_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "MedGen:C1519126",
+   "MedGen:C4302012",
+   "MedGen:C4302019"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 1 source, not yet confirmed",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_2_api": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "0 row(s) of 0: generated Cypher references unbound parameter(s) $e_NCBITaxon_2697049; the only bound parameter names are: $e_MedGen_C1519126, $e_MedGen_C4302012, $e_MedGen_C4302019. Rewrite the query using only those names."
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 98,
+  "answer_start": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [1]. \n\nNote: the ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 29.759,
+  "seconds": 30.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 11,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  },
+  "first_word_s": 29.906,
+  "first_token_ts": "2026-09-29T16:14:13.605546Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 0,
+   "ts": "2026-09-29T16:13:45.533364Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 2,
+   "ts": "2026-09-29T16:13:58.259158Z",
+   "payload": {
+    "narrative": "Finding SRA runs with specific criteria and explaining each match requires assembling evidence from multiple records. (SARS: 3 MedGen records matched by name)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 4,
+   "ts": "2026-09-29T16:13:58.263199Z",
+   "payload": {
+    "narrative": "searching 3 layers for sars coronavirus protease pathway. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-fad669eae817",
+      "layer": "layer_1_graph",
+      "persona": "Palade",
+      "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-4abd32dcba1b",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-5afd3c1773ae",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-fec36d09e8ea",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-121fcd38ef81",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-16a9e9b8061a",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-b40a5532c502",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-58bf0d9f2bab",
+      "layer": "layer_2_api",
+      "persona": "Pasteur",
+      "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 6,
+   "ts": "2026-09-29T16:13:58.266439Z",
+   "payload": {
+    "call_id": "cq-fad669eae817",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 7,
+   "ts": "2026-09-29T16:13:58.266538Z",
+   "payload": {
+    "call_id": "pa-4abd32dcba1b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 8,
+   "ts": "2026-09-29T16:13:58.266555Z",
+   "payload": {
+    "call_id": "ct-5afd3c1773ae",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 9,
+   "ts": "2026-09-29T16:13:58.266570Z",
+   "payload": {
+    "call_id": "ne-fec36d09e8ea",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 10,
+   "ts": "2026-09-29T16:13:58.266583Z",
+   "payload": {
+    "call_id": "ne-121fcd38ef81",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 11,
+   "ts": "2026-09-29T16:13:58.266596Z",
+   "payload": {
+    "call_id": "ne-16a9e9b8061a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 12,
+   "ts": "2026-09-29T16:13:58.266615Z",
+   "payload": {
+    "call_id": "pa-b40a5532c502",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 13,
+   "ts": "2026-09-29T16:13:58.266628Z",
+   "payload": {
+    "call_id": "ne-58bf0d9f2bab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 14,
+   "ts": "2026-09-29T16:13:58.455365Z",
+   "payload": {
+    "call_id": "pa-4abd32dcba1b",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 15,
+   "ts": "2026-09-29T16:13:58.458025Z",
+   "payload": {
+    "call_id": "ct-5afd3c1773ae",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 16,
+   "ts": "2026-09-29T16:13:58.461840Z",
+   "payload": {
+    "call_id": "ne-fec36d09e8ea",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 17,
+   "ts": "2026-09-29T16:13:58.603545Z",
+   "payload": {
+    "call_id": "ne-121fcd38ef81",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 18,
+   "ts": "2026-09-29T16:14:08.989711Z",
+   "payload": {
+    "call_id": "cq-fad669eae817",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Palade",
+    "persona_about": "Discovered the ribosome and mapped how cells make and export proteins, using the electron microscope.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/George_Emil_Palade",
+    "summary": "0 row(s) of 0: generated Cypher references unbound parameter(s) $e_NCBITaxon_2697049; the only bound parameter names are: $e_MedGen_C1519126, $e_MedGen_C4302012, $e_MedGen_C4302019. Rewrite the query using only those names.",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 19,
+   "ts": "2026-09-29T16:14:08.990065Z",
+   "payload": {
+    "call_id": "ne-16a9e9b8061a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 20,
+   "ts": "2026-09-29T16:14:08.990123Z",
+   "payload": {
+    "call_id": "pa-b40a5532c502",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 21,
+   "ts": "2026-09-29T16:14:09.150534Z",
+   "payload": {
+    "call_id": "ne-58bf0d9f2bab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pasteur",
+    "persona_about": "Proved that germs cause disease and fermentation, invented pasteurisation, and made the first rabies and anthrax vaccines.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Louis_Pasteur",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 22,
+   "ts": "2026-09-29T16:14:09.152715Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 23,
+   "ts": "2026-09-29T16:14:13.605546Z",
+   "payload": {
+    "text": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. ",
+    "marker_ids": [
+     "ne-58bf0d9f2bab-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "SARS Coronavirus Protease Pathway",
+     "SARS"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "276768",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "06b991a3-6069-4c7b-b0ec-f813f0522efb",
+   "seq": 38,
+   "ts": "2026-09-29T16:14:13.605952Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 29759,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 1 source, not yet confirmed",
+    "layer_calls_used": 5,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 432
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.96,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 174
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 172
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 224
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 medgen record for SARS: SARS Coronavirus Protease Pathway [1]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [1]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nNote: this answer does not address the following entities named in the question: SARS Coronavirus Protease Pathway, Probable SARS (severe acute respiratory syndrome), SARS (severe acute respiratory syndrome) confirmed. Ask about them individually for a complete answer.\n\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry."
+}

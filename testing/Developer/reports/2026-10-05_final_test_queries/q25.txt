@@ -1,0 +1,71 @@
+Find GEO expression datasets studying TP53 in human tumour samples.
+New search
+
+✓ Answered16.1s · 15 tools · 24 sources from 3 layers
+
+Show work ▾
+
+I found 1 gene related to TP53, out of 125 available.⁠2
+
+This gene makes a tumour suppressor protein that responds to cellular stress by controlling target genes involved in cell cycle arrest, cell death, DNA repair, and metabolism, and changes in this gene are linked to many human cancers including hereditary cancer syndromes.⁠1
+
+WHERE THIS ANSWER COMES FROM
+tumor protein p53	⁠2
+TP53	⁠3
+TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.	⁠4
+NM_000546.6(TP53):c.247G>T (p.Ala83Ser)	⁠5
+TUMOR PROTEIN p53; TP53	⁠6
+Genome-wide CRISPR knockout screens reveal genetic determinants of BMH-21 response in HCT116 TP53 wildtype and knockout cells [HCT116_CRISPR_Screen]	⁠7
+Biomarker Monitoring in TP53 Mutation Carriers	⁠8
+Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants.	⁠9
+NC_000017.11:g.7666193C>T	⁠10
+RNA-seq analysis of RNA polymerase I inhibitor in HCT116 TP53 KO cells [HCT116_TP53KO_3days_RNA-seq]	⁠11
+Showing 1–10 of 23
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Note: this answer was truncated because only 60 of the 125 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+23
+Sources disagree on at least one claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/gene/7157
+ -> https://www.ncbi.nlm.nih.gov/gene/7157/
+ -> https://pubmed.ncbi.nlm.nih.gov/27328919/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/
+ -> https://www.ncbi.nlm.nih.gov/gds/200300999
+ -> https://pubmed.ncbi.nlm.nih.gov/33300245/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/
+ -> https://www.ncbi.nlm.nih.gov/gds/200301000
+ -> https://pubmed.ncbi.nlm.nih.gov/35108372/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/
+ -> https://www.ncbi.nlm.nih.gov/gds/200301001
+ -> https://pubmed.ncbi.nlm.nih.gov/36766853/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/
+ -> https://www.ncbi.nlm.nih.gov/gds/200315988
+ -> https://pubmed.ncbi.nlm.nih.gov/40729726/
+ -> https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/
+ -> https://www.ncbi.nlm.nih.gov/gds/200349532
+ -> https://clinicaltrials.gov/study/NCT02289326
+ -> https://clinicaltrials.gov/study/NCT02612285
+ -> https://clinicaltrials.gov/study/NCT03149679
+ -> https://clinicaltrials.gov/study/NCT03466034
+ -> https://clinicaltrials.gov/study/NCT03645200
+
+TIME_TO_ANSWER_SECONDS=18.0 askback=false

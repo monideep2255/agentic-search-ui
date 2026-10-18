@@ -1,0 +1,81 @@
+{
+  "surface": "REST+SSE",
+  "question": "What are the clinical features of Marfan syndrome?",
+  "session_id": "audit-rest-marfan",
+  "depth_sent": null,
+  "create_status": 202,
+  "persona_name": "Ochoa",
+  "run_id": "7430e68a-e1f4-4525-a9eb-b6280629cb25",
+  "stream_status": 200,
+  "outcome": "answered",
+  "trust_outcome": "answer",
+  "citation_count": 93,
+  "citation_hosts": [
+    "clinicaltrials.gov",
+    "pubmed.ncbi.nlm.nih.gov",
+    "www.ncbi.nlm.nih.gov"
+  ],
+  "citation_urls_sample": [
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "https://www.ncbi.nlm.nih.gov/medgen/44287"
+  ],
+  "first_sentence": "Found 22 sequence variant records, 3 gene records and 21 derived records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][56][57][58][59][60][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82].",
+  "answer_chars": 6205,
+  "answer_head": "Found 22 sequence variant records, 3 gene records and 21 derived records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][56][57][58][59][60][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82]. \n\nClinical Features\n\nMedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:12502, name: NM_003242.6(TGFBR2):c.944C>T (p.Thr315Met) [11]. SequenceVariant ClinVar:12524, name: NM_004612.4(TGFBR1):c.722C>T (p.Ser241Leu) [14]. SequenceVariant ClinVar:16422, name: NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [17]. SequenceVariant ClinVar:16424, name: NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter) [20]. SequenceVariant ClinVar:16425, name: NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [22]. SequenceVariant ClinVar:16426, name: NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [24]. SequenceVariant ClinVar:16427, name: NM_000138.5(FBN1):c.6662G>C (p.Cys2221Ser) [26]. SequenceVariant ClinVar:16428, n",
+  "event_type_counts": {
+    "guard": 1,
+    "think": 1,
+    "plan": 1,
+    "tool_start": 8,
+    "tool_result": 8,
+    "step": 1,
+    "token": 123,
+    "citation": 93,
+    "trust_signal": 94,
+    "done": 1
+  },
+  "clarifying_question": null,
+  "clarifying_options": null,
+  "think_narratives": [
+    "Asks for clinical features of a known syndrome, answerable via one or two direct API calls to a disease resource. (Marfan syndrome: 1 of 17 MedGen record matched by name)"
+  ],
+  "resolved_entities": [
+    "Marfan syndrome=MedGen:C0024796"
+  ],
+  "done_trust_line": "Based on 58 sources",
+  "done_next_step": null,
+  "done_decisions": [
+    {
+      "name": "guardrail.injection",
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.recent_years",
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "plan.literature",
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "fallback_reason": null
+    },
+    {
+      "name": "think.asks_features",
+      "chosen": "asks_features",
+      "decided_by": "jev",
+      "fallback_reason": null
+    }
+  ],
+  "done_total_tool_calls": 6,
+  "done_elapsed_ms": 9742,
+  "answer_trust_signal_message": null,
+  "errors": [],
+  "wall_s": 10.2
+}

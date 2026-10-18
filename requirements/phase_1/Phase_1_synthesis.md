@@ -156,7 +156,7 @@ A two-API strategy covers Layer 2: E-utilities (ClinVar, PubMed, OMIM), the Data
 
 PubTator3's REST API replaces all local NER and normalization (GNorm2, tmVar3, AIONER, BioREx behind one endpoint). This avoids a 60GB-plus local JVM stack.
 
-The NCBI KG reference repo is used as an infrastructure template (React chat shell, LangSmith tracing wired to feedback, guardrail disclaimers, test organization, MCP patterns), not as an architecture blueprint. Its monolithic NL-to-Cypher pipeline is not adopted.
+The NCBI KG reference repository is used as an infrastructure template (React chat shell, LangSmith tracing wired to feedback, guardrail disclaimers, test organization, MCP patterns), not as an architecture blueprint. Its monolithic NL-to-Cypher pipeline is not adopted.
 
 ## Data and graph handoff
 
@@ -214,7 +214,7 @@ Step 1.8 locked the stack, building on infrastructure that already works.
 
 Hosting strategy: build the Track 1 PoC on our own proven stack first, then migrate to NCBI/OCCS infrastructure after the PoC. Building on NCBI infrastructure from day one would make Track 2 migration free but couples the PoC to access approvals, ATO and FISMA constraints (Step 1.13), and slower iteration. Migration later is bounded work, the same logic as FastAPI-to-Django. Runtime hosting and collaboration and data tools are separated: host on our own stack, but use NCBI MCP access (Confluence, Jira, GitLab) now to pull real user-research data for Phase 2 Step 2.2.
 
-The stack, taken from the NCBI KG reference repo that already runs it: Railway for runtime hosting, PostHog for product analytics, LangSmith for LLM tracing and eval (over Arize). The public API reaffirms the hybrid surface (REST plus SSE for chat, GraphQL via Strawberry for programmatic), which resolves the GraphQL-versus-REST open question.
+The stack, taken from the NCBI KG reference repository that already runs it: Railway for runtime hosting, PostHog for product analytics, LangSmith for LLM tracing and eval (over Arize). The public API reaffirms the hybrid surface (REST plus SSE for chat, GraphQL via Strawberry for programmatic), which resolves the GraphQL-versus-REST open question.
 
 Issue and task tracking: a self-maintained in-repo markdown tracker (a table, stood up when the build starts in Phase 6, migrated to NCBI Jira after the PoC). Linear is dropped because access ends 2026-07-29. During Phase 1 planning, Plan.md and the continuation prompt already track progress.
 

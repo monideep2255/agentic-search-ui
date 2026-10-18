@@ -1,7 +1,12 @@
 ---
 description: "Before installing any npm or PyPI package, or wiring up any MCP server or MCP-shaped tool integration (cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup), run checks that catch live supply-chain compromise before a CVE exists: version and timestamp verification, install-script inspection, and an enable-versus-trust gate for anything that executes code."
 scope: portable
-alwaysApply: true
+alwaysApply: false
+paths:
+  - "**/requirements*.txt"
+  - "**/pyproject.toml"
+  - "**/package.json"
+  - "**/package-lock.json"
 ---
 
 ## Supply-chain security
@@ -79,14 +84,14 @@ If a compromised version was installed during either attack window, rotate all s
 
 ### MCP servers: the unmonitored attack surface
 
-MCP servers run with your credentials and file access. They are package-equivalent execution surfaces but are rarely audited. This repo's roadmap tool integrations (cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup) are execution surfaces in the same sense: each one reaches a live credential-bearing connection, the Hetzner AGE graph or an NCBI API key, or a live external API. Apply these checks to any of them before it goes live, whether it is invoked as a native tool call or through an MCP server.
+MCP servers run with your credentials and file access. They are package-equivalent execution surfaces but are rarely audited. This repository's roadmap tool integrations (cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup) are execution surfaces in the same sense: each one reaches a live credential-bearing connection, the Hetzner AGE graph or an NCBI API key, or a live external API. Apply these checks to any of them before it goes live, whether it is invoked as a native tool call or through an MCP server.
 
 Before adding a new MCP server or wiring up a new tool integration:
 
 1. Check the package or server name against recent advisories. Search `[name] npm malware` for `npx`-installed servers, `[name] pypi malware` for `uvx`-installed servers.
 2. The `npx -y <pkg>` or `uvx <pkg>` pattern executes arbitrary code at invocation time with no install-time gate. Treat every `npx -y` or `uvx` in a tool or MCP config as equivalent to a global install. When you control the invocation, pin the exact version, `pkg@1.4.8`, never `pkg@latest`, so a hijacked latest tag cannot run on your machine.
 3. Check the server's or package's source repository: is it maintained? Does it have more than one contributor? When was the last commit?
-4. Environment values in MCP configs and tool configs often contain API keys and credentials, including the Hetzner AGE connection string and NCBI API keys in this repo. Never log, commit, or share config files without redacting env blocks.
+4. Environment values in MCP configs and tool configs often contain API keys and credentials, including the Hetzner AGE connection string and NCBI API keys in this repository. Never log, commit, or share config files without redacting env blocks.
 5. Provision least privilege. Give a new integration its own scoped credential, not your full-access one: a read-only token, a single-database scope, a separate service account. An agent with a tool inherits that tool's reach, so scope the reach down to exactly the job before connecting it. This is the same least-privilege principle `ai-security-standards` applies to Layer 1 graph access, which is read-only by design. Extend it to every new tool integration.
 
 #### Enable versus trust: a two-phase gate for executable extensions
@@ -132,7 +137,7 @@ Periodically inventory every configured MCP server and every tool invoked via `n
 
 ### Do NOT apply when
 
-- cargo, gem, go get: not yet covered, this repo has no Rust, Ruby, or Go dependencies
+- cargo, gem, go get: not yet covered, this repository has no Rust, Ruby, or Go dependencies
 - Read-only Cypher queries against the already-deployed Hetzner AGE graph: nothing gets installed
 
 The test: did I verify the package or execution surface, npm, PyPI, or MCP-shaped tool integration, before recommending, installing, or wiring it in?

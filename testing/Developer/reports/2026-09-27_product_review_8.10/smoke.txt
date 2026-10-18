@@ -1,0 +1,9 @@
+PASS health    ok (develop)
+PASS api-docs  /docs and /openapi.json answer, 17 paths
+PASS rest-sse  ask, 17 citations, 104 events, 13s
+PASS graphql   18 citations, 23s
+PASS mcp       1 tool, token required, ask, 17 citations, 20s
+PASS cli       login ok, [ask], 17 references, 25s
+PASS kgx       help works; without graph access the export stops with a message naming GRAPH_* settings
+PASS page      printed commands match the code
+8 passed, 0 failed, 38s

@@ -1,0 +1,6 @@
+wall clock from ask to captured: 22.0s
+answer wait after pick or ask: 16.1s
+mode pressed: Plain language
+clarifying options: ["What is gastroesophageal reflux disease (GERD)?","Which genes are associated with GERD risk?","What are the common symptoms and complications of GERD?","Are there clinical trials for GERD treatments?"]
+matched pick candidate: symptoms
+picked: typical symptoms||symptoms||What is GERD

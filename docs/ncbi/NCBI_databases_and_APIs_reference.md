@@ -104,7 +104,7 @@ Total records across all databases: approximately 4.4 billion.
 
 ### Reconciliation with KGX pipelines
 
-The record counts above come from the Entrez search index, which is intentionally broader than any individual bulk FTP flat file. When a pipeline in `system-01-data-pipelines/` ingests from NCBI FTP, it typically sees a smaller number because the flat file contains only the live (non-retired) slice of the database. For a per-pipeline reconciliation table (Gene 67.5M vs Entrez 95.0M, MedGen 199K vs Entrez 234K, Taxonomy 2.74M vs Entrez 2.87M, etc.) and the root cause + decision for each gap, see [data_inventory.md, "Pipeline output vs live Entrez counts"](data_inventory.md#pipeline-output-vs-live-entrez-counts).
+The record counts above come from the Entrez search index, which is intentionally broader than any individual bulk FTP flat file. When a pipeline in `system-01-data-pipelines/` ingests from NCBI FTP, it typically sees a smaller number because the flat file contains only the live (non-retired) slice of the database. For a per-pipeline reconciliation table (Gene 67.5M vs Entrez 95.0M, MedGen 199K vs Entrez 234K, Taxonomy 2.74M vs Entrez 2.87M, etc.) and the root cause + decision for each gap, see [data_inventory.md, "Pipeline output vs live Entrez counts"](https://github.com/monideep2255/agentic-search-data-engineering/blob/main/docs/data_inventory.md#pipeline-output-vs-live-entrez-counts).
 
 ## Part 2: database details (searchable fields and cross-links)
 

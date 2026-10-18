@@ -16,8 +16,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-# The same seven members as `GuardPayload.category`, `write_seeking` added at
-# Step 6.2 (F-3.0-01), deliberately not a second hand-maintained copy:
+# The same members as `GuardPayload.category`, `write_seeking` added at
+# Step 6.2 (F-3.0-01) and `compute_request` on 2026-09-22, deliberately
+# not a second hand-maintained copy:
 # `test_guard_category_matches_the_event_contract` asserts the two stay
 # identical, so a contract change that forgets this file fails a test rather
 # than drifting silently.
@@ -29,6 +30,7 @@ GuardCategory = Literal[
     "rate_limited",
     "cost_capped",
     "write_seeking",
+    "compute_request",
 ]
 
 # `GuardPayload.reason`'s own cap. Enforced here rather than at the event

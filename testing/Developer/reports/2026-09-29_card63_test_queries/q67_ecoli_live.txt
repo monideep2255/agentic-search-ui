@@ -1,0 +1,64 @@
+NCBI Agentic Search
+Search
+Integrations
+About
+Working as Koch
+S3
+s3-queries-c-20260929@example.com
+▾
++ New search
+
+YOUR SEARCHES
+
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+2 tools · 21 sources from 1 layer
+Which diseases are associated with BRCA1?
+23 sources · Sep 29
+s3-queries-c-20260929@example.com
+No search limit in effect yet
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+New search
+
+? Answered32.4s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli[21].⁠1–20
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED	
+C236-11	SAMN00715300	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠1
+11-3677	SAMN00715303	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠2
+11-4404	SAMN00715305	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠3
+11-4522	SAMN00715306	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠4
+11-4623	SAMN00715307	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠5
+11-4632 C1	SAMN00715308	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠6
+11-4632 C2	SAMN00715309	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠7
+11-4632 C3	SAMN00715310	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠8
+11-4632 C4	SAMN00715311	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠9
+11-4632 C5	SAMN00715312	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)		⁠10
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+TAXONOMY RECORDS FOUND
+RECORD	IDENTIFIER	
+Escherichia coli	NCBITaxon:562	⁠21
+NOTES
+Pathogen Detection lists 140,839 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+▶
+SOURCES
+21
+Based on 21 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+NCBI Agentic Search

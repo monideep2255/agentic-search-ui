@@ -12,7 +12,7 @@ Writes:
 
 The publishable fragment is NOT written here. It is a transient input to the
 publisher, not an artifact worth committing, so docs/publish_body.sh derives it
-into a temp path at publish time. Keeping it in the repo put two near-identical
+into a temp path at publish time. Keeping it in the repository put two near-identical
 HTML files side by side and made the folder unreadable.
 
 Usage:

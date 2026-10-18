@@ -1,0 +1,7 @@
+{
+  "name": "mod-design-tokens",
+  "version": "1.0.0",
+  "description": "Runs the design token check after an edit under frontend/src and toasts only the findings that are new. Trigger: Auto",
+  "types": "./types/index.d.ts",
+  "author": { "name": "Monideep Chakraborti" }
+}

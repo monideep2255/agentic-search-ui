@@ -48,7 +48,7 @@ import { parseAgentEvent, type AgentEvent } from "../lib/events";
  *     sanitized.model_dump_json()}` per real event, forwarded through
  *     `sse-starlette`'s `EventSourceResponse`.
  *   - `sse_starlette/event.py`'s `ServerSentEvent.encode()` (the
- *     installed version, 3.4.6, pinned in this repo's venv): each frame
+ *     installed version, 3.4.6, pinned in this repository's venv): each frame
  *     is `event: <type><sep>data: <json><sep><sep>`, where `<sep>`
  *     defaults to `"\r\n"` (`ServerSentEvent.DEFAULT_SEPARATOR`), so a
  *     frame ends in a blank line the same way the more familiar `"\n\n"`

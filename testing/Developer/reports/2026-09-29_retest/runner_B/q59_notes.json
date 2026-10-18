@@ -1,0 +1,57 @@
+{
+ "title": "NCBI Agentic Search",
+ "favicon": [
+  "https://search-agent-web-develop-2aeb.up.railway.app/favicon.svg"
+ ],
+ "homeBg": "rgb(240, 240, 240) | main:rgba(0, 0, 0, 0)",
+ "taRowsBefore": {
+  "h": 82,
+  "tag": "TEXTAREA",
+  "sw": 620,
+  "cw": 620
+ },
+ "taAfter240": {
+  "h": 82,
+  "sh": 82,
+  "ch": 82
+ },
+ "taAfter600": {
+  "h": 139.5,
+  "sh": 198,
+  "ch": 140
+ },
+ "searchBtn": {
+  "w": 36,
+  "h": 36,
+  "bg": "rgb(32, 84, 147)",
+  "svg": true,
+  "text": ""
+ },
+ "navItems": [
+  "Search",
+  "Integrations",
+  "About",
+  "",
+  "",
+  "Log in"
+ ],
+ "integUrl": "https://search-agent-web-develop-2aeb.up.railway.app/integrations",
+ "aboutUrl": "https://search-agent-web-develop-2aeb.up.railway.app/about",
+ "afterBack": "https://search-agent-web-develop-2aeb.up.railway.app/integrations",
+ "archUrl": "https://search-agent-web-develop-2aeb.up.railway.app/architecture",
+ "noReload": true,
+ "openAboutPresent": 1,
+ "afterOpenAbout": "https://search-agent-web-develop-2aeb.up.railway.app/about",
+ "openSearchPresent": 1,
+ "afterOpenSearch": "https://search-agent-web-develop-2aeb.up.railway.app/",
+ "archDirect": "Architecture",
+ "copyButtons": [
+  "Copy curl",
+  "Copy query",
+  "Copy config",
+  "Copy install command",
+  "Copy command",
+  "Copy agent config",
+  "Copy frame"
+ ]
+}

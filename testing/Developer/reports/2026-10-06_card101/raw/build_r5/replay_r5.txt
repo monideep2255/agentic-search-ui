@@ -1,0 +1,35 @@
+168 distinct recorded writer drafts, no model call (replay_r5.py).
+
+round 4, approves none: runs 168; shown that develop does not show 0; drafts emptied 0; develop sentences dropped 7 (7 distinct)
+round 4, approves all: runs 168; shown that develop does not show 0; drafts emptied 0; develop sentences dropped 0 (0 distinct)
+round 4, approves partial: runs 252; shown that develop does not show 0; drafts emptied 0; develop sentences dropped 33 (7 distinct)
+round 5, approves none: runs 168; shown that develop does not show 0; drafts emptied 0; develop sentences dropped 7 (7 distinct)
+round 5, approves all: runs 168; shown that develop does not show 0; drafts emptied 0; develop sentences dropped 0 (0 distinct)
+round 5, approves partial: runs 252; shown that develop does not show 0; drafts emptied 0; develop sentences dropped 33 (7 distinct)
+
+develop sentences shown, check approving nothing: 59
+round 4 sentences shown: none 52, all 59
+round 5 sentences shown: none 52, all 59
+round 4 items: 34 in 18 drafts
+round 5 items: 34 in 18 drafts; longer than the check reads, not sent: 0
+
+Round 5 versus round 4, per draft where the shown sentences differ (none / all):
+
+Round 5: develop sentences dropped, distinct, per mode (first 12 each):
+  approves none:
+    develop_control/cm4/37: Deleterious variants were identified in 218 distinct genes.
+    develop_control/cm4/37: The most common co-variant was the R202Q/M694V genotype.
+    develop_control/cr1/51: GERD affects quality of life.
+    live/br2/125: The goal of therapy is to maintain adequate oxygenation and hydration.
+    live/br3/130: A high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+    out/hb1/82: A high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+    out/hb2/85: The goal of therapy is to maintain adequate oxygenation and hydration.
+  approves all:
+  approves partial:
+    develop_control/cm4/37: Deleterious variants were identified in 218 distinct genes.
+    develop_control/cm4/37: The most common co-variant was the R202Q/M694V genotype.
+    develop_control/cr1/51: GERD affects quality of life.
+    live/br2/125: The goal of therapy is to maintain adequate oxygenation and hydration.
+    live/br3/130: A high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+    out/hb1/82: A high-flow nasal cannula is becoming common for children with severe bronchiolitis.
+    out/hb2/85: The goal of therapy is to maintain adequate oxygenation and hydration.

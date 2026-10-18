@@ -1,0 +1,1077 @@
+diff --git a/frontend/e2e/answer-depth-switch.spec.ts b/frontend/e2e/answer-depth-switch.spec.ts
+index 2d227d2a..c90ea6cd 100644
+--- a/frontend/e2e/answer-depth-switch.spec.ts
++++ b/frontend/e2e/answer-depth-switch.spec.ts
+@@ -172,7 +172,7 @@ function landedStream(mode: "plain" | "researcher"): string {
+     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
+     frame("done", {
+       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
+-      trust_line: "Based on 4 sources, not yet confirmed",
++      trust_line: "Based on 4 sources cited, all from MedGen",
+     }),
+   ].join("");
+ }
+diff --git a/frontend/e2e/answer-layout.spec.ts b/frontend/e2e/answer-layout.spec.ts
+index 5cc521dd..c2c53d6c 100644
+--- a/frontend/e2e/answer-layout.spec.ts
++++ b/frontend/e2e/answer-layout.spec.ts
+@@ -180,7 +180,7 @@ function landedStream(mode: "plain" | "researcher"): string {
+     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
+     frame("done", {
+       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
+-      trust_line: "Based on 4 sources, not yet confirmed",
++      trust_line: "Based on 4 sources cited, all from MedGen",
+     }),
+   ].join("");
+ }
+@@ -234,7 +234,7 @@ for (const width of [1280, 390]) {
+         await expect(page.getByRole("heading", { name: "Related clinical trials" })).toBeVisible();
+         await expect(page.getByTestId("answer-notes")).toBeVisible();
+         await expect(page.getByTestId("sources-disclosure")).toBeVisible();
+-        await expect(page.getByTestId("trust-line")).toContainText("Based on 4 sources, not yet confirmed");
++        await expect(page.getByTestId("trust-line")).toContainText("Based on 4 sources cited, all from MedGen");
+         if (mode === "plain") await expect(page.getByTestId("answer-medical-note")).toBeVisible();
+         else await expect(page.getByTestId("answer-medical-note")).toHaveCount(0);
+         if (width === 390) {
+diff --git a/frontend/e2e/bold-and-stagger.spec.ts b/frontend/e2e/bold-and-stagger.spec.ts
+index bbcadc01..75b21a76 100644
+--- a/frontend/e2e/bold-and-stagger.spec.ts
++++ b/frontend/e2e/bold-and-stagger.spec.ts
+@@ -114,7 +114,7 @@ function stream(mode: "plain" | "researcher"): string {
+     frame("trust_signal", { outcome: "answer", risk_tier: "high", grounded: true, triangulated: null, scope: "answer" }),
+     frame("done", {
+       total_cost_usd: 0.02, total_tool_calls: 2, elapsed_ms: 6200, trust_outcome: "answer",
+-      trust_line: "Based on 2 sources, not yet confirmed",
++      trust_line: "Based on 2 sources cited, all from MedGen",
+     }),
+   ].join("");
+ }
+diff --git a/frontend/e2e/fixtures/card22_brca1_citations.json b/frontend/e2e/fixtures/card22_brca1_citations.json
+index 91f9f2c4..78dd128f 100644
+--- a/frontend/e2e/fixtures/card22_brca1_citations.json
++++ b/frontend/e2e/fixtures/card22_brca1_citations.json
+@@ -200,6 +200,6 @@
+       "3": 5
+     },
+     "meta": "13 tool calls · 16 sources cited from 3 layers",
+-    "trust_line": "Based on 16 sources cited, not yet confirmed"
++    "trust_line": "Based on 16 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 2 other databases; their values could not be compared"
+   }
+ }
+\ No newline at end of file
+diff --git a/frontend/src/answerLayout.test.tsx b/frontend/src/answerLayout.test.tsx
+index 6e74df09..373183ed 100644
+--- a/frontend/src/answerLayout.test.tsx
++++ b/frontend/src/answerLayout.test.tsx
+@@ -63,7 +63,7 @@ const DONE = envelope("done", {
+   total_tool_calls: 1,
+   elapsed_ms: 900,
+   trust_outcome: "answer",
+-  trust_line: "Based on 4 sources, not yet confirmed",
++  trust_line: "Based on 4 sources cited, all from MedGen",
+ });
+ 
+ function tailStream(typed: boolean): AgentEvent[] {
+diff --git a/frontend/src/answerPagination.test.tsx b/frontend/src/answerPagination.test.tsx
+index e4a5bfca..5a31e4ae 100644
+--- a/frontend/src/answerPagination.test.tsx
++++ b/frontend/src/answerPagination.test.tsx
+@@ -55,7 +55,7 @@ const DONE = envelope("done", {
+   total_tool_calls: 1,
+   elapsed_ms: 900,
+   trust_outcome: "answer",
+-  trust_line: "Based on sources, not yet confirmed",
++  trust_line: "Based on sources cited, all from MedGen",
+ });
+ 
+ /** One table's worth of events: a header, `rows` table_row tokens, and a citation per row. */
+diff --git a/frontend/src/components/screens/AnswerScreen.card22.test.tsx b/frontend/src/components/screens/AnswerScreen.card22.test.tsx
+index 56f9d011..dc1abe3c 100644
+--- a/frontend/src/components/screens/AnswerScreen.card22.test.tsx
++++ b/frontend/src/components/screens/AnswerScreen.card22.test.tsx
+@@ -230,9 +230,7 @@ describe("the BRCA1 evidence of 2026-09-27", () => {
+       `${after.sources_cited} sources cited from ${after.layers} layers`,
+     );
+     expect(screen.getByTestId("sources-count")).toHaveTextContent(new RegExp(`^${after.sources_cited}$`));
+-    expect(screen.getByTestId("trust-line")).toHaveTextContent(
+-      `Based on ${after.sources_cited} sources cited, not yet confirmed`,
+-    );
++    expect(screen.getByTestId("trust-line")).toHaveTextContent(after.trust_line);
+   });
+ });
+ 
+@@ -368,12 +366,14 @@ describe("the trust line's info card", () => {
+     expect(TRUST_LINE_EXPLAINER).not.toMatch(/counted by the database/);
+   });
+ 
+-  it("explains a not-yet-confirmed answer that is incomplete, not only one missing a second database", () => {
+-    // J-22-08: the backend also floors an incomplete answer (a search that
+-    // did not finish, more records than the answer lists) at "not yet
+-    // confirmed". Mutation: revert to the one-cause sentence and this fails.
+-    expect(TRUST_LINE_EXPLAINER).toContain("has not been found in a second independent database");
+-    expect(TRUST_LINE_EXPLAINER).toContain("or this answer may be incomplete");
+-    expect(TRUST_LINE_EXPLAINER).toContain("a search did not finish");
++  it("describes the lines that show now: which databases, and when values could not be compared", () => {
++    // Card 8: "not yet confirmed" is gone from the line, so the card no longer
++    // explains it. Mutation: restore the old paragraph and this fails.
++    expect(TRUST_LINE_EXPLAINER).not.toMatch(/not yet confirmed/i);
++    expect(TRUST_LINE_EXPLAINER).toContain("names the databases");
++    expect(TRUST_LINE_EXPLAINER).toContain(
++      "When an answer rests on two or more databases and a high-stakes fact could not be checked against a second one",
++    );
++    expect(TRUST_LINE_EXPLAINER).toContain("their values could not be compared");
+   });
+ });
+diff --git a/frontend/src/components/screens/AnswerScreen.tsx b/frontend/src/components/screens/AnswerScreen.tsx
+index 2e8100ec..5154552d 100644
+--- a/frontend/src/components/screens/AnswerScreen.tsx
++++ b/frontend/src/components/screens/AnswerScreen.tsx
+@@ -123,20 +123,19 @@ export function summarySentencesShown(claims: Claim[]): number {
+  * which stopped being true for "Based on N sources" on 2026-09-23 (item
+  * 12.8 made it count pages). It now states what each number counts.
+  *
+- * Card 22 fix round (J-22-08): "not yet confirmed" has two causes, and the
+- * card names both. The backend floors an answer at `ask` when it may be
+- * incomplete (a background search did not finish, more records were found
+- * than it lists, a named item went unanswered, or the written summary fell
+- * back to a list: `core/graph.py`), as well as when a high-stakes fact has
+- * only one database behind it. The sentence says what the reader gets in
+- * each case and blames no one.
++ * Card 8 (2026-10-16): the "Based on" lines name their databases and no
++ * longer say "not yet confirmed", so the last sentence describes them: which
++ * databases, and when values could not be compared (an answer from two or
++ * more databases with a high-stakes fact that had no second database to check
++ * it against; the backend adds the clause on exactly that).
+  */
+ export const TRUST_LINE_EXPLAINER =
+   "Sources cited counts the record pages this answer cites, the same pages listed under " +
+   "Sources; two links to one page count once. Confirmed means two or more independent " +
+-  "databases agree on the same high-stakes fact. Not yet confirmed means a high-stakes fact " +
+-  "has not been found in a second independent database, or this answer may be incomplete, " +
+-  "for example because a search did not finish or more records were found than it lists.";
++  "databases agree on the same high-stakes fact. A Based on line names the databases the " +
++  "cited pages come from, the three most cited when there are four or more. When an answer rests " +
++  "on two or more databases and a high-stakes fact could not be checked against a second one, " +
++  "the line adds \"their values could not be compared\".";
+ 
+ /*
+  * UI fix 11.27, product owner 2026-09-14: "There is too much bold. Only the
+diff --git a/frontend/src/components/screens/SavedAnswerScreen.test.tsx b/frontend/src/components/screens/SavedAnswerScreen.test.tsx
+index 8c1c4e5b..4271fe44 100644
+--- a/frontend/src/components/screens/SavedAnswerScreen.test.tsx
++++ b/frontend/src/components/screens/SavedAnswerScreen.test.tsx
+@@ -182,7 +182,7 @@ describe("SavedAnswerScreen", () => {
+       <SavedAnswerScreen
+         question={ANSWER.question}
+         loading={false}
+-        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: "high" }}
++        answer={{ ...ANSWER, trust_line: "Based on 2 sources cited from MedGen and OMIM", risk_tier: "high" }}
+         onRunAgain={() => undefined}
+       />,
+     );
+@@ -193,7 +193,7 @@ describe("SavedAnswerScreen", () => {
+     expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
+     expect(screen.getByTestId("saved-answer-trust-line")).toContainElement(tag);
+     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(
+-      "Based on 2 sources cited, not yet confirmed",
++      "Based on 2 sources cited from MedGen and OMIM",
+     );
+   });
+ 
+@@ -204,7 +204,7 @@ describe("SavedAnswerScreen", () => {
+   ])("shows the live words for a stored %s tier", (tier, words) => {
+     // J-71T-09: the other known tiers and a tier the live screen does not
+     // know. Mutation: returning no tag for anything but "high" turns this red.
+-    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited, not yet confirmed", risk_tier: tier });
++    renderSaved({ ...ANSWER, trust_line: "Based on 2 sources cited from MedGen and OMIM", risk_tier: tier });
+     const tag = screen.getByTestId("saved-answer-trust-risk");
+     expect(tag).toHaveTextContent(words);
+     expect(tag).toHaveStyle({ color: designTokens.risk, fontWeight: 400 });
+diff --git a/frontend/src/lib/events.ts b/frontend/src/lib/events.ts
+index 919cbd35..120f5b42 100644
+--- a/frontend/src/lib/events.ts
++++ b/frontend/src/lib/events.ts
+@@ -288,7 +288,7 @@ export interface DonePayload {
+   trust_outcome: TrustOutcome;
+   /**
+    * UI fix set 9, item 9.9. The one plain trust line for the answer ("Based
+-   * on 1 source, not yet confirmed"), built in code by the backend. Optional
++   * on 1 source cited, from MedGen"), built in code by the backend. Optional
+    * and nullable; null on a refusal, absent from an older backend.
+    */
+   trust_line?: string | null;
+diff --git a/frontend/src/lib/riskTag.parity.test.tsx b/frontend/src/lib/riskTag.parity.test.tsx
+index 71ab5b6e..76d649f5 100644
+--- a/frontend/src/lib/riskTag.parity.test.tsx
++++ b/frontend/src/lib/riskTag.parity.test.tsx
+@@ -86,7 +86,7 @@ function savedText(outcome: string, trustLine: string | null, stored: string | n
+   return screen.getByTestId("saved-answer-trust-line").textContent ?? "";
+ }
+ 
+-const TRUST_LINE = "Based on 2 sources cited, not yet confirmed";
++const TRUST_LINE = "Based on 2 sources cited from MedGen and OMIM";
+ 
+ describe("the live and the reopened answer show the same trust words", () => {
+   it("the fixture has cases, including an empty tier beside high", () => {
+diff --git a/frontend/src/set9AnswerStructure.test.tsx b/frontend/src/set9AnswerStructure.test.tsx
+index f67e91ab..5b6567ec 100644
+--- a/frontend/src/set9AnswerStructure.test.tsx
++++ b/frontend/src/set9AnswerStructure.test.tsx
+@@ -113,7 +113,7 @@ function researcherStream(extraDone: Record<string, unknown> = {}): AgentEvent[]
+       total_tool_calls: 1,
+       elapsed_ms: 1200,
+       trust_outcome: "ask",
+-      trust_line: "Based on 1 source, not yet confirmed",
++      trust_line: "Based on 1 source cited, from MedGen",
+       ...extraDone,
+     } as Extract<AgentEvent, { type: "done" }>["payload"]),
+   ];
+@@ -221,12 +221,12 @@ describe("set 9: structure travels on the wire and reaches the screen", () => {
+   it("replaces the pills with one plain trust line, keeping high risk visible (9.9)", () => {
+     const { result } = renderHook(() => useRunView(researcherStream()));
+     expect(result.current.trust).toEqual([
+-      { kind: "plain", label: "Based on 1 source, not yet confirmed" },
++      { kind: "plain", label: "Based on 1 source cited, from MedGen" },
+       { kind: "risk", label: "High-risk claim" },
+     ]);
+     renderView(result.current);
+     const line = screen.getByTestId("trust-line");
+-    expect(line).toHaveTextContent("Based on 1 source, not yet confirmed");
++    expect(line).toHaveTextContent("Based on 1 source cited, from MedGen");
+     expect(line).not.toHaveTextContent(/every claim cited/i);
+     expect(within(line).getByRole("button", { name: /about trust signals/i })).toBeInTheDocument();
+   });
+diff --git a/src/system_03_search_agent/adapters/mcp/server.py b/src/system_03_search_agent/adapters/mcp/server.py
+index 9a1047cd..8dbe4175 100644
+--- a/src/system_03_search_agent/adapters/mcp/server.py
++++ b/src/system_03_search_agent/adapters/mcp/server.py
+@@ -452,7 +452,7 @@ class AskBiomedicalQuestionOutput(BaseModel):
+         ),
+     )
+     # `DonePayload.trust_line`, the one plain sentence the web shows under
+-    # an answer ("Based on 3 sources, not yet confirmed"), same bound.
++    # an answer ("Based on 3 sources cited, all from ClinVar"), same bound.
+     trust_line: str | None = Field(
+         default=None,
+         max_length=200,
+diff --git a/src/system_03_search_agent/contracts/events.py b/src/system_03_search_agent/contracts/events.py
+index ae949fce..b861dcd9 100644
+--- a/src/system_03_search_agent/contracts/events.py
++++ b/src/system_03_search_agent/contracts/events.py
+@@ -612,7 +612,7 @@ class DonePayload(BaseModel):
+     trust_outcome: TrustOutcome
+ 
+     # UI fix set 9, item 9.9 (2026-09-13). The one plain trust line for the
+-    # answer ("Based on 1 source, not yet confirmed"), built in code by
++    # answer ("Based on 1 source cited, from MedGen"), built in code by
+     # `synthesis.trust.answer_trust_line` from the verdicts `trust_outcome`
+     # already summarises. Additive and optional; None on a refusal. Carried
+     # HERE rather than on `TrustSignalPayload` because the MCP surface
+diff --git a/src/system_03_search_agent/synthesis/trust.py b/src/system_03_search_agent/synthesis/trust.py
+index aab20844..28c9ff78 100644
+--- a/src/system_03_search_agent/synthesis/trust.py
++++ b/src/system_03_search_agent/synthesis/trust.py
+@@ -609,6 +609,82 @@ def _databases_backing(claim_finding: SynthFinding, cited: list[SynthFinding]) -
+     return {database for finding in agreeing if (database := record_database(finding))}
+ 
+ 
++# Card 8: the closed display table for `record_database` keys. A key that is
++# not here is counted under "other databases" and never printed raw, so a
++# stray host cannot reach the reader's screen.
++_NCBI_DATABASE_NAMES: dict[str, str] = {
++    "assembly": "Assembly",
++    "bioproject": "BioProject",
++    "biosample": "BioSample",
++    "clinvar": "ClinVar",
++    "datasets": "NCBI Datasets",
++    "dbvar": "dbVar",
++    "gds": "GEO DataSets",
++    "gene": "NCBI Gene",
++    "gtr": "GTR",
++    "medgen": "MedGen",
++    "mesh": "MeSH",
++    "nuccore": "Nucleotide",
++    "pathogens": "Pathogen Detection",
++    "pmc": "PMC",
++    "pubchem": "PubChem",
++    "pubmed": "PubMed",
++    "snp": "dbSNP",
++    "sra": "SRA",
++    "taxonomy": "Taxonomy",
++}
++_NCBI_RESEARCH_NAMES: dict[str, str] = {"litvar2": "LitVar2", "pubtator3": "PubTator3"}
++_DATABASE_NAMES: dict[str, str] = {
++    **{f"{_NCBI_HOST}/{path}": name for path, name in _NCBI_DATABASE_NAMES.items()},
++    **{f"{_NCBI_HOST}/research/{path}": name for path, name in _NCBI_RESEARCH_NAMES.items()},
++    "omim.org": "OMIM",
++    "clinicaltrials.gov": "ClinicalTrials.gov",
++    "clinvar": "ClinVar",
++    "medgen": "MedGen",
++    "mesh": "MeSH",
++    "ncbigene": "NCBI Gene",
++    "omim": "OMIM",
++    "pubmed": "PubMed",
++    "dbsnp": "dbSNP",
++}
++
++
++def _join_names(names: list[str]) -> str:
++    if len(names) <= 1:
++        return "".join(names)
++    return ", ".join(names[:-1]) + " and " + names[-1]
++
++
++def _databases_phrase(claims: list[GroundedClaim], citation_count: int) -> tuple[str, int]:
++    """Card 8: the databases behind a "Based on" line, and how many there are.
++
++    Counts distinct cited pages per `record_database` key, names the known
++    ones through `_DATABASE_NAMES` (most cited first, ties by name), and
++    folds every unknown or empty key into "other databases". Four or more
++    databases: only the three most cited are named. Returns the phrase that
++    follows the count ("all from ClinVar", "from MedGen and OMIM") and the
++    number of distinct databases.
++    """
++    pages: dict[str, set[str]] = {}
++    for claim in claims:
++        page = source_page_key(claim.finding.source_url) or claim.finding.citation_id
++        pages.setdefault(record_database(claim.finding), set()).add(page)
++    known = sorted(
++        (key for key in pages if key in _DATABASE_NAMES),
++        key=lambda key: (-len(pages[key]), _DATABASE_NAMES[key].casefold()),
++    )
++    total = len(pages)
++    shown = known[:3] if total >= 4 else known
++    other = total - len(shown)
++    parts = [_DATABASE_NAMES[key] for key in shown]
++    if other:
++        parts.append(f"{other} other {'database' if other == 1 else 'databases'}")
++    if total == 1:
++        lone = citation_count == 1 or not shown
++        return (f"from {parts[0]}" if lone else f"all from {parts[0]}"), 1
++    return f"from {_join_names(parts)}", total
++
++
+ def answer_trust_line(
+     trust_outcome: TrustOutcome,
+     claim_trusts: list[ClaimTrust],
+@@ -628,11 +704,9 @@ def answer_trust_line(
+       "Confirmed by N independent databases". This is the only line that
+       says "confirmed", because concordance is the only verdict that means
+       it.
+-    - `ask`, or a high-risk claim whose agreement does not reach two
+-      databases: "Based on N source(s) cited, not yet confirmed".
+-    - Otherwise (every claim low risk): "Based on N source(s) cited".
+-      Low-risk claims are never triangulated, so "not yet confirmed" would
+-      imply a check that does not apply to them.
++    - Every other answer: "Based on N source(s) cited" plus the databases
++      behind it (card 8, below). The words "not yet confirmed" are gone;
++      the line names what it rests on instead of sounding like a warning.
+ 
+     Agreement is counted among the cited claims only, so N can never exceed
+     the number of databases in the answer's Sources list.
+@@ -720,7 +794,17 @@ def answer_trust_line(
+         ]
+         if min(backing) >= 2:
+             return f"Confirmed by {min(backing)} independent databases"
+-        return f"Based on {citation_count} {noun} cited, not yet confirmed"
+-    if trust_outcome == "ask":
+-        return f"Based on {citation_count} {noun} cited, not yet confirmed"
+-    return f"Based on {citation_count} {noun} cited"
++    base = f"Based on {citation_count} {noun} cited"
++    named, database_count = _databases_phrase(claims, citation_count)
++    line = f"{base}, {named}" if database_count == 1 else f"{base} {named}"
++    # Card 8: say the values could not be compared only when that is true,
++    # a high-risk claim came back `insufficient` AND the cited records come
++    # from two or more databases. A floor-only `ask` and an all-low-risk one
++    # (low risk is marked `insufficient` by design) never take the clause.
++    if (
++        trust_outcome == "ask"
++        and database_count >= 2
++        and any(trust.triangulation == "insufficient" for trust in high)
++    ):
++        line += "; their values could not be compared"
++    return line
+diff --git a/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py b/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py
+index 7554ef88..ca655aa1 100644
+--- a/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py
++++ b/tests/system_03_search_agent/adapters/cli/test_s3_as_printed.py
+@@ -770,12 +770,12 @@ class TestAQuestionBackIsLabelledAsk:
+ # ---------------------------------------------------------------------------
+ 
+ 
+-_UNCONFIRMED = "Based on 17 sources, not yet confirmed"
++_UNCONFIRMED = "Based on 17 sources cited, all from MedGen"
+ 
+ 
+ def _unconfirmed_answer_frames(trust_line: str | None = _UNCONFIRMED) -> list[dict]:
+     """A finished, cited answer whose outcome is the server's `ask`: answered,
+-    not yet confirmed. Phase 8.10's product review (PR-8.10-01) got exactly
++    not confirmed by a second database. Phase 8.10's product review (PR-8.10-01) got exactly
+     this for "Which diseases are associated with BRCA1?", and the web showed
+     it as "Answered" with the trust line below."""
+     frames = _answer_frames()
+@@ -789,7 +789,7 @@ class TestAFinishedAnswerShowsTheWebsTrustLine:
+     """Card 62, PR-8.10-01: `s3` printed `[ask]` under a finished, 12-citation
+     answer that asked nothing, and no trust line, while `[ask]` also labels a
+     question back with options to pick from. The web shows the same answer
+-    as "Answered" with "Based on N sources, not yet confirmed" under it.
++    as "Answered" with "Based on N sources cited, all from MedGen" under it.
+ 
+     Mutation that turns these red: tag the server's `ask` verdict `[ask]`
+     again, or drop the `_write_verdict` call from `_handle_done`."""
+@@ -1038,10 +1038,10 @@ class TestAQuestionBackIsItsOwnState:
+                 _TOKEN,
+                 _CITE,
+                 ("trust_signal", _signal("ask")),
+-                ("done", _done("ask", "Based on 1 source, not yet confirmed")),
++                ("done", _done("ask", "Based on 1 source cited, from MedGen")),
+             ]
+         )
+-        assert "\n[answer]\nBased on 1 source, not yet confirmed\n" in out
++        assert "\n[answer]\nBased on 1 source cited, from MedGen\n" in out
+         assert "[ask]" not in out
+         assert code == 0
+ 
+@@ -1150,12 +1150,12 @@ class TestTheVerdictIsPrintedOnce:
+                 _TOKEN,
+                 _CITE,
+                 ("trust_signal", _signal("ask")),
+-                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
++                ("done", _done("ask", "Based on 12 sources cited, all from MedGen")),
+                 ("done", _done("ask")),
+             ]
+         )
+         assert out.count("[answer]") == 1
+-        assert out.count("not yet confirmed") == 1
++        assert out.count("Based on 12 sources cited") == 1
+         assert "Single source" not in out
+ 
+     def test_nothing_follows_the_references(self) -> None:
+@@ -1165,7 +1165,7 @@ class TestTheVerdictIsPrintedOnce:
+                 _TOKEN,
+                 _CITE,
+                 ("trust_signal", _signal("ask")),
+-                ("done", _done("ask", "Based on 12 sources, not yet confirmed")),
++                ("done", _done("ask", "Based on 12 sources cited, all from MedGen")),
+             ]
+         )
+         assert out.endswith("[1] ncbi_gene - https://www.ncbi.nlm.nih.gov/gene/672\n")
+diff --git a/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py b/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py
+index 7b211b1c..6a3e09c5 100644
+--- a/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py
++++ b/tests/system_03_search_agent/adapters/graphql/test_parity_fields.py
+@@ -54,7 +54,7 @@ _GERD_OPTIONS = [
+     "Are there clinical trials on GERD treatments?",
+     "What does recent research say about GERD?",
+ ]
+-_TRUST_LINE = "Based on 3 sources, not yet confirmed"
++_TRUST_LINE = "Based on 3 sources cited, all from ClinVar"
+ _MARKER = re.compile(r"\[(\d+)\]")
+ 
+ 
+diff --git a/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py b/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py
+index a452b40a..8e616850 100644
+--- a/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py
++++ b/tests/system_03_search_agent/adapters/mcp/test_no_cost_and_auth.py
+@@ -442,7 +442,7 @@ class TestNeverCost:
+                 citations=[_GOLDEN_CITATION.model_dump()],
+                 answer_markdown="BRCA1 is a protein-coding gene [1].",
+                 audience_depth="researcher",
+-                answer_trust_line="Based on 1 source, not yet confirmed",
++                answer_trust_line="Based on 1 source cited, from MedGen",
+             )
+         )
+ 
+diff --git a/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py b/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py
+index 2e2ef61f..31379bdf 100644
+--- a/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py
++++ b/tests/system_03_search_agent/adapters/mcp/test_parity_tools.py
+@@ -70,7 +70,7 @@ _GERD_OPTIONS = [
+     "Are there clinical trials on GERD treatments?",
+     "What does recent research say about GERD?",
+ ]
+-_TRUST_LINE = "Based on 3 sources, not yet confirmed"
++_TRUST_LINE = "Based on 3 sources cited, all from ClinVar"
+ 
+ 
+ # ---------------------------------------------------------------------------
+diff --git a/tests/system_03_search_agent/core/test_write_answer_structure.py b/tests/system_03_search_agent/core/test_write_answer_structure.py
+index e20b9be7..29fa68ae 100644
+--- a/tests/system_03_search_agent/core/test_write_answer_structure.py
++++ b/tests/system_03_search_agent/core/test_write_answer_structure.py
+@@ -1905,35 +1905,36 @@ async def _hnf1a_answer(monkeypatch, depth: str):
+ 
+ _SEVEN = "[1][2][3][4][5][6][7]"
+ # Read by running exactly these inputs against develop 2182aff3's source.
++# The trust-line text names its databases since card 8; every count is unchanged.
+ _DEVELOP_NUMBERS = {
+     ("hnf1a", "researcher"): (
+         f"Found 7 sequence variant records for BRCA1 {_SEVEN}, linked to 1 disease. ",
+-        "Based on 7 sources cited",
++        "Based on 7 sources cited, all from ClinVar",
+         7,
+     ),
+     ("hnf1a", "plain_language"): (
+         f"I found 7 genetic variants related to BRCA1 {_SEVEN}, linked to 1 condition. ",
+-        "Based on 7 sources cited",
++        "Based on 7 sources cited, all from ClinVar",
+         7,
+     ),
+     ("case_a", "researcher"): (
+         "Found 1 gene record for BRCA1: BRCA1 [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+     ("case_a", "plain_language"): (
+         "I found 1 gene related to BRCA1 [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+     ("case_b", "researcher"): (
+         "Found 1 gene record for BRCA1: BRCA1 DNA repair associated [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+     ("case_b", "plain_language"): (
+         "I found 1 gene related to BRCA1 [1]. ",
+-        "Based on 1 source cited",
++        "Based on 1 source cited, from NCBI Gene",
+         1,
+     ),
+ }
+diff --git a/tests/system_03_search_agent/feedback/test_capture_saved_answer.py b/tests/system_03_search_agent/feedback/test_capture_saved_answer.py
+index b40367ab..d9bebe11 100644
+--- a/tests/system_03_search_agent/feedback/test_capture_saved_answer.py
++++ b/tests/system_03_search_agent/feedback/test_capture_saved_answer.py
+@@ -334,7 +334,7 @@ def test_a_refusal_and_a_clarifying_question_store_nothing(text: str) -> None:
+     assert row.answer_trust_line is None
+ 
+ 
+-_NOT_YET_CONFIRMED = "Based on 2 sources, not yet confirmed"
++_NOT_YET_CONFIRMED = "Based on 2 sources cited, all from MedGen"
+ _DOWN_NOTE = (
+     "PubMed is down at NCBI right now, so this answer may be missing papers "
+     "from it. Try again later."
+diff --git a/tests/system_03_search_agent/feedback/test_outage_note_dated.py b/tests/system_03_search_agent/feedback/test_outage_note_dated.py
+index e91f5104..870319b5 100644
+--- a/tests/system_03_search_agent/feedback/test_outage_note_dated.py
++++ b/tests/system_03_search_agent/feedback/test_outage_note_dated.py
+@@ -270,7 +270,7 @@ def _serve(monkeypatch: pytest.MonkeyPatch, stored: str, created_at: Any) -> Any
+         citations=[],
+         answer_markdown=stored,
+         audience_depth="researcher",
+-        answer_trust_line="Based on 9 sources, not yet confirmed",
++        answer_trust_line="Based on 9 sources cited, all from MedGen",
+         risk_tier=None,
+     )
+ 
+diff --git a/tests/system_03_search_agent/synthesis/test_answer_layout.py b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+index bce4bc27..3248d106 100644
+--- a/tests/system_03_search_agent/synthesis/test_answer_layout.py
++++ b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+@@ -326,7 +326,7 @@ def _claims(*findings: SynthFinding) -> list[GroundedClaim]:
+ 
+ def test_trust_line_single_source_not_confirmed() -> None:
+     line = answer_trust_line("ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE))
+-    assert line == "Based on 1 source cited, not yet confirmed"
++    assert line == "Based on 1 source cited, from MedGen"
+ 
+ 
+ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+@@ -344,7 +344,7 @@ def test_trust_line_based_on_counts_visible_citations_not_databases() -> None:
+     line = answer_trust_line(
+         "ask", [_trust("c-2", "high", "insufficient", "ask")], _claims(DISEASE, other, GENE)
+     )
+-    assert line == "Based on 3 sources cited, not yet confirmed"
++    assert line == "Based on 3 sources cited, all from MedGen"
+ 
+ 
+ def _significance(ref_index: int, url: str, *, tool: str = "cypher_query") -> SynthFinding:
+@@ -396,7 +396,9 @@ def test_trust_line_confirmed_only_on_concordance() -> None:
+         "Confirmed by 2 independent databases"
+     )
+     low = [_trust("c-1", "low", "insufficient", "answer")]
+-    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == "Based on 2 sources cited"
++    assert answer_trust_line("answer", low, _claims(CLINVAR_A, LITVAR)) == (
++        "Based on 2 sources cited from ClinVar and dbSNP"
++    )
+ 
+ 
+ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
+@@ -409,7 +411,7 @@ def test_trust_line_five_papers_one_database_reads_five_not_one() -> None:
+         for n in range(1, 6)
+     ]
+     line = answer_trust_line("answer", [], _claims(*papers))
+-    assert line == "Based on 5 sources cited"
++    assert line == "Based on 5 sources cited, all from MedGen"
+ 
+ 
+ def test_trust_line_counts_pages_the_source_list_shows() -> None:
+@@ -432,7 +434,7 @@ def test_trust_line_counts_pages_the_source_list_shows() -> None:
+     assert len({c.finding.citation_id for c in claims}) == 3, (
+         "populate-check: three citation ids, or the old count could not be told apart"
+     )
+-    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited"
++    assert answer_trust_line("answer", [], claims) == "Based on 2 sources cited, all from MedGen"
+ 
+ 
+ def test_trust_line_flag_and_refuse() -> None:
+diff --git a/tests/system_03_search_agent/synthesis/test_trust_line.py b/tests/system_03_search_agent/synthesis/test_trust_line.py
+new file mode 100644
+index 00000000..10cc8a93
+--- /dev/null
++++ b/tests/system_03_search_agent/synthesis/test_trust_line.py
+@@ -0,0 +1,357 @@
++"""Card 8 (owner, 2026-10-16): the trust line names the databases behind it.
++
++Every "Based on" line says which databases the cited pages come from, keyed
++by `record_database`; "not yet confirmed" is gone; the clause "; their
++values could not be compared" shows only on an `ask` from two or more
++databases with a high-risk claim that came back `insufficient`. Wording
++only: these tests never change a verdict, they pass verdicts in.
++"""
++
++from __future__ import annotations
++
++from functools import cache
++from itertools import combinations
++
++import pytest
++
++from system_03_search_agent.synthesis.findings import SynthFinding
++from system_03_search_agent.synthesis.grounding import GroundedClaim
++from system_03_search_agent.synthesis.trust import (
++    _DATABASE_NAMES,
++    ClaimTrust,
++    answer_trust_line,
++    record_database,
++)
++
++#: `DonePayload.trust_line` is capped at 200 characters (contracts/events.py).
++_CAP = 200
++_COMPARE = "; their values could not be compared"
++
++_PAGES = {
++    "medgen": "https://www.ncbi.nlm.nih.gov/medgen/C{n}",
++    "omim": "https://omim.org/entry/{n}",
++    "clinvar": "https://www.ncbi.nlm.nih.gov/clinvar/variation/{n}",
++    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/{n}/",
++    "gene": "https://www.ncbi.nlm.nih.gov/gene/{n}",
++    "trials": "https://clinicaltrials.gov/study/NCT{n}",
++    "snp": "https://www.ncbi.nlm.nih.gov/snp/rs{n}",
++}
++_NAMES = {
++    "medgen": "MedGen",
++    "omim": "OMIM",
++    "clinvar": "ClinVar",
++    "pubmed": "PubMed",
++    "gene": "NCBI Gene",
++    "trials": "ClinicalTrials.gov",
++    "snp": "dbSNP",
++}
++
++
++def _claims(spec: dict[str, int]) -> list[GroundedClaim]:
++    """`{database: pages}` becomes that many distinct cited pages in each."""
++    out: list[GroundedClaim] = []
++    index = 0
++    for database, pages in spec.items():
++        for n in range(1, pages + 1):
++            index += 1
++            url = _PAGES[database].format(n=n) if database in _PAGES else database.format(n=n)
++            finding = SynthFinding(
++                ref_index=index,
++                citation_id=f"c-{index}",
++                layer="layer_1_graph",
++                tool="cypher_query",
++                field="name",
++                field_value=f"record {index}",
++                source_url=url,
++                entity_type="Disease",
++                curie="",
++            )
++            out.append(GroundedClaim(claim_text=finding.field_value, finding=finding))
++    return out
++
++
++def _trust(tier: str, triangulation: str, outcome: str) -> list[ClaimTrust]:
++    return [ClaimTrust("c-1", tier, True, triangulation, outcome)]  # type: ignore[arg-type]
++
++
++HIGH_INSUFFICIENT = _trust("high", "insufficient", "ask")
++LOW = _trust("low", "insufficient", "ask")
++
++
++# ---------------------------------------------------------------- the table
++
++
++def test_refuse_and_nothing_grounded_have_no_line() -> None:
++    assert answer_trust_line("refuse", [], _claims({"medgen": 1})) is None
++    assert answer_trust_line("answer", [], []) is None
++
++
++def test_flag_is_unchanged() -> None:
++    line = answer_trust_line("flag", _trust("high", "discordant", "flag"), _claims({"medgen": 2}))
++    assert line == "Sources disagree on at least one claim"
++
++
++def test_confirmed_is_unchanged() -> None:
++    from system_03_search_agent.synthesis.trust import trust_for_claims
++
++    graph = _claims({"clinvar": 1})[0].finding
++    snp = _claims({"snp": 1})[0].finding
++    tools = ["cypher_query", "ncbi_dbsnp"]
++    facts = [
++        SynthFinding(
++            ref_index=i + 1,
++            citation_id=f"c-{i + 1}",
++            layer="layer_1_graph",
++            tool=tools[i],
++            field="clinical_significance",
++            field_value="Pathogenic",
++            source_url=f.source_url,
++            entity_type="Variant",
++            curie="",
++        )
++        for i, f in enumerate([graph, snp])
++    ]
++    claims = [GroundedClaim(claim_text="x", finding=f) for f in facts]
++    trusts = trust_for_claims(claims, facts)
++    assert answer_trust_line("answer", trusts, claims) == "Confirmed by 2 independent databases"
++
++
++def test_all_low_risk_names_one_database() -> None:
++    line = answer_trust_line("answer", [], _claims({"medgen": 4}))
++    assert line == "Based on 4 sources cited, all from MedGen"
++
++
++def test_all_low_risk_names_two_databases() -> None:
++    line = answer_trust_line("answer", [], _claims({"medgen": 3, "omim": 1}))
++    assert line == "Based on 4 sources cited from MedGen and OMIM"
++
++
++def test_one_source_reads_singular() -> None:
++    assert answer_trust_line("answer", [], _claims({"medgen": 1})) == (
++        "Based on 1 source cited, from MedGen"
++    )
++
++
++def test_high_risk_concordant_under_two_databases_has_no_clause() -> None:
++    trusts = _trust("high", "concordant", "answer")
++    line = answer_trust_line("answer", trusts, _claims({"clinvar": 2}))
++    assert line == "Based on 2 sources cited, all from ClinVar"
++
++
++def test_ask_one_database_has_no_clause() -> None:
++    line = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims({"clinvar": 4}))
++    assert line == "Based on 4 sources cited, all from ClinVar"
++    one = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims({"medgen": 1}))
++    assert one == "Based on 1 source cited, from MedGen"
++
++
++def test_ask_two_databases_with_a_high_risk_insufficient_claim_shows_the_clause() -> None:
++    line = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims({"medgen": 9, "omim": 7}))
++    assert line == "Based on 16 sources cited from MedGen and OMIM" + _COMPARE
++
++
++def test_ask_two_databases_from_a_floor_only_has_no_clause() -> None:
++    # A floor sets `ask` through `trust_outcome` while every claim's own
++    # verdict is concordant (or there are no high-risk claims at all).
++    concordant = _trust("high", "concordant", "answer")
++    floored = answer_trust_line("ask", concordant, _claims({"medgen": 2, "omim": 1}))
++    assert floored == "Based on 3 sources cited from MedGen and OMIM"
++    no_claims = answer_trust_line("ask", [], _claims({"medgen": 2, "omim": 1}))
++    assert no_claims == "Based on 3 sources cited from MedGen and OMIM"
++
++
++def test_ask_two_databases_all_low_risk_has_no_clause() -> None:
++    # Low-risk claims are marked `insufficient` by design (trust.py).
++    line = answer_trust_line("ask", LOW, _claims({"medgen": 2, "omim": 1}))
++    assert _COMPARE not in line
++    assert line == "Based on 3 sources cited from MedGen and OMIM"
++
++
++def test_four_or_more_databases_name_the_three_most_cited() -> None:
++    spec = {"medgen": 5, "omim": 4, "clinvar": 3, "pubmed": 2, "gene": 1}
++    line = answer_trust_line("answer", [], _claims(spec))
++    assert line == "Based on 15 sources cited from MedGen, OMIM, ClinVar and 2 other databases"
++
++
++def test_four_databases_say_one_other_database() -> None:
++    spec = {"medgen": 5, "omim": 4, "clinvar": 3, "pubmed": 2}
++    line = answer_trust_line("answer", [], _claims(spec))
++    assert line == "Based on 14 sources cited from MedGen, OMIM, ClinVar and 1 other database"
++
++
++def test_four_databases_with_a_failed_comparison_keep_the_clause() -> None:
++    spec = {"medgen": 5, "omim": 4, "clinvar": 3, "pubmed": 2}
++    line = answer_trust_line("ask", HIGH_INSUFFICIENT, _claims(spec))
++    assert line.endswith("and 1 other database" + _COMPARE)
++
++
++def test_an_unknown_database_counts_as_other_and_is_never_printed() -> None:
++    line = answer_trust_line(
++        "answer", [], _claims({"medgen": 2, "https://evil.example.com/x/{n}": 1})
++    )
++    assert line == "Based on 3 sources cited from MedGen and 1 other database"
++    assert "evil" not in line
++
++
++def test_only_unknown_databases_are_not_named() -> None:
++    line = answer_trust_line("answer", [], _claims({"https://evil.example.com/x/{n}": 2}))
++    assert line == "Based on 2 sources cited, from 1 other database"
++
++
++# ---------------------------------------------------------------- properties
++
++
++@cache
++def _all_lines() -> tuple[str, ...]:
++    lines: list[str] = []
++    keys = list(_PAGES) + ["https://unknown.example.org/{n}"]
++    states = [
++        ("answer", []),
++        ("answer", _trust("high", "concordant", "answer")),
++        ("ask", HIGH_INSUFFICIENT),
++        ("ask", LOW),
++        ("ask", []),
++        ("flag", _trust("high", "discordant", "flag")),
++    ]
++    for size in range(1, len(keys) + 1):
++        for combo in combinations(keys, size):
++            for pages in (1, 123):
++                spec = {key: pages for key in combo}
++                for outcome, trusts in states:
++                    line = answer_trust_line(outcome, trusts, _claims(spec))  # type: ignore[arg-type]
++                    assert line is not None
++                    lines.append(line)
++    return tuple(lines)
++
++
++def test_every_line_stays_within_the_done_payload_cap() -> None:
++    lines = _all_lines()
++    assert len(lines) > 1000, "populate-check: the sweep must cover many combinations"
++    assert max(map(len, lines)) <= _CAP
++
++
++def test_only_the_confirmed_branch_starts_with_confirmed() -> None:
++    # `_all_lines` never reaches the confirmed branch (it needs concordant
++    # records from two databases, covered above), so none may start with it.
++    for line in _all_lines():
++        assert not line.startswith("Confirmed")
++        if not line.startswith(("Based on ", "Sources disagree")):
++            pytest.fail(line)
++
++
++def test_no_branch_says_not_yet_confirmed_or_which_differ() -> None:
++    for line in _all_lines():
++        lowered = line.lower()
++        assert "not yet confirmed" not in lowered
++        assert "which differ" not in lowered
++
++
++def test_the_clause_needs_ask_a_high_risk_insufficient_claim_and_two_databases() -> None:
++    for line in _all_lines():
++        if _COMPARE in line:
++            assert line.startswith("Based on ")
++            assert " from " in line and " all from " not in line
++
++
++# ---------------------------------------------------------------- the sweep
++
++#: Written out by hand, independent of the module table: each `record_database`
++#: key, a real page that yields it, and the proper name a reader should see.
++_EXPECTED = {
++    "ncbi.nlm.nih.gov/assembly": ("https://www.ncbi.nlm.nih.gov/assembly/GCF_1", "Assembly"),
++    "ncbi.nlm.nih.gov/bioproject": ("https://www.ncbi.nlm.nih.gov/bioproject/1", "BioProject"),
++    "ncbi.nlm.nih.gov/biosample": ("https://www.ncbi.nlm.nih.gov/biosample/1", "BioSample"),
++    "ncbi.nlm.nih.gov/clinvar": ("https://www.ncbi.nlm.nih.gov/clinvar/variation/1", "ClinVar"),
++    "ncbi.nlm.nih.gov/datasets": ("https://www.ncbi.nlm.nih.gov/datasets/gene/1", "NCBI Datasets"),
++    "ncbi.nlm.nih.gov/dbvar": ("https://www.ncbi.nlm.nih.gov/dbvar/variants/1", "dbVar"),
++    "ncbi.nlm.nih.gov/gds": ("https://www.ncbi.nlm.nih.gov/gds/1", "GEO DataSets"),
++    "ncbi.nlm.nih.gov/gene": ("https://www.ncbi.nlm.nih.gov/gene/672", "NCBI Gene"),
++    "ncbi.nlm.nih.gov/gtr": ("https://www.ncbi.nlm.nih.gov/gtr/tests/1", "GTR"),
++    "ncbi.nlm.nih.gov/medgen": ("https://www.ncbi.nlm.nih.gov/medgen/C1", "MedGen"),
++    "ncbi.nlm.nih.gov/mesh": ("https://www.ncbi.nlm.nih.gov/mesh/1", "MeSH"),
++    "ncbi.nlm.nih.gov/nuccore": ("https://www.ncbi.nlm.nih.gov/nuccore/1", "Nucleotide"),
++    "ncbi.nlm.nih.gov/pathogens": ("https://www.ncbi.nlm.nih.gov/pathogens/isolates/1", "Pathogen Detection"),
++    "ncbi.nlm.nih.gov/pmc": ("https://pmc.ncbi.nlm.nih.gov/articles/PMC1/", "PMC"),
++    "ncbi.nlm.nih.gov/pubchem": ("https://pubchem.ncbi.nlm.nih.gov/compound/1", "PubChem"),
++    "ncbi.nlm.nih.gov/pubmed": ("https://pubmed.ncbi.nlm.nih.gov/12345/", "PubMed"),
++    "ncbi.nlm.nih.gov/research/litvar2": ("https://www.ncbi.nlm.nih.gov/research/litvar2/1", "LitVar2"),
++    "ncbi.nlm.nih.gov/research/pubtator3": ("https://www.ncbi.nlm.nih.gov/research/pubtator3/publication/1", "PubTator3"),
++    "ncbi.nlm.nih.gov/snp": ("https://www.ncbi.nlm.nih.gov/snp/rs1", "dbSNP"),
++    "ncbi.nlm.nih.gov/sra": ("https://www.ncbi.nlm.nih.gov/sra/1", "SRA"),
++    "ncbi.nlm.nih.gov/taxonomy": ("https://www.ncbi.nlm.nih.gov/taxonomy/1", "Taxonomy"),
++    "omim.org": ("https://www.omim.org/entry/113705", "OMIM"),
++    "clinicaltrials.gov": ("https://clinicaltrials.gov/study/NCT1", "ClinicalTrials.gov"),
++}
++_CURIE_EXPECTED = {
++    "clinvar": "ClinVar",
++    "medgen": "MedGen",
++    "mesh": "MeSH",
++    "ncbigene": "NCBI Gene",
++    "omim": "OMIM",
++    "pubmed": "PubMed",
++    "dbsnp": "dbSNP",
++}
++
++
++def _one(url: str, curie: str = "") -> SynthFinding:
++    return SynthFinding(
++        ref_index=1,
++        citation_id="c-1",
++        layer="layer_1_graph",
++        tool="cypher_query",
++        field="name",
++        field_value="x",
++        source_url=url,
++        entity_type="Disease",
++        curie=curie,
++    )
++
++
++def test_the_expected_mapping_covers_every_table_key() -> None:
++    page_keys = {key for key in _DATABASE_NAMES if "." in key}
++    assert set(_EXPECTED) == page_keys
++    assert set(_CURIE_EXPECTED) == set(_DATABASE_NAMES) - page_keys
++
++
++@pytest.mark.parametrize(("key", "case"), sorted(_EXPECTED.items()))
++def test_every_page_database_maps_to_a_proper_name(key: str, case: tuple[str, str]) -> None:
++    url, name = case
++    assert record_database(_one(url)) == key
++    line = answer_trust_line("answer", [], [GroundedClaim("x", _one(url))])
++    assert line == f"Based on 1 source cited, from {name}"
++
++
++@pytest.mark.parametrize(("prefix", "name"), sorted(_CURIE_EXPECTED.items()))
++def test_every_curie_fallback_maps_to_a_proper_name(prefix: str, name: str) -> None:
++    finding = _one("", curie=f"{prefix.upper()}:1")
++    assert record_database(finding) == prefix
++    line = answer_trust_line("answer", [], [GroundedClaim("x", finding)])
++    assert line == f"Based on 1 source cited, from {name}"
++
++
++def test_display_names_are_proper_names_not_hosts() -> None:
++    for name in _DATABASE_NAMES.values():
++        assert name and "/" not in name and not name.startswith("www.")
++
++
++def test_a_graph_row_and_a_live_fetch_of_one_database_name_it_once() -> None:
++    claims = [
++        GroundedClaim("a", _one("https://www.ncbi.nlm.nih.gov/clinvar/variation/1")),
++        GroundedClaim(
++            "b",
++            SynthFinding(
++                ref_index=2,
++                citation_id="c-2",
++                layer="layer_2_api",
++                tool="ncbi_efetch",
++                field="name",
++                field_value="y",
++                source_url="https://www.ncbi.nlm.nih.gov/clinvar/variation/2",
++                entity_type="Variant",
++                curie="",
++            ),
++        ),
++    ]
++    assert answer_trust_line("ask", HIGH_INSUFFICIENT, claims) == (
++        "Based on 2 sources cited, all from ClinVar"
++    )
+diff --git a/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py b/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py
+index e429beaf..5f0498e5 100644
+--- a/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py
++++ b/tests/system_03_search_agent/synthesis/test_trust_line_names_its_count.py
+@@ -84,7 +84,7 @@ def test_a_trailing_slash_is_the_same_source() -> None:
+     """The measured duplicate: the graph's gene link and the live Datasets
+     gene link name one page. Mutation: drop `.rstrip("/")` and this reads 2."""
+     line = answer_trust_line("answer", [], _claims(_finding(1, _GENE), _finding(2, _GENE + "/")))
+-    assert line == "Based on 1 source cited"
++    assert line == "Based on 1 source cited, from NCBI Gene"
+ 
+ 
+ def test_a_query_string_is_not_guessed_away() -> None:
+@@ -94,21 +94,21 @@ def test_a_query_string_is_not_guessed_away() -> None:
+     line = answer_trust_line(
+         "answer", [], _claims(_finding(1, base + "?query=BRCA1"), _finding(2, base + "?query=TP53"))
+     )
+-    assert line == "Based on 2 sources cited"
++    assert line == "Based on 2 sources cited, from 1 other database"
+ 
+ 
+ def test_a_record_without_a_link_is_never_merged() -> None:
+     line = answer_trust_line("answer", [], _claims(_finding(1, ""), _finding(2, "")))
+-    assert line == "Based on 2 sources cited"
++    assert line == "Based on 2 sources cited, all from MedGen"
+ 
+ 
+ @pytest.mark.parametrize(
+     ("outcome", "count", "expected"),
+     [
+-        ("answer", 1, "Based on 1 source cited"),
+-        ("answer", 2, "Based on 2 sources cited"),
+-        ("ask", 1, "Based on 1 source cited, not yet confirmed"),
+-        ("ask", 3, "Based on 3 sources cited, not yet confirmed"),
++        ("answer", 1, "Based on 1 source cited, from MedGen"),
++        ("answer", 2, "Based on 2 sources cited, all from MedGen"),
++        ("ask", 1, "Based on 1 source cited, from MedGen"),
++        ("ask", 3, "Based on 3 sources cited, all from MedGen"),
+     ],
+ )
+ def test_based_on_says_sources_cited(outcome: str, count: int, expected: str) -> None:
+@@ -256,7 +256,7 @@ def test_a_graph_row_and_a_live_fetch_of_one_record_confirm_nothing() -> None:
+         "populate-check: the per-claim verdict still compares tools; if this "
+         "changes, the case below no longer reaches the line"
+     )
+-    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
++    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, from ClinVar"
+ 
+ 
+ def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
+@@ -265,7 +265,7 @@ def test_the_graph_gene_page_and_the_live_gene_page_are_one_database() -> None:
+     graph = _fact(1, _GENE, curie="NCBIGene:672")
+     live = _fact(2, _GENE + "/", tool="ncbi_datasets", layer="layer_2_api")
+     line = answer_trust_line("answer", _confirmed("c-1"), _claims(graph, live))
+-    assert line == "Based on 1 source cited, not yet confirmed"
++    assert line == "Based on 1 source cited, from NCBI Gene"
+ 
+ 
+ def test_agreement_is_read_from_the_cited_records_only() -> None:
+@@ -287,7 +287,7 @@ def test_agreement_is_read_from_the_cited_records_only() -> None:
+     trusts = trust_for_claims(_claims(cited), [cited, *uncited])
+     assert [t.triangulation for t in trusts] == ["concordant"], "populate-check"
+     assert answer_trust_line("answer", trusts, _claims(cited)) == (
+-        "Based on 1 source cited, not yet confirmed"
++        "Based on 1 source cited, from ClinVar"
+     )
+ 
+ 
+@@ -300,7 +300,7 @@ def test_one_record_fetched_twice_beside_an_uncited_corroborator_confirms_nothin
+     litvar = _fact(3, _SNP, tool="litvar2_lookup", layer="layer_3_enrichment")
+     claims = _claims(graph, live)
+     trusts = trust_for_claims(claims, [graph, live, litvar])
+-    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, not yet confirmed"
++    assert answer_trust_line("answer", trusts, claims) == "Based on 1 source cited, from ClinVar"
+ 
+ 
+ def test_n_never_exceeds_the_databases_in_the_sources_list() -> None:
+@@ -318,7 +318,7 @@ def test_a_record_stating_a_different_value_does_not_count_as_agreeing() -> None
+     cited = _fact(1, _CLINVAR, curie="ClinVar:17661")
+     other = _fact(2, _SNP, tool="ncbi_dbsnp", value="Benign")
+     line = answer_trust_line("answer", _confirmed("c-1"), _claims(cited, other))
+-    assert line == "Based on 2 sources cited, not yet confirmed"
++    assert line == "Based on 2 sources cited from ClinVar and dbSNP"
+ 
+ 
+ def test_with_several_confirmed_facts_n_is_what_every_one_of_them_has() -> None:
+@@ -588,4 +588,5 @@ def test_evidence_trust_line_agrees_with_the_screen() -> None:
+     `AnswerScreen.card22.test.tsx`, reads this fixture too)."""
+     after = _DATA["expected_after"]
+     assert answer_trust_line("ask", _HIGH_ASK, _evidence_claims()) == after["trust_line"]
+-    assert after["trust_line"] == f"Based on {after['sources_cited']} sources cited, not yet confirmed"
++    assert after["trust_line"].startswith(f"Based on {after['sources_cited']} sources cited from ")
++    assert "not yet confirmed" not in after["trust_line"]

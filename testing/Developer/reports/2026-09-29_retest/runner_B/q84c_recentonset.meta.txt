@@ -1,0 +1,10 @@
+{
+ "modes": [
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=recent-onset%20diabetes%20treatmen -> https://www.ncbi.nlm.nih.gov/search/all/?term=recent-onset%20diabetes%20treatment"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

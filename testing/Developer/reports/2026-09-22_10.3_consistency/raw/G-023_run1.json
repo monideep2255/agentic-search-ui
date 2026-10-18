@@ -1,0 +1,1914 @@
+{
+ "record": {
+  "id": "G-023",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which clinically significant variants have been reported in CFTR?",
+  "session_id": "c103-831eb54b1929",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T16:52:27+00:00",
+  "run_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "NCBIGene:1080"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 5 sources, not yet confirmed",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_1_graph": 72,
+   "layer_2_api": 18,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 17,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   17,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1137,
+  "answer_start": "Found 20 sequence variant records for CFTR, of 6047 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nSequence variant record",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 9,
+  "server_elapsed_s": 7.367,
+  "seconds": 30.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 11,
+   "tool_result": 11,
+   "step": 1,
+   "token": 134,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 0,
+   "ts": "2026-09-22T16:50:54.877965Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 2,
+   "ts": "2026-09-22T16:50:57.053605Z",
+   "payload": {
+    "narrative": "The question asks for clinically significant variants in CFTR, which requires linking CFTR gene to variant databases (e.g., ClinVar) and filtering for clinical significance, involving graph traversal across records.",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 4,
+   "ts": "2026-09-22T16:50:57.055125Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:1080. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-a49dfad461af",
+      "layer": "layer_1_graph",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ec0bec3bfe39",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-eb8a8e524804",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-8ef502d26c7e",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-254a252f3c82",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-50569c7b057a",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-8c0806f0c264",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-9378e8a7f5f0",
+      "layer": "layer_3_enrichment",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9171c90c007e",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d47df1d10ae0",
+      "layer": "layer_2_api",
+      "persona": "Pauling",
+      "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-6fbe1373bcbc",
+      "layer": "layer_1_graph",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "CFTR",
+      "curie": "NCBIGene:1080",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 6,
+   "ts": "2026-09-22T16:50:57.056150Z",
+   "payload": {
+    "call_id": "cq-a49dfad461af",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 7,
+   "ts": "2026-09-22T16:50:57.056188Z",
+   "payload": {
+    "call_id": "ne-ec0bec3bfe39",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 8,
+   "ts": "2026-09-22T16:50:57.056202Z",
+   "payload": {
+    "call_id": "pa-eb8a8e524804",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 9,
+   "ts": "2026-09-22T16:50:57.056215Z",
+   "payload": {
+    "call_id": "ct-8ef502d26c7e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 10,
+   "ts": "2026-09-22T16:50:57.056225Z",
+   "payload": {
+    "call_id": "ne-254a252f3c82",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 11,
+   "ts": "2026-09-22T16:50:57.056233Z",
+   "payload": {
+    "call_id": "ne-50569c7b057a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 12,
+   "ts": "2026-09-22T16:50:57.056242Z",
+   "payload": {
+    "call_id": "ne-8c0806f0c264",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 13,
+   "ts": "2026-09-22T16:50:57.056250Z",
+   "payload": {
+    "call_id": "pa-9378e8a7f5f0",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 14,
+   "ts": "2026-09-22T16:50:57.056259Z",
+   "payload": {
+    "call_id": "ne-9171c90c007e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 15,
+   "ts": "2026-09-22T16:50:57.056285Z",
+   "payload": {
+    "call_id": "ne-d47df1d10ae0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 16,
+   "ts": "2026-09-22T16:50:57.056295Z",
+   "payload": {
+    "call_id": "cq-6fbe1373bcbc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 17,
+   "ts": "2026-09-22T16:50:57.275053Z",
+   "payload": {
+    "call_id": "pa-eb8a8e524804",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 18,
+   "ts": "2026-09-22T16:50:57.375308Z",
+   "payload": {
+    "call_id": "ne-50569c7b057a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 19,
+   "ts": "2026-09-22T16:50:57.386607Z",
+   "payload": {
+    "call_id": "ne-254a252f3c82",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 20,
+   "ts": "2026-09-22T16:50:57.466728Z",
+   "payload": {
+    "call_id": "ne-d47df1d10ae0",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 21,
+   "ts": "2026-09-22T16:50:57.486632Z",
+   "payload": {
+    "call_id": "ct-8ef502d26c7e",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 22,
+   "ts": "2026-09-22T16:50:57.594158Z",
+   "payload": {
+    "call_id": "cq-6fbe1373bcbc",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "17 row(s) of 17",
+    "result_count": 17,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 23,
+   "ts": "2026-09-22T16:50:57.615365Z",
+   "payload": {
+    "call_id": "ne-ec0bec3bfe39",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 24,
+   "ts": "2026-09-22T16:51:01.012531Z",
+   "payload": {
+    "call_id": "cq-a49dfad461af",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "100 row(s) of 6030",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 25,
+   "ts": "2026-09-22T16:51:01.219382Z",
+   "payload": {
+    "call_id": "pa-9378e8a7f5f0",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 26,
+   "ts": "2026-09-22T16:51:01.317754Z",
+   "payload": {
+    "call_id": "ne-9171c90c007e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 27,
+   "ts": "2026-09-22T16:51:01.356594Z",
+   "payload": {
+    "call_id": "ne-8c0806f0c264",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Pauling",
+    "persona_about": "Explained the nature of the chemical bond, found the protein alpha helix and showed sickle cell anaemia to be a molecular disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Linus_Pauling",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 28,
+   "ts": "2026-09-22T16:51:01.369926Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000823",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000823",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002760",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002760",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003660",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003660",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007213",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007213",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009171",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009171",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009391",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009391",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009463",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009463",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010196",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010196",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011536",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011536",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3064G>A (p.Val1022Met)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012571",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012571",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012572",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012572",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1018653",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1018653",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1018890",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1018890",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1024644",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1024644",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1027585",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1027585",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1027591",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1027591",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1029874",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029874",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.389T>C (p.Leu130Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1029875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029875",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.407T>G (p.Leu136Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1029876",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1029876",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1035472",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1035472",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1036122",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1036122",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1037205",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1037205",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1037208",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1037208",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3590A>G (p.His1197Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1038310",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1038310",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1038737",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1038737",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1444A>G (p.Ile482Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1039311",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1039311",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1040997",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1040997",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1077A>G (p.Gln359=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1042311",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1042311",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1043026",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043026",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1043097",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043097",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1043398",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1043398",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1178T>G (p.Val393Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1044113",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1044113",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1044502",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1044502",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2764G>A (p.Val922Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1046296",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1046296",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1048778",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1048778",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.89dup (p.Arg31fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1051107",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1051107",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1052121",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1052121",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1052165",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1052165",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.851T>C (p.Met284Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1053721",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1053721",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.508C>A (p.Arg170Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1053748",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1053748",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1054952",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1054952",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1055358",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1055358",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.941G>C (p.Gly314Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1060053",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1060053",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1685T>C (p.Val562Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1064446",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1064446",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1409T>A (p.Val470Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1064636",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1064636",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.878T>C (p.Leu293Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065566",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065566",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065569",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065569",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065570",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065570",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1065980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1065980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1069281",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1069281",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.2560dup (p.Thr854fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1069526",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1069526",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1069549",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1069549",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.300_301del (p.Leu101fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1070544",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1070544",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.4340del (p.Val1447fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1073653",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1073653",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.1573del (p.Gln525fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1077681",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1077681",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000492.4(CFTR):c.45T>G (p.Leu15=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705265/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00179439",
+    "source_url": "https://clinicaltrials.gov/study/NCT00179439",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006811",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705266",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705266/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00865904",
+    "source_url": "https://clinicaltrials.gov/study/NCT00865904",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006821",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705980/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01078740",
+    "source_url": "https://clinicaltrials.gov/study/NCT01078740",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006833",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1705981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1705981/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01132482",
+    "source_url": "https://clinicaltrials.gov/study/NCT01132482",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0015701",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "bicarbonate transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1706438",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1706438/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01348204",
+    "source_url": "https://clinicaltrials.gov/study/NCT01348204",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034220",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "monoatomic ion transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28340353",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28340353/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034976",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36207272",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36207272/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035377",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transepithelial water transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36220763",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36220763/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048240",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "sperm capacitation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36264792",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36264792/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0050891",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "multicellular organismal-level water homeostasis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38388235",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38388235/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051454",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intracellular pH elevation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0055085",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "membrane hyperpolarization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070175",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of enamel mineralization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071320",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to cAMP",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0097186",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "amelogenesis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1902476",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chloride transmembrane transport",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:1904322",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to forskolin",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "77a99105-1756-4b9e-bbcc-9537059d3367",
+   "seq": 365,
+   "ts": "2026-09-22T16:51:23.867635Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 9,
+    "elapsed_ms": 7367,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 5 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 20 sequence variant records for CFTR, of 6047 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000823, name: NM_000492.4(CFTR):c.1384G>A (p.Ala462Thr) [1]. SequenceVariant ClinVar:1002760, name: NM_000492.4(CFTR):c.2929T>G (p.Ser977Ala) [2]. SequenceVariant ClinVar:1003660, name: NM_000492.4(CFTR):c.3508C>T (p.Pro1170Ser) [3]. SequenceVariant ClinVar:1007213, name: NM_000492.4(CFTR):c.2131T>C (p.Phe711Leu) [4]. SequenceVariant ClinVar:1009171, name: NM_000492.4(CFTR):c.1051A>G (p.Thr351Ala) [5]. SequenceVariant ClinVar:1009391, name: NM_000492.4(CFTR):c.2950G>A (p.Asp984Asn) [6]. SequenceVariant ClinVar:1009463, name: NM_000492.4(CFTR):c.2546A>G (p.Tyr849Cys) [7]. SequenceVariant ClinVar:1010196, name: NM_000492.4(CFTR):c.3691T>C (p.Ser1231Pro) [8]. SequenceVariant ClinVar:1011536, name: NM_000492.4(CFTR):c.3064G>A (p.Val1022Met) [9]. SequenceVariant record ClinVar:1012571 [10]. SequenceVariant record ClinVar:1012572 [11]. SequenceVariant ClinVar:1018653, name: NM_000492.4(CFTR):c.364T>A (p.Tyr122Asn) [12]. SequenceVariant ClinVar:1018890, name: NM_000492.4(CFTR):c.4028G>A (p.Gly1343Asp) [13]. SequenceVariant ClinVar:1024644, name: NM_000492.4(CFTR):c.4244T>G (p.Val1415Gly) [14]. SequenceVariant record ClinVar:1027585 [15]. SequenceVariant record ClinVar:1027591 [16]. SequenceVariant ClinVar:1029874, name: NM_000492.4(CFTR):c.389T>C (p.Leu130Pro) [17]. SequenceVariant ClinVar:1029875, name: NM_000492.4(CFTR):c.407T>G (p.Leu136Arg) [18]. SequenceVariant record ClinVar:1029876 [19]. SequenceVariant ClinVar:1035472, name: NM_000492.4(CFTR):c.242T>A (p.Phe81Tyr) [20]. SequenceVariant ClinVar:1036122, name: NM_000492.4(CFTR):c.3498C>G (p.Phe1166Leu) [21]. SequenceVariant ClinVar:1037205, name: NM_000492.4(CFTR):c.2755T>A (p.Tyr919Asn) [22]. SequenceVariant ClinVar:1037208, name: NM_000492.4(CFTR):c.3590A>G (p.His1197Arg) [23]. SequenceVariant ClinVar:1038310, name: NM_000492.4(CFTR):c.3157A>T (p.Thr1053Ser) [24]. SequenceVariant ClinVar:1038737, name: NM_000492.4(CFTR):c.1444A>G (p.Ile482Val) [25]. SequenceVariant ClinVar:1039311, name: NM_000492.4(CFTR):c.2800G>A (p.Gly934Ser) [26]. SequenceVariant ClinVar:1040997, name: NM_000492.4(CFTR):c.1077A>G (p.Gln359=) [27]. SequenceVariant ClinVar:1042311, name: NM_000492.4(CFTR):c.1796C>G (p.Thr599Ser) [28]. SequenceVariant record ClinVar:1043026 [29]. SequenceVariant ClinVar:1043097, name: NM_000492.4(CFTR):c.3767C>G (p.Ala1256Gly) [30]. SequenceVariant ClinVar:1043398, name: NM_000492.4(CFTR):c.1178T>G (p.Val393Gly) [31]. SequenceVariant ClinVar:1044113, name: NM_000492.4(CFTR):c.4357C>G (p.Arg1453Gly) [32]. SequenceVariant ClinVar:1044502, name: NM_000492.4(CFTR):c.2764G>A (p.Val922Ile) [33]. SequenceVariant record ClinVar:1046296 [34]. SequenceVariant ClinVar:1048778, name: NM_000492.4(CFTR):c.89dup (p.Arg31fs) [35]. SequenceVariant ClinVar:1051107, name: NM_000492.4(CFTR):c.3239A>G (p.Lys1080Arg) [36]. SequenceVariant ClinVar:1052121, name: NM_000492.4(CFTR):c.1502C>T (p.Thr501Ile) [37]. SequenceVariant ClinVar:1052165, name: NM_000492.4(CFTR):c.851T>C (p.Met284Thr) [38]. SequenceVariant ClinVar:1053721, name: NM_000492.4(CFTR):c.508C>A (p.Arg170Ser) [39]. SequenceVariant ClinVar:1053748, name: NM_000492.4(CFTR):c.1909C>A (p.Gln637Lys) [40]. SequenceVariant ClinVar:1054952, name: NM_000492.4(CFTR):c.3500T>A (p.Ile1167Asn) [41]. SequenceVariant ClinVar:1055358, name: NM_000492.4(CFTR):c.941G>C (p.Gly314Ala) [42]. SequenceVariant ClinVar:1060053, name: NM_000492.4(CFTR):c.1685T>C (p.Val562Ala) [43]. SequenceVariant ClinVar:1064446, name: NM_000492.4(CFTR):c.1409T>A (p.Val470Glu) [44]. SequenceVariant ClinVar:1064636, name: NM_000492.4(CFTR):c.878T>C (p.Leu293Pro) [45]. SequenceVariant ClinVar:1065566, name: NM_000492.4(CFTR):c.327T>G (p.Tyr109Ter) [46]. SequenceVariant record ClinVar:1065569 [47]. SequenceVariant record ClinVar:1065570 [48]. SequenceVariant record ClinVar:1065980 [49]. SequenceVariant ClinVar:1069281, name: NM_000492.4(CFTR):c.2560dup (p.Thr854fs) [50]. SequenceVariant record ClinVar:1069526 [51]. SequenceVariant ClinVar:1069549, name: NM_000492.4(CFTR):c.300_301del (p.Leu101fs) [52]. SequenceVariant ClinVar:1070544, name: NM_000492.4(CFTR):c.4340del (p.Val1447fs) [53]. SequenceVariant ClinVar:1073653, name: NM_000492.4(CFTR):c.1573del (p.Gln525fs) [54]. SequenceVariant ClinVar:1077681, name: NM_000492.4(CFTR):c.45T>G (p.Leu15=) [55]. \n\nGene records found\n\ngene symbol: CFTR [56]. gene name: CFTR [59]. This gene encodes a member of the ATP-binding cassette (ABC) transporter superfamily [65]. The encoded protein functions as a chloride channel, making it unique among members of this protein family, and controls ion and water secretion and absorption in epithelial tissues [65]. Channel activation is mediated by cycles of regulatory domain phosphorylation, ATP-binding by the nucleotide-binding domains, and ATP hydrolysis [65]. Mutations in this gene cause cystic fibrosis, the most common lethal genetic disorder [65]. \n\nPubmed records found\n\npubmed title: Molecular Structure of the Human CFTR Ion Channel [57]. pubmed title: ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction [63]. pubmed title: ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria [69]. pubmed title: Molecular structures reveal synergistic rescue of \u0394508 CFTR by Trikafta modulators [74]. pubmed title: In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis [79]. The cystic fibrosis transmembrane conductance regulator (CFTR) is an ATP-binding cassette (ABC) transporter that uniquely functions as an ion channel [84]. Here, we present a 3.9\u00a0\u00c5 structure of dephosphorylated human CFTR without nucleotides, determined by electron cryomicroscopy (cryo-EM) [84]. Close resemblance of this human CFTR structure to zebrafish CFTR under identical conditions reinforces its relevance for understanding CFTR function [84]. The human CFTR structure reveals a previously unresolved helix [84]. The spectrum of disorders involving CFTR (cystic fibrosis transmembrane conductance regulator) dysfunction correlates with a continuous gradient of CFTR function defined by the combination of two allelic CFTR variants [86]. CFTR-related disorders are clinical entities with features of cystic fibrosis (CF) and evidence for presence of CFTR dysfunction but not meeting criteria for diagnosis of CF [86]. Individuals with CFTR-RDs demonstrate a wide range of CFTR activity and are still under-recognized or misc [86]. This paper is the first in a series providing updated guidance on the definition, evaluation and management of people with a Cystic Fibrosis Transmembrane conductance Regulator (CFTR)-Related Disorder (CFTR-RD) [88]. The need for this update relates to more precise characterisation of CFTR gene variants and improved assessment of CFTR protein dysfunction [88]. The exercise is co-ordinated by the European CF Society Standards of Care Committee and Diagnostic Network Working Group and involves stakeholder e [88]. The predominant mutation causing cystic fibrosis, a deletion of phenylalanine 508 (\u0394508) in the cystic fibrosis transmembrane conductance regulator (CFTR), leads to severe defects in CFTR biogenesis and function [90]. The advanced therapy Trikafta combines the folding corrector tezacaftor (VX-661), the channel potentiator ivacaftor (VX-770), and the dual-function modulator elexacaftor (VX-445) [90]. However, it is unclear how elexacaftor exerts its effects, in part because the structure of \u0394508 CFTR is un [90]. In 2017, the US Food and Drug Administration initiated expansion of drug labels for the treatment of cystic fibrosis (CF) to include CF transmembrane conductance regulator (CFTR) gene variants based on in vitro functional studies [92]. This study aims to identify CFTR variants that result in increased chloride (Cl-) transport function by the CFTR protein after treatment with the CFTR modulator combination elexacaftor/tezacaftor/ivacaftor (ELX/TEZ/IVA) [92]. These data may benefit people with CF (pwCF) who [92]. \n\nClinvar records found\n\nclinvar title: NM_000492.4(CFTR):c.1209+1988_1392+2067inv [58]. clinvar title: NM_000492.4(CFTR):c.1392+2072_1392+2074del [64]. clinvar title: NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA [70]. clinvar title: NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT [75]. clinvar title: NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del [80]. \n\nClinical trial records found\n\nClinical trial name: NPDT Evaluation in Children With CFTR and (PSC) [60]. Clinical trial name: Study of VX-809 in Cystic Fibrosis Subjects With the \u2206F508-CFTR Gene Mutation [66]. Clinical trial name: Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects [71]. Clinical trial name: Effects of Sildenafil on CFTR-dependent Ion Transport Activity [76]. Clinical trial name: Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators [81]. \n\nPublication records found\n\nPublication pmid: 28340353 [61]. Publication pmid: 36207272 [67]. Publication pmid: 36220763 [72]. Publication pmid: 36264792 [77]. Publication pmid: 38388235 [82]. \n\nBiological process records found\n\nBiologicalProcess GO:0006811, name: monoatomic ion transport [62]. BiologicalProcess GO:0006821, name: chloride transport [68]. BiologicalProcess GO:0006833, name: water transport [73]. BiologicalProcess GO:0015701, name: bicarbonate transport [78]. BiologicalProcess GO:0034220, name: monoatomic ion transmembrane transport [83]. BiologicalProcess GO:0034976, name: response to endoplasmic reticulum stress [85]. BiologicalProcess GO:0035377, name: transepithelial water transport [87]. BiologicalProcess GO:0048240, name: sperm capacitation [89]. BiologicalProcess GO:0050891, name: multicellular organismal-level water homeostasis [91]. BiologicalProcess GO:0051454, name: intracellular pH elevation [93]. BiologicalProcess GO:0055085, name: transmembrane transport [94]. BiologicalProcess GO:0060081, name: membrane hyperpolarization [95]. BiologicalProcess GO:0070175, name: positive regulation of enamel mineralization [96]. BiologicalProcess GO:0071320, name: cellular response to cAMP [97]. BiologicalProcess GO:0097186, name: amelogenesis [98]. BiologicalProcess GO:1902476, name: chloride transmembrane transport [99]. BiologicalProcess GO:1904322, name: cellular response to forskolin [100]. \n\nNote: this answer was truncated because only 105 of the 6047 records that matched this question in the graph were retrieved\n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

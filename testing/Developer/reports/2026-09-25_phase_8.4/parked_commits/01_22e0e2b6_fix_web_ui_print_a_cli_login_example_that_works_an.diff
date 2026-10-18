@@ -1,0 +1,119 @@
+Commit 22e0e2b6, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: fix(web-ui): print a CLI login example that works, and name KGX's graph access requirement
+
+Card 30. `s3 login` with no argument fails as printed: main.py's parser
+requires an email positional. CLI_EXAMPLE now sets S3_BASE_URL to this
+deployment and calls `s3 login you@example.org`, so pasting the example
+targets the right server instead of the CLI's localhost default. The KGX
+command is kept as printed, since it is otherwise correct, and the card's
+body now says plainly that it needs operator-granted read-only graph
+database credentials, so a public reader is told why it will not run for
+them instead of being led to a command that fails silently.
+
+
+diff --git a/frontend/src/components/screens/InfoScreens.tsx b/frontend/src/components/screens/InfoScreens.tsx
+index 6a07dc2d..23de4a71 100644
+--- a/frontend/src/components/screens/InfoScreens.tsx
++++ b/frontend/src/components/screens/InfoScreens.tsx
+@@ -159,9 +159,35 @@ export const MCP_CONFIG = `{
+   }
+ }`;
+ 
+-export const CLI_EXAMPLE = `s3 login
++/*
++ * Card 30, measured 2026-09-25
++ * (`testing/Developer/reports/2026-09-25_phase_8.5/`): `s3 login` printed
++ * with no argument fails as run, because `main.py`'s `_parse_login_args`
++ * declares `email` a required positional (`parser.add_argument("email", ...)`,
++ * no default). The command below adds that argument, with a placeholder
++ * address rather than a real one, the same convention every other login
++ * example on the web uses. It also sets `S3_BASE_URL` first: `_run_login`
++ * falls back to `_DEFAULT_BASE_URL`, `http://127.0.0.1:8000`, a local-dev
++ * address, when neither `--base-url` nor this variable is set, so a reader
++ * who only pasted the two original lines would have logged in against their
++ * own laptop rather than this deployment. `s3 ask` needs no base URL of its
++ * own: it reads the one `s3 login` already stored in the credential file.
++ * The password itself is never printed or scripted; `s3 login` reads it from
++ * stdin, unechoed on a real terminal, exactly as it does today.
++ */
++export const CLI_EXAMPLE = `export S3_BASE_URL=${API_ORIGIN}
++s3 login you@example.org
+ s3 ask "diseases linked to BRCA1"`;
+ 
++/*
++ * Card 30. The command itself is unchanged and still fails for anyone
++ * without direct read-only graph database credentials
++ * (GRAPH_PG_HOST, GRAPH_PG_USER, GRAPH_PG_PASSWORD, GRAPH_PG_DBNAME), which
++ * no public account carries. The command is kept, per the ticket, rather
++ * than removed: the fix is the card's own body text below, which now says
++ * plainly that this one needs operator-granted access, so a reader is never
++ * led to a command they cannot run without being told why.
++ */
+ export const KGX_EXAMPLE = `s3-kgx-export NCBIGene:672 \\
+   --hops 1 --output-dir ./kgx-out`;
+ 
+@@ -657,7 +683,7 @@ export function IntegrationsScreen() {
+         <IntegrationCard
+           icon={<TerminalIcon />}
+           title="Command line tools"
+-          body="Two console commands rather than HTTP routes. s3 asks a question and prints the answer, human-readable by default and JSON with --json. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops."
++          body="Two console commands rather than HTTP routes. s3 asks a question and prints the answer, human-readable by default and JSON with --json, once you sign in with s3 login and your account email. s3-kgx-export writes a query-scoped subgraph as BioLink-compliant KGX: nodes.tsv, edges.tsv and a manifest, from seed CURIEs and bounded hops, but it needs its own read-only graph database credentials, which only the operator can grant. It will not run for a public account."
+           copies={[
+             {
+               label: "Copy command",
+diff --git a/frontend/src/components/screens/IntegrationsScreen.test.tsx b/frontend/src/components/screens/IntegrationsScreen.test.tsx
+index ab70f7be..554dcaa0 100644
+--- a/frontend/src/components/screens/IntegrationsScreen.test.tsx
++++ b/frontend/src/components/screens/IntegrationsScreen.test.tsx
+@@ -113,6 +113,24 @@ describe("the integrations page, rebuilt from the reference layout", () => {
+     expect(merged).toHaveTextContent("s3-kgx-export");
+   });
+ 
++  it("card 30: prints a login command that works as printed, and names the KGX access requirement plainly", () => {
++    // Measured 2026-09-25 (testing/Developer/reports/2026-09-25_phase_8.5/):
++    // `s3 login` with no argument fails, because the CLI's own parser
++    // requires an email. The merged card's body is the only place this
++    // page can say so, since it renders no visible code box for either
++    // console command, only copy buttons.
++    render(<IntegrationsScreen />);
++
++    const merged = cards().getByRole("heading", { name: "Command line tools" }).parentElement;
++    expect(merged).not.toBeNull();
++    expect(merged, "the KGX command needs graph access the body never mentions").toHaveTextContent(
++      /read-only graph database credentials/i,
++    );
++    expect(merged, "the body never says the command needs an operator grant").toHaveTextContent(
++      /operator/i,
++    );
++  });
++
+   it("renders the MCP configuration, naming the /mcp path", () => {
+     render(<IntegrationsScreen />);
+ 
+@@ -212,6 +230,26 @@ describe("the integrations page, rebuilt from the reference layout", () => {
+       }
+     });
+ 
++    it("card 30: the copied login line names an account email, not bare `s3 login`", async () => {
++      const user = setupWithClipboard();
++      render(<IntegrationsScreen />);
++
++      await user.click(cards().getByTestId("integration-copy-cli"));
++
++      expect(writeText).toHaveBeenCalledTimes(1);
++      const copied = writeText.mock.calls[0][0];
++      const loginLine = copied.split("\n").find((line: string) => line.startsWith("s3 login"));
++
++      expect(loginLine, "no s3 login line in the copied example").toBeDefined();
++      expect(loginLine, "s3 login was copied with no email argument").not.toBe("s3 login");
++      expect(loginLine, "the placeholder does not look like an email").toMatch(/\S+@\S+/);
++      // The CLI's own default base URL is a local-dev address
++      // (127.0.0.1:8000); the example must point a reader at this
++      // deployment instead, or their first login silently targets their
++      // own laptop.
++      expect(copied, "no base URL is set before logging in").toMatch(/S3_BASE_URL=/);
++    });
++
+     it("says so when the clipboard is unavailable, rather than looking like nothing happened", async () => {
+       const user = setupWithClipboard(undefined);
+       render(<IntegrationsScreen />);

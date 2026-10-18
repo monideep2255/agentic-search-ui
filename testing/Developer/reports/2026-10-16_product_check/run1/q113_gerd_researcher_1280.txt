@@ -1,0 +1,53 @@
+What are the typical symptoms and risk factors of GERD?
+New search
+
+? Answered38.2s · 8 tool calls · 12 sources cited from 2 layers
+
+Show work ▾
+
+The typical symptoms of GERD are heartburn and regurgitation of gastric contents into the oropharynx.⁠13 Found 5 pubmed records, 1 medgen record, 1 literature entity record and 5 clinical trial records for GERD.⁠1–12
+
+GERD is a gastrointestinal motility disorder arising from reflux of stomach contents into the esophagus or oral cavity.⁠13
+
+CLINICAL MANAGEMENT
+
+GERD is a clinical diagnosis most effectively treated with proton-pump inhibitors, and PPI trials are part of clinical management approaches discussed for these symptoms.⁠13, 14 Long-term PPI use is associated with bone fractures, chronic and acute renal disease, community-acquired pneumonia, and Clostridium difficile intestinal infection.⁠13
+
+From the paper "Gastroesophageal reflux disease in children: What's new right now?": GER in children is very common and often physiological, managed conservatively, whereas GERD is a less common pathologic process causing troublesome symptoms that may need medical management.⁠15
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Gastroesophageal Reflux Disease.	PMID:29132520	⁠1
+Gastroesophageal Reflux Disease.	PMID:33351044	⁠5
+Gastroesophageal Reflux Disease.	PMID:36170502	⁠7
+Gastroesophageal reflux disease in children: What's new right now?	PMID:37034973	⁠9
+Gastroesophageal Reflux Disease.	PMID:37516506	⁠11
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Gastroesophageal reflux (GERD)	medgen 1795938	⁠2
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Gastroesophageal Reflux	@DISEASE_Gastroesophageal_Reflux	⁠3
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	NCT00141960	COMPLETED	⁠4
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	NCT00163306	COMPLETED	⁠6
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	NCT00181805	COMPLETED	⁠8
+On Demand Treatment of Reflux Disease	NCT00184522	COMPLETED	⁠10
+Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study	NCT00235677	COMPLETED	⁠12
+NOTES
+The background search of the knowledge graph did not finish because it took too long, so this answer may be missing sources from it. Ask again to retry.
+▶
+SOURCES
+12
+Based on 12 sources cited, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

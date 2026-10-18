@@ -1,0 +1,1158 @@
+{
+ "record": {
+  "id": "G-026",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with cystic fibrosis?",
+  "session_id": "c103-ec9949681ccd",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:29:34+00:00",
+  "run_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0010674"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 16 sources, not yet confirmed",
+  "citations": 47,
+  "distinct_sources": 16,
+  "citations_by_layer": {
+   "layer_1_graph": 3,
+   "layer_2_api": 38,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 32,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 440,
+  "answer_start": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [2] and transforming growth factor beta 1 [3], linke",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 3.019,
+  "seconds": 15.2,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 75,
+   "citation": 47,
+   "trust_signal": 48,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 0,
+   "ts": "2026-09-25T13:27:59.046703Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 2,
+   "ts": "2026-09-25T13:28:00.413457Z",
+   "payload": {
+    "narrative": "Question asks for genes associated with a specific disease, requiring one API call to link disease to genes. (cystic fibrosis: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 4,
+   "ts": "2026-09-25T13:28:00.415934Z",
+   "payload": {
+    "narrative": "searching 3 layers for cystic fibrosis. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-956549ed0158",
+      "layer": "layer_1_graph",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-b909eb78a1ac",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-f180f5a008e8",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-62b65f1d7939",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-733f1269c8e6",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7c16fcfdfe43",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-7e3c7ba1cc67",
+      "layer": "layer_3_enrichment",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a9cccec69343",
+      "layer": "layer_2_api",
+      "persona": "Hershey",
+      "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 6,
+   "ts": "2026-09-25T13:28:00.417067Z",
+   "payload": {
+    "call_id": "cq-956549ed0158",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 7,
+   "ts": "2026-09-25T13:28:00.417097Z",
+   "payload": {
+    "call_id": "pa-b909eb78a1ac",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 8,
+   "ts": "2026-09-25T13:28:00.417108Z",
+   "payload": {
+    "call_id": "ct-f180f5a008e8",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 9,
+   "ts": "2026-09-25T13:28:00.417118Z",
+   "payload": {
+    "call_id": "ne-62b65f1d7939",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 10,
+   "ts": "2026-09-25T13:28:00.417127Z",
+   "payload": {
+    "call_id": "ne-733f1269c8e6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 11,
+   "ts": "2026-09-25T13:28:00.417135Z",
+   "payload": {
+    "call_id": "ne-7c16fcfdfe43",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 12,
+   "ts": "2026-09-25T13:28:00.417144Z",
+   "payload": {
+    "call_id": "pa-7e3c7ba1cc67",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 13,
+   "ts": "2026-09-25T13:28:00.417153Z",
+   "payload": {
+    "call_id": "ne-a9cccec69343",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 14,
+   "ts": "2026-09-25T13:28:00.564824Z",
+   "payload": {
+    "call_id": "ne-62b65f1d7939",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 15,
+   "ts": "2026-09-25T13:28:00.568604Z",
+   "payload": {
+    "call_id": "pa-b909eb78a1ac",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 16,
+   "ts": "2026-09-25T13:28:00.701770Z",
+   "payload": {
+    "call_id": "ct-f180f5a008e8",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 17,
+   "ts": "2026-09-25T13:28:00.832432Z",
+   "payload": {
+    "call_id": "ne-733f1269c8e6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 18,
+   "ts": "2026-09-25T13:28:00.892170Z",
+   "payload": {
+    "call_id": "cq-956549ed0158",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 19,
+   "ts": "2026-09-25T13:28:01.034547Z",
+   "payload": {
+    "call_id": "pa-7e3c7ba1cc67",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 20,
+   "ts": "2026-09-25T13:28:01.120436Z",
+   "payload": {
+    "call_id": "ne-a9cccec69343",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "summary: 32 record(s)",
+    "result_count": 32,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 21,
+   "ts": "2026-09-25T13:28:01.160055Z",
+   "payload": {
+    "call_id": "ne-7c16fcfdfe43",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Hershey",
+    "persona_about": "Showed with Martha Chase in 1952 that DNA, not protein, is the genetic material a virus injects into a cell.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alfred_Hershey",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 22,
+   "ts": "2026-09-25T13:28:01.162611Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "CF transmembrane conductance regulator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2212",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "Fc gamma receptor IIa",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7040",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7040",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0010674",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0010674",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32800451",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32800451/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Cystic_Fibrosis",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D003550",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00391703",
+    "source_url": "https://clinicaltrials.gov/study/NCT00391703",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35240644",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35240644/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00744276",
+    "source_url": "https://clinicaltrials.gov/study/NCT00744276",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35592838",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35592838/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00967681",
+    "source_url": "https://clinicaltrials.gov/study/NCT00967681",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35853636",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35853636/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02929420",
+    "source_url": "https://clinicaltrials.gov/study/NCT02929420",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39129918",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39129918/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03290144",
+    "source_url": "https://clinicaltrials.gov/study/NCT03290144",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "67fab60d-351c-4e1b-b3a2-d8f8c2656a53",
+   "seq": 194,
+   "ts": "2026-09-25T13:28:12.872703Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 3019,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 16 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_literature",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 116
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 131
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [2] and transforming growth factor beta 1 [3], linked to 1 disease: Cystic fibrosis [12]. \n\nThe gene associated with cystic fibrosis is CF transmembrane conductance regulator, NCBIGene:1080 [1]. Two additional genes retrieved are Fc gamma receptor IIa, NCBIGene:2212 [2], and transforming growth factor beta 1, NCBIGene:7040 [3]. \n\nClinical Features\n\nMedGen lists these clinical features: Asthma [4], Bronchiectasis [5], Clubbing of fingers [6], Dehydration [7], Diarrhea [8], Hemoptysis [9], Hepatomegaly [10] and Hepatosplenomegaly [11]. \n\nDisease records found\n\nDisease name: Cystic fibrosis [12]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1080, name: CF transmembrane conductance regulator [1]. Gene NCBIGene:2212, name: Fc gamma receptor IIa [2]. Gene NCBIGene:7040, name: transforming growth factor beta 1 [3]. \n\nPubmed records found\n\nPubmed title: Encephalopathy in cystic fibrosis [13]. Pubmed title: 3.22 Nutrition in Cystic Fibrosis [40]. Pubmed title: Editorial: Cystic Fibrosis in Children [42]. Pubmed title: Azithromycin and cystic fibrosis [44]. Pubmed title: Editorial: Cystic fibrosis-related diabetes [46]. \n\nMedgen records found\n\nMedgen title: Cystic fibrosis [14]. \n\nClinical features MedGen lists for Cystic fibrosis\n\nMedgen clinical_features: Asthma [4]. Medgen clinical_features: Bronchiectasis [5]. Medgen clinical_features: Clubbing of fingers [6]. Medgen clinical_features: Dehydration [7]. Medgen clinical_features: Diarrhea [8]. Medgen clinical_features: Hemoptysis [9]. Medgen clinical_features: Hepatomegaly [10]. Medgen clinical_features: Hepatosplenomegaly [11]. Medgen clinical_features: Hypercalciuria [15]. Medgen clinical_features: Male infertility [16]. Medgen clinical_features: Cirrhosis of liver [17]. Medgen clinical_features: Biliary cirrhosis [18]. Medgen clinical_features: Nasal polyposis [19]. Medgen clinical_features: Pancreatitis [20]. Medgen clinical_features: Cor pulmonale [21]. Medgen clinical_features: Rectal prolapse [22]. Medgen clinical_features: Steatorrhea [23]. Medgen clinical_features: Chronic sinusitis [24]. Medgen clinical_features: Exocrine pancreatic insufficiency [25]. Medgen clinical_features: Recurrent pneumonia [26]. Medgen clinical_features: Chronic lung disease [27]. Medgen clinical_features: Ileus [28]. Medgen clinical_features: Reduced forced vital capacity [29]. Medgen clinical_features: Elevated sweat chloride [30]. Medgen clinical_features: Recurrent bronchopulmonary infections [31]. Medgen clinical_features: Failure to thrive [32]. Medgen clinical_features: Meconium ileus [33]. Medgen clinical_features: Reduced forced expiratory volume in one second [34]. Medgen clinical_features: Decreased forced expiratory flow 25-75% [35]. Medgen clinical_features: Hyperpolarized transepithelial nasal potential difference [36]. Medgen clinical_features: Salty tasting skin [37]. \n\nLiterature entity records found\n\nLiterature entity name: Cystic Fibrosis [38]. \n\nClinical trial records found\n\nClinical trial name: Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [39]. Clinical trial name: A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease [41]. Clinical trial name: Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease [43]. Clinical trial name: A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule [45]. Clinical trial name: Pregnancies and Cystic Fibrosis [47]. "
+}

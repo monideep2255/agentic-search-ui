@@ -1,0 +1,81 @@
+{
+ "record": {
+  "id": "G-042",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260922@example.com",
+  "category": "kiss",
+  "query_class": "lookup",
+  "expected_outcome": "refuse",
+  "question": "What is the weather in San Francisco tomorrow?",
+  "session_id": "c103-658059a8b9bc",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "63ec316",
+  "started_at": "2026-09-22T17:00:43+00:00",
+  "run_id": "8b004553-1c8b-4a04-95a1-4a85318da80e",
+  "outcome": "refused_offtopic",
+  "timed_out": false,
+  "guard_passed": false,
+  "guard_category": "off_topic",
+  "guard_reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.",
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": "refuse",
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 0,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 0,
+  "server_elapsed_s": 0.007,
+  "seconds": 0.5,
+  "event_types": {
+   "guard": 1,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8b004553-1c8b-4a04-95a1-4a85318da80e",
+   "seq": 0,
+   "ts": "2026-09-22T16:59:10.157757Z",
+   "payload": {
+    "passed": false,
+    "category": "off_topic",
+    "reason": "I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records."
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8b004553-1c8b-4a04-95a1-4a85318da80e",
+   "seq": 1,
+   "ts": "2026-09-22T16:59:10.157809Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 0,
+    "elapsed_ms": 7,
+    "trust_outcome": "refuse",
+    "trust_line": null,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": ""
+}

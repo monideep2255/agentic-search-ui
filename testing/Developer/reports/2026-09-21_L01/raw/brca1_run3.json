@@ -1,0 +1,26 @@
+{
+  "question": "Which diseases are associated with BRCA1?",
+  "run": 3,
+  "session": "l01-6d059e7f7c",
+  "run_id": "a3c3ef8c-03d2-4f9e-b949-c232e4474bb2",
+  "outcome": "error",
+  "elapsed": 15.4,
+  "error_payload": {
+    "fatal": true,
+    "scope": "step",
+    "source": "guardrail",
+    "error_class": "transient",
+    "message": "A step in this query hit a temporary error. Retrying the query may succeed.",
+    "retry_after_s": 0
+  },
+  "step_sequence": [
+    "error"
+  ],
+  "tool_starts": [],
+  "tool_results": [],
+  "graph_anomalies": [],
+  "graph_row_counts": [],
+  "source_count": 0,
+  "layer_1_citation_count": 0,
+  "sources": []
+}

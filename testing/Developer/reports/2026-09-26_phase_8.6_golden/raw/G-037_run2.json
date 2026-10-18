@@ -1,0 +1,1314 @@
+{
+ "record": {
+  "id": "G-037",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find GEO expression datasets studying TP53 in human tumour samples.",
+  "session_id": "c103-0f9413dc54e8",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:15:07+00:00",
+  "run_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "NCBIGene:7157"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 23 sources, not yet confirmed",
+  "citations": 24,
+  "distinct_sources": 22,
+  "citations_by_layer": {
+   "layer_2_api": 19,
+   "layer_3_enrichment": 5
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 59,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   59,
+   0
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "summary": "0 row(s) of 0: Generated Cypher appears to bind a literal value directly instead of a parameter. Every caller-supplied value must travel through a parameter, never a string or number written into the Cypher text. Retry generation using parameter references."
+   }
+  ],
+  "rate_limit_signals": 0,
+  "answer_words": 353,
+  "answer_start": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record, 5 gds records and 5 clinical trial records for TP53, of 124 available [2][3][4][5][6][",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 11,
+  "server_elapsed_s": 21.07,
+  "seconds": 21.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 15,
+   "tool_result": 15,
+   "step": 1,
+   "token": 49,
+   "citation": 24,
+   "trust_signal": 25,
+   "done": 1
+  },
+  "first_word_s": 21.253,
+  "first_token_ts": "2026-09-26T17:13:49.181668Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 0,
+   "ts": "2026-09-26T17:13:28.716495Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 2,
+   "ts": "2026-09-26T17:13:30.360735Z",
+   "payload": {
+    "narrative": "Asking for a count/collection of GEO datasets that meet specific criteria (organism, gene, sample type), which requires assembling records from one or more databases.",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 4,
+   "ts": "2026-09-26T17:13:30.364509Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:7157. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-0ec8b53d860f",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-51de0d4deec5",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-6bbbac8331f5",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-256ac72a9174",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9d197d083027",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a2639aac021b",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-afe860ee3988",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-cce20a06bb55",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f11ac086f265",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-8db9f50bb822",
+      "layer": "layer_3_enrichment",
+      "persona": "Hodgkin",
+      "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b1b33fbf2df2",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4aff7fe636f1",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-5a58fcd7f1f5",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e2c410d59bed",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8a45dfb2f63e",
+      "layer": "layer_1_graph",
+      "persona": "Fleming",
+      "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 6,
+   "ts": "2026-09-26T17:13:30.366051Z",
+   "payload": {
+    "call_id": "cq-0ec8b53d860f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 7,
+   "ts": "2026-09-26T17:13:30.366091Z",
+   "payload": {
+    "call_id": "ne-51de0d4deec5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 8,
+   "ts": "2026-09-26T17:13:30.366106Z",
+   "payload": {
+    "call_id": "pa-6bbbac8331f5",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 9,
+   "ts": "2026-09-26T17:13:30.366119Z",
+   "payload": {
+    "call_id": "ct-256ac72a9174",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 10,
+   "ts": "2026-09-26T17:13:30.366132Z",
+   "payload": {
+    "call_id": "ne-9d197d083027",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 11,
+   "ts": "2026-09-26T17:13:30.366145Z",
+   "payload": {
+    "call_id": "ne-a2639aac021b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 12,
+   "ts": "2026-09-26T17:13:30.366158Z",
+   "payload": {
+    "call_id": "ne-afe860ee3988",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 13,
+   "ts": "2026-09-26T17:13:30.366171Z",
+   "payload": {
+    "call_id": "ne-cce20a06bb55",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 14,
+   "ts": "2026-09-26T17:13:30.366184Z",
+   "payload": {
+    "call_id": "ne-f11ac086f265",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 15,
+   "ts": "2026-09-26T17:13:30.366197Z",
+   "payload": {
+    "call_id": "pa-8db9f50bb822",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 16,
+   "ts": "2026-09-26T17:13:30.366211Z",
+   "payload": {
+    "call_id": "ne-b1b33fbf2df2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 17,
+   "ts": "2026-09-26T17:13:30.366224Z",
+   "payload": {
+    "call_id": "ne-4aff7fe636f1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 18,
+   "ts": "2026-09-26T17:13:30.366237Z",
+   "payload": {
+    "call_id": "ne-5a58fcd7f1f5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 19,
+   "ts": "2026-09-26T17:13:30.366250Z",
+   "payload": {
+    "call_id": "ne-e2c410d59bed",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 20,
+   "ts": "2026-09-26T17:13:30.366263Z",
+   "payload": {
+    "call_id": "cq-8a45dfb2f63e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 21,
+   "ts": "2026-09-26T17:13:30.540629Z",
+   "payload": {
+    "call_id": "pa-6bbbac8331f5",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 22,
+   "ts": "2026-09-26T17:13:30.608582Z",
+   "payload": {
+    "call_id": "ct-256ac72a9174",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 23,
+   "ts": "2026-09-26T17:13:30.625998Z",
+   "payload": {
+    "call_id": "ne-51de0d4deec5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 24,
+   "ts": "2026-09-26T17:13:30.627649Z",
+   "payload": {
+    "call_id": "ne-a2639aac021b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 25,
+   "ts": "2026-09-26T17:13:30.648971Z",
+   "payload": {
+    "call_id": "ne-9d197d083027",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 26,
+   "ts": "2026-09-26T17:13:30.793752Z",
+   "payload": {
+    "call_id": "ne-afe860ee3988",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 27,
+   "ts": "2026-09-26T17:13:30.898902Z",
+   "payload": {
+    "call_id": "ne-cce20a06bb55",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 28,
+   "ts": "2026-09-26T17:13:31.044655Z",
+   "payload": {
+    "call_id": "ne-e2c410d59bed",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 29,
+   "ts": "2026-09-26T17:13:31.613948Z",
+   "payload": {
+    "call_id": "cq-8a45dfb2f63e",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "59 row(s) of 124",
+    "result_count": 59,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 30,
+   "ts": "2026-09-26T17:13:42.993004Z",
+   "payload": {
+    "call_id": "cq-0ec8b53d860f",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "error",
+    "persona": "Fleming",
+    "persona_about": "Noticed a mould killing bacteria on a culture dish in 1928 and discovered penicillin, the first antibiotic.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Alexander_Fleming",
+    "summary": "0 row(s) of 0: Generated Cypher appears to bind a literal value directly instead of a parameter. Every caller-supplied value must travel through a parameter, never a string or number written into the Cypher text. Retry generation using parameter references.",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 31,
+   "ts": "2026-09-26T17:13:43.160676Z",
+   "payload": {
+    "call_id": "pa-8db9f50bb822",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Hodgkin",
+    "persona_about": "Used X-ray crystallography to solve the structures of penicillin, vitamin B12 and insulin.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Dorothy_Hodgkin",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 32,
+   "ts": "2026-09-26T17:13:43.366641Z",
+   "payload": {
+    "call_id": "ne-f11ac086f265",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 33,
+   "ts": "2026-09-26T17:13:43.381376Z",
+   "payload": {
+    "call_id": "ne-4aff7fe636f1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 34,
+   "ts": "2026-09-26T17:13:43.419938Z",
+   "payload": {
+    "call_id": "ne-b1b33fbf2df2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 35,
+   "ts": "2026-09-26T17:13:43.437938Z",
+   "payload": {
+    "call_id": "ne-5a58fcd7f1f5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 36,
+   "ts": "2026-09-26T17:13:43.450075Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 37,
+   "ts": "2026-09-26T17:13:49.181668Z",
+   "payload": {
+    "text": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record, 5 gds records and 5 clinical trial records for TP53, of 124 available [2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24]. ",
+    "marker_ids": [
+     "ne-51de0d4deec5-1",
+     "ne-f11ac086f265-2",
+     "ne-b1b33fbf2df2-3",
+     "ne-4aff7fe636f1-4",
+     "ne-5a58fcd7f1f5-5",
+     "ne-e2c410d59bed-6",
+     "ct-256ac72a9174-7",
+     "ne-f11ac086f265-10",
+     "ne-b1b33fbf2df2-11",
+     "ne-5a58fcd7f1f5-12",
+     "ct-256ac72a9174-14",
+     "ne-f11ac086f265-17",
+     "ne-b1b33fbf2df2-18",
+     "ne-5a58fcd7f1f5-19",
+     "ct-256ac72a9174-20",
+     "ne-f11ac086f265-23",
+     "ne-b1b33fbf2df2-24",
+     "ne-5a58fcd7f1f5-25",
+     "ct-256ac72a9174-26",
+     "ne-f11ac086f265-29"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "TP53"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27328919",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3898631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "191170",
+    "source_url": "https://omim.org/entry/191170",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200303273",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200303273",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02289326",
+    "source_url": "https://clinicaltrials.gov/study/NCT02289326",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31365877",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31365877/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905024",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200308953",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200308953",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02612285",
+    "source_url": "https://clinicaltrials.gov/study/NCT02612285",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "33300245",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/33300245/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4055875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200308954",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200308954",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03149679",
+    "source_url": "https://clinicaltrials.gov/study/NCT03149679",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083530",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200308955",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200308955",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03466034",
+    "source_url": "https://clinicaltrials.gov/study/NCT03466034",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "40729726",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083687",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200346694",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200346694",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03645200",
+    "source_url": "https://clinicaltrials.gov/study/NCT03645200",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "e411f0c6-60d2-488e-bd41-362a8dca87da",
+   "seq": 136,
+   "ts": "2026-09-26T17:13:49.203023Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 11,
+    "elapsed_ms": 21070,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 23 sources, not yet confirmed",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 145
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 132
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.41,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 142
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 151
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 2 gene records, 5 pubmed records, 5 clinvar records, 1 omim record, 5 gds records and 5 clinical trial records for TP53, of 124 available [2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20][21][22][23][24]. \n\nMutations in TP53 are associated with a variety of human cancers, including hereditary cancers such as Li-Fraumeni syndrome [1]. \n\nGene records found\n\nGene symbol: TP53 [2]. Gene name: TP53 [7]. \n\nPubmed records found\n\nPubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data [3]. Pubmed title: Integrated Analysis of TP53 Gene and Pathway Alterations in The Cancer Genome Atlas [9]. Pubmed title: Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants [13]. Pubmed title: The Role of TP53 in Adaptation and Evolution [17]. Pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms [21]. \n\nClinvar records found\n\nClinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [4]. Clinvar title: NC_000017.11:g.7666193C>T [10]. Clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [14]. Clinvar title: NM_000546.6(TP53):c.1101-73G>C [18]. Clinvar title: NM_000546.6(TP53):c.-28-3132T>C [22]. \n\nOmim records found\n\nTUMOR PROTEIN p53 [5]. TP53 [5]. \n\nGds records found\n\nGds title: Epigenetic Disordering Drives Stemness, Senescence Escape and Tumor Heterogeneity [WGBS] [6]. Gds title: Activation of the TP53 pathway is a therapeutic vulnerability in NUP98::KDM5A+ pediatric AML I [11]. Gds title: Activation of the TP53 pathway is a therapeutic vulnerability in NUP98::KDM5A+ pediatric AML II [15]. Gds title: Activation of the TP53 pathway is a therapeutic vulnerability in NUP98::KDM5A+ pediatric AML III [19]. Gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas -- RNA [23]. \n\nClinical trial records found\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [8]. Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [12]. Clinical trial name: The p53 Colorectal Cancer Trial [16]. Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [20]. Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [24]. \n\nNote: this answer was truncated because only 59 of the 124 records that matched this question in the graph were retrieved\n\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry."
+}

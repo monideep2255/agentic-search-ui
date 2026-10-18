@@ -1,0 +1,717 @@
+{
+ "record": {
+  "id": "G-005",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86f@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find SRA runs of SARS-CoV-2 sequenced on Illumina from clinical respiratory samples, and explain why each one matched.",
+  "session_id": "c103-35010bd78969",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "15aae08",
+  "started_at": "2026-09-26T23:54:11+00:00",
+  "run_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C1519126",
+   "MedGen:C4302012",
+   "MedGen:C4302019"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 4 sources, not yet confirmed",
+  "citations": 4,
+  "distinct_sources": 4,
+  "citations_by_layer": {
+   "layer_2_api": 4
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 3,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "result_count": 0,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   3
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 85,
+  "answer_start": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [1], Probable SARS (severe acute respiratory syndrome) [2] and SARS (severe acute respirator",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 4,
+  "server_elapsed_s": 14.622,
+  "seconds": 15.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 13,
+   "citation": 4,
+   "trust_signal": 5,
+   "done": 1
+  },
+  "first_word_s": 14.816,
+  "first_token_ts": "2026-09-26T23:52:47.646427Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 0,
+   "ts": "2026-09-26T23:52:39.440943Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 2,
+   "ts": "2026-09-26T23:52:41.726036Z",
+   "payload": {
+    "narrative": "Broad request for SRA runs with multiple conditions (organism, platform, sample type) and explanation of matches, no single API call can fully answer. (SARS: 3 MedGen records matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 4,
+   "ts": "2026-09-26T23:52:42.245374Z",
+   "payload": {
+    "narrative": "searching 3 layers for sars coronavirus protease pathway. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-1d58261d5145",
+      "layer": "layer_1_graph",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e732eaef0251",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-5ed8a736ddcd",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-979b6ebcf523",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-200018d33a6b",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e8e8a764feca",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-bcd0b1f13064",
+      "layer": "layer_3_enrichment",
+      "persona": "Franklin",
+      "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9bbad3959b4b",
+      "layer": "layer_2_api",
+      "persona": "McClintock",
+      "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "SARS",
+      "curie": "MedGen:C1519126",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302012",
+      "confidence": 1.0
+     },
+     {
+      "text": "SARS",
+      "curie": "MedGen:C4302019",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 6,
+   "ts": "2026-09-26T23:52:42.246646Z",
+   "payload": {
+    "call_id": "cq-1d58261d5145",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 7,
+   "ts": "2026-09-26T23:52:42.246682Z",
+   "payload": {
+    "call_id": "pa-e732eaef0251",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 8,
+   "ts": "2026-09-26T23:52:42.246692Z",
+   "payload": {
+    "call_id": "ct-5ed8a736ddcd",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 9,
+   "ts": "2026-09-26T23:52:42.246700Z",
+   "payload": {
+    "call_id": "ne-979b6ebcf523",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 10,
+   "ts": "2026-09-26T23:52:42.246708Z",
+   "payload": {
+    "call_id": "ne-200018d33a6b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 11,
+   "ts": "2026-09-26T23:52:42.246715Z",
+   "payload": {
+    "call_id": "ne-e8e8a764feca",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 12,
+   "ts": "2026-09-26T23:52:42.246723Z",
+   "payload": {
+    "call_id": "pa-bcd0b1f13064",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 13,
+   "ts": "2026-09-26T23:52:42.246732Z",
+   "payload": {
+    "call_id": "ne-9bbad3959b4b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 14,
+   "ts": "2026-09-26T23:52:42.386823Z",
+   "payload": {
+    "call_id": "ct-5ed8a736ddcd",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 15,
+   "ts": "2026-09-26T23:52:42.525454Z",
+   "payload": {
+    "call_id": "ne-979b6ebcf523",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 16,
+   "ts": "2026-09-26T23:52:42.553908Z",
+   "payload": {
+    "call_id": "ne-200018d33a6b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "search: 0 id(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 17,
+   "ts": "2026-09-26T23:52:42.582851Z",
+   "payload": {
+    "call_id": "pa-e732eaef0251",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "empty: 0 record(s)",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 18,
+   "ts": "2026-09-26T23:52:42.727798Z",
+   "payload": {
+    "call_id": "cq-1d58261d5145",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "3 row(s) of 3",
+    "result_count": 3,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 19,
+   "ts": "2026-09-26T23:52:42.727903Z",
+   "payload": {
+    "call_id": "ne-e8e8a764feca",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "empty",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 20,
+   "ts": "2026-09-26T23:52:42.727919Z",
+   "payload": {
+    "call_id": "pa-bcd0b1f13064",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "empty",
+    "persona": "Franklin",
+    "persona_about": "Her X-ray images of DNA, including Photo 51, revealed its helical structure; she went on to map the structure of viruses.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rosalind_Franklin",
+    "summary": "no ids to fetch: the pubmed_search search returned none",
+    "result_count": 0,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 21,
+   "ts": "2026-09-26T23:52:42.994445Z",
+   "payload": {
+    "call_id": "ne-9bbad3959b4b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "McClintock",
+    "persona_about": "Discovered jumping genes, the transposable elements that move within maize chromosomes, decades before the field caught up.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Barbara_McClintock",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 22,
+   "ts": "2026-09-26T23:52:42.995616Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 23,
+   "ts": "2026-09-26T23:52:47.646427Z",
+   "payload": {
+    "text": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [1], Probable SARS (severe acute respiratory syndrome) [2] and SARS (severe acute respiratory syndrome) confirmed [3]. ",
+    "marker_ids": [
+     "cq-1d58261d5145-1",
+     "cq-1d58261d5145-2",
+     "cq-1d58261d5145-3"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "SARS (severe acute respiratory syndrome) confirmed",
+     "Probable SARS (severe acute respiratory syndrome)",
+     "SARS Coronavirus Protease Pathway",
+     "SARS"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C1519126",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C1519126",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4302012",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4302012",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4302019",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4302019",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "276768",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/276768",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "bcfd8be6-032d-4502-b4a4-bd4e3eec47c3",
+   "seq": 46,
+   "ts": "2026-09-26T23:52:47.646755Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 4,
+    "elapsed_ms": 14622,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 4 sources, not yet confirmed",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 121
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.96,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 104
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 142
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 164
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 3 disease records for SARS: SARS Coronavirus Protease Pathway [1], Probable SARS (severe acute respiratory syndrome) [2] and SARS (severe acute respiratory syndrome) confirmed [3]. \n\nDisease records found\n\nDisease name: SARS Coronavirus Protease Pathway [1]. Disease name: Probable SARS (severe acute respiratory syndrome) [2]. Disease name: SARS (severe acute respiratory syndrome) confirmed [3]. \n\nMedgen records found\n\nMedgen title: SARS Coronavirus Protease Pathway [4]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

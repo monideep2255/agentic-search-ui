@@ -1,0 +1,25 @@
+{
+  "depth": "plain_language",
+  "question": "Are there any beneficial variants typically found in people of mediterranean descent?",
+  "outcome": "answer",
+  "words": 129,
+  "paragraphs": 4,
+  "headings": 1,
+  "list_items": 5,
+  "table_rows": 0,
+  "unmarked_claims": 0,
+  "trust_line": "Based on 1 source",
+  "sources": [
+    "16225031",
+    "34582790",
+    "35098403",
+    "37782073",
+    "39042260"
+  ],
+  "notes": [
+    "This is a research summary, not medical advice."
+  ],
+  "errors": [],
+  "key": "q6",
+  "answer_text": "Found 8 pubmed records [1][2][3][4][5][6][7][8]. \nThe most common co-variant was the R202Q/M694V genotype (n = 507, 16.98%) [1]. \nmany such disorders are secondary to perturbation in brain development and/or function [2]. In 176 of the 234 studied families (75.2%), a plausible and genetically parsimonious molecular etiology was identified [2]. \nA \u03b2-globin chain variant was found in 67% of Hispanic patients with a distribution across 10 variants seen in greater than 1% of patients [3]. \n\n## Pubmed records found\n\n- Diagnosis and management of G6PD deficiency.\n- High prevalence of multilocus pathogenic variation in neurodevelopmental disorders in the Turkish population.\n- Clinical and molecular evaluation of MEFV gene variants in the Turkish population: a study by the National Genetics Consortium.\n- Hemoglobin \u03b2-Globin Variants In Hispanic Patients: An Institutional Experience From Dallas, Texas.\n- Molecular analyses of MEFV gene mutation variants in Turkish population.\n\n(This is a research summary, not medical advice.)\n"
+}

@@ -1,0 +1,21 @@
+{
+ "modes": [
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/medgen/C0346153 -> https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+  "https://www.ncbi.nlm.nih.gov/medgen/C2676676 -> https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+  "https://www.ncbi.nlm.nih.gov/medgen/C3280442 -> https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+  "https://www.ncbi.nlm.nih.gov/medgen/C4554406 -> https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+  "https://www.ncbi.nlm.nih.gov/gene/672/ -> https://www.ncbi.nlm.nih.gov/gene/672/",
+  "https://www.ncbi.nlm.nih.gov/gene/672 -> https://www.ncbi.nlm.nih.gov/gene/672"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

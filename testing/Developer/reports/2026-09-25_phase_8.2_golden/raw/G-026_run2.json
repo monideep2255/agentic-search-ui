@@ -1,0 +1,1158 @@
+{
+ "record": {
+  "id": "G-026",
+  "run": 2,
+  "pass": 2,
+  "worker": "B",
+  "account": "s3-consistency-b-20260925p82@example.com",
+  "category": "kiss",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "Which genes are associated with cystic fibrosis?",
+  "session_id": "c103-9c17a7618bf0",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "566e1ab",
+  "started_at": "2026-09-25T13:17:27+00:00",
+  "run_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "lookup",
+  "resolved_entities": [
+   "MedGen:C0010674"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 16 sources, not yet confirmed",
+  "citations": 47,
+  "distinct_sources": 16,
+  "citations_by_layer": {
+   "layer_1_graph": 3,
+   "layer_2_api": 38,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 4,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 32,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   4
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 463,
+  "answer_start": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [2] and transforming growth factor beta 1 [3], linke",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 8.489,
+  "seconds": 28.6,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 78,
+   "citation": 47,
+   "trust_signal": 48,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 0,
+   "ts": "2026-09-25T13:15:56.073725Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 2,
+   "ts": "2026-09-25T13:15:58.847960Z",
+   "payload": {
+    "narrative": "A single direct answer exists: the gene CFTR is known for cystic fibrosis; a lookup suffices. (cystic fibrosis: 1 of at least 20 MedGen record matched by name)",
+    "query_class": "lookup",
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 4,
+   "ts": "2026-09-25T13:15:58.850583Z",
+   "payload": {
+    "narrative": "searching 3 layers for cystic fibrosis. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-7ff077bf3d24",
+      "layer": "layer_1_graph",
+      "persona": "Tsien",
+      "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e94b4b2c363c",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-4e407a5a1da3",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-2720c956fc13",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-93a1e40af654",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-35d6b0307b15",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-b386e36c001c",
+      "layer": "layer_3_enrichment",
+      "persona": "Khorana",
+      "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-35ac382605db",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "cystic fibrosis",
+      "curie": "MedGen:C0010674",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 6,
+   "ts": "2026-09-25T13:15:58.851939Z",
+   "payload": {
+    "call_id": "cq-7ff077bf3d24",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 7,
+   "ts": "2026-09-25T13:15:58.851980Z",
+   "payload": {
+    "call_id": "pa-e94b4b2c363c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 8,
+   "ts": "2026-09-25T13:15:58.851990Z",
+   "payload": {
+    "call_id": "ct-4e407a5a1da3",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 9,
+   "ts": "2026-09-25T13:15:58.852000Z",
+   "payload": {
+    "call_id": "ne-2720c956fc13",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 10,
+   "ts": "2026-09-25T13:15:58.852009Z",
+   "payload": {
+    "call_id": "ne-93a1e40af654",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 11,
+   "ts": "2026-09-25T13:15:58.852017Z",
+   "payload": {
+    "call_id": "ne-35d6b0307b15",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 12,
+   "ts": "2026-09-25T13:15:58.852027Z",
+   "payload": {
+    "call_id": "pa-b386e36c001c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 13,
+   "ts": "2026-09-25T13:15:58.852038Z",
+   "payload": {
+    "call_id": "ne-35ac382605db",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 14,
+   "ts": "2026-09-25T13:15:59.003909Z",
+   "payload": {
+    "call_id": "ne-2720c956fc13",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 15,
+   "ts": "2026-09-25T13:15:59.014765Z",
+   "payload": {
+    "call_id": "pa-e94b4b2c363c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 16,
+   "ts": "2026-09-25T13:15:59.136837Z",
+   "payload": {
+    "call_id": "ct-4e407a5a1da3",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 17,
+   "ts": "2026-09-25T13:15:59.250540Z",
+   "payload": {
+    "call_id": "ne-93a1e40af654",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 18,
+   "ts": "2026-09-25T13:15:59.328588Z",
+   "payload": {
+    "call_id": "cq-7ff077bf3d24",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Tsien",
+    "persona_about": "Turned green fluorescent protein into a palette of colours so that living cells could be watched at work.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Roger_Y._Tsien",
+    "summary": "4 row(s) of 4",
+    "result_count": 4,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 19,
+   "ts": "2026-09-25T13:15:59.467865Z",
+   "payload": {
+    "call_id": "pa-b386e36c001c",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Khorana",
+    "persona_about": "Synthesised nucleic acids to confirm the whole genetic code and built the first artificial gene.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Har_Gobind_Khorana",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 20,
+   "ts": "2026-09-25T13:15:59.592565Z",
+   "payload": {
+    "call_id": "ne-35d6b0307b15",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 21,
+   "ts": "2026-09-25T13:15:59.706248Z",
+   "payload": {
+    "call_id": "ne-35ac382605db",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 32 record(s)",
+    "result_count": 32,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 22,
+   "ts": "2026-09-25T13:15:59.708675Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:1080",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/1080",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "CF transmembrane conductance regulator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2212",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "Fc gamma receptor IIa",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7040",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7040",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0010674",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0010674",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "32800451",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/32800451/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "41393",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/41393",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Cystic_Fibrosis",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D003550",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00391703",
+    "source_url": "https://clinicaltrials.gov/study/NCT00391703",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35240644",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35240644/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00744276",
+    "source_url": "https://clinicaltrials.gov/study/NCT00744276",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35592838",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35592838/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00967681",
+    "source_url": "https://clinicaltrials.gov/study/NCT00967681",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35853636",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35853636/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02929420",
+    "source_url": "https://clinicaltrials.gov/study/NCT02929420",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39129918",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39129918/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03290144",
+    "source_url": "https://clinicaltrials.gov/study/NCT03290144",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "99a373c0-a71c-4e49-a472-cfeaec344d33",
+   "seq": 197,
+   "ts": "2026-09-25T13:16:19.415892Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 8489,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 16 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_literature",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 126
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": "guard_not_ready",
+      "jev_latency_ms": 113
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 3 gene records for cystic fibrosis: CF transmembrane conductance regulator [1], Fc gamma receptor IIa [2] and transforming growth factor beta 1 [3], linked to 1 disease: Cystic fibrosis [12]. \n\nThe gene associated with cystic fibrosis in the knowledge graph is NCBIGene:1080, named CF transmembrane conductance regulator [1]. Two additional genes\u2014NCBIGene:2212 (Fc gamma receptor IIa) [2] and NCBIGene:7040 (transforming growth factor beta 1) [3]. \n\nAdditional Associated Genes\n\nNCBIGene:2212, named Fc gamma receptor IIa [2], and NCBIGene:7040, named transforming growth factor beta 1 [3]. \n\nClinical Features and Literature\n\nMedGen lists these clinical features: Asthma [4], Bronchiectasis [5], Clubbing of fingers [6], Dehydration [7], Diarrhea [8], Hemoptysis [9], Hepatomegaly [10] and Hepatosplenomegaly [11]. \n\nDisease records found\n\nDisease name: Cystic fibrosis [12]. \n\nGene-to-disease mapping\n\nGene NCBIGene:1080, name: CF transmembrane conductance regulator [1]. Gene NCBIGene:2212, name: Fc gamma receptor IIa [2]. Gene NCBIGene:7040, name: transforming growth factor beta 1 [3]. \n\nPubmed records found\n\nPubmed title: Encephalopathy in cystic fibrosis [13]. Pubmed title: 3.22 Nutrition in Cystic Fibrosis [40]. Pubmed title: Editorial: Cystic Fibrosis in Children [42]. Pubmed title: Azithromycin and cystic fibrosis [44]. Pubmed title: Editorial: Cystic fibrosis-related diabetes [46]. \n\nMedgen records found\n\nMedgen title: Cystic fibrosis [14]. \n\nClinical features MedGen lists for Cystic fibrosis\n\nMedgen clinical_features: Asthma [4]. Medgen clinical_features: Bronchiectasis [5]. Medgen clinical_features: Clubbing of fingers [6]. Medgen clinical_features: Dehydration [7]. Medgen clinical_features: Diarrhea [8]. Medgen clinical_features: Hemoptysis [9]. Medgen clinical_features: Hepatomegaly [10]. Medgen clinical_features: Hepatosplenomegaly [11]. Medgen clinical_features: Hypercalciuria [15]. Medgen clinical_features: Male infertility [16]. Medgen clinical_features: Cirrhosis of liver [17]. Medgen clinical_features: Biliary cirrhosis [18]. Medgen clinical_features: Nasal polyposis [19]. Medgen clinical_features: Pancreatitis [20]. Medgen clinical_features: Cor pulmonale [21]. Medgen clinical_features: Rectal prolapse [22]. Medgen clinical_features: Steatorrhea [23]. Medgen clinical_features: Chronic sinusitis [24]. Medgen clinical_features: Exocrine pancreatic insufficiency [25]. Medgen clinical_features: Recurrent pneumonia [26]. Medgen clinical_features: Chronic lung disease [27]. Medgen clinical_features: Ileus [28]. Medgen clinical_features: Reduced forced vital capacity [29]. Medgen clinical_features: Elevated sweat chloride [30]. Medgen clinical_features: Recurrent bronchopulmonary infections [31]. Medgen clinical_features: Failure to thrive [32]. Medgen clinical_features: Meconium ileus [33]. Medgen clinical_features: Reduced forced expiratory volume in one second [34]. Medgen clinical_features: Decreased forced expiratory flow 25-75% [35]. Medgen clinical_features: Hyperpolarized transepithelial nasal potential difference [36]. Medgen clinical_features: Salty tasting skin [37]. \n\nLiterature entity records found\n\nLiterature entity name: Cystic Fibrosis [38]. \n\nClinical trial records found\n\nClinical trial name: Assessment of Quadriceps Muscle Electrostimulation Used in Patients Suffering From Cystic Fibrosis [39]. Clinical trial name: A Study of Topical Danazol for the Treatment of Pain Associated With Fibrocystic Breast Disease [41]. Clinical trial name: Efficacy and Safety of ONCOXIN in Patients With Breast Fibrocystic Disease [43]. Clinical trial name: A Clinical Study on the Efficacy and Safety of the Treatment of Hyperplasia of Mammary Glands With Xiaoru Sanjie Capsule [45]. Clinical trial name: Pregnancies and Cystic Fibrosis [47]. "
+}

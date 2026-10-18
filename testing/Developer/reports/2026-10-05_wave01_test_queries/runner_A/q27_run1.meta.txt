@@ -1,0 +1,3 @@
+wall clock from ask to captured: 20.8s
+answer wait after pick or ask: 18.4s
+mode pressed: Researcher

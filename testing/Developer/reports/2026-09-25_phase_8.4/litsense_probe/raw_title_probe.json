@@ -1,0 +1,3359 @@
+[
+  {
+    "pmid": "11237011",
+    "title": "Initial sequencing and analysis of the human genome.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 2.005324083031155,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 33921670,
+          "section": null,
+          "score": 0.8893876373767853,
+          "text": "Although initial sequencing and analysis of the human genome revealed that less than 2% of the genome comprises exons, approximately 85% of the DNA variations responsible for highly penetrant genetic diseases lie in this small fraction of the genome.",
+          "annotations": [
+            "192|16|disease|MESH:D030342",
+            "48|5|species|9606"
+          ],
+          "pmcid": "PMC8072598"
+        },
+        {
+          "pmid": 27540499,
+          "section": null,
+          "score": 0.8759436905384064,
+          "text": "The two primary works are the \"Initial sequencing and analysis of the Human genome\" (Lander et al.) and the related paper by Venter et al.. These papers report the sequencing of the approximately 3 billion nucleotides that make up the human genome.",
+          "annotations": [
+            "235|5|species|9606",
+            "70|5|species|9606"
+          ],
+          "pmcid": "PMC4975741"
+        },
+        {
+          "pmid": 29423032,
+          "section": "RESULTS",
+          "score": 0.8624928593635559,
+          "text": "Since a large fraction of sequencing reads did not map on miRNome (Supplementary Table 1A), the alignment analysis was extended to other candidate sncRNA annotations by initially remapping reads on the human genome.",
+          "annotations": [
+            "202|5|species|9606"
+          ],
+          "pmcid": "PMC5790449"
+        },
+        {
+          "pmid": 28228978,
+          "section": null,
+          "score": 0.8537612855434418,
+          "text": "The initial analysis of the first draft of the human genome sequence was, in some sense, a watershed event for TE research.",
+          "annotations": [
+            "47|5|species|9606",
+            "111|2|disease|MESH:C565217"
+          ],
+          "pmcid": "PMC5305044"
+        },
+        {
+          "pmid": 28228978,
+          "section": null,
+          "score": 0.8372699618339539,
+          "text": "One particularly interesting finding from the initial analysis of the human genome sequence was that the distribution patterns of Alus change drastically for different age classes.",
+          "annotations": [
+            "70|5|species|9606"
+          ],
+          "pmcid": "PMC5305044"
+        },
+        {
+          "pmid": 17181857,
+          "section": "DISCUSS",
+          "score": 0.8362360894680023,
+          "text": "The initial analysis of the human genome sequence had indicated that the HOX gene cluster is virtually deprived of TEs; the same result was obtained upon analysis of the mouse genome and interpreted in terms of TEs disturbing fine tuned regulation of developmental genes.",
+          "annotations": [
+            "28|5|species|9606",
+            "170|5|species|10090"
+          ],
+          "pmcid": "PMC1794433"
+        },
+        {
+          "pmid": 16340004,
+          "section": "RESULTS",
+          "score": 0.8216182291507721,
+          "text": "Analysis of the NF1 intron-derived sequence was initiated by PCR amplification of an ~400 bp region encompassing the putative 100-200 bp palindrome from human genomic DNA (Figure 1).",
+          "annotations": [
+            "16|3|gene|4763",
+            "153|5|species|9606"
+          ],
+          "pmcid": "PMC1310899"
+        },
+        {
+          "pmid": 35280829,
+          "section": "METHODS",
+          "score": 0.816690981388092,
+          "text": "Sequencing data were analyzed using the following methods: the in-house developed quality control tools were firstly used to initiate the preprocessing and quality control analysis of the raw sequencing data, followed by using the Burrows-Wheeler Alignment (BWA) algorithm to compare the processed sequencing data with the reference human genome (version: GRCh37/hg19).",
+          "annotations": [
+            "333|5|species|9606"
+          ],
+          "pmcid": "PMC8908046"
+        },
+        {
+          "pmid": 25386756,
+          "section": "METHODS",
+          "score": 0.8118036985397339,
+          "text": "For sequence analysis the reference sequence used was NM_000527.4 and cDNA numbering was considered following the Human Genome Variation Society nomenclature, with nucleotide c.1 being A of the ATG initiation codon p.1.",
+          "annotations": [
+            "114|5|species|9606"
+          ],
+          "pmcid": "PMC4227843"
+        },
+        {
+          "pmid": 33923045,
+          "section": null,
+          "score": 0.7745766341686249,
+          "text": "Interestingly, when the biotech industry was approaching the beginning of the human genomics era following the publication of Initial sequencing and analysis of the human genome on 15 February 2001, the FDA approval of tyrosine kinase inhibitor Gleevec  (imatinib) in the same year also helped lay the foundations for a new age of biomedicine (medicine developed through research in molecular biology) and establish the high market potential of kinase inhibitors, which accounted for $40.41 billion in 2019 and is projected to reach $64.90 billion by 2027.",
+          "annotations": [
+            "165|5|species|9606",
+            "255|8|chemical|MESH:D000068877",
+            "78|5|species|9606",
+            "245|7|chemical|MESH:D000068877",
+            "219|15|gene|7294"
+          ],
+          "pmcid": "PMC8146955"
+        }
+      ]
+    },
+    "same_pmid_matches": [],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "10651488",
+    "title": "A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient. Mutations in brief no. 175. Online.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.1639052079990506,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 10651488,
+          "annotations": [
+            "143|7|species|9606",
+            "137|5|disease|MESH:C535984",
+            "103|4|gene|1080",
+            "50|51|gene|1080",
+            "26|5|mutation|rs397508225"
+          ],
+          "text": "A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient.",
+          "score": 0.9842461049556732,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 8829643,
+          "annotations": [
+            "122|5|disease|MESH:C535984",
+            "128|8|species|9606",
+            "97|4|gene|1080",
+            "44|51|gene|1080"
+          ],
+          "text": "A novel missense mutation in exon 16 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in CBAVD patients.",
+          "score": 0.8582946284686181,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 15705389,
+          "annotations": [
+            "193|5|disease|MESH:C535984",
+            "82|4|gene|1080",
+            "29|51|gene|1080",
+            "143|48|disease|MESH:C535984"
+          ],
+          "text": "OBJECTIVE: To report a novel cystic fibrosis transmembrane conductance regulator (CFTR) gene missense mutation in a compound heterozygote with congenital bilateral absence of the vas deferens (CBAVD).",
+          "score": 0.7806240978061867,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 18769034,
+          "annotations": [
+            "251|4|gene|1080",
+            "120|3|disease|None",
+            "56|51|gene|1080",
+            "265|6|mutation|rs397508619",
+            "114|4|gene|1080",
+            "276|6|mutation|rs397508696",
+            "136|5|disease|MESH:C535984",
+            "142|8|species|9606",
+            "185|5|mutation|rs397508187"
+          ],
+          "text": "A previous screening of the entire coding region of the cystic fibrosis transmembrane conductance regulator gene (CFTR [MIM 602421]) in CBAVD patients identified three novel mutations: P439S is located in the first nucleotide binding domain (NBD1) of CFTR, whereas P1290S and E1401K are located in NBD2.",
+          "score": 0.7762584220910208,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 15357566,
+          "annotations": [
+            "26|6|mutation|rs397508521",
+            "93|4|gene|1080",
+            "40|51|gene|1080",
+            "141|48|disease|MESH:C535984",
+            "128|7|species|9606"
+          ],
+          "text": "A novel missense mutation A1081P in the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a Laotian patient with congenital bilateral absence of the vas deferens.",
+          "score": 0.7676587046024397,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 7509683,
+          "annotations": [
+            "30|5|mutation|rs121908805",
+            "137|8|species|9606",
+            "23|5|mutation|rs397508224",
+            "119|4|gene|1080",
+            "37|9|mutation|tmVar:c|SUB|A|1651|T",
+            "66|51|gene|1080"
+          ],
+          "text": "Three novel mutations (I506S, S466X, 1651A-->T) in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) detected in patients of southern German descent.",
+          "score": 0.7476796973994737,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 31875237,
+          "annotations": [
+            "8|5|disease|MESH:C535984",
+            "252|5|disease|MESH:C535984",
+            "132|4|gene|1080",
+            "121|4|gene|1080",
+            "258|8|species|9606",
+            "63|51|gene|1080"
+          ],
+          "text": "In most CBAVD cases, recessive mutations are identified in the cystic fibrosis transmembrane conductance regulator gene (CFTR), and CFTR analysis by sequencing and screening for large rearrangements allows for a mutation detection rate of about 87% in CBAVD patients (Ratbi et al.).",
+          "score": 0.7394472344867271,
+          "pmcid": "PMC7864851",
+          "section": null
+        },
+        {
+          "pmid": 34300309,
+          "annotations": [
+            "258|5|disease|MESH:C535984",
+            "264|8|species|9606",
+            "139|5|disease|MESH:C535984",
+            "226|4|gene|1080",
+            "24|51|gene|1080",
+            "202|8|species|9606",
+            "130|3|species|9606",
+            "77|4|gene|1080"
+          ],
+          "text": "Mutations affecting the cystic fibrosis transmembrane conductance regulator (CFTR) gene have also been identified in about 10% of men with CUAVD and normal kidneys, and it has been suggested that these patients should undergo CFTR testing as recommended for CBAVD patients.",
+          "score": 0.7378189194924596,
+          "pmcid": "PMC8304267",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 22842702,
+          "annotations": [
+            "179|4|gene|1080",
+            "230|8|species|9606",
+            "50|5|disease|MESH:C535984",
+            "0|48|disease|MESH:C535984",
+            "80|23|disease|MESH:D053713",
+            "126|51|gene|1080",
+            "244|5|disease|MESH:C535984"
+          ],
+          "text": "Congenital bilateral absence of the vas deferens (CBAVD) is a frequent cause of obstructive azoospermia, and mutations of the cystic fibrosis transmembrane conductance regulator (CFTR) gene have also been frequently identified in patients with CBAVD.",
+          "score": 0.7267601006968465,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 10571949,
+          "annotations": [
+            "90|4|gene|1080",
+            "37|51|gene|1080",
+            "161|8|species|9606",
+            "175|6|disease|MESH:D001249"
+          ],
+          "text": "The complete characterization of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified missense mutations in 15% of 144 unrelated adult patients with asthma, but in none of 41 subjects from the general population.",
+          "score": 0.6943169406910381,
+          "pmcid": null,
+          "section": "abstract"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 10651488,
+        "annotations": [
+          "143|7|species|9606",
+          "137|5|disease|MESH:C535984",
+          "103|4|gene|1080",
+          "50|51|gene|1080",
+          "26|5|mutation|rs397508225"
+        ],
+        "text": "A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient.",
+        "score": 0.9842461049556732,
+        "pmcid": null,
+        "section": "title"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "10862786",
+    "title": "Inhibition of cystic fibrosis transmembrane conductance regulator by novel interaction with the metabolic sensor AMP-activated protein kinase.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 2.295820500003174,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 10862786,
+          "section": "title",
+          "score": 1.0,
+          "text": "Inhibition of cystic fibrosis transmembrane conductance regulator by novel interaction with the metabolic sensor AMP-activated protein kinase.",
+          "annotations": [
+            "14|51|gene|24255",
+            "113|28|gene|78975"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 35997536,
+          "section": "abstract",
+          "score": 0.9367784559726715,
+          "text": "Importantly, cystic fibrosis transmembrane conductance regulator (CFTR) is the main channel regulating fluid transport in this system, stimulated by phosphorylation by protein kinase A and inhibited by the AMP-activated protein kinase AMPK.",
+          "annotations": [
+            "13|51|gene|1080",
+            "66|4|gene|1080",
+            "235|4|gene|5564"
+          ],
+          "pmcid": "PMC9534488"
+        },
+        {
+          "pmid": 37108379,
+          "section": null,
+          "score": 0.9300388395786285,
+          "text": "In this work, they demonstrated that the activation of 5' AMP-activated protein kinase (AMPK) with Panduratin A inhibits cystic fibrosis transmembrane conductance regulator (CFTR)-mediated chloride secretion and reduces renal cyst expansion in polycystic kidney disease (PKD) in vitro and in vivo.",
+          "annotations": [
+            "189|8|chemical|MESH:D002712",
+            "88|4|gene|5563",
+            "174|4|gene|1080",
+            "121|51|gene|1080",
+            "99|12|chemical|MESH:C482884"
+          ],
+          "pmcid": "PMC10138362"
+        },
+        {
+          "pmid": 35457146,
+          "section": "abstract",
+          "score": 0.927808940410614,
+          "text": "Evidence suggests that the activation of 5' AMP-activated protein kinase (AMPK) inhibits cystic fibrosis transmembrane conductance regulator (CFTR)-mediated chloride secretion, leading to reduced progression of PKD.",
+          "annotations": [
+            "89|51|gene|24255",
+            "211|3|disease|MESH:D007690",
+            "74|4|gene|78975",
+            "142|4|gene|24255",
+            "157|8|chemical|MESH:D002712"
+          ],
+          "pmcid": "PMC9024631"
+        },
+        {
+          "pmid": 29779024,
+          "section": "abstract",
+          "score": 0.9271202385425568,
+          "text": "Metformin inhibits cyclic AMP generation and activates AMP-activated protein kinase (AMPK), which inhibits the cystic fibrosis transmembrane conductance regulator and Mammalian Target of Rapamycin pathways.",
+          "annotations": [
+            "0|9|chemical|MESH:D008687",
+            "187|9|chemical|MESH:D020123",
+            "19|10|chemical|MESH:D000242",
+            "167|9|species|9606",
+            "85|4|gene|5563",
+            "111|51|gene|1080",
+            "55|28|gene|5563"
+          ],
+          "pmcid": "PMC6010317"
+        },
+        {
+          "pmid": 21562404,
+          "section": "abstract",
+          "score": 0.9150802195072174,
+          "text": "AMP-activated protein kinase (AMPK) is a metabolic energy regulator found in a wide variety of cells and has been linked to cystic fibrosis transmembrane conductance regulator (CFTR) mediated chloride secretion in several different tissues.",
+          "annotations": [
+            "30|4|gene|78975",
+            "177|4|gene|1080",
+            "192|8|chemical|MESH:D002712",
+            "124|51|gene|1080",
+            "0|28|gene|78975"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 39469724,
+          "section": "INTRO",
+          "score": 0.9130797684192657,
+          "text": "Another study reported the potential of chalcone in alleviating polycystic kidney disease by inhibiting cystic fibrosis transmembrane conductance regulator (CFTR) expression and reducing extracellular signal-regulated kinase 1/2 (ERK1/2) and mammalian target of rapamycin (mTOR)/S6K signaling pathways as well as activating AMP-activated protein kinase (AMPK) expression.",
+          "annotations": [
+            "354|4|gene|5564",
+            "40|8|chemical|MESH:D002599",
+            "157|4|gene|1080",
+            "64|25|disease|MESH:D007690",
+            "273|4|gene|2475",
+            "279|3|gene|6198",
+            "242|29|gene|2475",
+            "104|51|gene|1080"
+          ],
+          "pmcid": "PMC11514653"
+        },
+        {
+          "pmid": 36490300,
+          "section": "abstract",
+          "score": 0.9089755117893219,
+          "text": "Electrophysiological analyses indicated that DHLV inhibited cystic fibrosis transmembrane conductance regulator (CFTR), a cAMP-dependent apical chloride channel, via mechanisms not involving alteration of intracellular cAMP levels or its negative regulators including AMP-activated protein kinases and protein phosphatases.",
+          "annotations": [
+            "45|4|chemical|-",
+            "144|8|chemical|MESH:D002712",
+            "113|4|gene|1080",
+            "122|4|chemical|-",
+            "60|51|gene|1080",
+            "219|4|chemical|-"
+          ],
+          "pmcid": "PMC9770395"
+        },
+        {
+          "pmid": 22158473,
+          "section": "abstract",
+          "score": 0.8983246684074402,
+          "text": "Takiar et al. found that metformin stimulates the energy-sensing molecule AMP-activated protein kinase (AMPK), inhibits the activities of AMPK-dependent cystic fibrosis transmembrane conductance regulator (CFTR) and mammalian target of rapamycin in Madin-Darby canine kidney renal epithelial cells, and attenuates cyclic AMP-dependent growth of Madin-Darby canine kidney cysts in collagen matrices and of cysts in metanephric organ explants, and cystogenesis in constitutive and inducible Pkd1-knockout mice.",
+          "annotations": [
+            "405|5|disease|MESH:D003560",
+            "104|4|gene|5564",
+            "25|9|chemical|MESH:D008687",
+            "503|4|species|10090",
+            "446|12|disease|None",
+            "314|10|chemical|MESH:D000242",
+            "206|4|gene|1080",
+            "153|51|disease|MESH:D003550",
+            "345|31|species|None",
+            "216|29|gene|2475",
+            "249|18|cellline|CVCL:0422",
+            "489|4|gene|5310",
+            "138|4|gene|5564"
+          ],
+          "pmcid": "PMC4096714"
+        },
+        {
+          "pmid": 36180454,
+          "section": "INTRO",
+          "score": 0.8896346986293793,
+          "text": "For instance, in the VMN, GI neuron activation depends on the energy sensor AMP-activated protein kinase (AMPK), which is activated by a fall in intracellular energy level, and which regulates the activity of an ion channel, possibly the cystic fibrosis transmembrane conductance regulator (CFTR); AMPK also preserves GI neurons function by upregulating the expression of anti-oxidant proteins, in particular thioredoxin 2.",
+          "annotations": [
+            "291|4|gene|12638",
+            "409|13|gene|56551",
+            "238|51|gene|12638"
+          ],
+          "pmcid": "PMC9525695"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 10862786,
+        "section": "title",
+        "score": 1.0,
+        "text": "Inhibition of cystic fibrosis transmembrane conductance regulator by novel interaction with the metabolic sensor AMP-activated protein kinase.",
+        "annotations": [
+          "14|51|gene|24255",
+          "113|28|gene|78975"
+        ],
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "11104661",
+    "title": "Worldwide genetic analysis of the CFTR region.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.6433916669921018,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11104661,
+          "annotations": [
+            "34|4|gene|1080"
+          ],
+          "text": "Worldwide genetic analysis of the CFTR region.",
+          "score": 1.0,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 18096053,
+          "annotations": [
+            "185|8|mutation|tmVar:c|SUB|T|2694|G",
+            "212|12|mutation|tmVar:c|SUB|G|4006-200|A",
+            "52|4|gene|1080"
+          ],
+          "text": "Mateu conducted a worldwide genetic analysis of the CFTR region and analyzed normal allele and haplotype variation at two single-nucleotide polymorphisms (SNPs), namely the T854/AvaII (2694 T/G) and TUB20/PVUII (4006-200 G/A).",
+          "score": 0.86411052942276,
+          "pmcid": "PMC2245972",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 19999232,
+          "annotations": [
+            "60|15|disease|MESH:D003550",
+            "176|2|disease|MESH:D003550",
+            "46|9|mutation|rs113993960",
+            "28|4|gene|1080"
+          ],
+          "text": "The most common mutation in CFTR worldwide is deltaF508 and cystic fibrosis genetic analysis consortium revealed that this mutation is responsible for approximately 66% of all CF chromosomes in the world.",
+          "score": 0.8235268314126819,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 38024076,
+          "annotations": [
+            "29|4|gene|1080",
+            "120|7|mutation|rs113993960",
+            "132|6|mutation|rs80034486"
+          ],
+          "text": "Furthermore, the analysis of CFTR gene mutations reveals the presence of commonly observed mutations worldwide, such as F508del and N1303K, suggesting a shared genetic profile in the Pakistani population.",
+          "score": 0.8135922681353782,
+          "pmcid": "PMC10653747",
+          "section": "CONCL"
+        },
+        {
+          "pmid": 26436105,
+          "annotations": [
+            "141|4|gene|1080",
+            "60|2|disease|MESH:D003550",
+            "23|9|mutation|rs113993960"
+          ],
+          "text": "Although one mutation (deltaF508) accounts for about 70% of CF alleles worldwide (Bobadilla et al.), diverse heritages are reflected for the CFTR gene and distributed with varying frequencies among populations often complicating genetic analysis (Estivill et al.).",
+          "score": 0.7966017578305747,
+          "pmcid": "PMC4585447",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 24241240,
+          "annotations": [
+            "61|3|disease|MESH:D015209",
+            "88|4|gene|1080",
+            "101|7|mutation|rs38904"
+          ],
+          "text": "In our analysis, there were significant associations between PSC and a genetic locus in CFTR region (rs38904, chr7q31, OR 2.78, 95% CI: 1.62-4.76, permutated P=0.01).",
+          "score": 0.7678846809783004,
+          "pmcid": "PMC4064459",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 32466381,
+          "annotations": [
+            "266|4|gene|1080"
+          ],
+          "text": "An exemplary collaboration involving more than 100 laboratories worldwide and carried out through an international consortium for the study of the gene mutations (Cystic Fibrosis Genetic Analysis Consortium) has led to the identification of more than 2000 different CFTR mutations to date.",
+          "score": 0.7663825903596427,
+          "pmcid": "PMC7348877",
+          "section": null
+        },
+        {
+          "pmid": 33407736,
+          "annotations": [
+            "152|4|gene|1080",
+            "30|2|disease|MESH:D003550"
+          ],
+          "text": "Worldwide, the sensitivity of CF NBS varies between 86.6 and 97.5% depending primarily on differences in IRT cut-offs and the detection rate of genetic CFTR analysis panels.",
+          "score": 0.7526046167872642,
+          "pmcid": "PMC7788805",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 21716935,
+          "annotations": [
+            "277|17|gene|367",
+            "785|16|disease|MESH:D007248",
+            "615|22|disease|MESH:D002869",
+            "502|23|disease|MESH:D056730",
+            "255|4|gene|1080",
+            "527|33|disease|MESH:D000079262",
+            "122|23|disease|MESH:D059786",
+            "429|20|disease|MESH:C567357",
+            "451|27|disease|MESH:D001506",
+            "357|13|disease|MESH:C567467",
+            "641|8|species|9606",
+            "324|3|species|9606",
+            "483|17|disease|MESH:D017204",
+            "586|24|disease|OMIM:163000",
+            "202|51|gene|1080",
+            "566|14|disease|MESH:D012175",
+            "99|21|disease|MESH:D030342"
+          ],
+          "text": "The dramatic increase in the worldwide use of ART (1-3% of births), increasing evidence of several genetic abnormalities [karyotype abnormalities, Y chromosome microdeletions involving the AZFc region, cystic fibrosis transmembrane conductance regulator (CFTR) gene mutations, androgen receptor gene mutations] in infertile men with numerical or structural sperm defects, vertical transmission of Yq deletions, increased risk of imprinting disorders (Beckwith-Wiedemann syndrome and Angelman syndrome, Silver-Russell syndrome, maternal hypomethylation syndrome, and retinoblastoma) and congenital malformations and chromosome aberrations in children born following ICSI, highlight the hazards associated with ICSI despite its documented efficacy and success in the treatment of severe male infertility.",
+          "score": 0.7135254528801602,
+          "pmcid": "PMC3114573",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 35647563,
+          "annotations": [
+            "73|4|gene|1080"
+          ],
+          "text": "Using principal-component (PC) analyses, we showed that variation in the CFTR region disproportionately contributes to a PC explaining a relatively high proportion of genetic variance.",
+          "score": 0.7063836803102204,
+          "pmcid": "PMC9136666",
+          "section": "abstract"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11104661,
+        "annotations": [
+          "34|4|gene|1080"
+        ],
+        "text": "Worldwide genetic analysis of the CFTR region.",
+        "score": 1.0,
+        "pmcid": null,
+        "section": "title"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "11146634",
+    "title": "The Hsc70 co-chaperone CHIP targets immature CFTR for proteasomal degradation.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.2028390829800628,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11146634,
+          "section": "title",
+          "score": 1.0,
+          "text": "The Hsc70 co-chaperone CHIP targets immature CFTR for proteasomal degradation.",
+          "annotations": [
+            "4|5|gene|3312",
+            "45|4|gene|1080"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 12361483,
+          "section": "DISCUSS",
+          "score": 0.9647690057754517,
+          "text": "In a recent report, CHIP, an Hsc70 co-chaperone was actually found to target immature CFTR for proteasomal degradation.",
+          "annotations": [
+            "86|4|gene|1080"
+          ],
+          "pmcid": "PMC130031"
+        },
+        {
+          "pmid": 18231578,
+          "section": "INTRO",
+          "score": 0.8957072568285018,
+          "text": "In addition to protein folding, it has also been demonstrated that Hsc70 and an interacting co-chaperone U-box protein termed CHIP (C-terminus of Hsc70-interacting protein), target aberrant forms of CFTR (Cystic Fibrosis Transmembrane Conductance Regulator) protein for proteasomal degradation by promoting their ubiquitination.",
+          "annotations": [
+            "67|5|gene|3312",
+            "132|13|gene|None",
+            "126|4|gene|None",
+            "199|4|gene|1080",
+            "205|51|disease|MESH:D003550",
+            "146|25|gene|6767",
+            "105|13|gene|None"
+          ],
+          "pmcid": "PMC2200795"
+        },
+        {
+          "pmid": 37730207,
+          "section": null,
+          "score": 0.8231505734889664,
+          "text": "JA2 overexpression increases Hsc70 association:enhancing CHIP mediated proteasomal degradation of immature CFTR.",
+          "annotations": [
+            "107|4|gene|1080",
+            "29|5|gene|15481"
+          ],
+          "pmcid": "PMC10595991"
+        },
+        {
+          "pmid": 21148293,
+          "section": "INTRO",
+          "score": 0.819028200297887,
+          "text": "The cytosolic E3 ubiquitin ligase CHIP interacts with Hsc70 and/or Hsp70 to form a quality control (QC) machine that uses the polypeptide-binding activity of Hsc/Hsp70 to target misfolded CFTR for proteasomal degradation (Meacham et al.,).",
+          "annotations": [
+            "67|5|gene|3308",
+            "162|5|gene|3308",
+            "158|3|gene|2523",
+            "14|19|gene|158506",
+            "188|4|gene|1080",
+            "54|5|gene|3312"
+          ],
+          "pmcid": "PMC3031462"
+        },
+        {
+          "pmid": 25258038,
+          "section": "INTRO",
+          "score": 0.8099045538158619,
+          "text": "CHIP functions both as a co-chaperone and an E3-ubiquitin ligase that couples protein folding and proteasome mediated degradation by interacting with heat shock proteins (e.g. HSC70) and ubiquitinating their misfolded client proteins thereby targeting them for proteasomal degradation (Figure 1).",
+          "annotations": [
+            "45|19|gene|79594",
+            "176|5|gene|3312"
+          ],
+          "pmcid": "PMC4181732"
+        },
+        {
+          "pmid": 32540021,
+          "section": "abstract",
+          "score": 0.8054859692616234,
+          "text": "The co-chaperone CHIP (carboxy terminus of Hsc70 interacting protein) is very important for many cell activities since it regulates the ubiquitination of substrates targeted for proteasomal degradation.",
+          "annotations": null,
+          "pmcid": null
+        },
+        {
+          "pmid": 38888668,
+          "section": null,
+          "score": 0.7976314678816006,
+          "text": "It had been shown that CHIP operates in conjunction with Hsc70 to identify and target aberrant forms of CFTR for proteasomal degradation by facilitating their ubiquitination.",
+          "annotations": [
+            "57|5|gene|3312",
+            "104|4|gene|1080"
+          ],
+          "pmcid": "PMC11335196"
+        },
+        {
+          "pmid": 36734593,
+          "section": "RESULTS",
+          "score": 0.7878313487260998,
+          "text": "Previously, we reported that a co-chaperone E3 ligase, C-terminus of Hsc70-interacting protein (CHIP), binds and ubiquitinates EndoG, targeting it for proteasomal degradation.",
+          "annotations": [
+            "69|25|gene|6767",
+            "127|5|gene|2021"
+          ],
+          "pmcid": "PMC10068316"
+        },
+        {
+          "pmid": 11146634,
+          "section": "abstract",
+          "score": 0.7877340798544651,
+          "text": "Here we show that CHIP functions with Hsc70 to sense the folded state of CFTR and targets aberrant forms for proteasomal degradation by promoting their ubiquitination.",
+          "annotations": [
+            "73|4|gene|1080",
+            "38|5|gene|3312"
+          ],
+          "pmcid": null
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11146634,
+        "section": "title",
+        "score": 1.0,
+        "text": "The Hsc70 co-chaperone CHIP targets immature CFTR for proteasomal degradation.",
+        "annotations": [
+          "4|5|gene|3312",
+          "45|4|gene|1080"
+        ],
+        "pmcid": null
+      },
+      {
+        "pmid": 11146634,
+        "section": "abstract",
+        "score": 0.7877340798544651,
+        "text": "Here we show that CHIP functions with Hsc70 to sense the folded state of CFTR and targets aberrant forms for proteasomal degradation by promoting their ubiquitination.",
+        "annotations": [
+          "73|4|gene|1080",
+          "38|5|gene|3312"
+        ],
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": [
+      {
+        "pmid": 11146634,
+        "section": "abstract",
+        "score": 0.7877340798544651,
+        "text": "Here we show that CHIP functions with Hsc70 to sense the folded state of CFTR and targets aberrant forms for proteasomal degradation by promoting their ubiquitination.",
+        "annotations": [
+          "73|4|gene|1080",
+          "38|5|gene|3312"
+        ],
+        "pmcid": null
+      }
+    ]
+  },
+  {
+    "pmid": "11243954",
+    "title": "Frequency of cystic fibrosis transmembrane conductance regulator gene mutations and 5T allele in patients with allergic bronchopulmonary aspergillosis.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 2.271318292012438,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11243954,
+          "annotations": [
+            "13|51|gene|1080",
+            "97|8|species|9606",
+            "111|39|disease|MESH:D001229"
+          ],
+          "text": "Frequency of cystic fibrosis transmembrane conductance regulator gene mutations and 5T allele in patients with allergic bronchopulmonary aspergillosis.",
+          "score": 1.0,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 11243954,
+          "annotations": [
+            "121|8|species|9606",
+            "97|4|gene|1080",
+            "44|51|gene|1080",
+            "135|39|disease|MESH:D001229",
+            "176|4|disease|MESH:D001229"
+          ],
+          "text": "STUDY OBJECTIVE: To assess the frequency of cystic fibrosis transmembrane conductance regulator (CFTR) gene mutations in patients with allergic bronchopulmonary aspergillosis (ABPA).",
+          "score": 0.9380526542663574,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 35430640,
+          "annotations": [
+            "84|8|species|9606",
+            "151|6|disease|MESH:D001249",
+            "98|52|disease|MESH:D001229"
+          ],
+          "text": "Occurrence of Cystic Fibrosis Transmembrane Conductance Regulator Gene Mutations in Patients with Allergic Bronchopulmonary Aspergillosis Complicating Asthma.",
+          "score": 0.9361928403377533,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 8659542,
+          "annotations": [
+            "53|4|gene|1080",
+            "77|39|disease|MESH:D001229",
+            "0|51|gene|1080"
+          ],
+          "text": "Cystic fibrosis transmembrane conductance regulator (CFTR) gene mutations in allergic bronchopulmonary aspergillosis.",
+          "score": 0.9323914349079132,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 35430640,
+          "annotations": [
+            "172|4|disease|MESH:D001229",
+            "131|39|disease|MESH:D001229",
+            "73|4|gene|1080",
+            "20|51|gene|1080"
+          ],
+          "text": "BACKGROUND: Whether cystic fibrosis transmembrane conductance regulator (CFTR) gene mutations contribute to the high prevalence of allergic bronchopulmonary aspergillosis (ABPA) in India remains unknown.",
+          "score": 0.9165525138378143,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 11994102,
+          "annotations": [
+            "108|39|disease|MESH:D001229",
+            "0|51|gene|1080"
+          ],
+          "text": "Cystic fibrosis transmembrane conductance regulator gene mutations: do they play a role in the aetiology of allergic bronchopulmonary aspergillosis?",
+          "score": 0.9140591323375702,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 11076391,
+          "annotations": [
+            "91|20|disease|MESH:D012140",
+            "287|22|disease|MESH:D008228",
+            "267|18|disease|MESH:D001982",
+            "138|51|gene|1080",
+            "233|30|disease|MESH:D055732",
+            "72|15|disease|MESH:D003550",
+            "132|4|gene|1080",
+            "58|8|species|9606"
+          ],
+          "text": "Genetic counseling is an important part of health care in patients with cystic fibrosis or respiratory diseases associated with the CFTR (cystic fibrosis transmembrane conductance regulator) gene, including certain types of allergic bronchopulmonary aspergilloses or bronchial diseases (diffuse bronchiectasia).",
+          "score": 0.9043408334255219,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 11667976,
+          "annotations": [
+            "194|4|gene|1080",
+            "281|17|disease|MESH:D012852",
+            "273|5|disease|MESH:C535984",
+            "223|48|disease|MESH:C535984",
+            "201|20|disease|MESH:D050500",
+            "42|2|disease|MESH:D003550",
+            "304|39|disease|MESH:D001229",
+            "126|66|disease|MESH:D003550"
+          ],
+          "text": "Furthermore, greater attention to 'adult' CF has also led us to identify, with increased frequency, atypical presentations of dysfunction of cystic fibrosis transmembrane conductance regulator (CFTR): chronic pancreatitis, congenital bilateral absence of the vas deferens (CBAVD), chronic sinusitis, and allergic bronchopulmonary aspergillosis.",
+          "score": 0.8935872614383698,
+          "pmcid": "PMC59552",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 39903773,
+          "annotations": [
+            "12|15|disease|MESH:D003550",
+            "171|39|disease|MESH:D001229",
+            "29|4|disease|MESH:D003550",
+            "230|23|disease|MESH:D055732",
+            "303|14|disease|MESH:D001987",
+            "131|4|gene|1080"
+          ],
+          "text": "People with cystic fibrosis (pwCF), a disease caused by mutations in the cystic fibrosis (CF) transmembrane conductance regulator (CFTR) protein, are at increased risk of allergic bronchopulmonary aspergillosis, a chronic form of pulmonary aspergillosis characterised by Th2 responses in the airway and bronchiectasis.",
+          "score": 0.8824200928211212,
+          "pmcid": "PMC11957335",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 36836272,
+          "annotations": [
+            "103|8|species|9606",
+            "514|39|disease|MESH:D001229",
+            "690|22|species|287",
+            "643|3|gene|3497",
+            "555|4|disease|MESH:D001229",
+            "275|4|gene|1080",
+            "857|11|species|33178",
+            "396|24|disease|MESH:D010188",
+            "217|51|gene|1080",
+            "598|3|gene|3497",
+            "610|11|species|33178"
+          ],
+          "text": "Finally, the univariate and multivariate statistical analyses were performed with the 239 samples (120 patients) that had a complete data set of the next parameters: age (years), gender (female/male), mutation of the cystic fibrosis transmembrane conductance regulator gene (CFTR mutation), body mass index (BMI) (kg/m2), percent-predicted mean forced expiratory volume in one second (FEV1) (%), pancreatic insufficiency (yes/no), lung transplantation (yes/no), current pulmonary exacerbation (yes/no), history of allergic bronchopulmonary aspergillosis (ABPA) (yes/no), total serum IgG (mg/L) and IgE (kU/L), Aspergillus serum IgG (mg/L) and IgE (kU/L) (measured by ImmunoCAP m3), chronic Pseudomonas aeruginosa colonization (yes/no), antifungal treatment (yes/no), antibiotic treatment (oral-inhaled or systemic, yes/no), sputum fungal culture result for Aspergillus spp.",
+          "score": 0.8045326173305511,
+          "pmcid": "PMC9959861",
+          "section": "METHODS"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11243954,
+        "annotations": [
+          "13|51|gene|1080",
+          "97|8|species|9606",
+          "111|39|disease|MESH:D001229"
+        ],
+        "text": "Frequency of cystic fibrosis transmembrane conductance regulator gene mutations and 5T allele in patients with allergic bronchopulmonary aspergillosis.",
+        "score": 1.0,
+        "pmcid": null,
+        "section": "title"
+      },
+      {
+        "pmid": 11243954,
+        "annotations": [
+          "121|8|species|9606",
+          "97|4|gene|1080",
+          "44|51|gene|1080",
+          "135|39|disease|MESH:D001229",
+          "176|4|disease|MESH:D001229"
+        ],
+        "text": "STUDY OBJECTIVE: To assess the frequency of cystic fibrosis transmembrane conductance regulator (CFTR) gene mutations in patients with allergic bronchopulmonary aspergillosis (ABPA).",
+        "score": 0.9380526542663574,
+        "pmcid": null,
+        "section": "abstract"
+      }
+    ],
+    "filtered_matches": [
+      {
+        "pmid": 11243954,
+        "annotations": [
+          "121|8|species|9606",
+          "97|4|gene|1080",
+          "44|51|gene|1080",
+          "135|39|disease|MESH:D001229",
+          "176|4|disease|MESH:D001229"
+        ],
+        "text": "STUDY OBJECTIVE: To assess the frequency of cystic fibrosis transmembrane conductance regulator (CFTR) gene mutations in patients with allergic bronchopulmonary aspergillosis (ABPA).",
+        "score": 0.9380526542663574,
+        "pmcid": null,
+        "section": "abstract"
+      }
+    ]
+  },
+  {
+    "pmid": "11379874",
+    "title": "Complete and rapid scanning of the cystic fibrosis transmembrane conductance regulator (CFTR) gene by denaturing high-performance liquid chromatography (D-HPLC): major implications for genetic counselling.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.4718465420301072,
+      "n": 4,
+      "results": [
+        {
+          "pmid": 11379874,
+          "annotations": [
+            "88|4|gene|1080",
+            "35|51|gene|1080"
+          ],
+          "text": "Complete and rapid scanning of the cystic fibrosis transmembrane conductance regulator (CFTR) gene by denaturing high-performance liquid chromatography (D-HPLC): major implications for genetic counselling.",
+          "score": 0.9832110404968262,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 22439061,
+          "annotations": [
+            "154|51|gene|1080",
+            "207|4|gene|1080"
+          ],
+          "text": "OBJECTIVE: The aim of the study is to evaluate the role of Denaturing High Performance Liquid Chromatography (DHPLC) in the second level screening of the Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) gene.",
+          "score": 0.8658623581368381,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 16191501,
+          "annotations": [
+            "127|51|gene|1080"
+          ],
+          "text": "A comparison of high-resolution melting analysis with denaturing high-performance liquid chromatography for mutation scanning: cystic fibrosis transmembrane conductance regulator gene as a model.",
+          "score": 0.8622649825739297,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 16191501,
+          "annotations": [
+            "165|51|gene|1080"
+          ],
+          "text": "High-resolution melting analysis (HRMA) was compared with denaturing high-performance liquid chromatography (dHPLC) for mutation scanning of common mutations in the cystic fibrosis transmembrane conductance regulator gene.",
+          "score": 0.8409872507822462,
+          "pmcid": null,
+          "section": "abstract"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11379874,
+        "annotations": [
+          "88|4|gene|1080",
+          "35|51|gene|1080"
+        ],
+        "text": "Complete and rapid scanning of the cystic fibrosis transmembrane conductance regulator (CFTR) gene by denaturing high-performance liquid chromatography (D-HPLC): major implications for genetic counselling.",
+        "score": 0.9832110404968262,
+        "pmcid": null,
+        "section": "title"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "11524016",
+    "title": "A monomer is the minimum functional unit required for channel and ATPase activity of the cystic fibrosis transmembrane conductance regulator.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 2.2323893750435673,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11524016,
+          "section": "title",
+          "score": 1.0,
+          "text": "A monomer is the minimum functional unit required for channel and ATPase activity of the cystic fibrosis transmembrane conductance regulator.",
+          "annotations": [
+            "89|51|gene|1080",
+            "66|6|gene|1769"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 37081882,
+          "section": null,
+          "score": 0.919651448726654,
+          "text": "C172 is an inhibitor of the cystic fibrosis transmembrane conductance regulator channel (CFTR), and its analogue CY-09 inhibits the ATPase activity and oligomerization of NLRP3 by binding to its ATP-bound Walker A motif.",
+          "annotations": [
+            "132|6|gene|13417",
+            "89|4|gene|12638",
+            "171|5|gene|114548",
+            "195|3|chemical|MESH:D000255",
+            "113|5|chemical|-",
+            "0|4|chemical|-",
+            "28|59|gene|12638"
+          ],
+          "pmcid": "PMC10110858"
+        },
+        {
+          "pmid": 30981209,
+          "section": "INTRO",
+          "score": 0.9024473428726196,
+          "text": "Recently, we discovered that the peptide P31-43, a fragment of P31-55, is able to trigger the epithelial stress response by binding to, and reducing the ATPase activity of, the nuclear binding domain 1 (NBD1) of the cystic fibrosis transmembrane conductance regulator (CFTR), thus inhibiting the chloride channel function of CFTR.",
+          "annotations": [
+            "325|4|gene|1080",
+            "153|6|gene|1769",
+            "296|8|chemical|MESH:D002712",
+            "269|4|gene|1080",
+            "216|51|gene|1080"
+          ],
+          "pmcid": "PMC6503870"
+        },
+        {
+          "pmid": 35047092,
+          "section": null,
+          "score": 0.8996433317661285,
+          "text": "Recently, it was observed that the peptide could interact with the cystic fibrosis transmembrane conductance regulator (CFTR) anion channel, inhibiting its ATPase activity and activating TG2.",
+          "annotations": [
+            "67|51|gene|1080",
+            "156|6|gene|1769",
+            "120|4|gene|1080"
+          ],
+          "pmcid": "PMC8724473"
+        },
+        {
+          "pmid": 10930504,
+          "section": "abstract",
+          "score": 0.8883621692657471,
+          "text": "In apical membrane vesicles from beef tracheal epithelia expressing up to 30% of the proteins as functional cystic fibrosis transmembrane conductance regulator (CFTR)-- i.e. a voltage-independent and PKA-sensitive 36Cl- flux--an ATPase activity, different from P, F0F1 and V types, was reproducibly detected.",
+          "annotations": [
+            "229|6|gene|1769",
+            "214|4|chemical|MESH:C000615326",
+            "161|4|gene|1080",
+            "108|51|gene|1080"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 16571116,
+          "section": "abstract",
+          "score": 0.8707155883312225,
+          "text": "Components of membranous ion transport systems, which have been shown to undergo a change in function during an inflammatory response include the sodium potassium ATPase, the epithelial sodium channel, the Cystic Fibrosis Transmembrane Conductance Regulator and calcium activated chloride channels and the sodium potassium chloride co-transporter.",
+          "annotations": [
+            "112|12|disease|MESH:D007249",
+            "206|51|gene|1080"
+          ],
+          "pmcid": "PMC1562419"
+        },
+        {
+          "pmid": 23916961,
+          "section": "abstract",
+          "score": 0.8616573810577393,
+          "text": "At the molecular level, FXR activation attenuated apical Cl(-) currents by inhibiting expression of cystic fibrosis transmembrane conductance regulator channels and inhibited basolateral Na(+)/K(+)-ATPase activity without altering expression of the protein.",
+          "annotations": [
+            "193|11|chemical|-",
+            "24|3|gene|20186"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 28953499,
+          "section": "INTRO",
+          "score": 0.8561834096908569,
+          "text": "ALC is an integrated process that requires basolateral Na+-K+-ATPase activity along with increased apical epithelial Na+ channel (ENaC) and cystic fibrosis transmembrane conductance regulator (CFTR) activity.",
+          "annotations": [
+            "193|4|gene|403154",
+            "140|51|gene|403154",
+            "130|4|chemical|-"
+          ],
+          "pmcid": "PMC5693779"
+        },
+        {
+          "pmid": 35669789,
+          "section": "DISCUSS",
+          "score": 0.8415506184101105,
+          "text": "In addition to the tool compound MCC950, another NLRP3-specific inhibitor, CY-09, a C172 analogue without cystic fibrosis transmembrane conductance regulator channel inhibitory activity, targets the NLRP3 ATP-binding motif, inhibiting NLRP3 ATPase activity and NLRP3 inflammasome activation.",
+          "annotations": [
+            "199|5|gene|216799",
+            "84|4|chemical|-",
+            "261|5|gene|216799",
+            "106|51|gene|12638",
+            "33|6|chemical|MESH:C000597426",
+            "235|5|gene|216799",
+            "241|6|gene|13417",
+            "75|5|chemical|-",
+            "49|5|gene|216799"
+          ],
+          "pmcid": "PMC9163344"
+        },
+        {
+          "pmid": 29664060,
+          "section": "abstract",
+          "score": 0.8280167579650879,
+          "text": "RESULTS: Specialized pro-resolving mediators (SPMs), as the proinflammatory mediators, not only upregulated epithelial sodium channel, Na,K-ATPase, cystic fibrosis transmembrane conductance regulator (CFTR), and aquaporins levels, but also improved Na,K-ATPase activity to promote AFC in ARDS.",
+          "annotations": [
+            "148|51|gene|1080",
+            "288|4|disease|MESH:D012128",
+            "60|15|disease|None",
+            "201|4|gene|1080"
+          ],
+          "pmcid": "PMC5912066"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11524016,
+        "section": "title",
+        "score": 1.0,
+        "text": "A monomer is the minimum functional unit required for channel and ATPase activity of the cystic fibrosis transmembrane conductance regulator.",
+        "annotations": [
+          "89|51|gene|1080",
+          "66|6|gene|1769"
+        ],
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "11667976",
+    "title": "Unique presentations and chronic complications in adult cystic fibrosis: do they teach us anything about CFTR?",
+    "litsense": {
+      "ok": true,
+      "latency_s": 0.9643148750183173,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11667976,
+          "section": "title",
+          "score": 0.9896677136421204,
+          "text": "Unique presentations and chronic complications in adult cystic fibrosis: do they teach us anything about CFTR?",
+          "annotations": [
+            "56|15|disease|MESH:D003550",
+            "105|4|gene|1080"
+          ],
+          "pmcid": "PMC59552"
+        },
+        {
+          "pmid": 11667976,
+          "section": "INTRO",
+          "score": 0.9583322107791901,
+          "text": "Do these unique presentations and chronic complications of adult CF teach us anything about the function of CFTR?",
+          "annotations": [
+            "108|4|gene|1080",
+            "65|2|disease|MESH:D003550"
+          ],
+          "pmcid": "PMC59552"
+        },
+        {
+          "pmid": 11667976,
+          "section": "abstract",
+          "score": 0.9050626456737518,
+          "text": "Do these chronic complications and unique presentations provide us with new insight into cystic fibrosis transmembrane conductance regulator (CFTR) function?",
+          "annotations": [
+            "142|4|gene|1080",
+            "89|51|gene|1080"
+          ],
+          "pmcid": "PMC59552"
+        },
+        {
+          "pmid": 11667976,
+          "section": "abstract",
+          "score": 0.8881482779979706,
+          "text": "The increase in numbers of adults with cystic fibrosis (CF) has allowed us to identify previously unrecognized chronic complications of CF, as well as appreciate unique presentations of cystic fibrosis-related diseases.",
+          "annotations": [
+            "186|32|disease|MESH:D003550",
+            "136|2|disease|MESH:D003550",
+            "39|15|disease|MESH:D003550",
+            "56|2|disease|MESH:D003550"
+          ],
+          "pmcid": "PMC59552"
+        },
+        {
+          "pmid": 11667976,
+          "section": null,
+          "score": 0.8840276319945027,
+          "text": "In contrast with chronic complications, however, unique presentations of CFTR-related diseases in adults have provided significant insight into CFTR function.",
+          "annotations": [
+            "144|4|gene|1080",
+            "73|4|gene|1080"
+          ],
+          "pmcid": "PMC59552"
+        },
+        {
+          "pmid": 11667976,
+          "section": "INTRO",
+          "score": 0.8093259655917024,
+          "text": "Furthermore, greater attention to 'adult' CF has also led us to identify, with increased frequency, atypical presentations of dysfunction of cystic fibrosis transmembrane conductance regulator (CFTR): chronic pancreatitis, congenital bilateral absence of the vas deferens (CBAVD), chronic sinusitis, and allergic bronchopulmonary aspergillosis.",
+          "annotations": [
+            "194|4|gene|1080",
+            "281|17|disease|MESH:D012852",
+            "273|5|disease|MESH:C535984",
+            "223|48|disease|MESH:C535984",
+            "201|20|disease|MESH:D050500",
+            "42|2|disease|MESH:D003550",
+            "304|39|disease|MESH:D001229",
+            "126|66|disease|MESH:D003550"
+          ],
+          "pmcid": "PMC59552"
+        },
+        {
+          "pmid": 41919747,
+          "section": "abstract",
+          "score": 0.7588460209412795,
+          "text": "Cystic fibrosis (CF) is a severe genetic disorder caused by pathogenic variants in the Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) gene, leading to multisystem complications including chronic rhinosinusitis and nasal polyposis.",
+          "annotations": [
+            "87|51|gene|1080",
+            "17|2|disease|MESH:D003550",
+            "226|15|disease|MESH:D009668",
+            "0|15|disease|MESH:D003550",
+            "140|4|gene|1080",
+            "207|14|disease|MESH:D000092562",
+            "33|16|disease|MESH:D030342"
+          ],
+          "pmcid": "PMC13041188"
+        },
+        {
+          "pmid": 35635299,
+          "section": "INTRO",
+          "score": 0.748347486959417,
+          "text": "CF is caused by variations in the cystic fibrosis transmembrane conductance regulator (CFTR) gene, which was first described in 1989 by Riordan et al.. Most CF patients are experiencing recurrent and chronic lung infections, which constitutes major lethal complications.",
+          "annotations": [
+            "34|51|gene|1080",
+            "160|8|species|9606",
+            "157|2|disease|MESH:D003550",
+            "0|2|disease|MESH:D003550",
+            "208|15|disease|MESH:D012141",
+            "87|4|gene|1080"
+          ],
+          "pmcid": "PMC9545947"
+        },
+        {
+          "pmid": 37887299,
+          "section": "INTRO",
+          "score": 0.7435166800190833,
+          "text": "In the case of cystic fibrosis, a genetic defect in the cystic fibrosis transmembrane conductance regulator (CFTR) protein impairs chloride transport across epithelial cell membranes, resulting in the accumulation of thick mucus in the lungs and other organs, leading to chronic respiratory infections and other complications.",
+          "annotations": [
+            "15|15|disease|MESH:D003550",
+            "131|8|chemical|MESH:D002712",
+            "34|14|disease|MESH:D030342",
+            "109|4|gene|1080",
+            "56|51|gene|1080",
+            "279|22|disease|MESH:D012141"
+          ],
+          "pmcid": "PMC10605148"
+        },
+        {
+          "pmid": 37748186,
+          "section": null,
+          "score": 0.7044113042397719,
+          "text": "COPD exhibits clinical characteristics that are comparable to those of cystic fibrosis, such as mucus hypersecretion and accumulation, resulting in airway obstruction, chronic infection, and other complications that can be caused by CFTR dysfunction.",
+          "annotations": [
+            "71|15|disease|MESH:D003550",
+            "0|4|disease|MESH:D029424",
+            "148|18|disease|MESH:D000402",
+            "176|9|disease|MESH:D007239"
+          ],
+          "pmcid": "PMC10867933"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11667976,
+        "section": "title",
+        "score": 0.9896677136421204,
+        "text": "Unique presentations and chronic complications in adult cystic fibrosis: do they teach us anything about CFTR?",
+        "annotations": [
+          "56|15|disease|MESH:D003550",
+          "105|4|gene|1080"
+        ],
+        "pmcid": "PMC59552"
+      },
+      {
+        "pmid": 11667976,
+        "section": "INTRO",
+        "score": 0.9583322107791901,
+        "text": "Do these unique presentations and chronic complications of adult CF teach us anything about the function of CFTR?",
+        "annotations": [
+          "108|4|gene|1080",
+          "65|2|disease|MESH:D003550"
+        ],
+        "pmcid": "PMC59552"
+      },
+      {
+        "pmid": 11667976,
+        "section": "abstract",
+        "score": 0.9050626456737518,
+        "text": "Do these chronic complications and unique presentations provide us with new insight into cystic fibrosis transmembrane conductance regulator (CFTR) function?",
+        "annotations": [
+          "142|4|gene|1080",
+          "89|51|gene|1080"
+        ],
+        "pmcid": "PMC59552"
+      },
+      {
+        "pmid": 11667976,
+        "section": "abstract",
+        "score": 0.8881482779979706,
+        "text": "The increase in numbers of adults with cystic fibrosis (CF) has allowed us to identify previously unrecognized chronic complications of CF, as well as appreciate unique presentations of cystic fibrosis-related diseases.",
+        "annotations": [
+          "186|32|disease|MESH:D003550",
+          "136|2|disease|MESH:D003550",
+          "39|15|disease|MESH:D003550",
+          "56|2|disease|MESH:D003550"
+        ],
+        "pmcid": "PMC59552"
+      },
+      {
+        "pmid": 11667976,
+        "section": null,
+        "score": 0.8840276319945027,
+        "text": "In contrast with chronic complications, however, unique presentations of CFTR-related diseases in adults have provided significant insight into CFTR function.",
+        "annotations": [
+          "144|4|gene|1080",
+          "73|4|gene|1080"
+        ],
+        "pmcid": "PMC59552"
+      },
+      {
+        "pmid": 11667976,
+        "section": "INTRO",
+        "score": 0.8093259655917024,
+        "text": "Furthermore, greater attention to 'adult' CF has also led us to identify, with increased frequency, atypical presentations of dysfunction of cystic fibrosis transmembrane conductance regulator (CFTR): chronic pancreatitis, congenital bilateral absence of the vas deferens (CBAVD), chronic sinusitis, and allergic bronchopulmonary aspergillosis.",
+        "annotations": [
+          "194|4|gene|1080",
+          "281|17|disease|MESH:D012852",
+          "273|5|disease|MESH:C535984",
+          "223|48|disease|MESH:C535984",
+          "201|20|disease|MESH:D050500",
+          "42|2|disease|MESH:D003550",
+          "304|39|disease|MESH:D001229",
+          "126|66|disease|MESH:D003550"
+        ],
+        "pmcid": "PMC59552"
+      }
+    ],
+    "filtered_matches": [
+      {
+        "pmid": 11667976,
+        "section": "abstract",
+        "score": 0.9050626456737518,
+        "text": "Do these chronic complications and unique presentations provide us with new insight into cystic fibrosis transmembrane conductance regulator (CFTR) function?",
+        "annotations": [
+          "142|4|gene|1080",
+          "89|51|gene|1080"
+        ],
+        "pmcid": "PMC59552"
+      },
+      {
+        "pmid": 11667976,
+        "section": "abstract",
+        "score": 0.8881482779979706,
+        "text": "The increase in numbers of adults with cystic fibrosis (CF) has allowed us to identify previously unrecognized chronic complications of CF, as well as appreciate unique presentations of cystic fibrosis-related diseases.",
+        "annotations": [
+          "186|32|disease|MESH:D003550",
+          "136|2|disease|MESH:D003550",
+          "39|15|disease|MESH:D003550",
+          "56|2|disease|MESH:D003550"
+        ],
+        "pmcid": "PMC59552"
+      }
+    ]
+  },
+  {
+    "pmid": "11707463",
+    "title": "A Golgi-associated PDZ domain protein modulates cystic fibrosis transmembrane regulator plasma membrane expression.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.3429606249555945,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11707463,
+          "section": "title",
+          "score": 1.0,
+          "text": "A Golgi-associated PDZ domain protein modulates cystic fibrosis transmembrane regulator plasma membrane expression.",
+          "annotations": null,
+          "pmcid": null
+        },
+        {
+          "pmid": 34383253,
+          "section": "INTRO",
+          "score": 0.8586574033526776,
+          "text": "An additional PDZ domain-containing protein, which binds to many postsynaptic membrane receptors, is the Golgi-associated PDZ and coiled-coil motif-containing protein (Gopc; also known as protein interacting specifically with Tc10, PIST; and as cystic fibrosis transmembrane conductance regulator (CFTR)-associated ligand, CAL).",
+          "annotations": [
+            "168|4|gene|309774",
+            "232|4|gene|94221",
+            "323|3|gene|94221",
+            "226|4|gene|104215",
+            "105|61|gene|94221"
+          ],
+          "pmcid": "PMC8599212"
+        },
+        {
+          "pmid": 29085445,
+          "section": "DISCUSS",
+          "score": 0.8578024863220979,
+          "text": "GOPC, also known as PDZ domain protein interacting specifically with TC10 or Fused in Glioblastoma (FIG), and cystic fibrosis transmembrane conductance regulator-associated ligand, controls the trafficking of numerous integral membrane proteins from the trans-Golgi network to the cell surface.",
+          "annotations": [
+            "0|4|gene|57120",
+            "77|21|gene|57120",
+            "20|18|gene|10207",
+            "100|3|gene|57120",
+            "69|4|gene|23433"
+          ],
+          "pmcid": "PMC5649543"
+        },
+        {
+          "pmid": 24297041,
+          "section": "INTRO",
+          "score": 0.8321565047192601,
+          "text": "The members of the Na+/H+ Exchanger Regulatory Factor (NHERF) family of PDZ-adaptor proteins interact with the C-terminal cytoplasmic domain of transporters and channels such as NHE3, Down Regulated in Adenoma (DRA), Putative Anion Transporter1 (PAT1) and Cystic Fibrosis Transmembrane Conductance Regulator (CFTR), and form multi-molecular assemblies with the underlying cytoskeleton and associated proteins, thereby modulating such diverse processes as protein trafficking, membrane retention and the formation of signaling platforms.",
+          "annotations": [
+            "55|5|gene|26941",
+            "256|51|gene|12638",
+            "309|4|gene|12638",
+            "178|4|gene|24784",
+            "19|34|gene|26941",
+            "211|3|gene|13487",
+            "184|25|gene|13487",
+            "217|27|gene|171429",
+            "246|4|gene|171429"
+          ],
+          "pmcid": "PMC4127042"
+        },
+        {
+          "pmid": 21726550,
+          "section": "INTRO",
+          "score": 0.8292121918679836,
+          "text": "For example, C-terminal PDZ-dependent interactions modulate endocytic recycling and trafficking from the Golgi apparatus to the plasma membrane of the cystic fibrosis transmembrane conductance regulator (CFTR).",
+          "annotations": [
+            "204|4|gene|1080",
+            "151|51|gene|1080"
+          ],
+          "pmcid": "PMC3159807"
+        },
+        {
+          "pmid": 30037057,
+          "section": null,
+          "score": 0.8222248703686325,
+          "text": "In addition to the Golgi-apparatus, PIST was shown to bind to the cell surface proteins frizzled five and frizzled eight, CALEB (chloride channel ClC-3B and chicken acidic leucine-rich epidermal growth factor-like domain-containing brain protein), neuroglycan C, CFTR (cystic fibrosis transmembrane conductance regulator), and, to regulate the expression of these proteins at the plasma membrane.",
+          "annotations": [
+            "36|4|gene|57120",
+            "269|51|gene|492302",
+            "157|7|species|9031"
+          ],
+          "pmcid": "PMC6073136"
+        },
+        {
+          "pmid": 35055030,
+          "section": null,
+          "score": 0.8180558318671382,
+          "text": "The Golgi-associated PDZ and coiled-coil motif-containing protein (Gopc) [also known as protein interacting specifically with Tc10, PIST; and as cystic fibrosis transmembrane conductance regulator (CFTR)-associated ligand, CAL] is a scaffolding protein and interacts with the mGlu1/5 PDZ motif through its PDZ domain.",
+          "annotations": [
+            "132|4|gene|94221",
+            "4|61|gene|94221",
+            "67|4|gene|94221",
+            "223|3|gene|94221",
+            "126|4|gene|104215"
+          ],
+          "pmcid": "PMC8778124"
+        },
+        {
+          "pmid": 33553213,
+          "section": null,
+          "score": 0.8109805683637036,
+          "text": "In addition, the C-terminus of SLC26A6 contains a consensus PDZ (PSD-95/Disc-large/ZO-1) interaction motif identical to that of the cystic fibrosis transmembrane conductance regulator (CFTR) and the PDZ domains provide places for protein-protein interaction that plays an essential role in the assembly of multiprotein complexes and ultimately involves in regulation of membrane proteins, determining cell polarity, and plasma membrane targeting (Figure 1).",
+          "annotations": [
+            "31|7|gene|105603547",
+            "83|4|gene|443200",
+            "132|51|gene|443347",
+            "185|4|gene|443347"
+          ],
+          "pmcid": "PMC7859274"
+        },
+        {
+          "pmid": 25851603,
+          "section": "INTRO",
+          "score": 0.8027190964247473,
+          "text": "For instance, the single-PDZ-domain-containing protein cystic fibrosis transmembrane conductance regulator (CFTR)-associated ligand (CAL) contributes to setting the balance of CFTR in the synthetic compartment, lysosomes, and plasma membrane.",
+          "annotations": [
+            "55|51|gene|1080",
+            "133|3|gene|57120",
+            "108|4|gene|1080",
+            "176|4|gene|1080"
+          ],
+          "pmcid": "PMC4472014"
+        },
+        {
+          "pmid": 12381914,
+          "section": "abstract",
+          "score": 0.7827700692125372,
+          "text": "However, the epithelial PDZ domain-containing Na(+)/H(+) exchanger regulatory factor tethers the Na(+)/H(+) exchanger and cystic fibrosis transmembrane regulator Cl(-) channel within an apical plasma membrane signalling complex, and has been shown to regulate the activity of these proteins.",
+          "annotations": null,
+          "pmcid": null
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11707463,
+        "section": "title",
+        "score": 1.0,
+        "text": "A Golgi-associated PDZ domain protein modulates cystic fibrosis transmembrane regulator plasma membrane expression.",
+        "annotations": null,
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "11773581",
+    "title": "Increased prevalence of mutations in the cystic fibrosis transmembrane conductance regulator in children with chronic rhinosinusitis.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.2522075420129113,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 11773581,
+          "section": "title",
+          "score": 1.0,
+          "text": "Increased prevalence of mutations in the cystic fibrosis transmembrane conductance regulator in children with chronic rhinosinusitis.",
+          "annotations": [
+            "41|51|gene|1080",
+            "110|22|disease|MESH:D000092562"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 19490804,
+          "section": "abstract",
+          "score": 0.9474654495716095,
+          "text": "Chronic rhinosinusitis (CRS) occurs at high frequency in patients with cystic fibrosis, suggesting that the cystic fibrosis transmembrane conductance regulator (CFTR) chloride (Cl) ion channel might be involved in the development of chronic sinusitis in the general population.",
+          "annotations": [
+            "24|3|disease|MESH:D000092562",
+            "57|8|species|9606",
+            "161|4|gene|1080",
+            "167|13|chemical|MESH:D002712",
+            "0|22|disease|MESH:D000092562",
+            "71|15|disease|MESH:D003550",
+            "108|51|gene|1080",
+            "233|17|disease|MESH:D012852"
+          ],
+          "pmcid": "PMC3196350"
+        },
+        {
+          "pmid": 27860385,
+          "section": "abstract",
+          "score": 0.9369653761386871,
+          "text": "BACKGROUND: Cystic fibrosis (CF) heterozygotes with a single mutation in the cystic fibrosis transmembrane conductance regulator (CFTR) gene are at significantly higher risk to develop chronic rhinosinusitis (CRS).",
+          "annotations": [
+            "12|15|disease|MESH:D003550",
+            "185|22|disease|MESH:D000092562",
+            "29|2|disease|MESH:D003550",
+            "209|3|disease|MESH:D000092562",
+            "130|4|gene|1080",
+            "77|51|gene|1080"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 41919747,
+          "section": "abstract",
+          "score": 0.9330816864967346,
+          "text": "Cystic fibrosis (CF) is a severe genetic disorder caused by pathogenic variants in the Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) gene, leading to multisystem complications including chronic rhinosinusitis and nasal polyposis.",
+          "annotations": [
+            "87|51|gene|1080",
+            "17|2|disease|MESH:D003550",
+            "226|15|disease|MESH:D009668",
+            "0|15|disease|MESH:D003550",
+            "140|4|gene|1080",
+            "207|14|disease|MESH:D000092562",
+            "33|16|disease|MESH:D030342"
+          ],
+          "pmcid": "PMC13041188"
+        },
+        {
+          "pmid": 42302461,
+          "section": "abstract",
+          "score": 0.9203877747058868,
+          "text": "OBJECTIVE(S): This study aimed to develop a dual-mechanism therapeutic strategy for Chronic Rhinosinusitis (CRS) associated with Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) mutations.",
+          "annotations": [
+            "129|51|gene|1080",
+            "108|3|disease|MESH:D000092562",
+            "84|22|disease|MESH:D000092562",
+            "182|4|gene|1080"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 40371719,
+          "section": "INTRO",
+          "score": 0.9051739573478699,
+          "text": "Chronic rhinosinusitis (CRS) affects quality-of-life (QoL) in people with cystic fibrosis (PwCF), despite the reduction in symptoms and symptom severity associated with cystic fibrosis transmembrane conductance regulator (CFTR) modulators.",
+          "annotations": [
+            "91|4|disease|MESH:D003550",
+            "24|3|disease|MESH:D000092562",
+            "222|4|gene|1080",
+            "74|15|disease|MESH:D003550",
+            "169|51|gene|1080",
+            "0|22|disease|MESH:D000092562"
+          ],
+          "pmcid": "PMC12315476"
+        },
+        {
+          "pmid": 40047648,
+          "section": "abstract",
+          "score": 0.9042266011238098,
+          "text": "Elexacaftor/tezacaftor/ivacaftor (ETI) is a Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) therapy that improves pulmonary function and chronic rhinosinusitis (CRS) in cystic fibrosis (CF) adults with at least one copy of the F508del CFTR mutation.",
+          "annotations": [
+            "172|3|disease|MESH:D000092562",
+            "97|4|gene|1080",
+            "44|51|gene|1080",
+            "23|9|chemical|MESH:C545203",
+            "180|15|disease|MESH:D003550",
+            "12|10|chemical|MESH:C000625213",
+            "156|14|disease|MESH:D000092562",
+            "197|2|disease|MESH:D003550",
+            "238|12|mutation|rs113993960",
+            "34|3|chemical|-",
+            "0|11|chemical|MESH:C000629074"
+          ],
+          "pmcid": "PMC12227108"
+        },
+        {
+          "pmid": 32596478,
+          "section": "abstract",
+          "score": 0.8919339776039124,
+          "text": "The purpose of this article is to provide a state-of-the-art review of the literature and summarize the latest publications on medical and surgical treatment of cystic fibrosis (CF) chronic rhinosinusitis (CRS), with an emphasis on describing recent advancements in cystic fibrosis transmembrane conductance regulator (CFTR) modulator therapies.",
+          "annotations": [
+            "266|51|gene|1080",
+            "161|15|disease|MESH:D003550",
+            "319|4|gene|1080",
+            "178|2|disease|MESH:D003550"
+          ],
+          "pmcid": "PMC7314487"
+        },
+        {
+          "pmid": 31642064,
+          "section": "abstract",
+          "score": 0.8878211975097656,
+          "text": "Several medical interventions are available for treating chronic rhinosinusitis in people with cystic fibrosis; for example, different concentrations of nasal saline irrigations, topical or oral corticosteroids, antibiotics - including nebulized antibiotics, dornase alfa and modulators of the cystic fibrosis transmembrane conductance regulator (CFTR) (such as lumacaftor, ivacaftor or tezacaftor).",
+          "annotations": [
+            "374|9|chemical|MESH:C545203",
+            "57|22|disease|MESH:D000092562",
+            "95|15|disease|MESH:D003550",
+            "387|10|chemical|MESH:C000625213",
+            "347|4|gene|1080",
+            "362|10|chemical|MESH:C569105",
+            "294|51|gene|1080"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 35390177,
+          "section": "abstract",
+          "score": 0.886930912733078,
+          "text": "Several medical interventions are available for treating chronic rhinosinusitis in people with cystic fibrosis; for example, different concentrations of nasal saline irrigations, topical or oral corticosteroids, antibiotics - including nebulized antibiotics - dornase alfa and modulators of the cystic fibrosis transmembrane conductance regulator (CFTR) (such as lumacaftor, ivacaftor or tezacaftor).",
+          "annotations": [
+            "363|10|chemical|MESH:C569105",
+            "57|22|disease|MESH:D000092562",
+            "388|10|chemical|MESH:C000625213",
+            "348|4|gene|1080",
+            "295|51|gene|1080",
+            "375|9|chemical|MESH:C545203",
+            "95|15|disease|MESH:D003550"
+          ],
+          "pmcid": null
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 11773581,
+        "section": "title",
+        "score": 1.0,
+        "text": "Increased prevalence of mutations in the cystic fibrosis transmembrane conductance regulator in children with chronic rhinosinusitis.",
+        "annotations": [
+          "41|51|gene|1080",
+          "110|22|disease|MESH:D000092562"
+        ],
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "27328919",
+    "title": "TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.3071996659855358,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 27328919,
+          "section": "title",
+          "score": 1.0,
+          "text": "TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.",
+          "annotations": [
+            "60|4|gene|7157",
+            "19|13|species|None",
+            "0|4|gene|7157"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 30060008,
+          "section": "RESULTS",
+          "score": 0.9459298552165105,
+          "text": "We then collected numerous function-defined somatic missense variants from the IARC TP53 database, which comprises TP53 gene variations related to different human cancers.",
+          "annotations": [
+            "157|5|species|9606",
+            "115|4|gene|7157",
+            "84|4|gene|7157",
+            "163|7|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC6125674"
+        },
+        {
+          "pmid": 31888289,
+          "section": "RESULTS",
+          "score": 0.9372238516807556,
+          "text": "The International Agency for Research in Cancer (IARC) TP53 database  compiles various types of information on human TP53 variations in relation to cancer.",
+          "annotations": [
+            "41|6|disease|MESH:D009369",
+            "117|4|gene|7157",
+            "111|5|species|9606",
+            "55|4|gene|7157",
+            "148|6|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC6966529"
+        },
+        {
+          "pmid": 27328919,
+          "section": "abstract",
+          "score": 0.9361388683319092,
+          "text": "The IARC TP53 Database (http://p53.iarc.fr) is a popular resource that compiles occurrence and phenotype data on TP53 germline and somatic variations linked to human cancer.",
+          "annotations": [
+            "113|4|gene|7157",
+            "9|4|gene|7157",
+            "166|6|disease|MESH:D009369",
+            "160|5|species|9606"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 27328919,
+          "section": "abstract",
+          "score": 0.9332318902015686,
+          "text": "We thus provide an update of current knowledge on TP53 variations in human cancer as well as inform users on the efficient use of the IARC TP53 Database.",
+          "annotations": [
+            "50|4|gene|7157",
+            "139|4|gene|7157",
+            "69|5|species|9606",
+            "75|6|disease|MESH:D009369"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 19458762,
+          "section": null,
+          "score": 0.9173110723495483,
+          "text": "(http://www.p53.iarc.fr/index.html) The IARC TP53 Database compiles data on human somatic and germline TP53 genetic variations that are reported in the published literature..  With over 18,500 somatic and 225 germline mutations and 1,000 citations in the world literature, this database is now recognized as a major source of information on TP53 mutation patterns in human cancer.",
+          "annotations": [
+            "76|5|species|9606",
+            "45|4|gene|7157",
+            "367|5|species|9606",
+            "103|4|gene|7157",
+            "12|3|gene|7157",
+            "373|6|disease|MESH:D009369",
+            "341|4|gene|7157"
+          ],
+          "pmcid": "PMC2675501"
+        },
+        {
+          "pmid": 20639550,
+          "section": null,
+          "score": 0.9047295029947695,
+          "text": "Only a few large public resources exist that comprehensively compile data on somatic gene alterations in cancer: International Agency for Research on Cancer (IARC) TP53 Database, Catalog of Somatic Mutations in Cancer (COSMIC), TCGA, Roche Cancer Genome Database (RCGDB) and Human Gene Mutation Database (HGMD ).",
+          "annotations": [
+            "211|6|disease|MESH:D009369",
+            "275|5|species|9606",
+            "164|4|gene|7157",
+            "105|6|disease|MESH:D009369",
+            "150|6|disease|MESH:D009369",
+            "240|6|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC2911800"
+        },
+        {
+          "pmid": 33130332,
+          "section": "abstract",
+          "score": 0.9009835012574955,
+          "text": "(Lower panel) Comparative mutation rates for common GI cancers, using the International Agency for Research on Cancer (IARC) TP53 database of curated TP53 mutations associated with human cancers either from peer-reviewed literature or curated from other genomic databases.",
+          "annotations": [
+            "52|10|disease|MESH:D005770",
+            "181|5|species|9606",
+            "111|6|disease|MESH:D009369",
+            "125|4|gene|7157",
+            "187|7|disease|MESH:D009369",
+            "150|4|gene|7157"
+          ],
+          "pmcid": "PMC7788241"
+        },
+        {
+          "pmid": 36045334,
+          "section": "INTRO",
+          "score": 0.8974057653728085,
+          "text": "CRC is reported to be the most common cancer entity that harbors TP53 variation, with 43.28% of CRCs reported to have TP53 variation (IARC TP53 database, R20; https://p53.iarc.fr/TP53SomaticVariations.aspx, accessed on 27 October 2021).",
+          "annotations": [
+            "65|4|gene|7157",
+            "0|3|disease|MESH:D015179",
+            "96|4|disease|None",
+            "118|4|gene|7157",
+            "167|3|gene|7157",
+            "38|6|disease|MESH:D009369",
+            "139|4|gene|7157"
+          ],
+          "pmcid": "PMC9434900"
+        },
+        {
+          "pmid": 30796655,
+          "section": "METHODS",
+          "score": 0.8816660046577454,
+          "text": "Nomenclature follows the guidelines of the Human Genome Variation Society (HGVS, http://www.HGVS.org/varnomen), clinical significance and geographic distribution were assessed using ClinVar (https://www.ncbi.nlm.nih.gov/clinvar/), the International Agency for Research on Cancer (IARC) TP53 database, MutPred2 [http://mutpred.mutdb.org], Ensemble (1000 Genomes Project, phase 3) [https://www.ensembl.org/] and COSMIC [https://cancer.sanger.ac.uk/cosmic].",
+          "annotations": [
+            "286|4|gene|7157",
+            "43|5|species|9606",
+            "272|6|disease|MESH:D009369",
+            "426|6|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC6533225"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 27328919,
+        "section": "title",
+        "score": 1.0,
+        "text": "TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.",
+        "annotations": [
+          "60|4|gene|7157",
+          "19|13|species|None",
+          "0|4|gene|7157"
+        ],
+        "pmcid": null
+      },
+      {
+        "pmid": 27328919,
+        "section": "abstract",
+        "score": 0.9361388683319092,
+        "text": "The IARC TP53 Database (http://p53.iarc.fr) is a popular resource that compiles occurrence and phenotype data on TP53 germline and somatic variations linked to human cancer.",
+        "annotations": [
+          "113|4|gene|7157",
+          "9|4|gene|7157",
+          "166|6|disease|MESH:D009369",
+          "160|5|species|9606"
+        ],
+        "pmcid": null
+      },
+      {
+        "pmid": 27328919,
+        "section": "abstract",
+        "score": 0.9332318902015686,
+        "text": "We thus provide an update of current knowledge on TP53 variations in human cancer as well as inform users on the efficient use of the IARC TP53 Database.",
+        "annotations": [
+          "50|4|gene|7157",
+          "139|4|gene|7157",
+          "69|5|species|9606",
+          "75|6|disease|MESH:D009369"
+        ],
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": [
+      {
+        "pmid": 27328919,
+        "section": "abstract",
+        "score": 0.9361388683319092,
+        "text": "The IARC TP53 Database (http://p53.iarc.fr) is a popular resource that compiles occurrence and phenotype data on TP53 germline and somatic variations linked to human cancer.",
+        "annotations": [
+          "113|4|gene|7157",
+          "9|4|gene|7157",
+          "166|6|disease|MESH:D009369",
+          "160|5|species|9606"
+        ],
+        "pmcid": null
+      },
+      {
+        "pmid": 27328919,
+        "section": "abstract",
+        "score": 0.9332318902015686,
+        "text": "We thus provide an update of current knowledge on TP53 variations in human cancer as well as inform users on the efficient use of the IARC TP53 Database.",
+        "annotations": [
+          "50|4|gene|7157",
+          "139|4|gene|7157",
+          "69|5|species|9606",
+          "75|6|disease|MESH:D009369"
+        ],
+        "pmcid": null
+      }
+    ]
+  },
+  {
+    "pmid": "30998989",
+    "title": "Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.5179177079699002,
+      "n": 7,
+      "results": [
+        {
+          "pmid": 30998989,
+          "annotations": [
+            "128|8|species|9606",
+            "95|4|gene|4292",
+            "104|4|gene|4436",
+            "142|14|disease|MESH:D003123"
+          ],
+          "text": "Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome.",
+          "score": 1.0,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 32612654,
+          "annotations": [
+            "122|4|gene|4292",
+            "160|8|species|9606",
+            "184|14|disease|MESH:D003123",
+            "113|4|gene|4436"
+          ],
+          "text": "Functional tests also include the methylation tolerance assay, which allows reclassification of novel alleles in MSH2 and MLH1, where the proportion of VUSs in patients with suspected Lynch syndrome can reach 30%.",
+          "score": 0.9206544907620025,
+          "pmcid": "PMC7317306",
+          "section": null
+        },
+        {
+          "pmid": 38200234,
+          "annotations": [
+            "457|4|gene|4292",
+            "238|4|disease|None",
+            "222|4|gene|4292",
+            "258|6|disease|MESH:D009369",
+            "761|6|disease|MESH:D009369",
+            "289|4|gene|4292",
+            "57|14|disease|MESH:D003123",
+            "729|6|disease|MESH:D009369",
+            "519|4|gene|4292",
+            "5|4|disease|None",
+            "139|4|gene|4292",
+            "483|7|disease|MESH:D009369"
+          ],
+          "text": "MMRd CRCs were further divided into three subgroups: (1) Lynch syndrome - where a germline pathogenic variant in one of the DNA MMR genes (MLH1, MSH2, MSH6 and PMS2) or in EPCAM was identified as previously described; (2) MLH1 methylated CRCs - positive for tumour hypermethylation of the MLH1 gene promoter using the MethyLight assay as previously described for ACCFR and MCCS and using MethyLight and MS-HRM assays as previously described for ANGELS with MLH1 methylation positive tumours showing concomitant loss of MLH1 and PMS2 expression by IHC; (3) Somatic biallelic MMR gene inactivation resulting from two somatic MMR gene mutations (double somatic MMR mutations) determined as described previously from either targeted tumour sequencing assay or from tumour whole exome sequencing.",
+          "score": 0.9199406073534946,
+          "pmcid": "PMC10912205",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 28944238,
+          "annotations": [
+            "360|4|gene|5395",
+            "338|4|gene|4292",
+            "344|4|gene|4436",
+            "350|4|gene|2956"
+          ],
+          "text": "In this study, we screened for germline mutations in 36 genes across five categories of CRC cases, including (1) Familial Colorectal Cancer Type X (FCCTX) which meet the Amsterdam Criteria I for Lynch Syndrome, but have normal mismatch repair function (microsatellite stable [MSS] and/or normal expression of four MMR proteins encoded by MLH1, MSH2, MSH6, and PMS2 by IHC) in the tumor (Lindor et al. 2005a), (2) unselected CRC cases with no prior IHC or MSI testing completed, (3) proficient MMR (pMMR) or unknown MMR status cases diagnosed <=50 years (diagnosed <50 years of age), (4) proficient MMR (pMMR) cases, based on MSI or IHC testing, diagnosed >=50 years, and (5) deficient MMR (dMMR) cases where no germline mutation has been previously identified by sequencing or multiplex ligation probe assay (MLPA) in the four main MMR genes (Lindor et al. 2005b; Boland and Goel 2010).",
+          "score": 0.9186811343690361,
+          "pmcid": "PMC5606870",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 28944238,
+          "annotations": [
+            "409|4|gene|5395",
+            "387|4|gene|4292",
+            "393|4|gene|4436",
+            "399|4|gene|2956"
+          ],
+          "text": "Population- and clinic-based individuals chosen for germline DNA sequencing were divided into five case groups (persons with CRC), namely: (1) Familial Colorectal Cancer Type X cases, which meet the Amsterdam Criteria I for Lynch Syndrome (Vasen et al. 1991), but have normal mismatch repair function (microsatellite stable [MSS] and/or normal expression of four MMR proteins encoded by MLH1, MSH2, MSH6, and PMS2 by IHC) in the tumor (\"FCCTX\"; n = 153); (2) CRC cases with no prior IHC or MSI testing (\"unselected\"; n = 548); (3) proficient MMR (pMMR) or unknown MMR status cases diagnosed <=50 years (\"young onset\"; n = 333); (4) cases diagnosed >=50 years with proficient DNA mismatch repair based on MSI or IHC testing (\"pMMR\"; n = 68); and (5) cases with deficient MMR in tumor but with no germline mutation identified in the gene with lost protein expression by sequencing or multiple ligation probe assay (MLPA) (\"dMMR\"; n = 129).",
+          "score": 0.91276534377458,
+          "pmcid": "PMC5606870",
+          "section": "METHODS"
+        },
+        {
+          "pmid": 40266329,
+          "annotations": [
+            "333|4|gene|5395",
+            "295|14|disease|MESH:D003123",
+            "323|4|gene|4436",
+            "317|4|gene|4292"
+          ],
+          "text": "A deep-learning model that uses evolutionary sequence conservation to predict the pathogenicity of variants (EVE) (Frazer et al.) (Supplementary Table 2) and predictive models based on molecular functional data (e.g., multiplex assays of variant effects) (Padigepati et al.) available for three Lynch syndrome genes (MLH1, MSH2, and PMS2) (Supplementary Table 3, Supplementary Table 4) were both highly concordant with CVM predictions (91% and 98%, respectively).",
+          "score": 0.8151983675705206,
+          "pmcid": "PMC12170740",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 35346574,
+          "annotations": [
+            "248|4|gene|5395",
+            "242|4|gene|2956",
+            "260|4|gene|4436",
+            "279|5|gene|5424",
+            "273|4|gene|4437",
+            "266|5|gene|4072",
+            "254|4|gene|4292",
+            "70|6|disease|MESH:D009369",
+            "5|7|species|9606"
+          ],
+          "text": "This patient underwent both commercial germline genetic testing of 80 cancer susceptibility genes and MSK-IMPACT research-based testing assessing 88 genes, with no additional variant of either clinical or uncertain significance identified in MSH6, PMS2, MLH1, MSH2, EPCAM, MSH3, POLD1, or POLE.",
+          "score": 0.7941118206661589,
+          "pmcid": "PMC9942243",
+          "section": "RESULTS"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 30998989,
+        "annotations": [
+          "128|8|species|9606",
+          "95|4|gene|4292",
+          "104|4|gene|4436",
+          "142|14|disease|MESH:D003123"
+        ],
+        "text": "Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome.",
+        "score": 1.0,
+        "pmcid": null,
+        "section": "title"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "32249768",
+    "title": "FBXO22 degrades nuclear PTEN to promote tumorigenesis.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 0.7946280840551481,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 32249768,
+          "annotations": [
+            "40|13|disease|MESH:D063646",
+            "24|4|gene|5728",
+            "0|6|gene|26263"
+          ],
+          "text": "FBXO22 degrades nuclear PTEN to promote tumorigenesis",
+          "score": 0.9723345339298248,
+          "pmcid": "PMC7136256",
+          "section": "title"
+        },
+        {
+          "pmid": 41347800,
+          "annotations": [
+            "60|4|gene|5728",
+            "76|13|disease|MESH:D063646",
+            "36|6|gene|26263"
+          ],
+          "text": "In addition, Ge et al reported that FBXO22 degrades nuclear PTEN to promote tumorigenesis.",
+          "score": 0.9608725309371948,
+          "pmcid": "PMC12695154",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 32249768,
+          "annotations": [
+            "56|4|gene|5728",
+            "16|13|disease|MESH:D063646",
+            "0|6|gene|26263"
+          ],
+          "text": "FBXO22 promotes tumorigenesis through degrading nuclear PTEN",
+          "score": 0.9339301288127899,
+          "pmcid": "PMC7136256",
+          "section": "RESULTS"
+        },
+        {
+          "pmid": 39153212,
+          "annotations": [
+            "49|4|gene|5728",
+            "84|11|disease|MESH:D063646",
+            "26|6|gene|26263"
+          ],
+          "text": "Ge et al. discovered that FBXO22 targets nuclear PTEN for degradation to accelerate oncogenesis.",
+          "score": 0.9299208223819733,
+          "pmcid": "PMC11330286",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 35847937,
+          "annotations": [
+            "296|4|gene|2475",
+            "140|3|gene|10671",
+            "330|4|gene|6662",
+            "185|13|disease|MESH:D063646",
+            "89|5|disease|MESH:D009369",
+            "218|5|disease|MESH:D009369",
+            "204|5|gene|55294",
+            "132|3|gene|644914",
+            "169|4|gene|5728",
+            "13|5|gene|6502",
+            "145|6|gene|26263",
+            "312|5|gene|4170",
+            "319|5|gene|4613",
+            "28|13|disease|MESH:D063646",
+            "262|6|disease|MESH:D009369"
+          ],
+          "text": "For example, FBXL1 promotes tumorigenesis by facilitating the degradation of a series of tumor-suppressor proteins, such as such as p21 and p27; FBXO22 degrades nuclear PTEN to promote tumorigenesis; and FBXW7 plays a tumor-suppressive role by degrading various cancer-promoting proteins such as mTOR, cyclin E, MCL-1, N-Myc, and SOX9.",
+          "score": 0.9207072257995605,
+          "pmcid": "PMC9280481",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 34950036,
+          "annotations": [
+            "139|4|gene|6794",
+            "16|13|disease|MESH:D063646",
+            "51|4|gene|5728",
+            "187|24|disease|MESH:D006528",
+            "264|3|gene|644914",
+            "148|5|gene|571",
+            "66|11|disease|MESH:D008175",
+            "0|6|gene|26263"
+          ],
+          "text": "FBXO22 promotes tumorigenesis by degrading nuclear PTEN, promotes lung cancer by mediating the polyubiquitination with the inactivation of LKB1 and Bach1, and promotes the development of hepatocellular carcinoma by regulating the ubiquitination and degradation of p21.",
+          "score": 0.9195299446582794,
+          "pmcid": "PMC8688818",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 32249768,
+          "annotations": [
+            "200|13|disease|MESH:D063646",
+            "35|4|gene|5728",
+            "123|4|gene|5728",
+            "184|4|gene|5728",
+            "142|6|gene|26263"
+          ],
+          "text": "Here the authors show that nuclear PTEN is more susceptible to ubiquitin-mediated proteasomal degradation than cytoplasmic PTEN, and identify FBXO22 ubiquitinates and degrades nuclear PTEN to promote tumorigenesis.",
+          "score": 0.9173080027103424,
+          "pmcid": "PMC7136256",
+          "section": "abstract"
+        },
+        {
+          "pmid": 35046938,
+          "annotations": [
+            "191|4|gene|5728",
+            "155|4|gene|6794",
+            "36|13|disease|MESH:D063646",
+            "163|11|disease|MESH:D008175",
+            "119|3|gene|644914",
+            "199|17|disease|MESH:D015179",
+            "126|24|disease|MESH:D006528",
+            "17|6|gene|26263"
+          ],
+          "text": "On the contrary, FBXO22 facilitated tumorigenesis and progression via regulating the ubiquitination and degradation of p21 in hepatocellular carcinoma, of LKB1 in lung cancer, and of nuclear PTEN in colorectal cancer.",
+          "score": 0.9025390148162842,
+          "pmcid": "PMC8761623",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 36428706,
+          "annotations": [
+            "139|6|gene|26263",
+            "166|13|disease|MESH:D063646",
+            "12|6|gene|26263",
+            "100|6|disease|MESH:D009369",
+            "24|5|disease|MESH:D009369",
+            "206|4|gene|5728"
+          ],
+          "text": "The role of FBXO22 as a tumor driver is supported by the frequent overexpression of this protein in cancer, and by xenograft models, where FBXO22 expression promotes tumorigenesis by degradation of nuclear PTEN.",
+          "score": 0.9015706181526184,
+          "pmcid": "PMC9688753",
+          "section": null
+        },
+        {
+          "pmid": 32249768,
+          "annotations": [
+            "249|9|gene|890",
+            "236|8|gene|6790",
+            "59|4|gene|5728",
+            "230|4|gene|5347",
+            "65|6|gene|26263",
+            "213|4|gene|999",
+            "146|3|gene|207",
+            "327|6|gene|26263",
+            "35|6|gene|26263"
+          ],
+          "text": "In accordance with the notion that FBXO22 degraded nuclear PTEN, FBXO22 depletion by shRNA (Fig. 4a) or CRISPR-CAS9 (Fig. 4b) showed no impact on AKT activation, but significantly reduced the expressions of APC/C-CDH1 substrates, PLK1, Aurora A and Cyclin A2, which could be reversed by ectopic expression of a shRNA-resistant FBXO22 (Supplementary Fig. 4a).",
+          "score": 0.8644378781318665,
+          "pmcid": "PMC7136256",
+          "section": "RESULTS"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 32249768,
+        "annotations": [
+          "40|13|disease|MESH:D063646",
+          "24|4|gene|5728",
+          "0|6|gene|26263"
+        ],
+        "text": "FBXO22 degrades nuclear PTEN to promote tumorigenesis",
+        "score": 0.9723345339298248,
+        "pmcid": "PMC7136256",
+        "section": "title"
+      },
+      {
+        "pmid": 32249768,
+        "annotations": [
+          "56|4|gene|5728",
+          "16|13|disease|MESH:D063646",
+          "0|6|gene|26263"
+        ],
+        "text": "FBXO22 promotes tumorigenesis through degrading nuclear PTEN",
+        "score": 0.9339301288127899,
+        "pmcid": "PMC7136256",
+        "section": "RESULTS"
+      },
+      {
+        "pmid": 32249768,
+        "annotations": [
+          "200|13|disease|MESH:D063646",
+          "35|4|gene|5728",
+          "123|4|gene|5728",
+          "184|4|gene|5728",
+          "142|6|gene|26263"
+        ],
+        "text": "Here the authors show that nuclear PTEN is more susceptible to ubiquitin-mediated proteasomal degradation than cytoplasmic PTEN, and identify FBXO22 ubiquitinates and degrades nuclear PTEN to promote tumorigenesis.",
+        "score": 0.9173080027103424,
+        "pmcid": "PMC7136256",
+        "section": "abstract"
+      },
+      {
+        "pmid": 32249768,
+        "annotations": [
+          "249|9|gene|890",
+          "236|8|gene|6790",
+          "59|4|gene|5728",
+          "230|4|gene|5347",
+          "65|6|gene|26263",
+          "213|4|gene|999",
+          "146|3|gene|207",
+          "327|6|gene|26263",
+          "35|6|gene|26263"
+        ],
+        "text": "In accordance with the notion that FBXO22 degraded nuclear PTEN, FBXO22 depletion by shRNA (Fig. 4a) or CRISPR-CAS9 (Fig. 4b) showed no impact on AKT activation, but significantly reduced the expressions of APC/C-CDH1 substrates, PLK1, Aurora A and Cyclin A2, which could be reversed by ectopic expression of a shRNA-resistant FBXO22 (Supplementary Fig. 4a).",
+        "score": 0.8644378781318665,
+        "pmcid": "PMC7136256",
+        "section": "RESULTS"
+      }
+    ],
+    "filtered_matches": [
+      {
+        "pmid": 32249768,
+        "annotations": [
+          "200|13|disease|MESH:D063646",
+          "35|4|gene|5728",
+          "123|4|gene|5728",
+          "184|4|gene|5728",
+          "142|6|gene|26263"
+        ],
+        "text": "Here the authors show that nuclear PTEN is more susceptible to ubiquitin-mediated proteasomal degradation than cytoplasmic PTEN, and identify FBXO22 ubiquitinates and degrades nuclear PTEN to promote tumorigenesis.",
+        "score": 0.9173080027103424,
+        "pmcid": "PMC7136256",
+        "section": "abstract"
+      },
+      {
+        "pmid": 32249768,
+        "annotations": [
+          "249|9|gene|890",
+          "236|8|gene|6790",
+          "59|4|gene|5728",
+          "230|4|gene|5347",
+          "65|6|gene|26263",
+          "213|4|gene|999",
+          "146|3|gene|207",
+          "327|6|gene|26263",
+          "35|6|gene|26263"
+        ],
+        "text": "In accordance with the notion that FBXO22 degraded nuclear PTEN, FBXO22 depletion by shRNA (Fig. 4a) or CRISPR-CAS9 (Fig. 4b) showed no impact on AKT activation, but significantly reduced the expressions of APC/C-CDH1 substrates, PLK1, Aurora A and Cyclin A2, which could be reversed by ectopic expression of a shRNA-resistant FBXO22 (Supplementary Fig. 4a).",
+        "score": 0.8644378781318665,
+        "pmcid": "PMC7136256",
+        "section": "RESULTS"
+      }
+    ]
+  },
+  {
+    "pmid": "34157306",
+    "title": "Overexpressing low-density lipoprotein receptor reduces tau-associated neurodegeneration in relation to apoE-linked mechanisms.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.479832582990639,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 34157306,
+          "annotations": [
+            "104|4|gene|348",
+            "71|17|disease|MESH:D019636",
+            "15|32|gene|16835",
+            "56|3|gene|4137"
+          ],
+          "text": "Overexpressing low-density lipoprotein receptor reduces tau-associated neurodegeneration in relation to apoE-linked mechanisms",
+          "score": 0.9695680439472198,
+          "pmcid": "PMC8349883",
+          "section": "title"
+        },
+        {
+          "pmid": 40468377,
+          "annotations": [
+            "83|3|gene|4137",
+            "95|17|disease|MESH:D019636"
+          ],
+          "text": "Shi et al. showed that overexpression of low-density lipoprotein receptors reduces tau-related neurodegeneration associated with ApoE mechanisms.",
+          "score": 0.9291287958621979,
+          "pmcid": "PMC12139291",
+          "section": null
+        },
+        {
+          "pmid": 36383681,
+          "annotations": [
+            "98|32|gene|16835",
+            "135|4|gene|348",
+            "29|4|gene|348",
+            "57|17|disease|MESH:D019636",
+            "42|3|gene|4137"
+          ],
+          "text": "Removal of astrocyte-derived apoE reduces tau-associated neurodegeneration, and overexpression of low-density lipoprotein receptor, an apoE metabolic receptor, alters markers of microglial suppression.",
+          "score": 0.9113383293151855,
+          "pmcid": "PMC9912474",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 36107206,
+          "annotations": [
+            "254|4|gene|11816",
+            "327|17|disease|MESH:D019636",
+            "225|5|species|10090",
+            "215|9|disease|MESH:D024801",
+            "176|32|gene|16835",
+            "277|3|disease|MESH:D004194",
+            "67|3|disease|MESH:D004194"
+          ],
+          "text": "Further, supporting an underlying protective mechanism of reducing DAM microglia in disease development, a most recent study reported that overexpressing an APOE receptor, the low-density lipoprotein receptor, in a tauopathy mouse model tamed microglial APOE level and reduced DAM signature leading to slowed tau pathology and neurodegeneration.",
+          "score": 0.8866890966892242,
+          "pmcid": "PMC9481739",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 34157306,
+          "annotations": [
+            "147|4|gene|11816",
+            "60|4|gene|16835",
+            "109|9|disease|MESH:D024801",
+            "36|4|gene|11816",
+            "66|32|gene|16835",
+            "169|3|gene|4137",
+            "187|17|disease|MESH:D019636",
+            "119|4|species|10090",
+            "103|5|mutation|rs63751438"
+          ],
+          "text": "Here we show that overexpressing an apoE metabolic receptor LDLR (low-density lipoprotein receptor) in P301S tauopathy mice markedly reduces brain apoE, and ameliorates tau pathology and neurodegeneration.",
+          "score": 0.8760579854880834,
+          "pmcid": "PMC8349883",
+          "section": "abstract"
+        },
+        {
+          "pmid": 35078351,
+          "annotations": [
+            "52|4|gene|348",
+            "119|4|gene|16835",
+            "198|4|gene|348",
+            "299|3|gene|4137",
+            "317|17|disease|MESH:D019636",
+            "266|4|species|10090",
+            "240|4|gene|348",
+            "125|32|gene|16835",
+            "95|4|gene|348"
+          ],
+          "text": "More recently, Shi et al. have demonstrated a novel apoE knockout model that overexpresses the apoE metabolic receptor LDLR (low-density lipoprotein receptor, responsible for mediating clearance of apoE lipoproteins) and that reduces brain apoE when crossed to PS19 mice, which results in decreased tau pathology and neurodegeneration.",
+          "score": 0.8518331484758033,
+          "pmcid": "PMC8790339",
+          "section": null
+        },
+        {
+          "pmid": 36165619,
+          "annotations": [
+            "29|4|gene|348",
+            "87|9|disease|MESH:D003704",
+            "45|3|gene|4137",
+            "169|32|gene|3949",
+            "237|4|gene|348",
+            "203|4|gene|3949",
+            "360|5|species|10090",
+            "74|2|disease|MESH:D000544",
+            "347|7|disease|MESH:D001284",
+            "375|9|disease|MESH:D024801",
+            "293|3|gene|4137"
+          ],
+          "text": "To examine the links between APOE levels and Tau pathology, a hallmark of AD and other dementias, translational studies have shown that transgenic overexpression of the low-density lipoprotein receptor (LDLR), the ApoE receptor, reduces ApoE concentrations in the cerebrospinal fluid, reduces Tau phosphorylation, and protects against hippocampal atrophy in a mouse model of tauopathy.",
+          "score": 0.8310676449283937,
+          "pmcid": "PMC10040476",
+          "section": null
+        },
+        {
+          "pmid": 41925951,
+          "annotations": [
+            "195|4|species|10090",
+            "135|28|disease|MESH:D009410",
+            "47|32|gene|16835",
+            "109|4|gene|348",
+            "81|4|gene|16835",
+            "168|17|disease|MESH:D019636",
+            "189|5|mutation|rs63751438"
+          ],
+          "text": "Recent studies show that overexpression of the low-density lipoprotein receptor (LDLR) significantly reduces APOE levels and mitigates neurofibrillary degeneration and neurodegeneration in P301S mice.",
+          "score": 0.8303788952917612,
+          "pmcid": "PMC13047008",
+          "section": null
+        },
+        {
+          "pmid": 35095394,
+          "annotations": [
+            "246|3|gene|19164",
+            "75|32|gene|3949",
+            "132|4|gene|348",
+            "187|4|species|10090",
+            "109|4|gene|16835",
+            "250|4|species|10090",
+            "160|17|disease|MESH:D019636",
+            "152|3|disease|MESH:D009410",
+            "181|5|mutation|rs63751438"
+          ],
+          "text": "In line with this, a recent report demonstrated that the overexpression of low-density lipoprotein receptor (LDLR) markedly reduced APOE and attenuated NFD and neurodegeneration in P301S mice :similarly demonstrated in an earlier study using APP/PS1 mice.",
+          "score": 0.7845665146293541,
+          "pmcid": "PMC8789683",
+          "section": null
+        },
+        {
+          "pmid": 37310025,
+          "annotations": [
+            "109|17|gene|344",
+            "128|5|gene|345",
+            "210|3|disease|MESH:D015179",
+            "215|17|disease|MESH:D015179",
+            "234|4|gene|3949",
+            "135|17|gene|345",
+            "154|4|gene|348",
+            "178|3|gene|351",
+            "76|5|gene|341",
+            "240|32|gene|3949",
+            "274|4|gene|4035",
+            "320|4|gene|7804",
+            "0|5|gene|335",
+            "26|5|gene|336",
+            "58|16|gene|338",
+            "7|17|gene|335",
+            "52|4|gene|338",
+            "83|17|gene|341",
+            "102|5|gene|344",
+            "280|38|gene|16971",
+            "160|16|gene|348",
+            "183|25|gene|351",
+            "33|17|gene|336"
+          ],
+          "text": "apoA1: Apolipoprotein A1; apoA2: Apolipoprotein A2; apoB: Apolipoprotein B; apoC1: Apolipoprotein C1; apoC2: Apolipoprotein C2; apoC3: Apolipoprotein C3; apoE: Apolipoprotein E; APP: Amyloid precursor protein; CRC: Colorectal cancer; LDLR: Low-density lipoprotein receptor; LRP1: Lipoprotein receptor-related protein 1; LRP8: Lipoprotein receptor-related protein 8; OE: Overexpression; VC: Vector control; ns: No significance; ELISA: Enzyme-linked immunosorbent assay.",
+          "score": 0.6761600111291182,
+          "pmcid": "PMC10655886",
+          "section": "RESULTS"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 34157306,
+        "annotations": [
+          "104|4|gene|348",
+          "71|17|disease|MESH:D019636",
+          "15|32|gene|16835",
+          "56|3|gene|4137"
+        ],
+        "text": "Overexpressing low-density lipoprotein receptor reduces tau-associated neurodegeneration in relation to apoE-linked mechanisms",
+        "score": 0.9695680439472198,
+        "pmcid": "PMC8349883",
+        "section": "title"
+      },
+      {
+        "pmid": 34157306,
+        "annotations": [
+          "147|4|gene|11816",
+          "60|4|gene|16835",
+          "109|9|disease|MESH:D024801",
+          "36|4|gene|11816",
+          "66|32|gene|16835",
+          "169|3|gene|4137",
+          "187|17|disease|MESH:D019636",
+          "119|4|species|10090",
+          "103|5|mutation|rs63751438"
+        ],
+        "text": "Here we show that overexpressing an apoE metabolic receptor LDLR (low-density lipoprotein receptor) in P301S tauopathy mice markedly reduces brain apoE, and ameliorates tau pathology and neurodegeneration.",
+        "score": 0.8760579854880834,
+        "pmcid": "PMC8349883",
+        "section": "abstract"
+      }
+    ],
+    "filtered_matches": [
+      {
+        "pmid": 34157306,
+        "annotations": [
+          "147|4|gene|11816",
+          "60|4|gene|16835",
+          "109|9|disease|MESH:D024801",
+          "36|4|gene|11816",
+          "66|32|gene|16835",
+          "169|3|gene|4137",
+          "187|17|disease|MESH:D019636",
+          "119|4|species|10090",
+          "103|5|mutation|rs63751438"
+        ],
+        "text": "Here we show that overexpressing an apoE metabolic receptor LDLR (low-density lipoprotein receptor) in P301S tauopathy mice markedly reduces brain apoE, and ameliorates tau pathology and neurodegeneration.",
+        "score": 0.8760579854880834,
+        "pmcid": "PMC8349883",
+        "section": "abstract"
+      }
+    ]
+  },
+  {
+    "pmid": "36150551",
+    "title": "Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 0.9370504160178825,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 36150551,
+          "annotations": [
+            "80|17|disease|MESH:D015179",
+            "54|25|disease|MESH:C536928"
+          ],
+          "text": "Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer.",
+          "score": 1.0,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 34396449,
+          "annotations": [
+            "0|31|disease|MESH:D053842",
+            "77|5|disease|MESH:D000848",
+            "42|33|disease|MESH:D015179",
+            "83|8|disease|MESH:D015179"
+          ],
+          "text": "Microsatellite instability-high/deficient mismatch repair colorectal cancer (MSI-H/dMMR CRC) is a molecular subtype characterized by high-frequency mutations within DNA mismatch repair genes.",
+          "score": 0.8971764147281647,
+          "pmcid": "PMC8360619",
+          "section": "abstract"
+        },
+        {
+          "pmid": 30723092,
+          "annotations": [
+            "56|25|disease|MESH:C536928",
+            "19|4|gene|4436",
+            "82|17|disease|MESH:D015179",
+            "28|4|gene|2956",
+            "107|4|gene|4292"
+          ],
+          "text": "Additional loss of MSH2 and MSH6 expression in sporadic deficient mismatch repair colorectal cancer due to MLH1 promoter hypermethylation.",
+          "score": 0.8642754216815239,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 35004844,
+          "annotations": [
+            "164|17|disease|MESH:D015179",
+            "78|12|disease|MESH:D015179",
+            "126|8|gene|100302276"
+          ],
+          "text": "Comparison of miRNA profiles between deficient and proficient mismatch repair colon cancer tissues has shown up-regulation of miR-1290 in deficient mismatch repair colorectal cancer tissues.",
+          "score": 0.8524022956515557,
+          "pmcid": "PMC8740132",
+          "section": null
+        },
+        {
+          "pmid": 32173280,
+          "annotations": [
+            "68|17|disease|MESH:D015179"
+          ],
+          "text": "Clinical Development of Immunotherapy for Deficient Mismatch Repair Colorectal Cancer.",
+          "score": 0.852336472360136,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 39807593,
+          "annotations": [
+            "26|8|species|9606",
+            "50|43|disease|MESH:D015179"
+          ],
+          "text": "RESULTS: A total of 3,625 patients with localized deficient mismatch repair colorectal cancer were included in the study.",
+          "score": 0.8430046101237542,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 33028346,
+          "annotations": [
+            "118|17|disease|MESH:D015179"
+          ],
+          "text": "Other clinical trials are currently studying the effects of immunotherapy on metastatic and deficient mismatch repair colorectal cancer.",
+          "score": 0.8331713140883464,
+          "pmcid": "PMC7542723",
+          "section": "DISCUSS"
+        },
+        {
+          "pmid": 37129929,
+          "annotations": [
+            "127|6|gene|3627",
+            "120|6|gene|51441",
+            "0|5|gene|3872",
+            "55|17|disease|MESH:D015179"
+          ],
+          "text": "KRT17 is highly expressed in deficient mismatch repair colorectal cancer, where it promotes T-cell infiltration via the YTHDF2-CXCL10 axis.",
+          "score": 0.8272175450946099,
+          "pmcid": "PMC10320689",
+          "section": "abstract"
+        },
+        {
+          "pmid": 32173570,
+          "annotations": [
+            "20|43|disease|MESH:D015179"
+          ],
+          "text": "Immune Profiling of Deficient Mismatch Repair Colorectal Cancer Tumor Microenvironment Reveals Different Levels of Immune System Activation.",
+          "score": 0.8193211217547661,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 42097167,
+          "annotations": [
+            "221|8|species|9606",
+            "136|17|disease|MESH:D015179",
+            "166|29|disease|MESH:D000077277",
+            "18|6|disease|MESH:D009369"
+          ],
+          "text": "The estimated pan-cancer weighted rate of ARI was 73.5% (95% CI, 71.6-75.4) at 3 years, ranging from 25.4% in deficient mismatch repair colorectal cancer to 83.1% in squamous esophageal carcinoma; approximately 1,001,815 patients per year may develop ARI globally.",
+          "score": 0.7494306563216249,
+          "pmcid": null,
+          "section": "abstract"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 36150551,
+        "annotations": [
+          "80|17|disease|MESH:D015179",
+          "54|25|disease|MESH:C536928"
+        ],
+        "text": "Clinicopathological and molecular characterization of deficient mismatch repair colorectal cancer.",
+        "score": 1.0,
+        "pmcid": null,
+        "section": "title"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "36535904",
+    "title": "Three-tiered EGFr domain risk stratification for individualized NOTCH3-small vessel disease prediction.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.0667506659519859,
+      "n": 6,
+      "results": [
+        {
+          "pmid": 36535904,
+          "section": "title",
+          "score": 0.9831927716732025,
+          "text": "Three-tiered EGFr domain risk stratification for individualized NOTCH3-small vessel disease prediction",
+          "annotations": [
+            "71|20|disease|MESH:D059345",
+            "13|4|gene|1956",
+            "64|6|gene|4854"
+          ],
+          "pmcid": "PMC10316769"
+        },
+        {
+          "pmid": 42684564,
+          "section": "abstract",
+          "score": 0.7933336844238381,
+          "text": "The NOTCH3 p.Arg1231Cys variant, located in EGFr domain 31, is classified as low-risk under the three-tiered EGFr domain risk stratification system.",
+          "annotations": [
+            "4|6|gene|4854",
+            "109|4|gene|1956",
+            "44|4|gene|1956",
+            "11|12|mutation|rs201680145"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 36535904,
+          "section": "INTRO",
+          "score": 0.7756466886948161,
+          "text": "To validate the use of our new three-tiered EGFr risk classification, we studied the association between NOTCH3 EGFr risk categories and NOTCH3-small vessel disease severity in the largest data set so far of 1437 NOTCH3cys positive CADASIL patients and community-dwelling individuals.",
+          "annotations": [
+            "232|7|disease|MESH:D046589",
+            "105|6|gene|4854",
+            "44|4|gene|1956",
+            "137|6|gene|4854",
+            "144|20|disease|MESH:D059345",
+            "112|4|gene|1956",
+            "240|8|species|9606"
+          ],
+          "pmcid": "PMC10316769"
+        },
+        {
+          "pmid": 41614465,
+          "section": "abstract",
+          "score": 0.6789419768739979,
+          "text": "We divided the CADASIL cohort into (1) two groups NOTCH3 mutations affecting epidermal growth factor-like repeat (EGFr) domains 1-6 (proximal) and EGFr domains 7-34 (distal); and (2) three groups; low, medium and high-risk based on a proposed three-tiered risk stratification.",
+          "annotations": [
+            "15|7|disease|MESH:D046589",
+            "147|4|gene|1956",
+            "114|4|gene|1956",
+            "50|6|gene|4854"
+          ],
+          "pmcid": "PMC12866229"
+        },
+        {
+          "pmid": 32732295,
+          "section": "DISCUSS",
+          "score": 0.6291052624246651,
+          "text": "Taken together, these findings suggest that NOTCH3-associated small vessel disease severity depends on at least 3 factors: the location of the cysteine-altering NOTCH3 variant in the 34 EGFr domains, unknown genetic modifiers, and the presence or absence of common vascular risk factors such as smoking and hypertension.",
+          "annotations": [
+            "62|20|disease|MESH:D059345",
+            "307|12|disease|MESH:D006973",
+            "161|6|gene|4854",
+            "44|6|gene|4854",
+            "186|4|gene|1956",
+            "143|8|chemical|MESH:D003545"
+          ],
+          "pmcid": "PMC7682826"
+        },
+        {
+          "pmid": 30032161,
+          "section": "DISCUSS",
+          "score": 0.5984576054241053,
+          "text": "From the population perspective, it is therefore possible that cysteine-altering NOTCH3 PV in higher EGFr domains are a hitherto overlooked risk factor for cerebral small-vessel disease in the (elderly) population.",
+          "annotations": [
+            "101|4|gene|1956",
+            "81|6|gene|4854",
+            "88|2|disease|MESH:D008881",
+            "156|29|disease|MESH:D059345"
+          ],
+          "pmcid": "PMC6752295"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 36535904,
+        "section": "title",
+        "score": 0.9831927716732025,
+        "text": "Three-tiered EGFr domain risk stratification for individualized NOTCH3-small vessel disease prediction",
+        "annotations": [
+          "71|20|disease|MESH:D059345",
+          "13|4|gene|1956",
+          "64|6|gene|4854"
+        ],
+        "pmcid": "PMC10316769"
+      },
+      {
+        "pmid": 36535904,
+        "section": "INTRO",
+        "score": 0.7756466886948161,
+        "text": "To validate the use of our new three-tiered EGFr risk classification, we studied the association between NOTCH3 EGFr risk categories and NOTCH3-small vessel disease severity in the largest data set so far of 1437 NOTCH3cys positive CADASIL patients and community-dwelling individuals.",
+        "annotations": [
+          "232|7|disease|MESH:D046589",
+          "105|6|gene|4854",
+          "44|4|gene|1956",
+          "137|6|gene|4854",
+          "144|20|disease|MESH:D059345",
+          "112|4|gene|1956",
+          "240|8|species|9606"
+        ],
+        "pmcid": "PMC10316769"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "38266643",
+    "title": "Apolipoprotein E secreted by astrocytes forms antiparallel dimers in discoidal lipoproteins.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 0.8065455000032671,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 38266643,
+          "annotations": [
+            "0|16|gene|348"
+          ],
+          "text": "Apolipoprotein E secreted by astrocytes forms antiparallel dimers in discoidal lipoproteins.",
+          "score": 1.0,
+          "pmcid": null,
+          "section": "title"
+        },
+        {
+          "pmid": 24723866,
+          "annotations": [
+            "66|5|gene|11303",
+            "0|11|chemical|MESH:D002784"
+          ],
+          "text": "Cholesterol and ApoE synthesized in astrocytes are secreted in an ABCA1 dependent process, forming discoidal lipoprotein particles.",
+          "score": 0.9421035051345825,
+          "pmcid": "PMC3973904",
+          "section": null
+        },
+        {
+          "pmid": 40219843,
+          "annotations": [
+            "175|4|gene|348",
+            "94|4|gene|348"
+          ],
+          "text": "However, transmission electron microscopy studies revealed that astrocyte-secreted, lipidated ApoE adopts an antiparallel orientation on discoidal lipoproteins, regardless of ApoE isoform.",
+          "score": 0.9398528337478638,
+          "pmcid": "PMC11992651",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 35303786,
+          "annotations": [
+            "31|4|gene|12759",
+            "190|6|chemical|MESH:D008055",
+            "145|4|gene|12759",
+            "0|3|species|10116",
+            "86|17|chemical|MESH:D002788"
+          ],
+          "text": "Rat primary astrocytes secrete apoJ in the form of discoidal lipoproteins devoid of a cholesteryl ester core, suggesting that astrocyte-secreted apoJ-containing particles acquire additional lipids before reaching CSF.",
+          "score": 0.9328698813915253,
+          "pmcid": "PMC9634960",
+          "section": null
+        },
+        {
+          "pmid": 22138302,
+          "annotations": [
+            "134|4|gene|348",
+            "0|4|gene|348"
+          ],
+          "text": "ApoE is the major lipoprotein forming apolipoprotein produced in the brain (For review,); secreted primarily by astrocytes as nascent apoE-containing discoidal particles.",
+          "score": 0.91889688372612,
+          "pmcid": "PMC3273043",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 34067119,
+          "annotations": [
+            "42|16|gene|348",
+            "16|11|chemical|MESH:D002784"
+          ],
+          "text": "The synthesized cholesterol combines with apolipoprotein E (ApoE), produced by astrocytes, to form lipoproteins secreted into the extracellular fluid through ATP-binding cassette (ABC) transporters present on astrocyte cell membranes, and then transported to neurons.",
+          "score": 0.8964443802833557,
+          "pmcid": "PMC8151638",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 38726205,
+          "annotations": [
+            "31|11|chemical|MESH:D002784",
+            "57|16|gene|11816"
+          ],
+          "text": "Astrocytes, after synthesizing cholesterol, bind it with apolipoprotein E (ApoE) to form lipoproteins, which are then secreted via ATP-binding cassette (ABC) transporters on the cell membrane.",
+          "score": 0.8881778419017792,
+          "pmcid": "PMC11079309",
+          "section": null
+        },
+        {
+          "pmid": 39302036,
+          "annotations": [
+            "207|13|chemical|MESH:D010743",
+            "37|2|disease|MESH:D000544",
+            "175|18|chemical|MESH:D000105",
+            "140|5|gene|3156",
+            "251|9|gene|1191",
+            "222|16|gene|348",
+            "158|11|chemical|MESH:D002784",
+            "98|40|gene|3156",
+            "240|4|gene|348",
+            "194|11|chemical|MESH:D002784",
+            "0|5|chemical|MESH:D008055",
+            "262|3|gene|1191",
+            "402|5|gene|10347",
+            "395|5|gene|19"
+          ],
+          "text": "Lipid metabolism has been a focus in AD research, with previous study showing that astrocytes use 3-Hydroxy-3-Methylglutaryl-CoA Reductase (HMGCR) to produce cholesterol from acetyl coenzyme A. Cholesterol, phospholipids, Apolipoprotein E (APOE), and Clusterin (CLU) combine to form high-density lipoprotein complex, which is secreted out of astrocytes by ATP-binding cassette transporter A1/7 (ABCA1, ABCA7).",
+          "score": 0.8746307492256165,
+          "pmcid": "PMC11413920",
+          "section": "INTRO"
+        },
+        {
+          "pmid": 6772442,
+          "annotations": [
+            "117|16|gene|348",
+            "84|17|chemical|MESH:D002788",
+            "196|17|chemical|MESH:D002788"
+          ],
+          "text": "The data suggest that the discoidal high-density lipoproteins are the major site of cholesteryl ester formation that apolipoprotein-E is not involved in an undirectional transport of newly formed cholesteryl ester from high-density lipoproteins to other lipoproteins and that lipoprotein-X and lipoprotein-E are not preferential substrates for the acyltransferase.",
+          "score": 0.8558116856648105,
+          "pmcid": null,
+          "section": "abstract"
+        },
+        {
+          "pmid": 15617867,
+          "annotations": [
+            "19|11|chemical|MESH:D002784",
+            "157|16|gene|348"
+          ],
+          "text": "Astrocyte-produced cholesterol is utilized for cell proliferation, or is released, via astrocyte-secreted high density lipoprotein-like particles containing apolipoprotein E, outside the cell, where it is taken up and utilized by neurons for dendrite outgrowth and to form synapses.",
+          "score": 0.8462444841861725,
+          "pmcid": null,
+          "section": "abstract"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 38266643,
+        "annotations": [
+          "0|16|gene|348"
+        ],
+        "text": "Apolipoprotein E secreted by astrocytes forms antiparallel dimers in discoidal lipoproteins.",
+        "score": 1.0,
+        "pmcid": null,
+        "section": "title"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "39056802",
+    "title": "KRAS Mutation Subtypes and Their Association with Other Driver Mutations in Oncogenic Pathways.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.2345003749942407,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 39056802,
+          "section": "title",
+          "score": 0.984673023223877,
+          "text": "KRAS Mutation Subtypes and Their Association with Other Driver Mutations in Oncogenic Pathways",
+          "annotations": [
+            "0|4|gene|3845"
+          ],
+          "pmcid": "PMC11274496"
+        },
+        {
+          "pmid": 26376781,
+          "section": "DISCUSS",
+          "score": 0.9351538419723511,
+          "text": "A target sequencing analysis did not detect any possible somatic driver mutations commonly observed in lung cancer, such as EGFR, HER2, KRAS, ALK, MET, or PIK3CA, suggesting that primary pulmonary malignant melanomas may have different oncogenic pathways from primary lung cancer from the viewpoint of driver oncogenes.",
+          "annotations": [
+            "268|11|disease|MESH:D008175",
+            "155|6|gene|5290",
+            "130|4|gene|2064",
+            "147|3|gene|79811",
+            "187|29|disease|MESH:D008545",
+            "124|4|gene|1956",
+            "136|4|gene|3845",
+            "103|11|disease|MESH:D008175",
+            "142|3|gene|238"
+          ],
+          "pmcid": "PMC4573480"
+        },
+        {
+          "pmid": 41756324,
+          "section": "INTRO",
+          "score": 0.9350566565990448,
+          "text": "(A) Distribution of major oncogenic drivers in lung adenocarcinoma (LUAD) across Western cohorts, highlighting the predominance of KRAS mutations relative to other actionable alterations; (B) Relative distribution of KRAS mutation subtypes in LUAD, illustrating the predominance of codon 12 variants alongside less frequent non-G12 alterations, including codon 61 mutations such as KRASQ61H; (C) Schematic representation of KRAS signaling and therapeutic intervention points relevant to KRASQ61H-mutant LUAD.",
+          "annotations": [
+            "243|4|disease|MESH:D000077192",
+            "328|3|mutation|rs121913529",
+            "131|4|gene|3845",
+            "217|4|gene|3845",
+            "503|4|disease|MESH:D000077192",
+            "424|4|gene|3845",
+            "68|4|disease|MESH:D000077192",
+            "47|19|disease|MESH:D000077192"
+          ],
+          "pmcid": "PMC12932154"
+        },
+        {
+          "pmid": 35236051,
+          "section": "RESULTS",
+          "score": 0.93010014295578,
+          "text": "There are pCMML subtypes in which oncogenic RAS pathway mutations (NRAS, CBL, KRAS and PTPN11) are clear initiating driver mutations, occurring early in the course of disease, associated with poor outcomes (decreased survival and higher rates of transformation to acute myeloid leukemia [AML]) (Figure 1).",
+          "annotations": [
+            "73|3|gene|867",
+            "78|4|gene|3845",
+            "288|3|disease|MESH:D015470",
+            "10|5|disease|MESH:D015477",
+            "87|6|gene|5781",
+            "264|22|disease|MESH:D015470",
+            "67|4|gene|4893"
+          ],
+          "pmcid": "PMC9244829"
+        },
+        {
+          "pmid": 41630007,
+          "section": null,
+          "score": 0.9289936125278473,
+          "text": "In gastric cancer, recurrent driver mutations in the five most frequently mutated genes:TP53, ARID1A, KRAS, CDH1, and HER2:activate distinct oncogenic pathways that not only provide cell-autonomous proliferation advantages but also remodel the TME through paracrine signaling and metabolic symbiosis (Fig. 1).",
+          "annotations": [
+            "118|4|gene|2064",
+            "102|4|gene|3845",
+            "94|6|gene|8289",
+            "88|4|gene|7157",
+            "108|4|gene|999",
+            "3|14|disease|MESH:D013274"
+          ],
+          "pmcid": "PMC12955345"
+        },
+        {
+          "pmid": 38414979,
+          "section": null,
+          "score": 0.9246321022510529,
+          "text": "NRG1 gene fusion is the first potential therapeutic oncogenic driver mutation specifically associated with a subtype of lung adenocarcinoma and is predominantly found in nonsmoking patients, in contrast to the tobacco-associated KRAS gene mutation.",
+          "annotations": [
+            "0|4|gene|3084",
+            "210|7|species|4097",
+            "120|19|disease|MESH:D000077192",
+            "181|8|species|9606",
+            "229|4|gene|3845"
+          ],
+          "pmcid": "PMC10898996"
+        },
+        {
+          "pmid": 39421314,
+          "section": null,
+          "score": 0.9032988548278809,
+          "text": "However, in cancer cells, a new 'driver mutation' may occur at a different site of the proto-oncogene or in a different proto-oncogene, which can activate a different oncogenic pathway, and allow the tumor to bypass the effects of the therapy; for instance, in non-small cell lung cancer (NSCLC) driven by the KRASG12C mutation, the KRASY96D mutation confers resistance to KRASG12C-selective inhibitors in cancer cells; NSCLC driven by EGFR gene mutation can reactivate the rat sarcoma (RAS)/mitogen-activated protein kinase (MAPK) signaling pathway and mediate drug resistance through mutations in KRAS, the human MAPK kinase 1 or neuroblastoma-RAS genes after treatment with EGFR inhibitors.",
+          "annotations": [
+            "261|26|disease|MESH:D002289",
+            "420|5|disease|MESH:D002289",
+            "487|3|species|None",
+            "406|6|disease|MESH:D009369",
+            "474|11|species|None",
+            "609|5|species|9606",
+            "677|4|gene|1956",
+            "436|4|gene|1956",
+            "599|4|gene|3845",
+            "646|3|species|None",
+            "200|5|disease|MESH:D009369",
+            "12|6|disease|MESH:D009369",
+            "289|5|disease|MESH:D002289"
+          ],
+          "pmcid": "PMC11484340"
+        },
+        {
+          "pmid": 36576236,
+          "section": "abstract",
+          "score": 0.9014545977115631,
+          "text": "Using intestinal metastatic tumor-derived organoids carrying Apc, Kras, Tgfbr2, and Trp53 quadruple mutations, we demonstrate here that approximately 30% of subclones of the organoids show loss of metastatic ability to the liver while keeping the driver mutations and oncogenic pathways.",
+          "annotations": [
+            "66|4|gene|16653",
+            "61|3|gene|324",
+            "72|6|gene|21813",
+            "84|5|gene|22059"
+          ],
+          "pmcid": "PMC10067385"
+        },
+        {
+          "pmid": 38672529,
+          "section": "abstract",
+          "score": 0.8914172351360321,
+          "text": "We then present current and emerging therapeutic approaches for targeting KRAS mutation subtypes intending to provide individualized treatment for lung cancer harboring this challenging driver mutation.",
+          "annotations": [
+            "147|11|disease|MESH:D008175"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 41731528,
+          "section": null,
+          "score": 0.8900136053562164,
+          "text": "In a tissue-specific context, particular oncogenic pathways are preferentially disrupted (e.g.  Hras in skin versus Kras in lung), and tumor promoters selectively favor the expansion of cells harboring these driver mutations, ultimately resulting in a growing tumor",
+          "annotations": [
+            "260|5|disease|MESH:D009369",
+            "116|4|gene|3845",
+            "96|4|gene|3265",
+            "135|5|disease|MESH:D009369"
+          ],
+          "pmcid": "PMC13020270"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 39056802,
+        "section": "title",
+        "score": 0.984673023223877,
+        "text": "KRAS Mutation Subtypes and Their Association with Other Driver Mutations in Oncogenic Pathways",
+        "annotations": [
+          "0|4|gene|3845"
+        ],
+        "pmcid": "PMC11274496"
+      }
+    ],
+    "filtered_matches": []
+  },
+  {
+    "pmid": "40373998",
+    "title": "Complex Etiologies of the Discordance Between Cystatin C- and Creatinine-Based Estimated GFR and Its Adverse Associations: Findings From the CRIC Study.",
+    "litsense": {
+      "ok": true,
+      "latency_s": 1.2335166670382023,
+      "n": 10,
+      "results": [
+        {
+          "pmid": 40373998,
+          "section": "title",
+          "score": 1.0,
+          "text": "Complex Etiologies of the Discordance Between Cystatin C- and Creatinine-Based Estimated GFR and Its Adverse Associations: Findings From the CRIC Study.",
+          "annotations": [
+            "62|10|chemical|MESH:D003404",
+            "46|10|gene|1471"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 37354936,
+          "section": "title",
+          "score": 0.7833507030276099,
+          "text": "Discordances Between Creatinine and Cystatin C-Based Estimated GFR and Adverse Clinical Outcomes in Routine Clinical Practice.",
+          "annotations": [
+            "21|10|chemical|MESH:D003404",
+            "36|10|gene|1471"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 38816682,
+          "section": "METHODS",
+          "score": 0.7820778631764163,
+          "text": "While the optimal measure to estimate GFR has been debated, we have shown carbamylation associations in CRIC using the equation employed in this study to be robust across numerous different estimations (incorporating both serum creatinine and cystatin C, and excluding race as a variable).",
+          "annotations": [
+            "243|10|gene|1471",
+            "228|10|chemical|MESH:D003404",
+            "104|4|disease|MESH:D051436"
+          ],
+          "pmcid": "PMC11140876"
+        },
+        {
+          "pmid": 27670967,
+          "section": null,
+          "score": 0.7717341108702669,
+          "text": "While prior large studies including a wide spectrum of congenital heart disease diagnoses reported an association between creatinine-based GFR estimates and mortality, only cystatin C estimates of GFR were associated with increased risk of incident adverse outcomes in this study focusing on patients with a Fontan circulation.",
+          "annotations": [
+            "122|10|chemical|MESH:D003404",
+            "173|10|gene|1471",
+            "292|8|species|9606",
+            "55|24|disease|MESH:D006330"
+          ],
+          "pmcid": "PMC5500305"
+        },
+        {
+          "pmid": 37737748,
+          "section": "title",
+          "score": 0.7699968757172637,
+          "text": "Etiologic and Diagnostic Implications of Morbidity and Mortality Associations When Cystatin C-Based Estimated GFR Is Lower Than Creatinine-Based Estimated GFR.",
+          "annotations": [
+            "128|10|chemical|MESH:D003404",
+            "41|9|disease|OMIM:614963"
+          ],
+          "pmcid": null
+        },
+        {
+          "pmid": 32682697,
+          "section": "title",
+          "score": 0.7634153780529866,
+          "text": "The Difference Between Cystatin C- and Creatinine-Based Estimated GFR and Associations With Frailty and Adverse Outcomes: A Cohort Analysis of the Systolic Blood Pressure Intervention Trial (SPRINT)",
+          "annotations": [
+            "23|10|gene|1471",
+            "92|7|disease|MESH:D000073496",
+            "39|10|chemical|MESH:D003404"
+          ],
+          "pmcid": "PMC8896529"
+        },
+        {
+          "pmid": 22837367,
+          "section": "CONCL",
+          "score": 0.7525623055312578,
+          "text": "Further prospective studies in larger cohorts of type 2 diabetic patients with different stages of CKD are needed to confirm the reproducibility of our results and to examine whether the more precise estimation of GFR with combined equations based on serum creatinine, cystatin C, or other filtration markers will provide better risk predictions of mortality and other adverse clinical outcomes.",
+          "annotations": [
+            "65|8|species|9606",
+            "49|15|disease|MESH:D003924",
+            "269|10|gene|1471",
+            "99|3|disease|MESH:D051436",
+            "257|10|chemical|MESH:D003404"
+          ],
+          "pmcid": "PMC3476924"
+        },
+        {
+          "pmid": 39502964,
+          "section": "DISCUSS",
+          "score": 0.7493099466009902,
+          "text": "GFR estimated from serum cystatin C may more accurately reflect kidney function than GFR estimated using traditional serum creatinine-based methods since the main factor influencing serum cystatin C levels in the blood is the rate at which it is filtered by the glomerulus, and it is more strongly associated with adverse health outcomes in community-based populations, the majority of whom are nondiabetic.",
+          "annotations": [
+            "188|10|gene|1471",
+            "25|10|gene|1471",
+            "123|10|chemical|MESH:D003404"
+          ],
+          "pmcid": "PMC11537672"
+        },
+        {
+          "pmid": 39810763,
+          "section": null,
+          "score": 0.712814717574234,
+          "text": "Equally important is the fact that the vast majority of laboratories and practitioners use creatinine-based equations to estimate GFR due to the limited availability of cystatin C. The threshold used to flag eGFR associated with adverse outcomes should be determined using the same measure that is most widely used in practice.",
+          "annotations": [
+            "130|3|gene|9771",
+            "169|10|gene|1471",
+            "91|10|chemical|MESH:D003404"
+          ],
+          "pmcid": "PMC11725809"
+        },
+        {
+          "pmid": 24815335,
+          "section": "abstract",
+          "score": 0.7085275650822533,
+          "text": "Associations of urine cadmium, thallium and uranium in models of serum creatinine- and cystatin-C-based estimated GFR (eGFR) were examined using multiple linear regression in a cross-sectional study of adolescents residing near a lead smelter complex.",
+          "annotations": [
+            "44|7|chemical|MESH:D014501",
+            "87|10|gene|1471",
+            "31|8|chemical|MESH:D013793",
+            "71|10|chemical|MESH:D003404",
+            "230|20|chemical|-",
+            "22|7|chemical|MESH:D002104"
+          ],
+          "pmcid": "PMC4128831"
+        }
+      ]
+    },
+    "same_pmid_matches": [
+      {
+        "pmid": 40373998,
+        "section": "title",
+        "score": 1.0,
+        "text": "Complex Etiologies of the Discordance Between Cystatin C- and Creatinine-Based Estimated GFR and Its Adverse Associations: Findings From the CRIC Study.",
+        "annotations": [
+          "62|10|chemical|MESH:D003404",
+          "46|10|gene|1471"
+        ],
+        "pmcid": null
+      }
+    ],
+    "filtered_matches": []
+  }
+]

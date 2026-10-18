@@ -1,0 +1,1779 @@
+{
+ "record": {
+  "id": "G-022",
+  "run": 3,
+  "pass": 3,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86c@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What phenotypic features are associated with Marfan syndrome?",
+  "session_id": "c103-27f7d73bb453",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c0bf50b",
+  "started_at": "2026-09-26T20:55:18+00:00",
+  "run_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0024796"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 53 sources",
+  "citations": 93,
+  "distinct_sources": 53,
+  "citations_by_layer": {
+   "layer_2_api": 47,
+   "layer_1_graph": 40,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 2,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 7,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 71,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 669,
+  "answer_start": "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 14.383,
+  "seconds": 14.9,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 123,
+   "citation": 93,
+   "trust_signal": 94,
+   "done": 1
+  },
+  "first_word_s": 14.598,
+  "first_token_ts": "2026-09-26T20:53:53.720605Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 0,
+   "ts": "2026-09-26T20:53:40.285922Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 2,
+   "ts": "2026-09-26T20:53:44.681002Z",
+   "payload": {
+    "narrative": "The query asks for phenotypic features associated with a specific syndrome, which can be answered by a direct lookup of that syndrome's clinical features. (Marfan syndrome: 1 of 17 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Marfan syndrome",
+      "curie": "MedGen:C0024796",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 4,
+   "ts": "2026-09-26T20:53:44.683413Z",
+   "payload": {
+    "narrative": "searching 3 layers for marfan syndrome. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-f2a93e2cf991",
+      "layer": "layer_1_graph",
+      "persona": "Sanger",
+      "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-068d345eea63",
+      "layer": "layer_3_enrichment",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-1d073af68468",
+      "layer": "layer_3_enrichment",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7c2e1a2a8489",
+      "layer": "layer_2_api",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-921d64a96b74",
+      "layer": "layer_2_api",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-54bd7a3678bb",
+      "layer": "layer_2_api",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-7719eedb17c0",
+      "layer": "layer_3_enrichment",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b0357ee3b415",
+      "layer": "layer_2_api",
+      "persona": "Crick",
+      "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Marfan syndrome",
+      "curie": "MedGen:C0024796",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 6,
+   "ts": "2026-09-26T20:53:44.684406Z",
+   "payload": {
+    "call_id": "cq-f2a93e2cf991",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 7,
+   "ts": "2026-09-26T20:53:44.684438Z",
+   "payload": {
+    "call_id": "pa-068d345eea63",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 8,
+   "ts": "2026-09-26T20:53:44.684448Z",
+   "payload": {
+    "call_id": "ct-1d073af68468",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 9,
+   "ts": "2026-09-26T20:53:44.684456Z",
+   "payload": {
+    "call_id": "ne-7c2e1a2a8489",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 10,
+   "ts": "2026-09-26T20:53:44.684464Z",
+   "payload": {
+    "call_id": "ne-921d64a96b74",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 11,
+   "ts": "2026-09-26T20:53:44.684473Z",
+   "payload": {
+    "call_id": "ne-54bd7a3678bb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 12,
+   "ts": "2026-09-26T20:53:44.684482Z",
+   "payload": {
+    "call_id": "pa-7719eedb17c0",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 13,
+   "ts": "2026-09-26T20:53:44.684491Z",
+   "payload": {
+    "call_id": "ne-b0357ee3b415",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 14,
+   "ts": "2026-09-26T20:53:44.831522Z",
+   "payload": {
+    "call_id": "ne-7c2e1a2a8489",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 15,
+   "ts": "2026-09-26T20:53:44.833302Z",
+   "payload": {
+    "call_id": "pa-068d345eea63",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 16,
+   "ts": "2026-09-26T20:53:45.039807Z",
+   "payload": {
+    "call_id": "ct-1d073af68468",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 17,
+   "ts": "2026-09-26T20:53:45.072058Z",
+   "payload": {
+    "call_id": "ne-921d64a96b74",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 18,
+   "ts": "2026-09-26T20:53:49.251065Z",
+   "payload": {
+    "call_id": "cq-f2a93e2cf991",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Sanger",
+    "persona_about": "Invented ways to read the sequence of proteins and then of DNA, the method behind the Human Genome Project.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Frederick_Sanger",
+    "summary": "100 row(s) of 100",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 19,
+   "ts": "2026-09-26T20:53:49.380270Z",
+   "payload": {
+    "call_id": "pa-7719eedb17c0",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 20,
+   "ts": "2026-09-26T20:53:49.515193Z",
+   "payload": {
+    "call_id": "ne-54bd7a3678bb",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "fetch: 7 record(s)",
+    "result_count": 7,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 21,
+   "ts": "2026-09-26T20:53:49.549226Z",
+   "payload": {
+    "call_id": "ne-b0357ee3b415",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Crick",
+    "persona_about": "Co-discovered the double helix with Watson, then worked out how the genetic code is read three letters at a time.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Francis_Crick",
+    "summary": "summary: 71 record(s)",
+    "result_count": 71,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 22,
+   "ts": "2026-09-26T20:53:49.552257Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 23,
+   "ts": "2026-09-26T20:53:53.720605Z",
+   "payload": {
+    "text": "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82]. ",
+    "marker_ids": [
+     "cq-f2a93e2cf991-1",
+     "cq-f2a93e2cf991-2",
+     "cq-f2a93e2cf991-3",
+     "cq-f2a93e2cf991-4",
+     "cq-f2a93e2cf991-5",
+     "cq-f2a93e2cf991-6",
+     "cq-f2a93e2cf991-7",
+     "cq-f2a93e2cf991-8",
+     "cq-f2a93e2cf991-9",
+     "cq-f2a93e2cf991-10",
+     "cq-f2a93e2cf991-11",
+     "cq-f2a93e2cf991-12",
+     "cq-f2a93e2cf991-13",
+     "cq-f2a93e2cf991-14",
+     "cq-f2a93e2cf991-15",
+     "cq-f2a93e2cf991-16",
+     "cq-f2a93e2cf991-17",
+     "cq-f2a93e2cf991-18",
+     "cq-f2a93e2cf991-19",
+     "cq-f2a93e2cf991-31"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Marfan syndrome"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0024796",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0024796",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:12502",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/12502",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_003242.6(TGFBR2):c.944C>T (p.Thr315Met)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7048",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7048",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:12524",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/12524",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_004612.4(TGFBR1):c.722C>T (p.Ser241Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7046",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7046",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16422",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16422",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2200",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2200",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "fibrillin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16424",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16424",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16425",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16425",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16426",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16426",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16427",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16427",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.6662G>C (p.Cys2221Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16428",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16428",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16429",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16429",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3725G>A (p.Cys1242Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16430",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16430",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16431",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16431",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.6431A>G (p.Asn2144Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16432",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16432",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16433",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16433",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.2168A>C (p.Asp723Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16436",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16437",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16437",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.7339G>A (p.Glu2447Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "44287",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/44287",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16439",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16439",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.8326C>T (p.Arg2776Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16440",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16440",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.364C>T (p.Arg122Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16442",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16442",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16443",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16443",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3379G>A (p.Gly1127Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16444",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16444",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3668G>A (p.Cys1223Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16445",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16445",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.8176C>T (p.Arg2726Trp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16446",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16446",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3128A>G (p.Lys1043Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16448",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16448",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3192del (p.Glu1065fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16449",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16449",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.6354C>T (p.Ile2118=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16450",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16450",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3793T>C (p.Cys1265Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16451",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16451",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3509G>A (p.Arg1170His)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16452",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16452",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.1585C>T (p.Arg529Ter)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16455",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16455",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3037G>C (p.Gly1013Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16456",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16456",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16457",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16457",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3217G>A (p.Glu1073Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16460",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16460",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.2261A>G (p.Tyr754Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16461",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16461",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.718C>T (p.Arg240Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16462",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16462",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3095G>A (p.Cys1032Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16463",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16463",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3386G>A (p.Cys1129Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16464",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16464",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.3662G>A (p.Cys1221Tyr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16466",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16466",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_000138.5(FBN1):c.1453C>T (p.Arg485Cys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:16467",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/16467",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "2402263",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/2402263/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Marfan_Syndrome",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D008382",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00270686",
+    "source_url": "https://clinicaltrials.gov/study/NCT00270686",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35894201",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35894201/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00429364",
+    "source_url": "https://clinicaltrials.gov/study/NCT00429364",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37058316",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37058316/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00485368",
+    "source_url": "https://clinicaltrials.gov/study/NCT00485368",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "38517496",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/38517496/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00593710",
+    "source_url": "https://clinicaltrials.gov/study/NCT00593710",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "8733052",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/8733052/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00651235",
+    "source_url": "https://clinicaltrials.gov/study/NCT00651235",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "7fbad503-0994-4bf7-a7d3-819195d98183",
+   "seq": 334,
+   "ts": "2026-09-26T20:53:53.729691Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 14383,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 53 sources",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 167
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 116
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 137
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "asks_features",
+      "decided_by": "jev",
+      "jev_choice": "asks_features",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 189
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 disease record, 37 sequence variant records and 3 gene records for Marfan syndrome [11][12][13][14][15][16][17][18][19][20][21][22][23][24][25][26][27][28][29][61][62][63][64][65][66][67][68][69][70][71][72][73][74][75][76][77][78][79][80][81][82]. \n\nClinical Features\n\nMedGen lists these clinical features: Aortic regurgitation [1], Arachnodactyly [2], Astigmatism [3], Ectopia lentis [4], Esotropia [5], Exotropia [6], Pes planus [7], Glaucoma [8], Congestive heart failure [9] and Hypertropia [10]. \n\nDisease records found\n\nDisease name: Marfan syndrome [11]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:12502, name: NM_003242.6(TGFBR2):c.944C>T (p.Thr315Met) [12]. SequenceVariant ClinVar:12524, name: NM_004612.4(TGFBR1):c.722C>T (p.Ser241Leu) [14]. SequenceVariant ClinVar:16422, name: NM_000138.5(FBN1):c.6920G>C (p.Cys2307Ser) [16]. SequenceVariant ClinVar:16424, name: NM_000138.5(FBN1):c.8268G>A (p.Trp2756Ter) [18]. SequenceVariant ClinVar:16425, name: NM_000138.5(FBN1):c.3746G>C (p.Cys1249Ser) [19]. SequenceVariant ClinVar:16426, name: NM_000138.5(FBN1):c.4987T>C (p.Cys1663Arg) [20]. SequenceVariant ClinVar:16427, name: NM_000138.5(FBN1):c.6662G>C (p.Cys2221Ser) [21]. SequenceVariant ClinVar:16428, name: NM_000138.5(FBN1):c.3350G>A (p.Cys1117Tyr) [22]. SequenceVariant ClinVar:16429, name: NM_000138.5(FBN1):c.3725G>A (p.Cys1242Tyr) [23]. SequenceVariant ClinVar:16430, name: NM_000138.5(FBN1):c.6339T>G (p.Tyr2113Ter) [24]. SequenceVariant ClinVar:16431, name: NM_000138.5(FBN1):c.6431A>G (p.Asn2144Ser) [25]. SequenceVariant ClinVar:16432, name: NM_000138.5(FBN1):c.1643A>T (p.Asn548Ile) [26]. SequenceVariant ClinVar:16433, name: NM_000138.5(FBN1):c.2168A>C (p.Asp723Ala) [27]. SequenceVariant record ClinVar:16436 [28]. SequenceVariant ClinVar:16437, name: NM_000138.5(FBN1):c.7339G>A (p.Glu2447Lys) [29]. SequenceVariant ClinVar:16439, name: NM_000138.5(FBN1):c.8326C>T (p.Arg2776Ter) [61]. SequenceVariant ClinVar:16440, name: NM_000138.5(FBN1):c.364C>T (p.Arg122Cys) [62]. SequenceVariant record ClinVar:16442 [63]. SequenceVariant ClinVar:16443, name: NM_000138.5(FBN1):c.3379G>A (p.Gly1127Ser) [64]. SequenceVariant ClinVar:16444, name: NM_000138.5(FBN1):c.3668G>A (p.Cys1223Tyr) [65]. SequenceVariant ClinVar:16445, name: NM_000138.5(FBN1):c.8176C>T (p.Arg2726Trp) [66]. SequenceVariant ClinVar:16446, name: NM_000138.5(FBN1):c.3128A>G (p.Lys1043Arg) [67]. SequenceVariant ClinVar:16448, name: NM_000138.5(FBN1):c.3192del (p.Glu1065fs) [68]. SequenceVariant ClinVar:16449, name: NM_000138.5(FBN1):c.6354C>T (p.Ile2118=) [69]. SequenceVariant ClinVar:16450, name: NM_000138.5(FBN1):c.3793T>C (p.Cys1265Arg) [70]. SequenceVariant ClinVar:16451, name: NM_000138.5(FBN1):c.3509G>A (p.Arg1170His) [71]. SequenceVariant ClinVar:16452, name: NM_000138.5(FBN1):c.1585C>T (p.Arg529Ter) [72]. SequenceVariant ClinVar:16455, name: NM_000138.5(FBN1):c.3037G>C (p.Gly1013Arg) [73]. SequenceVariant record ClinVar:16456 [74]. SequenceVariant ClinVar:16457, name: NM_000138.5(FBN1):c.3217G>A (p.Glu1073Lys) [75]. SequenceVariant ClinVar:16460, name: NM_000138.5(FBN1):c.2261A>G (p.Tyr754Cys) [76]. SequenceVariant ClinVar:16461, name: NM_000138.5(FBN1):c.718C>T (p.Arg240Cys) [77]. SequenceVariant ClinVar:16462, name: NM_000138.5(FBN1):c.3095G>A (p.Cys1032Tyr) [78]. SequenceVariant ClinVar:16463, name: NM_000138.5(FBN1):c.3386G>A (p.Cys1129Tyr) [79]. SequenceVariant ClinVar:16464, name: NM_000138.5(FBN1):c.3662G>A (p.Cys1221Tyr) [80]. SequenceVariant ClinVar:16466, name: NM_000138.5(FBN1):c.1453C>T (p.Arg485Cys) [81]. SequenceVariant record ClinVar:16467 [82]. \n\nGene records found\n\nGene NCBIGene:7048, name: transforming growth factor beta receptor 2 [13]. Gene NCBIGene:7046, name: transforming growth factor beta receptor 1 [15]. Gene NCBIGene:2200, name: fibrillin 1 [17]. \n\nMedgen records found\n\nMedgen title: Marfan syndrome [30]. \n\nClinical features MedGen lists for Marfan syndrome (40 of 70 shown)\n\nMedgen clinical_features: Aortic regurgitation [1]. Medgen clinical_features: Arachnodactyly [2]. Medgen clinical_features: Astigmatism [3]. Medgen clinical_features: Ectopia lentis [4]. Medgen clinical_features: Esotropia [5]. Medgen clinical_features: Exotropia [6]. Medgen clinical_features: Pes planus [7]. Medgen clinical_features: Glaucoma [8]. Medgen clinical_features: Congestive heart failure [9]. Medgen clinical_features: Hypertropia [10]. Medgen clinical_features: Micrognathia [31]. Medgen clinical_features: Mitral regurgitation [32]. Medgen clinical_features: Mitral valve prolapse [33]. Medgen clinical_features: Myopia [34]. Medgen clinical_features: Pneumothorax [35]. Medgen clinical_features: Emphysema [36]. Medgen clinical_features: Retinal detachment [37]. Medgen clinical_features: Retrognathia [38]. Medgen clinical_features: Scoliosis [39]. Medgen clinical_features: Spondylolisthesis [40]. Medgen clinical_features: Strabismus [41]. Medgen clinical_features: Dental crowding [42]. Medgen clinical_features: Tricuspid regurgitation [43]. Medgen clinical_features: Tricuspid valve prolapse [44]. Medgen clinical_features: Cataract [45]. Medgen clinical_features: Bicuspid aortic valve [46]. Medgen clinical_features: Striae distensae [47]. Medgen clinical_features: Pectus carinatum [48]. Medgen clinical_features: Dolichocephaly [49]. Medgen clinical_features: High palate [50]. Medgen clinical_features: Tall stature [51]. Medgen clinical_features: Incisional hernia [52]. Medgen clinical_features: Flexion contracture [53]. Medgen clinical_features: Aortic dissection [54]. Medgen clinical_features: Hypoplasia of the iris [55]. Medgen clinical_features: Protrusio acetabuli [56]. Medgen clinical_features: Downslanted palpebral fissures [57]. Medgen clinical_features: Deeply set eye [58]. Medgen clinical_features: Pulmonary artery dilatation [59]. Medgen clinical_features: Genu recurvatum [60]. \n\nPubmed records found\n\nPubmed title: Marfan syndrome [83]. Pubmed title: [Latest advances in the diagnosis and treatment of Marfan syndrome] [86]. Pubmed title: What Is Marfan Syndrome [88]. Pubmed title: Marfan syndrome [90]. Pubmed title: Marfan syndrome [92]. \n\nLiterature entity records found\n\nLiterature entity name: Marfan Syndrome [84]. \n\nClinical trial records found\n\nClinical trial name: Studies of Heritable Disorders of Connective Tissue [85]. Clinical trial name: Comparison of Two Medications Aimed at Slowing Aortic Root Enlargement in Individuals With Marfan Syndrome [87]. Clinical trial name: Angiotensin Converting Enzyme Inhibitors in Marfan Syndrome [89]. Clinical trial name: Losartan Versus Atenolol for the Treatment of Marfan Syndrome [91]. Clinical trial name: A Randomized, Open-label, LOSARTAN Therapy on the Progression of Aortic Root Dilation in Patients With Marfan Syndrome [93]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query"
+}

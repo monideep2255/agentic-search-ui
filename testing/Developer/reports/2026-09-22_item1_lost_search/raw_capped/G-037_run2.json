@@ -1,0 +1,74 @@
+{
+ "record": {
+  "id": "G-037",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260922@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find GEO expression datasets studying TP53 in human tumour samples.",
+  "session_id": "c103-8345863123e1",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "b6cd025",
+  "started_at": "2026-09-22T21:46:24+00:00",
+  "run_id": "3a3997fe-05c0-40cc-9383-fde29cc02efd",
+  "outcome": "capped",
+  "timed_out": false,
+  "guard_passed": null,
+  "guard_category": null,
+  "guard_reason": null,
+  "think_query_class": null,
+  "resolved_entities": null,
+  "trust_outcome": null,
+  "trust_line": null,
+  "citations": 0,
+  "distinct_sources": 0,
+  "citations_by_layer": {},
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [],
+  "layers": [],
+  "tool_calls": [],
+  "l1_row_counts": [],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 0,
+  "answer_start": "",
+  "error_payload": {
+   "fatal": true,
+   "scope": "run",
+   "source": "cost_control.check_user_daily_query_cap",
+   "error_class": "recoverable",
+   "message": "You've reached 101 queries today. New queries will be available again at 00:00 UTC.",
+   "retry_after_s": 0
+  },
+  "total_cost_usd": null,
+  "total_tool_calls": null,
+  "server_elapsed_s": null,
+  "seconds": 0.6,
+  "event_types": {
+   "error": 1
+  }
+ },
+ "events": [
+  {
+   "type": "error",
+   "version": "v1",
+   "trace_id": "3a3997fe-05c0-40cc-9383-fde29cc02efd",
+   "seq": 0,
+   "ts": "2026-09-22T21:44:51.374615Z",
+   "payload": {
+    "fatal": true,
+    "scope": "run",
+    "source": "cost_control.check_user_daily_query_cap",
+    "error_class": "recoverable",
+    "message": "You've reached 101 queries today. New queries will be available again at 00:00 UTC.",
+    "retry_after_s": 0
+   }
+  }
+ ],
+ "answer_text": ""
+}

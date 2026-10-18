@@ -1,0 +1,758 @@
+{
+ "id": "G-012",
+ "question": "Find clinical trials for carcinoma not otherwise specified.",
+ "started_at": "2026-09-26T21:37:09+00:00",
+ "run_id": "bfc74201-9ecb-4419-b5c9-528895f94240",
+ "create_s": 0.246,
+ "stream_open_s": 0.443,
+ "headers": {
+  "cache-control": "no-store",
+  "content-type": "text/event-stream; charset=utf-8",
+  "server": "railway-hikari",
+  "x-accel-buffering": "no",
+  "transfer-encoding": "chunked",
+  "x-railway-edge": "iad1",
+  "connection": "close"
+ },
+ "events": [
+  {
+   "arrive_s": 1.317,
+   "type": "guard",
+   "seq": 0,
+   "ts": "2026-09-26T21:35:31.422130Z",
+   "summary": "passed=True",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   },
+   "text": null,
+   "lag_s": 0.003,
+   "server_s": 1.093
+  },
+  {
+   "arrive_s": 3.389,
+   "type": "think",
+   "seq": 2,
+   "ts": "2026-09-26T21:35:33.484440Z",
+   "summary": "class=single_hop",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.012,
+   "server_s": 3.155
+  },
+  {
+   "arrive_s": 3.788,
+   "type": "plan",
+   "seq": 4,
+   "ts": "2026-09-26T21:35:33.888509Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.007,
+   "server_s": 3.559
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 6,
+   "ts": "2026-09-26T21:35:33.890518Z",
+   "summary": "cypher_query:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 7,
+   "ts": "2026-09-26T21:35:33.890568Z",
+   "summary": "pubtator_annotate:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 8,
+   "ts": "2026-09-26T21:35:33.890581Z",
+   "summary": "clinicaltrials_search:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 9,
+   "ts": "2026-09-26T21:35:33.890593Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 10,
+   "ts": "2026-09-26T21:35:33.890605Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 11,
+   "ts": "2026-09-26T21:35:33.890618Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.824,
+   "type": "tool_start",
+   "seq": 12,
+   "ts": "2026-09-26T21:35:33.890630Z",
+   "summary": "pubtator_annotate:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.041,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.825,
+   "type": "tool_start",
+   "seq": 13,
+   "ts": "2026-09-26T21:35:33.890642Z",
+   "summary": "ncbi_efetch:running",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.042,
+   "server_s": 3.561
+  },
+  {
+   "arrive_s": 3.953,
+   "type": "tool_result",
+   "seq": 14,
+   "ts": "2026-09-26T21:35:34.054489Z",
+   "summary": "pubtator_annotate:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.006,
+   "server_s": 3.725
+  },
+  {
+   "arrive_s": 4.086,
+   "type": "tool_result",
+   "seq": 15,
+   "ts": "2026-09-26T21:35:34.193806Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.0,
+   "server_s": 3.864
+  },
+  {
+   "arrive_s": 4.185,
+   "type": "tool_result",
+   "seq": 16,
+   "ts": "2026-09-26T21:35:34.290898Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.002,
+   "server_s": 3.961
+  },
+  {
+   "arrive_s": 4.214,
+   "type": "tool_result",
+   "seq": 17,
+   "ts": "2026-09-26T21:35:34.320948Z",
+   "summary": "clinicaltrials_search:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 3.991
+  },
+  {
+   "arrive_s": 5.405,
+   "type": "tool_result",
+   "seq": 18,
+   "ts": "2026-09-26T21:35:35.480638Z",
+   "summary": "cypher_query:empty",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.032,
+   "server_s": 5.151
+  },
+  {
+   "arrive_s": 5.52,
+   "type": "tool_result",
+   "seq": 19,
+   "ts": "2026-09-26T21:35:35.626830Z",
+   "summary": "pubtator_annotate:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 5.297
+  },
+  {
+   "arrive_s": 5.783,
+   "type": "tool_result",
+   "seq": 20,
+   "ts": "2026-09-26T21:35:35.883888Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.007,
+   "server_s": 5.554
+  },
+  {
+   "arrive_s": 6.079,
+   "type": "tool_result",
+   "seq": 21,
+   "ts": "2026-09-26T21:35:36.186072Z",
+   "summary": "ncbi_efetch:ok",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.001,
+   "server_s": 5.857
+  },
+  {
+   "arrive_s": 6.088,
+   "type": "step",
+   "seq": 22,
+   "ts": "2026-09-26T21:35:36.191494Z",
+   "summary": "write:started",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   },
+   "text": null,
+   "lag_s": 0.004,
+   "server_s": 5.862
+  },
+  {
+   "arrive_s": 13.335,
+   "type": "token",
+   "seq": 23,
+   "ts": "2026-09-26T21:35:43.428101Z",
+   "summary": "len=591 kind=claim",
+   "payload": null,
+   "text": "Found 5 clinical trial records for carcinoma not otherwise specified: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1], Thalidomide in Treating Patients With Thyroid Cancer [2], Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3], Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4] and Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. ",
+   "lag_s": 0.015,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 24,
+   "ts": "2026-09-26T21:35:43.428167Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 25,
+   "ts": "2026-09-26T21:35:43.428177Z",
+   "summary": "len=30 kind=heading",
+   "payload": null,
+   "text": "Clinical trial records found\n\n",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 26,
+   "ts": "2026-09-26T21:35:43.428184Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 27,
+   "ts": "2026-09-26T21:35:43.428191Z",
+   "summary": "len=157 kind=table_row",
+   "payload": null,
+   "text": "Clinical trial name: Radioimmunotherapy With or Without Chemotherapy Plus Peripheral Stem Cell Transplantation in Treating Patients With Thyroid Cancer [1]. ",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 28,
+   "ts": "2026-09-26T21:35:43.428198Z",
+   "summary": "len=79 kind=table_row",
+   "payload": null,
+   "text": "Clinical trial name: Thalidomide in Treating Patients With Thyroid Cancer [2]. ",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 29,
+   "ts": "2026-09-26T21:35:43.428205Z",
+   "summary": "len=103 kind=table_row",
+   "payload": null,
+   "text": "Clinical trial name: Irinotecan in Treating Patients With Metastatic or Inoperable Thyroid Cancer [3]. ",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 30,
+   "ts": "2026-09-26T21:35:43.428212Z",
+   "summary": "len=129 kind=table_row",
+   "payload": null,
+   "text": "Clinical trial name: Tanespimycin in Treating Patients With Inoperable Locoregionally Advanced or Metastatic Thyroid Cancer [4]. ",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 31,
+   "ts": "2026-09-26T21:35:43.428219Z",
+   "summary": "len=155 kind=table_row",
+   "payload": null,
+   "text": "Clinical trial name: Suberoylanilide Hydroxamic Acid in Treating Patients With Metastatic and/or Locally Advanced or Locally Recurrent Thyroid Cancer [5]. ",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 32,
+   "ts": "2026-09-26T21:35:43.428226Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 33,
+   "ts": "2026-09-26T21:35:43.428232Z",
+   "summary": "len=22 kind=heading",
+   "payload": null,
+   "text": "Pubmed records found\n\n",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 34,
+   "ts": "2026-09-26T21:35:43.428238Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.337,
+   "type": "token",
+   "seq": 35,
+   "ts": "2026-09-26T21:35:43.428245Z",
+   "summary": "len=122 kind=table_row",
+   "payload": null,
+   "text": "Pubmed title: Prognostic value of morphology and hormone receptor status in breast cancer - a population-based study [6]. ",
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "token",
+   "seq": 36,
+   "ts": "2026-09-26T21:35:43.428252Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "token",
+   "seq": 37,
+   "ts": "2026-09-26T21:35:43.428259Z",
+   "summary": "len=22 kind=heading",
+   "payload": null,
+   "text": "Medgen records found\n\n",
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "token",
+   "seq": 38,
+   "ts": "2026-09-26T21:35:43.428265Z",
+   "summary": "len=0 kind=table_header",
+   "payload": null,
+   "text": "",
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "token",
+   "seq": 39,
+   "ts": "2026-09-26T21:35:43.428272Z",
+   "summary": "len=64 kind=table_row",
+   "payload": null,
+   "text": "Medgen title: Medullary Carcinoma, Not Otherwise Specified [7]. ",
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "token",
+   "seq": 40,
+   "ts": "2026-09-26T21:35:43.428279Z",
+   "summary": "len=2 kind=paragraph_break",
+   "payload": null,
+   "text": "\n\n",
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "token",
+   "seq": 41,
+   "ts": "2026-09-26T21:35:43.428284Z",
+   "summary": "len=635 kind=note",
+   "payload": null,
+   "text": "Note: this answer does not address the following entities named in the question: Medullary Carcinoma, Not Otherwise Specified, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Cyst, Infiltrating duct carcinoma of breast, Primary Intraosseous Carcinoma, Not Otherwise Specified, Derived from Odontogenic Keratocyst, Advanced Renal Cell Carcinoma, Not Otherwise Specified, Metastatic Renal Cell Carcinoma, Not Otherwise Specified, Locally Advanced Renal Cell Carcinoma, Not Otherwise Specified, Cervical Squamous Cell Carcinoma, Not Otherwise Specified. Ask about them individually for a complete answer.",
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 42,
+   "ts": "2026-09-26T21:35:43.428293Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.018,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 43,
+   "ts": "2026-09-26T21:35:43.428321Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 44,
+   "ts": "2026-09-26T21:35:43.428330Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 45,
+   "ts": "2026-09-26T21:35:43.428338Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 46,
+   "ts": "2026-09-26T21:35:43.428346Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 47,
+   "ts": "2026-09-26T21:35:43.428353Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "citation",
+   "seq": 48,
+   "ts": "2026-09-26T21:35:43.428363Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 49,
+   "ts": "2026-09-26T21:35:43.428381Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 50,
+   "ts": "2026-09-26T21:35:43.428396Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 51,
+   "ts": "2026-09-26T21:35:43.428405Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 52,
+   "ts": "2026-09-26T21:35:43.428413Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 53,
+   "ts": "2026-09-26T21:35:43.428421Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 54,
+   "ts": "2026-09-26T21:35:43.428429Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 55,
+   "ts": "2026-09-26T21:35:43.428438Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "trust_signal",
+   "seq": 56,
+   "ts": "2026-09-26T21:35:43.428450Z",
+   "summary": "",
+   "payload": null,
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  },
+  {
+   "arrive_s": 13.338,
+   "type": "done",
+   "seq": 58,
+   "ts": "2026-09-26T21:35:43.428525Z",
+   "summary": "elapsed_ms=13099 outcome=ask",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 13099,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 7 sources, not yet confirmed",
+    "layer_calls_used": 13,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 1.0,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 107
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 141
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 137
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 201
+     }
+    ]
+   },
+   "text": null,
+   "lag_s": 0.017,
+   "server_s": 13.099
+  }
+ ],
+ "moments": {
+  "first_event": {
+   "arrive_s": 1.317,
+   "server_s": 1.093,
+   "lag_s": 0.003
+  },
+  "guard": {
+   "arrive_s": 1.317,
+   "server_s": 1.093,
+   "lag_s": 0.003
+  },
+  "think": {
+   "arrive_s": 3.389,
+   "server_s": 3.155,
+   "lag_s": 0.012
+  },
+  "plan": {
+   "arrive_s": 3.788,
+   "server_s": 3.559,
+   "lag_s": 0.007
+  },
+  "first_tool_start": {
+   "arrive_s": 3.824,
+   "server_s": 3.561,
+   "lag_s": 0.041
+  },
+  "last_tool_result": {
+   "arrive_s": 6.079,
+   "server_s": 5.857,
+   "lag_s": 0.001
+  },
+  "write_started": {
+   "arrive_s": 6.088,
+   "server_s": 5.862,
+   "lag_s": 0.004
+  },
+  "first_token": {
+   "arrive_s": 13.335,
+   "server_s": 13.099,
+   "lag_s": 0.015
+  },
+  "last_token": {
+   "arrive_s": 13.338,
+   "server_s": 13.099,
+   "lag_s": 0.018
+  },
+  "done": {
+   "arrive_s": 13.338,
+   "server_s": 13.099,
+   "lag_s": 0.017
+  },
+  "n_events": 55,
+  "n_tokens": 19,
+  "max_lag_s": 0.042,
+  "withdrawn": false
+ }
+}

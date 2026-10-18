@@ -1,0 +1,295 @@
+{
+ "record": {
+  "id": "G-006",
+  "run": 1,
+  "pass": 1,
+  "worker": "B",
+  "account": "s3-consistency-b-20260926p86f@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies are linked to it? Mark each link as direct, inferred, or absent.",
+  "session_id": "c103-236b63aa676a",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "15aae08",
+  "started_at": "2026-09-26T23:48:45+00:00",
+  "run_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "multi_hop",
+  "resolved_entities": [
+   "PMID:11237011"
+  ],
+  "trust_outcome": "answer",
+  "trust_line": "Based on 1 source",
+  "citations": 1,
+  "distinct_sources": 1,
+  "citations_by_layer": {
+   "layer_1_graph": 1
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "cypher_query"
+  ],
+  "layers": [
+   "layer_1_graph"
+  ],
+  "tool_calls": [
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   2
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 16,
+  "answer_start": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. \n\nArticle records found\n\nArticle record PMID:11237011 [1]. ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 2,
+  "server_elapsed_s": 9.931,
+  "seconds": 11.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 1,
+   "tool_result": 1,
+   "step": 1,
+   "token": 5,
+   "citation": 1,
+   "trust_signal": 2,
+   "done": 1
+  },
+  "first_word_s": 11.185,
+  "first_token_ts": "2026-09-26T23:47:17.711605Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 0,
+   "ts": "2026-09-26T23:47:09.253978Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 2,
+   "ts": "2026-09-26T23:47:11.724239Z",
+   "payload": {
+    "narrative": "The query asks for multiple types of links (sequence data, BioProjects, GEO series, assemblies) from a given PMID, requiring traversal from a publication to several different database records.",
+    "query_class": "multi_hop",
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 4,
+   "ts": "2026-09-26T23:47:11.725734Z",
+   "payload": {
+    "narrative": "Layer 1, the knowledge graph: cypher_query",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-3f0499c2308b",
+      "layer": "layer_1_graph",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "PMID 11237011",
+      "curie": "PMID:11237011",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 6,
+   "ts": "2026-09-26T23:47:11.726575Z",
+   "payload": {
+    "call_id": "cq-3f0499c2308b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 7,
+   "ts": "2026-09-26T23:47:13.883656Z",
+   "payload": {
+    "call_id": "cq-3f0499c2308b",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "2 row(s) of 2",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 8,
+   "ts": "2026-09-26T23:47:15.642733Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 9,
+   "ts": "2026-09-26T23:47:17.711605Z",
+   "payload": {
+    "text": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. ",
+    "marker_ids": [
+     "cq-3f0499c2308b-1"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "PMID 11237011"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "PMID:11237011",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/11237011/",
+    "layer": "layer_1_graph",
+    "source": "PMID",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "eedee9a9-4c59-46f8-9566-6e65b38a2158",
+   "seq": 18,
+   "ts": "2026-09-26T23:47:17.711825Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 2,
+    "elapsed_ms": 9931,
+    "trust_outcome": "answer",
+    "trust_line": "Based on 1 source",
+    "layer_calls_used": 2,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.97,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 136
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.9,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 160
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 176
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 1.0,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 395
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 1 article record for PMID 11237011: PMID:11237011 [1]. \n\nArticle records found\n\nArticle record PMID:11237011 [1]. "
+}

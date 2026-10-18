@@ -1,0 +1,39 @@
+{
+  "tag": "egfr",
+  "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+  "steps": [
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "rail buttons matching",
+      "count": 1
+    },
+    {
+      "step": "reopen-only 1280",
+      "secondsToOpen": 0.304,
+      "trust": {
+        "text": "Based on 55 sources cited, not yet confirmed",
+        "spans": []
+      },
+      "marker": "SAVED ANSWER · ASKED OCT 8, 2026, 9:30 PM",
+      "overflow": 0,
+      "emailStillVisible": false
+    },
+    {
+      "step": "rail buttons matching",
+      "count": 1
+    },
+    {
+      "step": "reopen-only 390",
+      "secondsToOpen": 0.231,
+      "trust": {
+        "text": "Based on 55 sources cited, not yet confirmed",
+        "spans": []
+      },
+      "overflow": 0,
+      "emailStillVisible": false
+    }
+  ]
+}

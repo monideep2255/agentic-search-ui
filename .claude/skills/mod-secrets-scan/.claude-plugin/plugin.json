@@ -1,0 +1,6 @@
+{
+  "name": "mod-secrets-scan",
+  "version": "1.0.0",
+  "description": "Denies Bash, Edit, Write and NotebookEdit calls that carry secret-shaped text in any file type, and toasts when a tool result shows one. Trigger: Auto",
+  "author": { "name": "Monideep Chakraborti" }
+}

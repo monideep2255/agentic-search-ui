@@ -1,0 +1,273 @@
+{
+  "question": "Does coffee help make exercise more effective?",
+  "depth": "plain_language",
+  "findings": [
+    {
+      "ref_index": 1,
+      "citation_id": "ne-ea2483211e41-1",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "title",
+      "field_value": "Caffeine and exercise: metabolism, endurance and performance.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/11583104/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 2,
+      "citation_id": "ne-ea2483211e41-2",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "title",
+      "field_value": "International society of sports nutrition position stand: caffeine and exercise performance.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/33388079/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 3,
+      "citation_id": "ne-ea2483211e41-3",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "title",
+      "field_value": "The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/36870101/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 4,
+      "citation_id": "ne-ea2483211e41-4",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "title",
+      "field_value": "Common questions and misconceptions about caffeine supplementation: what does the scientific evidence really show?",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38466174/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 5,
+      "citation_id": "ne-ea2483211e41-5",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "title",
+      "field_value": "Coffee and cardiovascular disease.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/40626862/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 6,
+      "citation_id": "ne-ea2483211e41-6",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "abstract",
+      "field_value": "Caffeine is a common substance in the diets of most athletes and it is now appearing in many new products, including energy drinks, sport gels, alcoholic beverages and diet aids. It can be a powerful ergogenic aid at levels that are considerably lower than the acceptable limit of the International Olympic Committee and could be beneficial in training and in competition. Caffeine does not improve maximal oxygen capacity directly, but could permit the athlete to train at a greater power output and/or to train longer. It has also been shown to increase speed and/or power output in simulated race conditions. These effects have been found in activities that last as little as 60 seconds or as long as 2 hours. There is less information about the effects of caffeine on strength; however, recent work suggests no effect on maximal ability, but enhanced endurance or resistance to fatigue. There is no evidence that caffeine ingestion before exercise leads to dehydration, ion imbalance, or any other adverse effects. The ingestion of caffeine as coffee appears to be ineffective compared to doping with pure caffeine. Related compounds such as theophylline are also potent ergogenic aids. Caffeine may act synergistically with other drugs including ephedrine and anti-inflammatory agents. It appears that male and female athletes have similar caffeine pharmacokinetics, i.e., for a given dose of caffeine, the time course and absolute plasma concentrations of caffeine and its metabolites are the same. In addition, exercise or dehydration does not affect caffeine pharmacokinetics. The limited information available suggests that caffeine non-users and users respond similarly and that withdrawal from caffeine may not be important. The mechanism(s) by which caffeine elicits its ergogenic effects are unknown, but the popular theory that it enhances fat oxidation and spares muscle glycogen has very little support and is an incomplete explanation at best. Caffeine may work, in part, by\u2026",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/11583104/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 7,
+      "citation_id": "ne-ea2483211e41-7",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "abstract",
+      "field_value": "Following critical evaluation of the available literature to date, The International Society of Sports Nutrition (ISSN) position regarding caffeine intake is as follows: 1. Supplementation with caffeine has been shown to acutely enhance various aspects of exercise performance in many but not all studies. Small to moderate benefits of caffeine use include, but are not limited to: muscular endurance, movement velocity and muscular strength, sprinting, jumping, and throwing performance, as well as a wide range of aerobic and anaerobic sport-specific actions. 2. Aerobic endurance appears to be the form of exercise with the most consistent moderate-to-large benefits from caffeine use, although the magnitude of its effects differs between individuals. 3. Caffeine has consistently been shown to improve exercise performance when consumed in doses of 3-6\u2009mg/kg body mass. Minimal effective doses of caffeine currently remain unclear but they may be as low as 2\u2009mg/kg body mass. Very high doses of caffeine (e.g. 9\u2009mg/kg) are associated with a high incidence of side-effects and do not seem to be required to elicit an ergogenic effect. 4. The most commonly used timing of caffeine supplementation is 60\u2009min pre-exercise. Optimal timing of caffeine ingestion likely depends on the source of caffeine. For example, as compared to caffeine capsules, caffeine chewing gums may require a shorter waiting time from consumption to the start of the exercise session. 5. Caffeine appears to improve physical performance in both trained and untrained individuals. 6. Inter-individual differences in sport and exercise performance as well as adverse effects on sleep or feelings of anxiety following caffeine ingestion may be attributed to genetic variation associated with caffeine metabolism, and physical and psychological response. Other factors such as habitual caffeine intake also may play a role in between-individual response variation. 7. Caffeine has been shown to be ergogenic for cognitive\u2026",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/33388079/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 8,
+      "citation_id": "ne-ea2483211e41-8",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "abstract",
+      "field_value": "The consumption of caffeine in response to insufficient sleep may impair the onset and maintenance of subsequent sleep. This systematic review and meta-analysis investigated the effect of caffeine on the characteristics of night-time sleep, with the intent to identify the time after which caffeine should not be consumed prior to bedtime. A systematic search of the literature was undertaken with 24 studies included in the analysis. Caffeine consumption reduced total sleep time by 45\u00a0min and sleep efficiency by 7%, with an increase in sleep onset latency of 9\u00a0min and wake after sleep onset of 12\u00a0min. Duration (+6.1\u00a0min) and proportion (+1.7%) of light sleep (N1) increased with caffeine intake and the duration (-11.4\u00a0min) and proportion (-1.4%) of deep sleep (N3 and N4) decreased with caffeine intake. To avoid reductions in total sleep time, coffee (107\u00a0mg per 250\u00a0mL) should be consumed at least 8.8\u00a0h prior to bedtime and a standard serve of pre-workout supplement (217.5\u00a0mg) should be consumed at least 13.2\u00a0h prior to bedtime. The results of the present study provide evidence-based guidance for the appropriate consumption of caffeine to mitigate the deleterious effects on sleep.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/36870101/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 9,
+      "citation_id": "ne-ea2483211e41-9",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "abstract",
+      "field_value": "Caffeine is a popular ergogenic aid that has a plethora of evidence highlighting its positive effects. A Google Scholar search using the keywords \"caffeine\" and \"exercise\" yields over 200,000 results, emphasizing the extensive research on this topic. However, despite the vast amount of available data, it is intriguing that uncertainties persist regarding the effectiveness and safety of caffeine. These include but are not limited to: 1. Does caffeine dehydrate you at rest? 2. Does caffeine dehydrate you during exercise? 3. Does caffeine promote the loss of body fat? 4. Does habitual caffeine consumption influence the performance response to acute caffeine supplementation? 5. Does caffeine affect upper vs. lower body performance/strength differently? 6. Is there a relationship between caffeine and depression? 7. Can too much caffeine kill you? 8. Are there sex differences regarding caffeine's effects? 9. Does caffeine work for everyone? 10. Does caffeine cause heart problems? 11. Does caffeine promote the loss of bone mineral? 12. Should pregnant women avoid caffeine? 13. Is caffeine addictive? 14. Does waiting 1.5-2.0\u2009hours after waking to consume caffeine help you avoid the afternoon \"crash?\" To answer these questions, we performed an evidence-based scientific evaluation of the literature regarding caffeine supplementation.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38466174/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 10,
+      "citation_id": "ne-ea2483211e41-10",
+      "layer": "layer_2_api",
+      "tool": "ncbi_efetch",
+      "field": "abstract",
+      "field_value": "While rigorous longitudinal study of a widely and enthusiastically consumed dietary substance has it challenges, recent exponential growth in the scientific evaluation of coffee consumption has resulted in a clearer appreciation of the link between this common drink and health outcomes. Coffee has complex effects that can vary between individuals depending on both inherited predispositions as well as consumption habits. Despite the common concern and conventional 'wisdom' that coffee can promote various cardiovascular diseases, the available data suggest that moderate coffee consumption is associated with a reduced risk of hypertension, type 2 diabetes, myocardial infarction, arrhythmias, heart failure, and even overall mortality. Some exceptions have emerged, including the potentially harmful effects of unfiltered coffee with respect to LDL cholesterol and randomized controlled data demonstrating an acute increase in frequency of premature ventricular contractions with coffee consumption. In many instances, the beneficial effects of coffee appear to be independent of caffeine. Given the ubiquity of coffee consumption and the growing prevalence of cardiovascular disease, translating the latest science into accessible knowledge has the capability to tremendously empower patients and impact global health.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/40626862/",
+      "entity_type": "pubmed",
+      "curie": ""
+    },
+    {
+      "ref_index": 11,
+      "citation_id": "pa-f403bab6e89b-11",
+      "layer": "layer_3_enrichment",
+      "tool": "pubtator_annotate",
+      "field": "pmid",
+      "field_value": "11583104",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/11583104/",
+      "entity_type": "Publication",
+      "curie": ""
+    },
+    {
+      "ref_index": 12,
+      "citation_id": "pa-f403bab6e89b-12",
+      "layer": "layer_3_enrichment",
+      "tool": "pubtator_annotate",
+      "field": "pmid",
+      "field_value": "33388079",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/33388079/",
+      "entity_type": "Publication",
+      "curie": ""
+    },
+    {
+      "ref_index": 13,
+      "citation_id": "pa-f403bab6e89b-13",
+      "layer": "layer_3_enrichment",
+      "tool": "pubtator_annotate",
+      "field": "pmid",
+      "field_value": "36870101",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/36870101/",
+      "entity_type": "Publication",
+      "curie": ""
+    },
+    {
+      "ref_index": 14,
+      "citation_id": "pa-f403bab6e89b-14",
+      "layer": "layer_3_enrichment",
+      "tool": "pubtator_annotate",
+      "field": "pmid",
+      "field_value": "38466174",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/38466174/",
+      "entity_type": "Publication",
+      "curie": ""
+    },
+    {
+      "ref_index": 15,
+      "citation_id": "pa-f403bab6e89b-15",
+      "layer": "layer_3_enrichment",
+      "tool": "pubtator_annotate",
+      "field": "pmid",
+      "field_value": "40626862",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/40626862/",
+      "entity_type": "Publication",
+      "curie": ""
+    }
+  ],
+  "question_text": "Does coffee help make exercise more effective?",
+  "reply_keyed": "Yes, the published evidence says caffeine can make exercise performance better, but it matters how you take it and how much. The International Society of Sports Nutrition reports that caffeine improves many aspects of exercise, with aerobic endurance showing the most consistent benefits [7#0][7#1]. Doses of 3 to 6 mg per kilogram of body mass reliably improve performance, while very high doses cause more side effects without adding benefit [7#2][7#3]. Caffeine lets athletes train at greater output or for longer times, and increases speed or power in simulated races lasting from 60 seconds to 2 hours [6#4][6#5]. Coffee itself may not work as well as pure caffeine for exercise. One study found that taking caffeine as coffee appears ineffective compared with pure caffeine [6#6]. So while coffee contains caffeine, the evidence for exercise benefits comes mainly from caffeine itself, not necessarily from coffee as the source. Caffeine can also disrupt sleep, which could affect recovery. A review found caffeine reduces total sleep time by 45 minutes and deep sleep duration, and recommends stopping coffee at least 8.8 hours before bedtime to avoid these effects [8#7][8#8][8#9]. Separately, moderate coffee consumption is linked to a lower risk of several cardiovascular conditions, though some of those benefits appear independent of caffeine [10#10][10#11].",
+  "quotes": [
+    "acutely enhance various aspects of exercise performance",
+    "Aerobic endurance appears to be the form of exercise with the most consistent moderate-to-large benefits",
+    "improve exercise performance when consumed in doses of 3-6 mg/kg body mass",
+    "Very high doses of caffeine (e.g. 9 mg/kg) are associated with a high incidence of side-effects",
+    "permit the athlete to train at a greater power output and/or to train longer",
+    "increase speed and/or power output in simulated race conditions",
+    "The ingestion of caffeine as coffee appears to be ineffective compared to doping with pure caffeine",
+    "Caffeine consumption reduced total sleep time by 45 min",
+    "deep sleep (N3 and N4) decreased with caffeine intake",
+    "consumed at least 8.8 h prior to bedtime",
+    "moderate coffee consumption is associated with a reduced risk of hypertension",
+    "beneficial effects of coffee appear to be independent of caffeine"
+  ],
+  "clauses": [
+    {
+      "marker": 7,
+      "field": "abstract",
+      "claim": "The International Society of Sports Nutrition reports that caffeine improves many aspects of exercise, with aerobic endurance showing the most consistent benefits",
+      "quote": "acutely enhance various aspects of exercise performance",
+      "verdict": "strict: not contained | words beyond quote ['aerobic', 'benefit', 'caffein', 'consistent', 'enduranc', 'improv', 'international', 'nutrition']"
+    },
+    {
+      "marker": 7,
+      "field": "abstract",
+      "claim": "",
+      "quote": "Aerobic endurance appears to be the form of exercise with the most consistent moderate-to-large benefits",
+      "verdict": "PASS synthesis"
+    },
+    {
+      "marker": 7,
+      "field": "abstract",
+      "claim": "Doses of 3 to 6 mg per kilogram of body mass reliably improve performance, while very high doses cause more side effects without adding benefit",
+      "quote": "improve exercise performance when consumed in doses of 3-6 mg/kg body mass",
+      "verdict": "strict: not contained | polarity"
+    },
+    {
+      "marker": 7,
+      "field": "abstract",
+      "claim": "",
+      "quote": "Very high doses of caffeine (e.g. 9 mg/kg) are associated with a high incidence of side-effects",
+      "verdict": "PASS synthesis"
+    },
+    {
+      "marker": 6,
+      "field": "abstract",
+      "claim": "Caffeine lets athletes train at greater output or for longer times, and increases speed or power in simulated races lasting from 60 seconds to 2 hours",
+      "quote": "permit the athlete to train at a greater power output and/or to train longer",
+      "verdict": "strict: not contained | number not in quote"
+    },
+    {
+      "marker": 6,
+      "field": "abstract",
+      "claim": "",
+      "quote": "increase speed and/or power output in simulated race conditions",
+      "verdict": "PASS synthesis"
+    },
+    {
+      "marker": 6,
+      "field": "abstract",
+      "claim": "One study found that taking caffeine as coffee appears ineffective compared with pure caffeine",
+      "quote": "The ingestion of caffeine as coffee appears to be ineffective compared to doping with pure caffeine",
+      "verdict": "strict: not contained | words beyond quote ['taking']"
+    },
+    {
+      "marker": 8,
+      "field": "abstract",
+      "claim": "A review found caffeine reduces total sleep time by 45 minutes and deep sleep duration, and recommends stopping coffee at least 8.8 hours before bedtime to avoid these effects",
+      "quote": "Caffeine consumption reduced total sleep time by 45 min",
+      "verdict": "strict: not contained | number not in quote"
+    },
+    {
+      "marker": 8,
+      "field": "abstract",
+      "claim": "",
+      "quote": "deep sleep (N3 and N4) decreased with caffeine intake",
+      "verdict": "PASS synthesis"
+    },
+    {
+      "marker": 8,
+      "field": "abstract",
+      "claim": "",
+      "quote": "consumed at least 8.8 h prior to bedtime",
+      "verdict": "PASS synthesis"
+    },
+    {
+      "marker": 10,
+      "field": "abstract",
+      "claim": "Separately, moderate coffee consumption is linked to a lower risk of several cardiovascular conditions, though some of those benefits appear independent of caffeine",
+      "quote": "moderate coffee consumption is associated with a reduced risk of hypertension",
+      "verdict": "strict: not contained | words beyond quote ['appear', 'benefit', 'caffein', 'cardiovascular', 'condition', 'independent', 'lower']"
+    },
+    {
+      "marker": 10,
+      "field": "abstract",
+      "claim": "",
+      "quote": "beneficial effects of coffee appear to be independent of caffeine",
+      "verdict": "PASS synthesis"
+    }
+  ]
+}

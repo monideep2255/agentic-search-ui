@@ -1,0 +1,69 @@
+{
+  "tag": "egfr",
+  "question": "What is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?",
+  "steps": [
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "live answer 1280",
+      "secondsToTrustLine": 36.976,
+      "trust": {
+        "text": "Based on 55 sources cited, not yet confirmed",
+        "spans": [
+          {
+            "id": "trust-plain",
+            "text": "Based on 55 sources cited, not yet confirmed",
+            "color": "rgb(86, 92, 101)"
+          }
+        ]
+      },
+      "mainTextStart": "+ New search\n\nYOUR SEARCHES\n\nWhat is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?\n13 tool calls · 55 sources cited from 3 layers\n[account]\nNo search limit in effect yet\nWhat is known about EGFR mutations in non-small cell lung cancer, and what trials are recruiting?\nNew search\n\n? Answered20.4s · 13 tool calls · 55 sources cited from 3 layers\n\nShow work ▾\n\nFound 5 clinical trial records and 38 sequence variant records for EGFR, of 4002 available.⁠1–20\n\nCLINICAL TRIAL RECORDS FOUND\nTRIAL\tIDENTIFIER\tSTATUS\t\nA Retrospective Study of "
+    },
+    {
+      "step": "live mask",
+      "emailStillVisible": false,
+      "overflow1280": 0
+    },
+    {
+      "step": "rail buttons matching",
+      "count": 1
+    },
+    {
+      "step": "reopened 1280",
+      "secondsToOpen": 0.817,
+      "marker": "SAVED ANSWER · ASKED OCT 8, 2026, 9:30 PM",
+      "trust": {
+        "text": "Based on 55 sources cited, not yet confirmed",
+        "spans": []
+      },
+      "overflow": 0
+    },
+    {
+      "step": "reopen mask 1280",
+      "emailStillVisible": false
+    },
+    {
+      "step": "390 new search clicked",
+      "newOk": true
+    },
+    {
+      "step": "rail buttons matching",
+      "count": 1
+    },
+    {
+      "step": "reopened 390",
+      "secondsToOpen": 0.239,
+      "trust": {
+        "text": "Based on 55 sources cited, not yet confirmed",
+        "spans": []
+      },
+      "overflow": 0
+    },
+    {
+      "step": "reopen mask 390",
+      "emailStillVisible": false
+    }
+  ]
+}

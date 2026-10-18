@@ -1,0 +1,20 @@
+{
+ "modes": [
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "Flag: does not support=false",
+  "=false",
+  "=false"
+ ],
+ "links": [
+  "https://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20statins -> https://www.ncbi.nlm.nih.gov/search/all/?term=recent%20papers%20on%20statins",
+  "https://pubmed.ncbi.nlm.nih.gov/35451596/ -> https://pubmed.ncbi.nlm.nih.gov/35451596/",
+  "https://pubmed.ncbi.nlm.nih.gov/35775396/ -> https://pubmed.ncbi.nlm.nih.gov/35775396/",
+  "https://pubmed.ncbi.nlm.nih.gov/38325336/ -> https://pubmed.ncbi.nlm.nih.gov/38325336/",
+  "https://pubmed.ncbi.nlm.nih.gov/39585530/ -> https://pubmed.ncbi.nlm.nih.gov/39585530/",
+  "https://pubmed.ncbi.nlm.nih.gov/42247832/ -> https://pubmed.ncbi.nlm.nih.gov/42247832/"
+ ],
+ "url": "https://search-agent-web-develop-2aeb.up.railway.app/"
+}

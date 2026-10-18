@@ -70,6 +70,9 @@ BRCA1 = "NCBIGene:672"
 BRCA2 = "NCBIGene:675"
 BREAST_CANCER = "MedGen:C0346153"
 PMID = "PMID:11237011"
+TP53 = "NCBIGene:7157"
+MLH1 = "NCBIGene:4292"
+MSH2 = "NCBIGene:4436"
 
 
 def _select(
@@ -160,6 +163,61 @@ def _select(
             "has_phenotype",
         ),
         ("gene lookup for BRCA1", [BRCA1], "lookup", "gene_record_one", None),
+        # Decided from the user's chair, 2026-09-22: an exploratory question
+        # naming an entity and no shape gets the record, not the model path
+        # whose generated query timed out on every pass (G-039, G-033).
+        ("Tell me about BRCA1", [BRCA1], "exploratory", "gene_record_one", None),
+        # Decided from the user's chair, 2026-09-22, evening (fix-plan item
+        # 1): a GENE question with no shape on the two hop classes takes the
+        # record too. Measured offline over all 150 runs of the consistency
+        # run, the model path never produced a rich result on those classes
+        # for any golden question, and G-037 lost its own search on every
+        # pass to a generated query the validator rejected.
+        ("Tell me about BRCA1", [BRCA1], "multi_hop", "gene_record_one", None),
+        # 2026-10-05 (card 91): a Gene question with no shape and no count
+        # request takes the record on the aggregate class too.
+        (
+            "Find GEO expression datasets studying TP53 in human tumour samples.",
+            [TP53],
+            "aggregate",
+            "gene_record_one",
+            None,
+        ),
+        (
+            "Find GEO expression datasets studying TP53 in human tumour samples.",
+            [TP53],
+            "single_hop",
+            "gene_record_one",
+            None,
+        ),
+        # The same question when Think also resolves "tumour" to several
+        # MedGen concepts (its third pass): one gene beside several disease
+        # concepts and no shape is still the gene record, so the source is
+        # the same whichever way Think listed the concepts.
+        (
+            "Find GEO expression datasets studying TP53 in human tumour samples.",
+            [TP53, "MedGen:C1519412", "MedGen:C1520213"],
+            "exploratory",
+            "gene_record_one",
+            None,
+        ),
+        # Several genes beside a disease and no shape word: each gene's
+        # disease edges, side by side (G-033), never the link narrowed to
+        # the one concept Think happened to resolve.
+        (
+            "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+            [MLH1, MSH2, "MedGen:C0346629"],
+            "exploratory",
+            "gene_diseases_many",
+            "gene_associated_with_condition",
+        ),
+        (
+            "I am a student. Explain in plain terms what the BRCA1 gene does and why it matters, with sources.",
+            [BRCA1],
+            "exploratory",
+            "gene_record_one",
+            None,
+        ),
         (
             "Explain in plain terms what the BRCA1 gene does and why it matters, with sources.",
             [BRCA1],
@@ -215,13 +273,6 @@ def _select(
             "single_hop",
             "disease_genes_one",
             "gene_associated_with_condition",
-        ),
-        (
-            "What phenotypic features are associated with Marfan syndrome?",
-            ["MedGen:C0024796"],
-            "single_hop",
-            "disease_phenotypes_one",
-            "has_phenotype",
         ),
         (
             "What MeSH terms are assigned to PMID 11237011?",
@@ -301,8 +352,21 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
 @pytest.mark.parametrize(
     ("intent", "entities", "query_class"),
     [
-        ("Tell me about BRCA1", [BRCA1], "single_hop"),
-        ("Tell me about BRCA1", [BRCA1], "exploratory"),
+        # 2026-09-22: a gene question with no shape takes the record on every
+        # class but `aggregate` (see the template table). What still takes
+        # the model path with no shape, each for a measured reason: a count
+        # class, which computes what a record cannot (G-034), and a Disease
+        # or Article anchor on the hop classes, where a list Think resolved
+        # from a common noun would turn a correct refusal into a page of
+        # unrelated records (G-014, pass 3).
+        ("How many records does BRCA1 have?", [BRCA1], "aggregate"),
+        ("Count the records for BRCA1", [BRCA1], "aggregate"),
+        ("Tell me about breast cancer", [BREAST_CANCER], "single_hop"),
+        ("Tell me about breast cancer", [BREAST_CANCER], "multi_hop"),
+        # A count about one Article keeps the model path (card 15, D5).
+        ("How many records does PMID:11237011 link to?", [PMID], "multi_hop"),
+        ("Count what PMID:11237011 links to", [PMID], "aggregate"),
+        ("Tell me about PMID:11237011 and PMID:11237012", [PMID, "PMID:11237012"], "multi_hop"),
         (
             ("Which diseases are associated with BRCA1 and BRCA2 variants, and which "
              "papers mention them?"),
@@ -310,11 +374,23 @@ def test_the_mixed_variants_template_binds_the_gene_and_the_disease() -> None:
             "multi_hop",
         ),
         ("Which diseases are associated with rs334?", ["ClinVar:17661"], "single_hop"),
+        # 2026-09-23 (Worker F): the graph has no Disease-to-PhenotypicFeature
+        # edge at all (`testing/Developer/reports/2026-09-23_overnight/
+        # findings.md`, "Worker F"). The `("Disease", "phenotypes")` hop that
+        # used to answer this question was removed; it could never return a
+        # row. This question now takes the model path, the same one that
+        # already reaches Layer 2 for the graph's other genuinely absent
+        # shapes, rather than a template guaranteed to come back empty.
+        (
+            "What phenotypic features are associated with Marfan syndrome?",
+            ["MedGen:C0024796"],
+            "single_hop",
+        ),
         ("Which diseases are associated with BRCA1?", [BRCA1, PMID], "single_hop"),
         ("How many variants does BRCA1 have compared with BRCA2?", [BRCA1, BRCA2], "aggregate"),
         ("Compare NCBIGene:7157 and NCBIGene:672: how many diseases is NCBIGene:672 linked to?", [BRCA1, "NCBIGene:7157"], "lookup"),
         ("How many variants of GCK cause MODY?", ["NCBIGene:2645", "MedGen:C0342276"], "lookup"),
-        ("Compare MLH1 and MSH2 in colorectal cancer risk.", ["NCBIGene:4292", "NCBIGene:4436", "MedGen:C0009402"], "multi_hop"),
+        ("How many conditions do MLH1 and MSH2 share?", [MLH1, MSH2, "MedGen:C0009402"], "aggregate"),
         ("Which diseases are associated with BRCA1?", ["not-a-curie"], "single_hop"),
     ],
 )
@@ -322,6 +398,40 @@ def test_ambiguous_or_unknown_shapes_fall_back_to_the_model(
     intent: str, entities: list[str], query_class: str
 ) -> None:
     assert _select(intent, entities, query_class) is None
+
+
+@pytest.mark.parametrize("query_class", ["single_hop", "multi_hop", "aggregate"])
+def test_one_article_with_no_hop_word_takes_the_linked_records_template(
+    query_class: str,
+) -> None:
+    # Card 15 (D5), golden G-006: this used to reach the model-written path.
+    template = _select(
+        "For PMID 11237011, what sequence data, BioProjects, GEO series and assemblies "
+        "are linked to it?",
+        [PMID],
+        query_class,
+    )
+    assert template is not None
+    assert template.name == "article_links_one"
+    assert "$e_PMID_11237011" in template.cypher
+    assert "has_mesh_annotation" in template.cypher and "cited_in" in template.cypher
+    # `mentioned_in` from the Article end timed out live; it is not walked.
+    assert "mentioned_in" not in template.cypher
+    assert template.cypher.count("ORDER BY") == 3
+
+
+def test_article_linked_records_template_passes_the_validator() -> None:
+    template = _select("What is linked to PMID 11237011?", [PMID], "multi_hop")
+    assert template is not None
+    result = validate_cypher(template.cypher, 100)
+    assert result.ok, f"{result.reason} {result.message}"
+    assert (result.normalized_cypher or "").count("LIMIT") == 3
+
+
+def test_article_mesh_question_keeps_its_own_hop() -> None:
+    template = _select("What MeSH terms are assigned to PMID 11237011?", [PMID], "multi_hop")
+    assert template is not None
+    assert template.name == "article_mesh_one"
 
 
 def test_no_bindings_means_no_template() -> None:
@@ -395,3 +505,117 @@ def test_selection_is_byte_identical_across_calls() -> None:
 def test_template_names_fit_the_output_field() -> None:
     for template in all_template_examples():
         assert len(template.name) <= cypher_templates.MAX_TEMPLATE_NAME_CHARS
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-22, fix-plan item 1: the shapes that lost their own graph search.
+# ---------------------------------------------------------------------------
+
+
+def test_the_several_record_form_is_a_union_of_single_matches_in_parameter_order() -> None:
+    """The IN-list form never finished on the live graph (the reader role's
+    30-second statement timeout on the Gene label, measured 2026-09-22),
+    because only the inline property match uses the id index. The
+    several-record form is now one inline match per record joined by
+    UNION ALL, each branch ordered, the branches sorted by parameter name
+    so Think's listing order cannot change the query or the row order."""
+    template = cypher_templates._record_template("Gene", ["e_two", "e_one"])
+    assert template.name == "gene_record_many"
+    assert template.cypher == (
+        "MATCH (a:Gene {id: $e_one}) RETURN a ORDER BY a.id"
+        " UNION ALL MATCH (a:Gene {id: $e_two}) RETURN a ORDER BY a.id"
+    )
+    assert " IN [" not in template.cypher
+    normalized = validate_cypher(template.cypher, 100).normalized_cypher or ""
+    assert normalized.count("LIMIT 100") == 2, normalized
+    # Populate check: the one-record form is untouched.
+    one = cypher_templates._record_template("Gene", ["e_one"])
+    assert one.cypher == "MATCH (a:Gene {id: $e_one}) RETURN a"
+
+
+def test_the_several_gene_disease_template_binds_every_gene_and_not_the_disease() -> None:
+    template = _select(
+        "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+        [MLH1, MSH2, "MedGen:C0346629"],
+        "exploratory",
+    )
+    assert template is not None and template.name == "gene_diseases_many"
+    assert "$e_NCBIGene_4292" in template.cypher and "$e_NCBIGene_4436" in template.cypher
+    # The bound disease is deliberately NOT in the query: the link narrowed
+    # to it returned zero rows live where the open hop returned six.
+    assert "$e_MedGen_C0346629" not in template.cypher
+    assert re.search(r"RETURN a, x ORDER BY a\.id, x\.id$", template.cypher)
+    # The same template on the multi_hop class Think gives the question on
+    # other passes, so the class cannot change the sources.
+    same = _select(
+        "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+        [MLH1, MSH2, "MedGen:C0346629"],
+        "multi_hop",
+    )
+    assert same == template
+
+
+def test_one_gene_beside_several_disease_concepts_takes_the_gene_record() -> None:
+    template = _select(
+        "Find GEO expression datasets studying TP53 in human tumour samples.",
+        [TP53, "MedGen:C1519412", "MedGen:C1520213", "MedGen:C1521923"],
+        "single_hop",
+    )
+    assert template is not None and template.name == "gene_record_one"
+    assert template.cypher == "MATCH (a:Gene {id: $e_NCBIGene_7157}) RETURN a"
+
+
+def test_a_count_over_several_genes_beside_a_disease_still_takes_the_model_path() -> None:
+    assert (
+        _select("How many conditions do MLH1 and MSH2 share?", [MLH1, MSH2, "MedGen:C0009402"], "aggregate")
+        is None
+    )
+
+
+# ---------------------------------------------------------------------------
+# 2026-09-23, Worker F: the Disease-to-PhenotypicFeature shape never
+# returned a row and is gone. These arms prove the removal took, not just
+# that the one golden question falls back (already covered above).
+# ---------------------------------------------------------------------------
+
+
+def test_phenotypes_is_no_longer_a_matchable_shape_for_any_anchor() -> None:
+    """Populate check: `matched_shapes` must not name `"phenotypes"` for any
+    anchor this module templates. A green fallback test alone cannot tell
+    "the shape was removed" from "the shape still matches but something
+    else about selection changed"; this pins the shape itself is gone."""
+    for anchor in ("Gene", "Disease", "Article"):
+        assert "phenotypes" not in matched_shapes(
+            "What phenotypic features, symptoms and clinical features are known?",
+            anchor,
+        )
+
+
+def test_no_template_in_the_example_set_names_phenotypicfeature() -> None:
+    """Populate check on `all_template_examples`: the removed hop must not
+    reappear under a different name. Mutation: reinstating the `("Disease",
+    "phenotypes")` row in `_HOPS` turns this red, because the graph's own
+    import-time guard (`_assert_templates_name_real_labels`) would then
+    require `PhenotypicFeature` to be a documented endpoint of
+    `has_phenotype` again, which it no longer is."""
+    for template in all_template_examples():
+        assert "disease_phenotypes" not in template.name
+        assert "PhenotypicFeature" not in template.cypher
+
+
+def test_has_phenotype_documents_its_real_endpoint_pair_exactly_once() -> None:
+    """`has_phenotype`'s real, measured pair (SequenceVariant to Disease) now
+    lives in `EDGE_ENDPOINTS` itself, and `ADDITIONAL_EDGE_ENDPOINTS` no
+    longer duplicates it. Mutation: restoring the old Disease-to-
+    PhenotypicFeature primary pair while leaving the SequenceVariant-to-
+    Disease pair in `ADDITIONAL_EDGE_ENDPOINTS` turns this red on the first
+    assertion, and dropping the fix-up in `EDGE_ENDPOINTS` without also
+    dropping the `_HOPS` entry turns the module's own import-time guard red
+    before this test even runs."""
+    from system_03_search_agent.tools import graph_schema_constants as gsc
+
+    assert gsc.EDGE_ENDPOINTS["has_phenotype"] == ("SequenceVariant", "Disease")
+    assert "has_phenotype" not in gsc.ADDITIONAL_EDGE_ENDPOINTS
+    assert cypher_templates._documented_endpoint_pairs("has_phenotype") == (
+        ("SequenceVariant", "Disease"),
+    )

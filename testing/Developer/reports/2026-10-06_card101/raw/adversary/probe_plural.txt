@@ -1,0 +1,20 @@
+Q: In a patient with lupus, the drug caused liver failure.
+S: In patients with lupus, the drug caused liver failure
+   develop: ['patient with']
+   branch : []
+Q: One study found that the supplement reduced migraine frequency.
+S: Studies found that the supplement reduced migraine frequency
+   develop: ['study found']
+   branch : []
+Q: In one family, the variant segregated with deafness.
+S: In families, the variant segregated with deafness
+   develop: ['family the']
+   branch : []
+Q: A single case of hepatitis was reported after vaccination.
+S: Cases of hepatitis were reported after vaccination
+   develop: ['case of']
+   branch : ['case of']
+Q: In a mouse model, the gene deletion caused tumors.
+S: In mouse models, the gene deletion caused tumors
+   develop: ['mouse model', 'model the']
+   branch : []

@@ -1,6 +1,6 @@
 ---
 name: doc-auditor
-description: Grades a restructured or newly authored markdown document against a fixed no-loss and house-style checklist, from fresh context. Dispatched by the doc-readability skill, never by trigger phrase. Never fixes what it grades.
+description: Grades a restructured or new markdown document against a no-loss and house-style checklist, from fresh context. Dispatched by name from doc-readability, never by phrase. Grades only, never fixes.
 scope: project
 tools: Read, Grep, Glob
 model: opus

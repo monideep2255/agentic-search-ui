@@ -1,0 +1,142 @@
+How an answer is built
+
+Every question crosses up to three data layers. The colour on a citation tells you which layer it came from, and therefore how fresh it is and how it was established.
+
+Knowledge graph
+L1
+
+115M nodes and 693M edges merged from 5 NCBI databases. Broad and fast, but a periodic snapshot rather than live.
+
+Live NCBI APIs
+L2
+
+E-utilities, Datasets, PubChem, dbSNP and Pathogen Detection, called at the moment you ask. Narrower and slower, and always current.
+
+Enrichment
+L3
+
+PubTator3, LitVar2 and ClinicalTrials.gov. Literature and trial evidence about the gene, disease or variant a question names, when Plan adds them.
+
+What happens to your question
+
+One real question, followed from the moment you press send to the answer on your screen. Seven stops, each naming who is acting.
+
+1
+You ask
+
+You type a question and pick how the answer is written: Plain language, the default, or Researcher. That is the whole of your part. Everything after it happens on the server, and your question is carried through as data rather than as an instruction the system obeys.
+
+THE QUESTION THIS WALK FOLLOWS
+
+Which diseases are associated with BRCA1?
+2
+The model steps, tier by tier
+
+Every one of the five steps can ask a language model something, and the harness decides which model each one gets. There are three tiers, matched to how hard the step is. A tier's model is read from configuration once at the start of your question and held there, so it cannot change partway through a run.
+
+Guard tier, a fast, inexpensive model
+
+Runs the guardrail. Is this a biomedical research question at all, and is it asking for medical advice rather than for evidence? A question that fails either check is turned away with a plain sentence saying which one, and nothing is looked up.
+
+Plan tier, a mid-range model
+
+Runs Think, which works out the shape of the question and which real records its words point at, so BRCA1 becomes NCBI Gene 672, confirmed by a live lookup rather than recalled. In Act it also writes a graph query, but only when no ready-made template fits the question. Plan itself never calls this tier: it picks the tools in code, and passes the odd yes-or-no question, such as whether you want papers, to the guard tier or a dedicated classifier.
+
+Synth tier, the strongest model
+
+Runs Write, which composes the answer once the records are back.
+
+All of these calls open with the same unchanging block of text: the system instructions, the descriptions of the seven tools, and the graph's own schema. Reusing it exactly is what keeps the cost of a question bounded, so it is fixed in code and never reordered between calls.
+
+3
+The search goes out
+
+Act sends out the calls Plan chose, across three layers of data, together rather than one after another. A call that needs another call's result, such as the abstracts of the papers a PubMed search found, goes out in a second round once the first has returned. Each source has its own time limit in code: 30 seconds for a graph query, 15 seconds for a call to a live web API, and 120 seconds for Pathogen Detection, the longest. One question may make at most 20 live calls in total. A call that reaches its limit stops there and says which limit it hit, rather than leaving you waiting. This is the part you watch on the progress screen.
+
+Knowledge graph
+
+L1
+
+115M nodes and 693M edges merged from five NCBI databases. One query returns the stored links from BRCA1 to its diseases, while most of the live searches run at the same time and four of the thirteen calls follow in a second round.
+
+cypher_query
+
+Live NCBI APIs
+
+L2
+
+Fetched while you wait, so they are current. Used for anything the graph cannot name, such as turning a concept id into a disease name.
+
+ncbi_efetch, ncbi_dbsnp, pathogen_detection
+
+Enrichment
+
+L3
+
+Literature and trial evidence. Plan adds them here because the question names a gene by its symbol, BRCA1, though not every question gets them.
+
+pubtator_annotate, litvar2_lookup, clinicaltrials_search
+
+4
+The records come back
+
+Every tool returns typed data checked against its own schema, never loose text. A long result is cut to a bounded size and the cut is recorded rather than hidden. Each record arrives with its provenance attached: the source, the record id, the link to it, and the layer it came from.
+
+That bundle is handed to the Synth tier as material to read, labelled as data rather than as instructions. So a sentence buried inside a fetched abstract is something the model can quote, never something it can be told to obey, and the model may only state what the records in front of it support.
+
+5
+The answer is written, then streamed to you
+
+Write composes the answer from those records alone. Code checks each sentence against the record it points at: the exact words must be in the record, every number must be in the quote, and a negation must match. A sentence that fails those checks is dropped. One that passes but was reworded is then judged by a model, and kept only when the model finds it adds nothing beyond the record's own words. If nothing citeable survives, the system says it could not find an answer and stops instead of answering from memory. That rule is called cite or refuse.
+
+What reaches your browser is a stream of small events rather than one finished page: each step as it completes, each tool call, the answer text as it is written, each citation, a trust signal, then done. The progress screen and the answer screen are both just that stream being drawn as it arrives.
+
+6
+What you get
+
+A paragraph you can check line by line. Every sentence carries a numbered chip pointing at the record behind it, a trust line says whether the whole answer was grounded, and each source opens as a card with a link to the NCBI record it came from. Below the answer, a follow-up field carries the conversation forward, and if you are signed in the question is kept in your history.
+
+A CITED SENTENCE
+
+BRCA1 is associated with hereditary breast and ovarian cancer syndrome. 1
+MedGen C0677776
+
+THE TRUST LINE
+
+Grounded · every claim cited
+
+ONE SOURCE, OPENING ON THE RECORD IT CAME FROM
+
+[1]
+
+Hereditary breast and ovarian cancer syndrome
+
+L1 · knowledge graph
+
+THE FOLLOW-UP FIELD
+
+Ask a follow-up
+7
+What it will not do
+
+It will not tell you what to do about a diagnosis or a treatment. It assembles cited evidence, and a clinician makes that call. It will not answer from memory when the search comes back empty, and it will not ship a sentence with no source behind it.
+
+The scientist's name beside a run is presentation only. It never changes which tools run, which records are read, or what the trust line says.
+
+Follow the same question live: open Search and ask "Which diseases are associated with BRCA1?".
+
+Cite or refuse
+
+Every claim is tied to a specific record. When nothing supports an answer, the system says so and stops rather than answering from memory. The track beside each answer shows one segment per claim, coloured by its layer, so an uncited claim is visible before you read a word.
+
+Where the data comes from
+The knowledge graph is a snapshot, finished on 22 April 2026.
+It is built from five NCBI databases: Gene, PubMed, ClinVar, Taxonomy and MedGen.
+It holds 115,406,761 nodes and 693,295,991 edges.
+Layers 2 and 3 are stored nowhere. They are called live while you wait, so what they return is current.
+
+Explore the architecture for the pipelines behind that snapshot, what each database contributes, and every API the two live layers call.
+
+--- LINKS ---
+
+OVERFLOW scrollWidth=390 clientWidth=390

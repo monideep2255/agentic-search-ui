@@ -1,0 +1,7 @@
+{
+  "name": "mod-stack-status",
+  "version": "1.0.0",
+  "description": "Shows whether the local API, the Vite dev server, and PostgreSQL are answering, refreshed every 30 seconds. Stays quiet until something has been up. Trigger: Auto",
+  "types": "./types/index.d.ts",
+  "author": { "name": "Monideep Chakraborti" }
+}

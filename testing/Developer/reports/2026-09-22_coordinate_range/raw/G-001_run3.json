@@ -1,0 +1,2195 @@
+{
+ "record": {
+  "id": "G-001",
+  "run": 3,
+  "pass": 3,
+  "worker": "A",
+  "account": "s3-item1-c-24fb67-20260922@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.",
+  "session_id": "c103-51de1a36c024",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "66b3811",
+  "started_at": "2026-09-22T22:53:26+00:00",
+  "run_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "aggregate",
+  "resolved_entities": [
+   "NCBIGene:672",
+   "NCBIGene:127886930",
+   "NCBIGene:129664047",
+   "NCBIGene:140660",
+   "NCBIGene:126862571",
+   "NCBIGene:110485084",
+   "NCBIGene:111589216",
+   "NCBIGene:111589215"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 6 sources, not yet confirmed",
+  "citations": 100,
+  "distinct_sources": 88,
+  "citations_by_layer": {
+   "layer_1_graph": 66,
+   "layer_2_api": 24,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 3,
+  "must_cite_hits": 2,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "pubtator_annotate"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 40,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 100,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   40,
+   100
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1894,
+  "answer_start": "Found 1 gene record and 19 sequence variant records for BRCA1, LOC127886930, LOC129664047, RPL21P4, LOC126862571, LOC110485084, LOC111589216 and LOC111589215 [1",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 12,
+  "server_elapsed_s": 7.026,
+  "seconds": 19.5,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 15,
+   "tool_result": 15,
+   "step": 1,
+   "token": 165,
+   "citation": 100,
+   "trust_signal": 101,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 0,
+   "ts": "2026-09-22T22:51:54.090023Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 2,
+   "ts": "2026-09-22T22:51:57.568116Z",
+   "payload": {
+    "narrative": "The query asks to assemble evidence (overlapping genes, dbVar records, ClinVar entries) for a CNV, which requires collecting across multiple records. (the window chr17:43,044,295-43,125,364 (GRCh38) overlaps 8 genes: BRCA1, LOC127886930, LOC129664047, RPL21P4, LOC126862571, LOC110485084, LOC111589216, LOC111589215)",
+    "query_class": "aggregate",
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC127886930",
+      "curie": "NCBIGene:127886930",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC129664047",
+      "curie": "NCBIGene:129664047",
+      "confidence": 1.0
+     },
+     {
+      "text": "RPL21P4",
+      "curie": "NCBIGene:140660",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC126862571",
+      "curie": "NCBIGene:126862571",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC110485084",
+      "curie": "NCBIGene:110485084",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589216",
+      "curie": "NCBIGene:111589216",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589215",
+      "curie": "NCBIGene:111589215",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 4,
+   "ts": "2026-09-22T22:51:57.570561Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:672. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-4fc946b14cd6",
+      "layer": "layer_1_graph",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-7e60cf4169e1",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4366965a79f6",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-89bc3135ca82",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-c63d5e612081",
+      "layer": "layer_3_enrichment",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-22412cec4a95",
+      "layer": "layer_3_enrichment",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-e42065f7c793",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-a503bd44bbc5",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d1bb090268d2",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-d214f8b85c10",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e7eafab483e9",
+      "layer": "layer_3_enrichment",
+      "persona": "Ramon y Cajal",
+      "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1566ba2bb764",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-ac52a7ed575d",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-b83654c46a6b",
+      "layer": "layer_2_api",
+      "persona": "Avery",
+      "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-9664e435324d",
+      "layer": "layer_1_graph",
+      "persona": "de Duve",
+      "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "BRCA1",
+      "curie": "NCBIGene:672",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC127886930",
+      "curie": "NCBIGene:127886930",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC129664047",
+      "curie": "NCBIGene:129664047",
+      "confidence": 1.0
+     },
+     {
+      "text": "RPL21P4",
+      "curie": "NCBIGene:140660",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC126862571",
+      "curie": "NCBIGene:126862571",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC110485084",
+      "curie": "NCBIGene:110485084",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589216",
+      "curie": "NCBIGene:111589216",
+      "confidence": 1.0
+     },
+     {
+      "text": "LOC111589215",
+      "curie": "NCBIGene:111589215",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 6,
+   "ts": "2026-09-22T22:51:57.571397Z",
+   "payload": {
+    "call_id": "cq-4fc946b14cd6",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 7,
+   "ts": "2026-09-22T22:51:57.571438Z",
+   "payload": {
+    "call_id": "ne-7e60cf4169e1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 8,
+   "ts": "2026-09-22T22:51:57.571447Z",
+   "payload": {
+    "call_id": "ne-4366965a79f6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 9,
+   "ts": "2026-09-22T22:51:57.571455Z",
+   "payload": {
+    "call_id": "ne-89bc3135ca82",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 10,
+   "ts": "2026-09-22T22:51:57.571463Z",
+   "payload": {
+    "call_id": "pa-c63d5e612081",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 11,
+   "ts": "2026-09-22T22:51:57.571471Z",
+   "payload": {
+    "call_id": "ct-22412cec4a95",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 12,
+   "ts": "2026-09-22T22:51:57.571479Z",
+   "payload": {
+    "call_id": "ne-e42065f7c793",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 13,
+   "ts": "2026-09-22T22:51:57.571486Z",
+   "payload": {
+    "call_id": "ne-a503bd44bbc5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 14,
+   "ts": "2026-09-22T22:51:57.571493Z",
+   "payload": {
+    "call_id": "ne-d1bb090268d2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 15,
+   "ts": "2026-09-22T22:51:57.571501Z",
+   "payload": {
+    "call_id": "ne-d214f8b85c10",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 16,
+   "ts": "2026-09-22T22:51:57.571508Z",
+   "payload": {
+    "call_id": "pa-e7eafab483e9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 17,
+   "ts": "2026-09-22T22:51:57.571516Z",
+   "payload": {
+    "call_id": "ne-1566ba2bb764",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 18,
+   "ts": "2026-09-22T22:51:57.571523Z",
+   "payload": {
+    "call_id": "ne-ac52a7ed575d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 19,
+   "ts": "2026-09-22T22:51:57.571532Z",
+   "payload": {
+    "call_id": "ne-b83654c46a6b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 20,
+   "ts": "2026-09-22T22:51:57.571539Z",
+   "payload": {
+    "call_id": "cq-9664e435324d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 21,
+   "ts": "2026-09-22T22:51:57.741731Z",
+   "payload": {
+    "call_id": "pa-c63d5e612081",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 22,
+   "ts": "2026-09-22T22:51:57.931785Z",
+   "payload": {
+    "call_id": "ct-22412cec4a95",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 23,
+   "ts": "2026-09-22T22:51:57.946248Z",
+   "payload": {
+    "call_id": "ne-89bc3135ca82",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 24,
+   "ts": "2026-09-22T22:51:58.013289Z",
+   "payload": {
+    "call_id": "ne-a503bd44bbc5",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 25,
+   "ts": "2026-09-22T22:51:58.058707Z",
+   "payload": {
+    "call_id": "ne-e42065f7c793",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 26,
+   "ts": "2026-09-22T22:51:58.110964Z",
+   "payload": {
+    "call_id": "ne-d1bb090268d2",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 27,
+   "ts": "2026-09-22T22:51:58.219328Z",
+   "payload": {
+    "call_id": "ne-b83654c46a6b",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 28,
+   "ts": "2026-09-22T22:51:58.273970Z",
+   "payload": {
+    "call_id": "cq-9664e435324d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "40 row(s) of 40",
+    "result_count": 40,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 29,
+   "ts": "2026-09-22T22:51:58.350354Z",
+   "payload": {
+    "call_id": "ne-7e60cf4169e1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "coordinate_overlap: 5 record(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 30,
+   "ts": "2026-09-22T22:51:58.434778Z",
+   "payload": {
+    "call_id": "ne-4366965a79f6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "coordinate_overlap: 5 record(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 31,
+   "ts": "2026-09-22T22:51:59.777990Z",
+   "payload": {
+    "call_id": "cq-4fc946b14cd6",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "de Duve",
+    "persona_about": "Discovered the lysosome and the peroxisome, the cell's recycling and detoxifying compartments.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Christian_de_Duve",
+    "summary": "100 row(s) of 100",
+    "result_count": 100,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 32,
+   "ts": "2026-09-22T22:52:00.026728Z",
+   "payload": {
+    "call_id": "ne-1566ba2bb764",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 33,
+   "ts": "2026-09-22T22:52:00.112369Z",
+   "payload": {
+    "call_id": "ne-ac52a7ed575d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 34,
+   "ts": "2026-09-22T22:52:00.116243Z",
+   "payload": {
+    "call_id": "ne-d214f8b85c10",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Avery",
+    "persona_about": "Showed in 1944, with MacLeod and McCarty, that DNA rather than protein carries genetic information in bacteria.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Oswald_Avery",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 35,
+   "ts": "2026-09-22T22:52:00.130456Z",
+   "payload": {
+    "call_id": "pa-e7eafab483e9",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Ramon y Cajal",
+    "persona_about": "Showed that the nervous system is built from separate cells, the neuron doctrine, through exquisite drawings of stained brain tissue.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Santiago_Ram%C3%B3n_y_Cajal",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 36,
+   "ts": "2026-09-22T22:52:00.140806Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "BRCA1 DNA repair associated",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000183",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000183",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1000551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1000551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1001081",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1001081",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002154",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002154",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1002750",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1002750",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003072",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1003150",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1003150",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004428",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004428",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004775",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004775",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1004786",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1004786",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005082",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005082",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005528",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005528",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005598",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005598",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005841",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005841",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005942",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005942",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1005980",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1005980",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007698",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007698",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1007721",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1007721",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1008789",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1008789",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009121",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009121",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009204",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009204",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009272",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009272",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009310",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009310",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009406",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009406",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1009551",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1009551",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010063",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010063",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.641A>T (p.Asp214Val)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010509",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010509",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010603",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010603",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010631",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1010734",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1010734",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1011036",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1011036",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012155",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012155",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1728del (p.Glu577fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012156",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012156",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.3982del (p.Ser1328fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1012905",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1012905",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1013802",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1013802",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014065",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014065",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1014279",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1014279",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004871826",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4871826/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28976962",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267740",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "113705",
+    "source_url": "https://omim.org/entry/113705",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00590109",
+    "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28976962",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000724",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "double-strand break repair via homologous recombination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004871829",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4871829/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34421362",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34421362/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "267741",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "672",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00597987",
+    "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34421362",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34421362/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006281",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004871869",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4871869/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "373892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00617656",
+    "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006282",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004875788",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4875788/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4822953",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4822953/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00673335",
+    "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006301",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage tolerance",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "VCV004876004",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4876004/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4823850",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00700778",
+    "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006302",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "double-strand break repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28976962",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28976962/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006338",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chromatin remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34421362",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34421362/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "35432218",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/35432218/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006974",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36914836",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36914836/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007059",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chromosome segregation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "39265497",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/39265497/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007095",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mitotic G2 DNA damage checkpoint signaling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007549",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "sex-chromosome dosage compensation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008630",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to DNA damage",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010575",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of vascular endothelial growth factor production",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010628",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of gene expression",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0016567",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein ubiquitination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030308",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell growth",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033147",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of intracellular estrogen receptor signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0035825",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "homologous recombination",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043009",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "chordate embryonic development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0044027",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of gene expression via chromosomal CpG island methylation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0044818",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mitotic G2/M transition checkpoint",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045717",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of fatty acid biosynthetic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045739",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045766",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of angiogenesis",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045786",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell cycle",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045893",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "8fdfed01-34b7-4da3-a1a7-bf0a558cd2af",
+   "seq": 404,
+   "ts": "2026-09-22T22:52:11.857932Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 12,
+    "elapsed_ms": 7026,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 6 sources, not yet confirmed",
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record and 19 sequence variant records for BRCA1, LOC127886930, LOC129664047, RPL21P4, LOC126862571, LOC110485084, LOC111589216 and LOC111589215 [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. \n\nGene records found\n\nGene NCBIGene:672, name: BRCA1 DNA repair associated [1]. gene symbol: BRCA1 [40]. gene name: BRCA1 [44]. This gene encodes a 190 kD nuclear phosphoprotein that plays a role in maintaining genomic stability, and it also acts as a tumor suppressor [51]. The BRCA1 gene contains 22 exons spanning about 110 kb of DNA [51]. The encoded protein combines with other tumor suppressors, DNA damage sensors, and signal transducers to form a large multi-subunit protein complex known as the BRCA1-associated genome surveillance complex (BASC) [51]. This gene product associates with RNA polymerase II, and through the C-terminal domain, also interacts with histone deacetylase complexes [51]. This protein thus plays a role in transcription, DNA repair of double-stranded breaks, and recombination [51]. Mutations in this gene are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers [51]. Alternative splicing plays a role in modulating the subcellular localization and physiological function of this gene [51]. Many alternatively spliced transcript variants, some of which are disease-associated mutations, have been described for this gene, but the full-length natures of only some of these variants has been described [51]. A related pseudogene, which is also located on chromosome 17, has been identified [51]. [provided by RefSeq, May 2020] [51]. \n\nSequence variant records found\n\nSequenceVariant ClinVar:1000183, name: NM_007294.4(BRCA1):c.4709T>C (p.Leu1570Pro) [2]. SequenceVariant ClinVar:1000551, name: NM_007294.4(BRCA1):c.3664G>A (p.Glu1222Lys) [3]. SequenceVariant ClinVar:1001081, name: NM_007294.4(BRCA1):c.353T>C (p.Leu118Pro) [4]. SequenceVariant ClinVar:1002154, name: NM_007294.4(BRCA1):c.1226T>G (p.Val409Gly) [5]. SequenceVariant ClinVar:1002750, name: NM_007294.4(BRCA1):c.2614T>C (p.Phe872Leu) [6]. SequenceVariant ClinVar:1003072, name: NM_007294.4(BRCA1):c.3017A>C (p.His1006Pro) [7]. SequenceVariant ClinVar:1003150, name: NM_007294.4(BRCA1):c.4328G>T (p.Arg1443Leu) [8]. SequenceVariant ClinVar:1004428, name: NM_007294.4(BRCA1):c.1810A>G (p.Lys604Glu) [9]. SequenceVariant ClinVar:1004775, name: NM_007294.4(BRCA1):c.1976C>G (p.Pro659Arg) [10]. SequenceVariant ClinVar:1004786, name: NM_007294.4(BRCA1):c.3556C>G (p.Leu1186Val) [11]. SequenceVariant ClinVar:1005082, name: NM_007294.4(BRCA1):c.1930T>G (p.Cys644Gly) [12]. SequenceVariant ClinVar:1005528, name: NM_007294.4(BRCA1):c.4685C>G (p.Pro1562Arg) [13]. SequenceVariant ClinVar:1005598, name: NM_007294.4(BRCA1):c.4333C>T (p.Pro1445Ser) [14]. SequenceVariant ClinVar:1005841, name: NM_007294.4(BRCA1):c.4652C>T (p.Ser1551Phe) [15]. SequenceVariant ClinVar:1005942, name: NM_007294.4(BRCA1):c.3660T>G (p.Asp1220Glu) [16]. SequenceVariant ClinVar:1005980, name: NM_007294.4(BRCA1):c.4162C>A (p.Gln1388Lys) [17]. SequenceVariant ClinVar:1007698, name: NM_007294.4(BRCA1):c.1199A>T (p.Asp400Val) [18]. SequenceVariant ClinVar:1007721, name: NM_007294.4(BRCA1):c.3811A>G (p.Ser1271Gly) [19]. SequenceVariant ClinVar:1008789, name: NM_007294.4(BRCA1):c.3959C>T (p.Ser1320Phe) [20]. SequenceVariant ClinVar:1009121, name: NM_007294.4(BRCA1):c.778A>G (p.Lys260Glu) [21]. SequenceVariant ClinVar:1009204, name: NM_007294.4(BRCA1):c.500C>T (p.Thr167Ile) [22]. SequenceVariant ClinVar:1009272, name: NM_007294.4(BRCA1):c.4445A>C (p.Asp1482Ala) [23]. SequenceVariant ClinVar:1009310, name: NM_007294.4(BRCA1):c.3673T>A (p.Cys1225Ser) [24]. SequenceVariant ClinVar:1009406, name: NM_007294.4(BRCA1):c.4586T>G (p.Ile1529Ser) [25]. SequenceVariant ClinVar:1009551, name: NM_007294.4(BRCA1):c.4001G>T (p.Gly1334Val) [26]. SequenceVariant ClinVar:1010063, name: NM_007294.4(BRCA1):c.641A>T (p.Asp214Val) [27]. SequenceVariant ClinVar:1010509, name: NM_007294.4(BRCA1):c.1328A>G (p.Lys443Arg) [28]. SequenceVariant ClinVar:1010603, name: NM_007294.4(BRCA1):c.1331G>T (p.Ser444Ile) [29]. SequenceVariant record ClinVar:1010631 [30]. SequenceVariant ClinVar:1010734, name: NM_007294.4(BRCA1):c.4840C>G (p.Pro1614Ala) [31]. SequenceVariant ClinVar:1011036, name: NM_007294.4(BRCA1):c.3610A>G (p.Arg1204Gly) [32]. SequenceVariant ClinVar:1012155, name: NM_007294.4(BRCA1):c.1728del (p.Glu577fs) [33]. SequenceVariant ClinVar:1012156, name: NM_007294.4(BRCA1):c.3982del (p.Ser1328fs) [34]. SequenceVariant ClinVar:1012905, name: NM_007294.4(BRCA1):c.1528T>G (p.Ser510Ala) [35]. SequenceVariant ClinVar:1013802, name: NM_007294.4(BRCA1):c.4595T>C (p.Val1532Ala) [36]. SequenceVariant ClinVar:1014065, name: NM_007294.4(BRCA1):c.4403A>C (p.Asn1468Thr) [37]. SequenceVariant ClinVar:1014279, name: NM_007294.4(BRCA1):c.1633G>T (p.Val545Leu) [38]. \n\nClinvar records found\n\nclinvar title: NM_007294.4(BRCA1):c.3504dup (p.Asp1169Ter) [39]. clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [42]. clinvar title: NM_007294.4(BRCA1):c.5332+84G>A [48]. clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [50]. clinvar title: NM_007294.4(BRCA1):c.2850_2851del (p.Arg951fs) [55]. clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [57]. clinvar title: NM_007294.4(BRCA1):c.1699_1700del (p.Asn567fs) [61]. clinvar title: NM_007294.4(BRCA1):c.544T>C (p.Leu182=) [63]. clinvar title: NM_007294.4(BRCA1):c.834_840del (p.His279fs) [67]. clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [69]. \n\nPubmed records found\n\npubmed title: BRCA1-BARD1 promotes RAD51-mediated homologous DNA pairing [41]. pubmed title: BRCA1 Antibodies Matter [49]. pubmed title: BRCA1: An Endocrine and Metabolic Regulator [56]. pubmed title: Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis [62]. pubmed title: Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors [68]. The tumour suppressor complex BRCA1-BARD1 functions in the repair of DNA double-stranded breaks by homologous recombination [73]. During this process, BRCA1-BARD1 facilitates the nucleolytic resection of DNA ends to generate a single-stranded template for the recruitment of another tumour suppressor complex, BRCA2-PALB2, and the recombinase RAD51 [73]. Here, by examining purified wild-type and mutant BRCA1-BARD1, we show that both BRCA1 and BARD1 bind DNA and interact with RAD51, and that BRCA1-BARD1 enhances the recombinase activity of RAD51 [73]. Mechanistically, BRCA1-BARD1 promotes the assembly of the synaptic complex, an essential intermediate in RAD51-mediated DNA joint formation [73]. We provide evidence that BRCA1 and BARD1 are indispensable for RAD51 stimulation [73]. Notably, BRCA1-BARD1 mutants with weakened RAD51 interactions show compromised DNA joint formation and impaired mediation of homologous recombination and DNA repair in cells [73]. Our results identify a late role of BRCA1-BARD1 in homologous recombination, an attribute of the tumour suppressor complex that could be targeted in cancer therapy [73]. Breast cancer susceptibility gene 1 (BRCA1) encodes a tumor suppressor that is frequently mutated in familial breast and ovarian cancer patients [75]. BRCA1 functions in multiple important cellular processes including DNA damage repair, cell cycle checkpoint activation, protein ubiquitination, chromatin remodeling, transcriptional regulation, as well as R-loop formation and apoptosis [75]. A large number of BRCA1 antibodies have been generated and become commercially available over the past three decades, however, many commercial antibodies are poorly characterized and, when widely used, led to unreliable data [75]. In search of reliable and specific BRCA1 antibodies (Abs), particularly antibodies recognizing mouse BRCA1, we performed a rigorous validation of a number of commercially available anti-BRCA1 antibodies, using proper controls in a panel of validation applications, including Western blot (WB), immunoprecipitation (IP), immunoprecipitation-mass spectrometry (IP-MS), chromatin immunoprecipitation (ChIP) and immunofluorescence (IF) [75]. Furthermore, we assessed the specificity of these antibodies to detect mouse BRCA1 protein through the use of testis tissue and mouse embryonic fibroblasts (MEFs) from Brca1+/+ and Brca1\u039411/\u039411 mice [75]. We find that Ab1, D-9, 07-434 (for recognizing human BRCA1) and 287.17, 440621, BR-64 (for recognizing mouse BRCA1) are specific with high quality performance in the indicated assays [75]. We share these results here with the goal of helping the community combat the common challenges associated with anti-BRCA1 antibody specificity and reproducibility and, hopefully, better understanding BRCA1 functions at cellular and tissue levels [75]. The breast and ovarian cancer susceptibility gene (BRCA1) is a tumor suppressor whose mutation has been associated with the development of breast, ovarian and, probably, other malignancies at young ages [77]. The BRCA1 gene product participates in multiple biological pathways including the DNA damage response, transcriptional control, cell growth and apoptosis [77]. Inactivating germline mutations of the BRCA1 gene can be detected in a substantial portion of families with inherited breast and/or ovarian cancer [77]. While the genomic and cancer-related actions of BRCA1 have been extensively investigated, not much information exists regarding the cellular and circulating factors involved in regulation of BRCA1 expression and action [77]. The present review article dissects the emerging role of BRCA1 as an important regulator of various endocrine and metabolic axes [77]. Experimental and clinical evidence links BRCA1 with a number of peptide and steroid hormones [77]. Furthermore, comprehensive analyses identified complex interactions between the insulin/insulin-like growth factor-1 (IGF1) signaling axis and BRCA1 [77]. The correlation between metabolic disorders, including diabetes and the metabolic syndrome, and BRCA1 mutations, are discussed in this article [77]. Women with germline BRCA1 mutations (BRCA1+/mut) have increased risk for hereditary breast cancer [79]. Cancer initiation in BRCA1+/mut is associated with premalignant changes in breast epithelium [79]. however, the role of the epithelium-associated stromal niche during BRCA1-driven tumor initiation remains unclear [79]. Here we show that the premalignant stromal niche promotes epithelial proliferation and mutant BRCA1-driven tumorigenesis in trans [79]. Using single-cell RNA sequencing analysis of human preneoplastic BRCA1+/mut and noncarrier breast tissues, we show distinct changes in epithelial homeostasis including increased proliferation and expansion of basal-luminal intermediate progenitor cells [79]. Additionally, BRCA1+/mut stromal cells show increased expression of pro-proliferative paracrine signals [79]. In particular, we identify pre-cancer-associated fibroblasts (pre-CAFs) that produce protumorigenic factors including matrix metalloproteinase 3 (MMP3), which promotes BRCA1-driven tumorigenesis in vivo [79]. Together, our findings demonstrate that precancerous stroma in BRCA1+/mut may elevate breast cancer risk through the promotion of epithelial proliferation and an accumulation of luminal progenitor cells with altered differentiation [79]. BRCA1 is one of the most frequently-mutated tumor suppressor genes in ovarian and breast cancers [81]. Loss of BRCA1 triggers homologous recombination (HR) repair deficiency, consequently leading to genomic instability and PARP inhibitors (PARPi)-associated synthetic lethality [81]. Although, the roles of BRCA1 in DNA repair and replication have been extensively investigated, its tumor suppressive functions beyond genome safeguard remain poorly understood [81]. Here, we report that BRCA1 promotes ferroptosis susceptibility through catalyzing K6-linked polyubiquitination of GPX4 and subsequently accelerating GPX4 degradation [81]. Depletion of BRCA1 induces ferroptosis resistance in ovarian cancer cells due to elevated GPX4 protein, and silence of GPX4 significantly suppresses the growth of BRCA1-deficient ovarian cancer xenografts [81]. Importantly, we found that PARPi triggers ferroptosis in ovarian cancer cells, inhibition of GPX4 markedly increase PARPi-induced ferroptosis in BRCA1-deficient ovarian cancer cells [81]. Combined treatment of GPX4 inhibitor and PARPi produces synergistic anti-tumor efficacy in BRCA1-deficient ovarian cancer cells, patient derived organoid (PDO) and xenografts [81]. Thus, our study uncovers a novel mechanism via which BRCA1 exerts tumor suppressive function through regulating ferroptosis, and demonstrates the potential of GPX4 as a therapeutic target for BRCA1-mutant cancers [81]. \n\nOmim records found\n\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN [43]. BRCA1 [43]. \n\nClinical trial records found\n\nClinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [45]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [52]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [58]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [64]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [70]. \n\nPublication records found\n\nPublication pmid: 28976962 [46]. Publication pmid: 34421362 [53]. Publication pmid: 35432218 [59]. Publication pmid: 36914836 [65]. Publication pmid: 39265497 [71]. \n\nBiological process records found\n\nBiologicalProcess GO:0000724, name: double-strand break repair via homologous recombination [47]. BiologicalProcess GO:0006281, name: DNA repair [54]. BiologicalProcess GO:0006282, name: regulation of DNA repair [60]. BiologicalProcess GO:0006301, name: DNA damage tolerance [66]. BiologicalProcess GO:0006302, name: double-strand break repair [72]. BiologicalProcess GO:0006338, name: chromatin remodeling [74]. BiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II [76]. BiologicalProcess GO:0006974, name: DNA damage response [78]. BiologicalProcess GO:0007059, name: chromosome segregation [80]. BiologicalProcess GO:0007095, name: mitotic G2 DNA damage checkpoint signaling [82]. BiologicalProcess GO:0007549, name: sex-chromosome dosage compensation [83]. BiologicalProcess GO:0008630, name: intrinsic apoptotic signaling pathway in response to DNA damage [84]. BiologicalProcess GO:0010212, name: response to ionizing radiation [85]. BiologicalProcess GO:0010575, name: positive regulation of vascular endothelial growth factor production [86]. BiologicalProcess GO:0010628, name: positive regulation of gene expression [87]. BiologicalProcess GO:0016567, name: protein ubiquitination [88]. BiologicalProcess GO:0030308, name: negative regulation of cell growth [89]. BiologicalProcess GO:0033147, name: negative regulation of intracellular estrogen receptor signaling pathway [90]. BiologicalProcess GO:0035825, name: homologous recombination [91]. BiologicalProcess GO:0043009, name: chordate embryonic development [92]. BiologicalProcess GO:0044027, name: negative regulation of gene expression via chromosomal CpG island methylation [93]. BiologicalProcess GO:0044818, name: mitotic G2/M transition checkpoint [94]. BiologicalProcess GO:0045717, name: negative regulation of fatty acid biosynthetic process [95]. BiologicalProcess GO:0045739, name: positive regulation of DNA repair [96]. BiologicalProcess GO:0045766, name: positive regulation of angiogenesis [97]. BiologicalProcess GO:0045786, name: negative regulation of cell cycle [98]. BiologicalProcess GO:0045892, name: negative regulation of DNA-templated transcription [99]. BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription [100]. \n\nNote: this answer was truncated before every matching record could be retrieved, and the exact total that matched this question is not available for this query\n\nNote: this answer does not address the following entities named in the question: LOC127886930, LOC129664047, RPL21P4, LOC126862571, LOC110485084, LOC111589216, LOC111589215. Ask about them individually for a complete answer."
+}

@@ -1,0 +1,123 @@
+QUESTION: Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+LANDED=answer SECONDS=45.5
+
++ New search
+
+YOUR SEARCHES
+
+Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+2 tools · 21 sources from 1 layer
+Show me the ones from 2023
+0 sources · Sep 29
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+0 sources · Sep 29
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+21 sources · Sep 29
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+6 sources · Sep 29
+What is known about Salmonella isolate SAMN02147118 in Pathogen Detection?
+2 sources · Sep 29
+Which E. coli isolates in Pathogen Detection carry colistin resistance genes?
+1 source · Sep 29
+Show me the ones from 2023
+0 sources · Sep 29
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+21 sources · Sep 29
+ESBL E. coli isolates?
+21 sources · Sep 29
+Which E. coli isolates are in Pathogen Detection?
+0 sources · Sep 29
+Which tomato isolates in Pathogen Detection carry resistance genes?
+0 sources · Sep 29
+Which Listeria isolates in Pathogen Detection carry blaKPC?
+1 source · Sep 29
+Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+21 sources · Sep 29
+Which Salmonella isolates carry blaCTX-M-15?
+21 sources · Sep 29
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+0 sources · Sep 29
+What is in BioProject PRJNA999999999?
+0 sources · Sep 29
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+New search
+
+? Answered41.5s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+Found 20 pathogen detection isolate records and 1 taxonomy record for Salmonella[21].⁠1–20
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED	
+8891	SAMEA1009669	aac(3)-IIe, aac(6')-Ib-cr5, aadA1, aadA1=PARTIAL_END_OF_CONTIG, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaOXA-1, blaTEM-1, catA1, catB3=PARTIAL_END_OF_CONTIG, dfrA1, dfrA14, mdsA, mdsB, sul1, sul2, sul2=PARTIAL_END_OF_CONTIG, tet(A)		⁠1
+A54560	SAMEA1009687	aac(3)-IIe, aac(6')-Ib-cr5, aadA1, aadA1=PARTIAL_END_OF_CONTIG, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaOXA-1, blaTEM-1, catA1, catB3=PARTIAL_END_OF_CONTIG, dfrA1, dfrA14, mdsA, mdsB, qnrB1, sul1, sul2, sul2=PARTIAL_END_OF_CONTIG, tet(A)		⁠2
+8892	SAMEA1009692	aadA1, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaTEM=PARTIAL_END_OF_CONTIG, blaTEM-1, catA1, dfrA1, mdsA, mdsB, sul1, sul2		⁠3
+SAMEA1712252	SAMEA1712252	aac(3)-IIg, aac(6')-IIc, aac(6')-Ib-cr5, aadA2, aph(3'')-Ib, aph(3')-Ia, aph(6)-Id, arr, blaCTX-M-15, blaOXA-1, blaSHV-12, blaTEM-1, catA2, catB3=PARTIAL_END_OF_CONTIG, dfrA19, ere(A)=PARTIAL, gyrA_D87G=POINT, gyrA_S83Y=POINT, mcr-9.1, mdsA, mdsB, parC_S80I=POINT, sul1, sul2, tet(A), tet(D)		⁠4
+SAMEA1712275	SAMEA1712275	aac(3)-IIg, aac(6')-IIc, aac(6')-Ib-cr5, aadA2, aph(3'')-Ib, aph(3')-Ia, aph(6)-Id, arr, blaCTX-M-15, blaOXA-1, blaSHV-12, blaTEM-1, catA2, catB3=PARTIAL, catB3=PARTIAL_END_OF_CONTIG, dfrA19, ere(A)=PARTIAL, gyrA_D87G=POINT, gyrA_S83Y=POINT, mcr-9.1, mdsA, mdsB, parC_S80I=POINT, sul1, sul2, tet(A), tet(D)		⁠5
+SAMEA2054258	SAMEA2054258	aac(3)-IIe, aac(6')-Ib-cr5, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaOXA-1, blaTEM-1, catA2, catB3=PARTIAL, catB3=PARTIAL_END_OF_CONTIG, dfrA14, dfrA7, mdsA, mdsB, qnrB1, sul1, sul2, sul2=PARTIAL_END_OF_CONTIG, tet(A)		⁠6
+100RC3	SAMEA2673767	aac(3)-VIa, aadA1, blaCTX-M-2, mdsA, mdsB, pmrB_RQRL11del=POINT, sul1		⁠7
+FSW0064	SAMN02345061	aph(3'')-Ib, aph(6)-Id, blaCTX-M=PARTIAL_END_OF_CONTIG, blaCTX-M-24, blaCTX-M-27, blaCTX-M-65, blaCTX-M-98, blaTEM-1, dfrA17, floR, gyrA_D87N=POINT, gyrA_S83F=POINT, mdsA, mdsB, mph(A), parC_S80R=POINT, qepA=PARTIAL_END_OF_CONTIG, qepA1, rmtB1, tet(A)	2011	⁠8
+FMA0085	SAMN02345081	aph(3'')-Ib, aph(6)-Id, blaCTX-M, blaCTX-M-24, blaCTX-M-27, blaTEM-1, dfrA17, floR, gyrA_D87N=POINT, gyrA_S83F=POINT, mdsA, mdsB, mph(A), parC_S80R=POINT, tet(A)	2011	⁠9
+NY-FSL-R8-0865	SAMN02664839	blaCTX-M-55, mdsA, mdsB	2008	⁠10
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+TAXONOMY RECORDS FOUND
+RECORD	IDENTIFIER	
+Salmonella	NCBITaxon:590	⁠21
+NOTES
+Pathogen Detection lists 20,346 Salmonella isolates with these genes; the first 20 in the snapshot are shown.
+▶
+SOURCES
+21
+Based on 21 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009669
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009687
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009692
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1712252
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1712275
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA2054258
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA2673767
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02345061
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02345081
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02664839
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02664857
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098689
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098807
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098808
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098809
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098810
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145677
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145678
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145679
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03154419
+https://www.ncbi.nlm.nih.gov/taxonomy/590
+=== CITATION ARIA (first 6) ===
+Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2
+Sources
+Source 1, layer 2
+Source 2, layer 2
+Source 3, layer 2
+Source 4, layer 2

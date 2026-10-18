@@ -1,0 +1,108 @@
+QUESTION: Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+LANDED=answer SECONDS=22
+
++ New search
+
+YOUR SEARCHES
+
+Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+2 tools · 21 sources from 1 layer
+Which Salmonella isolates carry blaCTX-M-15?
+21 sources · Sep 29
+What is BioSample SAMN12121739 and which SRA runs and assemblies come from it?
+0 sources · Sep 29
+What is in BioProject PRJNA999999999?
+0 sources · Sep 29
+For BioProject PRJNA31257, list the BioSamples, the SRA runs and any genome assemblies, and tell me how to retrieve each.
+4 sources · Sep 29
+What genes and ClinVar records are under chr7:117,480,025-117,668,665 on GRCh38?
+50 sources · Sep 29
+What is under chr17:43,044,295-43,125,364?
+0 sources · Sep 29
+What ACMG-relevant evidence is available for a copy number variant spanning chr17:43,044,295-43,125,364 on GRCh38? List the overlapping genes, dbVar records and ClinVar entries.
+50 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+24 sources · Sep 29
+Find GEO expression datasets studying TP53 in human tumour samples.
+23 sources · Sep 29
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+25 sources · Sep 29
+What is rs334 and what condition is it associated with?
+5 sources · Sep 29
+Which diseases are associated with BRCA1?
+22 sources · Sep 29
+s3-retest-a-20260929@example.com
+No search limit in effect yet
+Which Klebsiella isolates in Pathogen Detection carry carbapenemase genes?
+New search
+
+? Answered18.1s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+I found 20 pathogen samples and 1 organism related to Klebsiella[21].⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+KPNIH4	⁠1
+KPNIH5	⁠2
+KPNIH6	⁠3
+KPNIH2	⁠4
+KPNIH1	⁠5
+KPNIH8	⁠6
+KPNIH9	⁠7
+KPNIH10	⁠8
+KPNIH11	⁠9
+KPNIH12	⁠10
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Pathogen Detection lists 88,213 Klebsiella isolates with these genes; the first 20 in the snapshot are shown.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources, not yet confirmed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== LINKS ===
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057606
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057607
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057608
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057609
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057611
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057612
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057613
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057614
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057620
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057621
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057635
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057640
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057641
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057646
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057650
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057652
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057657
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057658
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01057711
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02602959
+https://www.ncbi.nlm.nih.gov/taxonomy/570
+=== CITATION ARIA (first 6) ===
+Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2
+Source 1, layer 2
+Source 2, layer 2
+Source 3, layer 2
+Source 4, layer 2
+Source 5, layer 2

@@ -1,0 +1,972 @@
+{
+ "record": {
+  "id": "G-003",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-consistency-a-20260926p86b@example.com",
+  "category": "kisses",
+  "query_class": "multi_hop",
+  "expected_outcome": "answer",
+  "question": "What is known about Lynch syndrome across NCBI: the causal genes, the condition record, clinical variants and current trials?",
+  "session_id": "c103-3e258d9f2d63",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "c19ef2f",
+  "started_at": "2026-09-26T17:02:39+00:00",
+  "run_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "exploratory",
+  "resolved_entities": [
+   "MedGen:C4552100"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 26 sources, not yet confirmed",
+  "citations": 26,
+  "distinct_sources": 25,
+  "citations_by_layer": {
+   "layer_3_enrichment": 8,
+   "layer_1_graph": 11,
+   "layer_2_api": 7
+  },
+  "must_cite_total": 4,
+  "must_cite_hits": 3,
+  "tools": [
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "cypher_query",
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 3,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 12,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 2,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 8,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   12
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 299,
+  "answer_start": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndr",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 16.762,
+  "seconds": 17.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 47,
+   "citation": 26,
+   "trust_signal": 27,
+   "done": 1
+  },
+  "first_word_s": 16.96,
+  "first_token_ts": "2026-09-26T17:01:17.119037Z"
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 0,
+   "ts": "2026-09-26T17:01:02.047157Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 2,
+   "ts": "2026-09-26T17:01:03.396122Z",
+   "payload": {
+    "narrative": "The query is broad and open-ended, asking about multiple aspects of Lynch syndrome across several NCBI resources (causal genes, condition record, clinical variants, trials), with no single obvious path. (Lynch syndrome: 1 of 10 MedGen record matched by name)",
+    "query_class": "exploratory",
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 4,
+   "ts": "2026-09-26T17:01:03.683607Z",
+   "payload": {
+    "narrative": "searching 3 layers for lynch syndrome. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-395e549e0e0d",
+      "layer": "layer_1_graph",
+      "persona": "Chargaff",
+      "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-8ff7be766302",
+      "layer": "layer_3_enrichment",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-3da33b3b3f93",
+      "layer": "layer_3_enrichment",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-9e1812bb98d4",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0d245a1638ca",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-739b7129b82c",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-c48d0c317883",
+      "layer": "layer_3_enrichment",
+      "persona": "Nightingale",
+      "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-1e5ea799874c",
+      "layer": "layer_2_api",
+      "persona": "Mendel",
+      "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Lynch syndrome",
+      "curie": "MedGen:C4552100",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 6,
+   "ts": "2026-09-26T17:01:03.685065Z",
+   "payload": {
+    "call_id": "cq-395e549e0e0d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 7,
+   "ts": "2026-09-26T17:01:03.685104Z",
+   "payload": {
+    "call_id": "pa-8ff7be766302",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 8,
+   "ts": "2026-09-26T17:01:03.685115Z",
+   "payload": {
+    "call_id": "ct-3da33b3b3f93",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 9,
+   "ts": "2026-09-26T17:01:03.685124Z",
+   "payload": {
+    "call_id": "ne-9e1812bb98d4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 10,
+   "ts": "2026-09-26T17:01:03.685133Z",
+   "payload": {
+    "call_id": "ne-0d245a1638ca",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 11,
+   "ts": "2026-09-26T17:01:03.685150Z",
+   "payload": {
+    "call_id": "ne-739b7129b82c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 12,
+   "ts": "2026-09-26T17:01:03.685159Z",
+   "payload": {
+    "call_id": "pa-c48d0c317883",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 13,
+   "ts": "2026-09-26T17:01:03.685167Z",
+   "payload": {
+    "call_id": "ne-1e5ea799874c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 14,
+   "ts": "2026-09-26T17:01:04.012681Z",
+   "payload": {
+    "call_id": "pa-8ff7be766302",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "ok: 3 record(s)",
+    "result_count": 3,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 15,
+   "ts": "2026-09-26T17:01:04.077448Z",
+   "payload": {
+    "call_id": "ne-9e1812bb98d4",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 16,
+   "ts": "2026-09-26T17:01:04.107954Z",
+   "payload": {
+    "call_id": "ne-0d245a1638ca",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 17,
+   "ts": "2026-09-26T17:01:04.231089Z",
+   "payload": {
+    "call_id": "ct-3da33b3b3f93",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 18,
+   "ts": "2026-09-26T17:01:05.131739Z",
+   "payload": {
+    "call_id": "cq-395e549e0e0d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Chargaff",
+    "persona_about": "Found that in DNA the amount of adenine equals thymine and guanine equals cytosine, the rule that made base pairing possible.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Erwin_Chargaff",
+    "summary": "12 row(s) of 12",
+    "result_count": 12,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 19,
+   "ts": "2026-09-26T17:01:05.427270Z",
+   "payload": {
+    "call_id": "ne-1e5ea799874c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "summary: 2 record(s)",
+    "result_count": 2,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 20,
+   "ts": "2026-09-26T17:01:05.460940Z",
+   "payload": {
+    "call_id": "pa-c48d0c317883",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Nightingale",
+    "persona_about": "Founded modern nursing and used statistics and hospital hygiene to cut death rates, charting the evidence so that governments acted on it.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Florence_Nightingale",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 21,
+   "ts": "2026-09-26T17:01:05.601157Z",
+   "payload": {
+    "call_id": "ne-739b7129b82c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Mendel",
+    "persona_about": "Pea plant experiments in a monastery garden established the laws of inheritance, the foundation of genetics, decades before anyone noticed.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Gregor_Mendel",
+    "summary": "fetch: 8 record(s)",
+    "result_count": 8,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 22,
+   "ts": "2026-09-26T17:01:05.603393Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "token",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 23,
+   "ts": "2026-09-26T17:01:17.119037Z",
+   "payload": {
+    "text": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndrome [7]. ",
+    "marker_ids": [
+     "ct-3da33b3b3f93-1",
+     "ct-3da33b3b3f93-2",
+     "ct-3da33b3b3f93-3",
+     "ct-3da33b3b3f93-4",
+     "ct-3da33b3b3f93-5",
+     "cq-395e549e0e0d-6",
+     "cq-395e549e0e0d-8",
+     "cq-395e549e0e0d-9",
+     "cq-395e549e0e0d-10",
+     "cq-395e549e0e0d-11",
+     "cq-395e549e0e0d-12",
+     "cq-395e549e0e0d-13",
+     "cq-395e549e0e0d-14",
+     "cq-395e549e0e0d-15",
+     "cq-395e549e0e0d-16",
+     "cq-395e549e0e0d-17",
+     "cq-395e549e0e0d-7"
+    ],
+    "kind": "claim",
+    "cells": null,
+    "emphasis": [
+     "Lynch syndrome"
+    ]
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00141466",
+    "source_url": "https://clinicaltrials.gov/study/NCT00141466",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00262171",
+    "source_url": "https://clinicaltrials.gov/study/NCT00262171",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00341575",
+    "source_url": "https://clinicaltrials.gov/study/NCT00341575",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00450424",
+    "source_url": "https://clinicaltrials.gov/study/NCT00450424",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00508573",
+    "source_url": "https://clinicaltrials.gov/study/NCT00508573",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:27030",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/27030",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 3",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C4552100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4552100",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:2956",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/2956",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 6",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4072",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4072",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "epithelial cell adhesion molecule",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4292",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4292",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutL homolog 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4436",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4436",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "mutS homolog 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:4763",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/4763",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "neurofibromin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5378",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5378",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 1, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:5395",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/5395",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "PMS1 homolog 2, mismatch repair system component",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:6224",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/6224",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "ribosomal protein S20",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7048",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7048",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "transforming growth factor beta receptor 2",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:999",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/999",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "cadherin 1",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "21508689",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/21508689/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "1633554",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/1633554",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/C537261",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24468183",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24468183/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "unknown",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D003123",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "30134129",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/30134129/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Lynch_Syndrome_II",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D055847",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "34798986",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/34798986/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36706841",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36706841/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "2804384e-e5fb-4f48-838a-d22d16843059",
+   "seq": 124,
+   "ts": "2026-09-26T17:01:17.130854Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 16762,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 26 sources, not yet confirmed",
+    "layer_calls_used": 11,
+    "next_step": null,
+    "next_step_query": null,
+    "decisions": [
+     {
+      "name": "guardrail.injection",
+      "options": [
+       "injection",
+       "not_injection"
+      ],
+      "chosen": "not_injection",
+      "decided_by": "jev",
+      "jev_choice": "not_injection",
+      "jev_confidence": 0.99,
+      "guard_choice": "not_injection",
+      "agreed": true,
+      "fallback_reason": null,
+      "jev_latency_ms": 287
+     },
+     {
+      "name": "think.recent_years",
+      "options": [
+       "recent_unbounded",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.98,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 177
+     },
+     {
+      "name": "plan.literature",
+      "options": [
+       "wants_literature",
+       "not_literature"
+      ],
+      "chosen": "not_literature",
+      "decided_by": "jev",
+      "jev_choice": "not_literature",
+      "jev_confidence": 0.94,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 193
+     },
+     {
+      "name": "think.asks_features",
+      "options": [
+       "asks_features",
+       "not_applicable"
+      ],
+      "chosen": "not_applicable",
+      "decided_by": "jev",
+      "jev_choice": "not_applicable",
+      "jev_confidence": 0.99,
+      "guard_choice": null,
+      "agreed": null,
+      "fallback_reason": null,
+      "jev_latency_ms": 488
+     }
+    ]
+   }
+  }
+ ],
+ "answer_text": "Found 5 clinical trial records and 11 gene records for Lynch syndrome [1][2][3][4][5][6][8][9][10][11][12][13][14][15][16][17], linked to 1 disease: Lynch syndrome [7]. \n\nDisease records found\n\nDisease name: Lynch syndrome [7]. \n\nClinical trial records found\n\nClinical trial name: Implementation of a New Strategy to Identify HNPCC Patients [1]. Clinical trial name: Hereditary Nonpolyposis Colorectal Cancer in Taiwan-Related Genetic Study and Clinical Applications [2]. Clinical trial name: Psychosocial Aspects of Genetic Testing for Hereditary Nonpolyposis Colon Cancer [3]. Clinical trial name: Educational CD-ROM Compared With Standard Informed Consent for Patients With Colorectal Cancer or a Family History of Colorectal Cancer [4]. Clinical trial name: Registry for Women Who Are At Risk Or May Have Lynch Syndrome [5]. \n\nGene-to-disease mapping\n\nGene NCBIGene:27030, name: mutL homolog 3 [6]. Gene NCBIGene:2956, name: mutS homolog 6 [8]. Gene NCBIGene:4072, name: epithelial cell adhesion molecule [9]. Gene NCBIGene:4292, name: mutL homolog 1 [10]. Gene NCBIGene:4436, name: mutS homolog 2 [11]. Gene NCBIGene:4763, name: neurofibromin 1 [12]. Gene NCBIGene:5378, name: PMS1 homolog 1, mismatch repair system component [13]. Gene NCBIGene:5395, name: PMS1 homolog 2, mismatch repair system component [14]. Gene NCBIGene:6224, name: ribosomal protein S20 [15]. Gene NCBIGene:7048, name: transforming growth factor beta receptor 2 [16]. Gene NCBIGene:999, name: cadherin 1 [17]. \n\nPubmed records found\n\nPubmed title: Lynch syndrome [18]. Pubmed title: Differentiating Lynch-like from Lynch syndrome [21]. Pubmed title: Lynch Syndrome-Associated Colorectal Cancer [23]. Pubmed title: Identification of Lynch Syndrome [25]. Pubmed title: Lynch Syndrome Genetics and Clinical Implications [26]. \n\nMedgen records found\n\nMedgen title: Lynch syndrome [19]. \n\nLiterature entity records found\n\nLiterature entity name: Lynch syndrome I (site-specific colonic cancer) [20]. Literature entity name: Colorectal Neoplasms Hereditary Nonpolyposis [22]. Literature entity name: Lynch Syndrome II [24]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead"
+}

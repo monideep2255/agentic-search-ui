@@ -134,7 +134,7 @@ _SEARCH_PATH_SQL = 'SET search_path = ag_catalog, "$user", public;'
 # it would silently change how many rows a caller asked for), and moving the
 # LIMIT onto the wrapping SELECT (measured, still 42 seconds, since the inner
 # plan is chosen the same way). Fixing the statistics server-side is the real
-# repair, but the graph is read-only from this repo and belongs to Systems 1
+# repair, but the graph is read-only from this repository and belongs to Systems 1
 # and 2.
 _ENABLE_SEQSCAN_OFF_SQL = "SET enable_seqscan = off;"
 

@@ -1,0 +1,70 @@
+▶
+GERD
+0 tools · 0 sources
+Show answer
+What are the symptoms of GERD?
+New search
+
+✓ Answered24.5s · 8 tools · 14 sources from 2 layers
+
+Show work ▾
+
+Found 5 pubmed records, 1 medgen record, 1 literature entity record and 5 clinical trial records for GERD.⁠3–14
+
+Clinical manifestations of GERD in young children are varied and nonspecific, prompting the necessity for careful diagnostic evaluation.⁠1
+
+COMPLICATIONS
+
+GERD may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.⁠2 The disease affects quality of life.⁠2
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Gastroesophageal Reflux Disease.	PMID:29132520	⁠3
+Gastroesophageal Reflux Disease.	PMID:33351044	⁠7
+Gastroesophageal Reflux Disease.	PMID:36170502	⁠9
+Gastroesophageal reflux disease in children: What's new right now?	PMID:37034973	⁠11
+Gastroesophageal Reflux Disease.	PMID:37516506	⁠13
+MEDGEN RECORDS FOUND
+DISEASE	IDENTIFIER	
+Gastroesophageal reflux (GERD)	medgen 1795938	⁠4
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Gastroesophageal Reflux	@DISEASE_Gastroesophageal_Reflux	⁠5
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Famotidine in Subjects With Non-erosive Gastroesophageal Reflux Disease	NCT00141960	COMPLETED	⁠6
+Efficacy of Pantoprazole in Patients Older Than 18 Years Who Have Symptoms of Acid Reflux (Gastroesophageal Reflux Disease) (BY1023/M3-339)	NCT00163306	COMPLETED	⁠8
+Natural History of Gastroesophageal Reflux (GER) in Children and Adolescents	NCT00181805	COMPLETED	⁠10
+On Demand Treatment of Reflux Disease	NCT00184522	COMPLETED	⁠12
+Treatment Of Gastroesophageal Reflux Disease By Endoscopic Fundoplication, A Placebo-Controlled Study	NCT00235677	COMPLETED	⁠14
+▶
+SOURCES
+12
+Based on 12 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+--- LINKS ---
+ -> https://www.ncbi.nlm.nih.gov/search/all/?term=GERD
+ -> https://pubmed.ncbi.nlm.nih.gov/37034973/
+ -> https://pubmed.ncbi.nlm.nih.gov/29132520/
+ -> https://www.ncbi.nlm.nih.gov/medgen/1795938
+ -> https://pubmed.ncbi.nlm.nih.gov/33351044/
+ -> https://pubmed.ncbi.nlm.nih.gov/36170502/
+ -> https://pubmed.ncbi.nlm.nih.gov/37516506/
+ -> https://www.ncbi.nlm.nih.gov/mesh/D005764
+ -> https://clinicaltrials.gov/study/NCT00141960
+ -> https://clinicaltrials.gov/study/NCT00163306
+ -> https://clinicaltrials.gov/study/NCT00181805
+ -> https://clinicaltrials.gov/study/NCT00184522
+ -> https://clinicaltrials.gov/study/NCT00235677
+
+TIME_TO_ANSWER_SECONDS=25.5 askback=true

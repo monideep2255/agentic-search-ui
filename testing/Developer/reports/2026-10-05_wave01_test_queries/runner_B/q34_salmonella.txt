@@ -1,0 +1,90 @@
+QUESTION: Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+LANDED=answer SECONDS=30.2
+
+Which Salmonella isolates in Pathogen Detection carry ESBL genes?
+New search
+
+✓ Answered27.4s · 2 tools · 21 sources from 1 layer
+
+Show work ▾
+
+I found 20 pathogen samples and 1 organism related to Salmonella[21].⁠1–20
+
+WHERE THIS ANSWER COMES FROM
+8891	⁠1
+A54560	⁠2
+8892	⁠3
+Pathogen sample	⁠4
+Pathogen sample	⁠5
+Pathogen sample	⁠6
+100RC3	⁠7
+FSW0064	⁠8
+FMA0085	⁠9
+NY-FSL-R8-0865	⁠10
+Showing 1–10 of 21
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Pathogen Detection lists 20,423 Salmonella isolates with these genes; the first 20 in the snapshot are shown.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+21
+Based on 21 sources
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+BUTTONS:
+New search
+Show work ▾
+1–20
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+‹ Previous
+Next ›
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+
+LINKS:
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009669
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009687
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1009692
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1712252
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA1712275
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA2054258
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMEA2673767
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02345061
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02345081
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02664839
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02664857
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098689
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098807
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098808
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098809
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03098810
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145677
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145678
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03145679
+ -> https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN03154419
+ -> https://www.ncbi.nlm.nih.gov/taxonomy/590

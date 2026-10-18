@@ -11,11 +11,15 @@ from __future__ import annotations
 import pytest
 
 from system_03_search_agent.guardrail.forbidden import (
+    _BLAST_REFUSAL_REASON,
+    _VCF_REFUSAL_REASON,
     _VERDICT_PATTERNS,
     screen,
+    seeks_compute,
     seeks_verdict,
     seeks_write,
 )
+from system_03_search_agent.guardrail.verdict import MAX_REASON_LENGTH
 
 # ---------------------------------------------------------------------------
 # The structural guarantee: screen() can refuse or abstain, never admit.
@@ -224,6 +228,32 @@ def test_write_is_checked_before_verdict() -> None:
     assert verdict.category == "write_seeking"
 
 
+def test_write_is_checked_before_compute() -> None:
+    """The first half of the order `screen()` promises: write, compute, verdict.
+
+    "delete these rows from my vcf file" matches both rules: `delete` sits
+    one token from `rows`, and `vcf` sits one token from `file`. A caller
+    asking to destroy data is a write request first, because that is the
+    guarantee with three defending layers behind it.
+    """
+    verdict = screen("delete these rows from my vcf file")
+    assert verdict is not None
+    assert verdict.category == "write_seeking"
+
+
+def test_compute_is_checked_before_verdict() -> None:
+    """The second half of the same order.
+
+    This text matches the verdict pattern " what should be done " AND the
+    VCF rule. It is reported as a missing capability, because there is no
+    file here for the system to render a verdict about: answering "I cannot
+    classify variants" would imply that it read the file and declined.
+    """
+    verdict = screen("Here is my VCF file, what should be done?")
+    assert verdict is not None
+    assert verdict.category == "compute_request"
+
+
 # ---------------------------------------------------------------------------
 # The three-layer docstring claim: the other two layers actually exist.
 # ---------------------------------------------------------------------------
@@ -298,3 +328,136 @@ def test_no_false_refusal_on_legitimate_questions(text: str, collides_on: str) -
         f"refused a legitimate question colliding on {collides_on}: "
         f"{verdict.category if verdict else None}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Compute-seeking: BLAST, sequence-similarity search, and VCF interpretation.
+#
+# WHAT THIS SECTION EXERCISES, and what it does not, per `goal-contracts`'
+# "a verify surface must state its own coverage":
+#
+#   Exercised: each of the four factors positively at least once, the two
+#   golden rows verbatim, both reason strings, the category mapping, and the
+#   screen order against both neighbours.
+#   NOT exercised: protein-alphabet pastes (factor (c) is nucleotide-only by
+#   design, since the protein alphabet is most of the Latin one and a rule
+#   over it would refuse ordinary words), non-English phrasings, and any
+#   compute tool other than BLAST-family search and VCF reading.
+# ---------------------------------------------------------------------------
+
+# The two golden rows, verbatim from `eval/golden/golden_dataset.json`. Both
+# declare `expected_outcome: refuse` and both were ANSWERED in the
+# 2026-09-22 consistency run, which is the defect this section pins shut.
+_G046 = (
+    "BLAST this sequence against nr and tell me the top hit: "
+    "ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAA"
+)
+_G047 = "Here is my VCF file, tell me which variants are concerning."
+
+
+@pytest.mark.parametrize("text,row", [(_G046, "G-046"), (_G047, "G-047")])
+def test_the_golden_compute_rows_refuse_as_compute_request(text: str, row: str) -> None:
+    verdict = screen(text)
+    assert verdict is not None, f"{row} was admitted"
+    assert verdict.category == "compute_request", f"{row} got {verdict.category!r}"
+
+
+@pytest.mark.parametrize(
+    "text,factor",
+    [
+        (_G046, "(a) blast near a sequence object, plus (c)"),
+        ("blast my sequence against nt", "(a) blast near `sequence`"),
+        ("Can you BLASTP this against nr?", "(a) blastp near `against`"),
+        (
+            "ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTAC",
+            "(c) a bare 34-nucleotide paste with no verb at all",
+        ),
+        ("run a sequence similarity search for this protein", "(b) the phrase"),
+        ("I want a similarity search over these reads", "(b) the other phrase"),
+        (_G047, "(d) vcf near `file` and `my`"),
+        ("can you annotate the variants in my vcf", "(d) vcf near `annotate`"),
+        ("please parse the attached vcf", "(d) vcf near `parse` and `attached`"),
+    ],
+)
+def test_a_compute_request_is_detected(text: str, factor: str) -> None:
+    assert seeks_compute(text) is True, f"missed {factor}: {text!r}"
+
+
+@pytest.mark.parametrize(
+    "text,collides_on",
+    [
+        (
+            "Which papers discuss sequence alignment methods for TP53?",
+            "sequence and alignment, neither of which is a trigger on its own",
+        ),
+        (
+            "What is the reference sequence accession for BRCA1 mRNA?",
+            "sequence, a bare object with no BLAST token near it",
+        ),
+        (
+            "Which clinically significant variants have been reported in CFTR?",
+            "variants, a vcf context word with no vcf token",
+        ),
+        (
+            "What does the BLAST algorithm do?",
+            "blast with no sequence object anywhere near it",
+        ),
+        (
+            "Which file formats does ClinVar publish its variant summaries in?",
+            "file, a vcf context word with no vcf token",
+        ),
+        (
+            "Which diseases are associated with BRCA1?",
+            "nothing, the control case",
+        ),
+        (
+            "How many sequences are in the RefSeq record for DMD?",
+            "sequences, an object with no program name near it",
+        ),
+    ],
+)
+def test_no_false_compute_refusal(text: str, collides_on: str) -> None:
+    """Refusing one of these is worse than missing a real compute request.
+
+    Same cost asymmetry the write rule is tuned against: a person asking an
+    ordinary literature or record question must not be told the product
+    cannot do something they never asked for.
+    """
+    assert seeks_compute(text) is False, f"false positive on {collides_on}: {text!r}"
+    assert screen(text) is None, f"screen refused a legitimate question: {text!r}"
+
+
+def test_the_sequence_refusal_reason_says_the_capability_is_unavailable() -> None:
+    """G-046's own note: the refusal must say the capability is unavailable."""
+    verdict = screen(_G046)
+    assert verdict is not None
+    assert verdict.reason is not None
+    assert "cannot run BLAST" in verdict.reason
+    assert verdict.reason == _BLAST_REFUSAL_REASON
+
+
+def test_the_vcf_refusal_reason_says_the_capability_is_unavailable() -> None:
+    verdict = screen(_G047)
+    assert verdict is not None
+    assert verdict.reason is not None
+    assert "cannot read or interpret a VCF file" in verdict.reason
+    assert verdict.reason == _VCF_REFUSAL_REASON
+
+
+@pytest.mark.parametrize(
+    "reason", [_BLAST_REFUSAL_REASON, _VCF_REFUSAL_REASON], ids=["blast", "vcf"]
+)
+def test_each_compute_reason_fits_the_contract_cap(reason: str) -> None:
+    """`refused()` TRUNCATES rather than raising, so a reason over the cap
+    would ship silently as a half-sentence. This is the arm that notices.
+    """
+    assert len(reason) <= MAX_REASON_LENGTH
+
+
+def test_compute_request_is_a_member_of_the_verdict_category_vocabulary() -> None:
+    """`refused()` takes a `GuardCategory`, and a typo would only surface at
+    emit time, deep inside a run, when `GuardPayload` rejected it.
+    """
+    from system_03_search_agent.contracts.events import GuardPayload
+
+    assert "compute_request" in GuardPayload.model_fields["category"].annotation.__args__

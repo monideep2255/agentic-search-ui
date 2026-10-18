@@ -1,0 +1,23 @@
+{
+  "surface": "GraphQL",
+  "question": "Tell me about black holes.",
+  "session_id": "audit-gql-black",
+  "depth_sent": null,
+  "http_status": 200,
+  "outcome": "refused",
+  "trust_outcome": "refuse",
+  "citation_count": 0,
+  "citation_hosts": [],
+  "citation_urls_sample": [],
+  "first_sentence": "This question could not be answered: it did not pass this system's content guardrail (I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.).",
+  "answer_chars": 213,
+  "answer_head": "This question could not be answered: it did not pass this system's content guardrail (I answer questions about biomedical evidence from NCBI data: genes, variants, diseases, publications, and sequencing records.).",
+  "trust_signal": {
+    "outcome": "refuse",
+    "riskTier": "unknown",
+    "grounded": false,
+    "message": "No trust assessment of any scope reached this surface for this run, so its answer is reported as ungrounded and its risk tier as unknown rather than assumed to be safe."
+  },
+  "persona_name": "Khorana",
+  "wall_s": 1.8
+}

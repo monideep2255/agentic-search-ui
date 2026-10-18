@@ -1,0 +1,66 @@
+== page_line_1_s3_login: exit 2 (1.9s)
+   stdout: 
+   stderr: usage: s3 login [-h] [--base-url BASE_URL] email
+           s3 login: error: the following arguments are required: email
+== page_line_2_s3_ask_without_login: exit 1 (1.2s)
+   stdout: 
+   stderr: s3: not logged in; run 's3 login' first
+== s3_ask_json_flag: exit 2 (0.9s)
+   stdout: 
+   stderr: usage: s3 ask [-h] [--session-id SESSION_ID]
+                         [--depth {clinical_brief,researcher,deep_technical,plain_language}]
+                         question
+           s3 ask: error: unrecognized arguments: --json
+== s3_no_args: exit 2 (0.9s)
+   stdout: 
+   stderr: usage: s3 <ask|stop|login> ...
+== s3_help: exit 2 (0.8s)
+   stdout: 
+   stderr: s3: unknown command '--help'; expected ask, stop, or login
+== s3_ask_help: exit 0 (1.4s)
+   stdout: usage: s3 ask [-h] [--session-id SESSION_ID]
+                         [--depth {clinical_brief,researcher,deep_technical,plain_language}]
+                         question
+           
+           positional arguments:
+             question              the question to ask
+           
+           options:
+             -h, --help            show this help message and exit
+             --session-id SESSION_ID
+                                   a session id to group related questions; a fresh one
+                         
+   stderr: 
+== s3_login_help: exit 0 (0.8s)
+   stdout: usage: s3 login [-h] [--base-url BASE_URL] email
+           
+           positional arguments:
+             email                the account email
+           
+           options:
+             -h, --help           show this help message and exit
+             --base-url BASE_URL  the server to log into; consumed by main()'s sync
+                                  wrapper before the HTTP client is built, not read here,
+                                  since async_main is always handed an already-
+            
+   stderr: 
+== kgx_help: exit 1 (0.6s)
+   stdout: 
+   stderr: Traceback (most recent call last):
+             File "<scratch>/int_prefix/bin/s3-kgx-export", line 5, in <module>
+               from system_03_search_agent.export.cli import main
+             File "<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/export/cli.py", line 72, in <module>
+               from system_03_search_agent.tools.graph_connection import GraphError
+             File "<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/tools/graph_connection.py", line 91, in <module>
+               from system_03_search_agent.observability.audit import (
+           ModuleNotFoundError: No module named 'system_03_search_agen
+== kgx_as_printed_no_graph_access: exit 1 (0.3s)
+   stdout: 
+   stderr: Traceback (most recent call last):
+             File "<scratch>/int_prefix/bin/s3-kgx-export", line 5, in <module>
+               from system_03_search_agent.export.cli import main
+             File "<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/export/cli.py", line 72, in <module>
+               from system_03_search_agent.tools.graph_connection import GraphError
+             File "<scratch>/int_prefix/lib/python3.11/site-packages/system_03_search_agent/tools/graph_connection.py", line 91, in <module>
+               from system_03_search_agent.observability.audit import (
+           ModuleNotFoundError: No module named 'system_03_search_agen

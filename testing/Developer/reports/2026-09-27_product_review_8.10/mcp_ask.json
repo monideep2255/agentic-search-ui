@@ -1,0 +1,539 @@
+{
+ "tools": [
+  {
+   "name": "ask_biomedical_question",
+   "description": "Ask a biomedical research question about genes, variants, diseases, publications or sequencing records. Returns a cited answer assembled from the NCBI knowledge graph and live NCBI APIs, or an honest refusal. Every [n] marker in the answer resolves to an entry in citations. To ask a follow-up in the same conversation, pass the session_id this tool returned. When clarifying_question is set, the answer is a question back to you: send one of clarifying_options, or your own reply, as the next query with the same session_id.",
+   "input_schema": {
+    "properties": {
+     "query": {
+      "description": "The question, in plain words, for example 'Which diseases are associated with BRCA1?'.",
+      "maxLength": 2000,
+      "title": "Query",
+      "type": "string"
+     },
+     "audience_depth": {
+      "default": "researcher",
+      "description": "Who the answer is written for. 'researcher' is the default here; 'plain_language' is the everyday wording the web app uses by default; 'clinical_brief' and 'deep_technical' are the product's other two depths.",
+      "enum": [
+       "plain_language",
+       "researcher",
+       "clinical_brief",
+       "deep_technical"
+      ],
+      "title": "Audience Depth",
+      "type": "string"
+     },
+     "session_id": {
+      "anyOf": [
+       {
+        "maxLength": 64,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Leave this out to start a new conversation. To ask a follow-up, pass the session_id a previous answer returned, so 'it' or 'that gene' refers to what was just discussed.",
+      "title": "Session Id"
+     }
+    },
+    "required": [
+     "query"
+    ],
+    "type": "object",
+    "title": "ask_biomedical_questionArguments"
+   }
+  },
+  {
+   "name": "list_past_searches",
+   "description": "List your own past searches, newest first: each one's trace_id, the question, when it was asked, its trust verdict, how many sources it cited, and whether its answer can be reopened with reopen_past_answer. Searches this account made on the web app, the command line or this server all appear.",
+   "input_schema": {
+    "properties": {
+     "limit": {
+      "default": 20,
+      "description": "How many searches to return, 1 to 50. Defaults to 20.",
+      "maximum": 50,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+     }
+    },
+    "type": "object",
+    "title": "list_past_searchesArguments"
+   }
+  },
+  {
+   "name": "reopen_past_answer",
+   "description": "Reopen the answer one of your past searches gave, by the trace_id list_past_searches returned, without running the search again. Only searches listed with has_saved_answer true can be reopened.",
+   "input_schema": {
+    "properties": {
+     "trace_id": {
+      "description": "The trace_id of one of your past searches, from list_past_searches.",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Trace Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "trace_id"
+    ],
+    "type": "object",
+    "title": "reopen_past_answerArguments"
+   }
+  },
+  {
+   "name": "send_answer_feedback",
+   "description": "Tell the team what you thought of one answer: a thumbs up or down, a comment, a reason it was wrong, or the citations that do not support their claim. Send at least one of them. run_id is the one ask_biomedical_question returned. Sending feedback again for the same answer replaces the earlier one.",
+   "input_schema": {
+    "properties": {
+     "run_id": {
+      "description": "The run_id ask_biomedical_question returned for the answer you are rating.",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+     },
+     "rating": {
+      "anyOf": [
+       {
+        "enum": [
+         "up",
+         "down"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "'up' if the answer helped, 'down' if it did not.",
+      "title": "Rating"
+     },
+     "comment": {
+      "anyOf": [
+       {
+        "maxLength": 2000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Anything you want the team to read about this answer.",
+      "title": "Comment"
+     },
+     "flagged_reason": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "A short reason the answer is wrong or unsafe, if it is.",
+      "title": "Flagged Reason"
+     },
+     "citation_flags": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/$defs/FeedbackCitationFlag"
+        },
+        "maxItems": 50,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Citations that do not support their claim: each a citation_id and a reason.",
+      "title": "Citation Flags"
+     }
+    },
+    "required": [
+     "run_id"
+    ],
+    "type": "object",
+    "$defs": {
+     "FeedbackCitationFlag": {
+      "additionalProperties": false,
+      "description": "One entry in `FeedbackPayload.citation_flags`: which citation, and why.\n\nExists for the same reason `CompressedFinding.citation_ids` in\n`contracts/query.py` needed its own per-item validator (F-4.5-J-19): a\n`max_length` on the surrounding list bounds how MANY entries arrive and\nsays nothing about how big one entry is, or what keys it carries.\n`citation_flags` used to be a bare `list[dict[str, str]]` with\n`max_length=50` on the list only, so fifty entries of two megabytes\neach, or fifty entries carrying arbitrary keys instead of\n`citation_id`/`reason`, both validated cleanly and were accepted with a\n204 (F-4.6-A-07, the adversary round that found this: 100 MB of caller\nJSON accepted). This model closes both holes: only the two named keys\nare accepted (`extra=\"forbid\"`), and each is bounded on its own.",
+      "properties": {
+       "citation_id": {
+        "maxLength": 64,
+        "minLength": 1,
+        "title": "Citation Id",
+        "type": "string"
+       },
+       "reason": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Reason",
+        "type": "string"
+       }
+      },
+      "required": [
+       "citation_id",
+       "reason"
+      ],
+      "title": "FeedbackCitationFlag",
+      "type": "object"
+     }
+    },
+    "title": "send_answer_feedbackArguments"
+   }
+  }
+ ],
+ "ask_seconds": 13.6,
+ "ask": {
+  "is_error": false,
+  "structured": {
+   "answer": "I found 4 conditions related to BRCA1 [1][2][3][4]. \n\nWhere this answer comes from\n\nDisease record MedGen:C0346153 [1]. Disease record MedGen:C2676676 [2]. Disease record MedGen:C3280442 [3]. Disease record MedGen:C4554406 [4]. Gene symbol: BRCA1 [5]. Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [6]. BRCA1 DNA REPAIR-ASSOCIATED PROTEIN [7]. BRCA1 [7]. Gene name: BRCA1 [8]. Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [9]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [10]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [11]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [12]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [13]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [14]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [15]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [16]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [17]. \n\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\n\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry.\n\nThis is a research summary, not medical advice.",
+   "citations": [
+    {
+     "citation_id": "cq-7263ca596806-1",
+     "display_index": 1,
+     "source": "MedGen",
+     "source_id": "MedGen:C0346153",
+     "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0346153",
+     "layer": "layer_1_graph",
+     "field": "curie",
+     "claim_text": "Disease record MedGen:C0346153",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "hedged",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": "2026-04-22",
+     "entity_name": null
+    },
+    {
+     "citation_id": "cq-7263ca596806-2",
+     "display_index": 2,
+     "source": "MedGen",
+     "source_id": "MedGen:C2676676",
+     "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C2676676",
+     "layer": "layer_1_graph",
+     "field": "curie",
+     "claim_text": "Disease record MedGen:C2676676",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "hedged",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": "2026-04-22",
+     "entity_name": null
+    },
+    {
+     "citation_id": "cq-7263ca596806-3",
+     "display_index": 3,
+     "source": "MedGen",
+     "source_id": "MedGen:C3280442",
+     "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C3280442",
+     "layer": "layer_1_graph",
+     "field": "curie",
+     "claim_text": "Disease record MedGen:C3280442",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "hedged",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": "2026-04-22",
+     "entity_name": null
+    },
+    {
+     "citation_id": "cq-7263ca596806-4",
+     "display_index": 4,
+     "source": "MedGen",
+     "source_id": "MedGen:C4554406",
+     "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C4554406",
+     "layer": "layer_1_graph",
+     "field": "curie",
+     "claim_text": "Disease record MedGen:C4554406",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "hedged",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": "2026-04-22",
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-383f6a58bd01-5",
+     "display_index": 5,
+     "source": "gene",
+     "source_id": "672",
+     "source_url": "https://www.ncbi.nlm.nih.gov/gene/672/",
+     "layer": "layer_2_api",
+     "field": "symbol",
+     "claim_text": "gene symbol: BRCA1",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-ef91c5735c20-6",
+     "display_index": 6,
+     "source": "clinvar",
+     "source_id": "267740",
+     "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/",
+     "layer": "layer_2_api",
+     "field": "title",
+     "claim_text": "clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-c1b826b727e2-7",
+     "display_index": 7,
+     "source": "omim",
+     "source_id": "113705",
+     "source_url": "https://omim.org/entry/113705",
+     "layer": "layer_2_api",
+     "field": "title",
+     "claim_text": "BRCA1 DNA REPAIR-ASSOCIATED PROTEIN",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-af5bcceaa1b1-8",
+     "display_index": 8,
+     "source": "gene",
+     "source_id": "672",
+     "source_url": "https://www.ncbi.nlm.nih.gov/gene/672",
+     "layer": "layer_2_api",
+     "field": "name",
+     "claim_text": "gene name: BRCA1",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ct-bd6399ba3151-9",
+     "display_index": 9,
+     "source": "clinicaltrials.gov",
+     "source_id": "NCT00590109",
+     "source_url": "https://clinicaltrials.gov/study/NCT00590109",
+     "layer": "layer_3_enrichment",
+     "field": "name",
+     "claim_text": "Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer",
+     "evidence_kind": "external_annotation",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-ef91c5735c20-11",
+     "display_index": 10,
+     "source": "clinvar",
+     "source_id": "267741",
+     "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/",
+     "layer": "layer_2_api",
+     "field": "title",
+     "claim_text": "clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ct-bd6399ba3151-13",
+     "display_index": 11,
+     "source": "clinicaltrials.gov",
+     "source_id": "NCT00597987",
+     "source_url": "https://clinicaltrials.gov/study/NCT00597987",
+     "layer": "layer_3_enrichment",
+     "field": "name",
+     "claim_text": "Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression",
+     "evidence_kind": "external_annotation",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-ef91c5735c20-15",
+     "display_index": 12,
+     "source": "clinvar",
+     "source_id": "373892",
+     "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/",
+     "layer": "layer_2_api",
+     "field": "title",
+     "claim_text": "clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ct-bd6399ba3151-16",
+     "display_index": 13,
+     "source": "clinicaltrials.gov",
+     "source_id": "NCT00617656",
+     "source_url": "https://clinicaltrials.gov/study/NCT00617656",
+     "layer": "layer_3_enrichment",
+     "field": "name",
+     "claim_text": "Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma",
+     "evidence_kind": "external_annotation",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-ef91c5735c20-18",
+     "display_index": 14,
+     "source": "clinvar",
+     "source_id": "4823850",
+     "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/",
+     "layer": "layer_2_api",
+     "field": "title",
+     "claim_text": "clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ct-bd6399ba3151-19",
+     "display_index": 15,
+     "source": "clinicaltrials.gov",
+     "source_id": "NCT00673335",
+     "source_url": "https://clinicaltrials.gov/study/NCT00673335",
+     "layer": "layer_3_enrichment",
+     "field": "name",
+     "claim_text": "Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation",
+     "evidence_kind": "external_annotation",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ne-ef91c5735c20-21",
+     "display_index": 16,
+     "source": "clinvar",
+     "source_id": "4848411",
+     "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/",
+     "layer": "layer_2_api",
+     "field": "title",
+     "claim_text": "clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)",
+     "evidence_kind": "primary_assertion",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    },
+    {
+     "citation_id": "ct-bd6399ba3151-22",
+     "display_index": 17,
+     "source": "clinicaltrials.gov",
+     "source_id": "NCT00700778",
+     "source_url": "https://clinicaltrials.gov/study/NCT00700778",
+     "layer": "layer_3_enrichment",
+     "field": "name",
+     "claim_text": "Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations",
+     "evidence_kind": "external_annotation",
+     "assertion_confidence": "asserted",
+     "population_ancestry_context": null,
+     "license": "public_domain_us_gov",
+     "snapshot_date": null,
+     "entity_name": null
+    }
+   ],
+   "trust_signal": {
+    "outcome": "ask",
+    "risk_tier": "high",
+    "grounded": true,
+    "triangulated": null,
+    "citation_id": null,
+    "scope": "answer",
+    "message": null,
+    "fallback_link": null
+   },
+   "run_id": "594b6681-97af-4627-82d0-a4d08bce56c5",
+   "persona_name": "Avery",
+   "session_id": "594b6681-97af-4627-82d0-a4d08bce56c5",
+   "trust_line": "Based on 17 sources, not yet confirmed",
+   "clarifying_question": null,
+   "clarifying_options": null
+  },
+  "text": [
+   "{\n  \"answer\": \"I found 4 conditions related to BRCA1 [1][2][3][4]. \\n\\nWhere this answer comes from\\n\\nDisease record MedGen:C0346153 [1]. Disease record MedGen:C2676676 [2]. Disease record MedGen:C3280442 [3]. Disease record MedGen:C4554406 [4]. Gene symbol: BRCA1 [5]. Clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del [6]. BRCA1 DNA REPAIR-ASSOCIATED PROTEIN [7]. BRCA1 [7]. Gene name: BRCA1 [8]. Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer [9]. Clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG [10]. Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression [11]. Clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del [12]. Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma [13]. Clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3 [14]. Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation [15]. Clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=) [16]. Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations [17]. \\n\\nNote: the written summary of these records could not be verified against them, so this answer lists the records found instead\\n\\nOne of the background searches did not finish, so this answer may be missing sources. Ask again to retry.\\n\\nThis is a research summary, not medical advice.\",\n  \"citations\": [\n    {\n      \"citation_id\": \"cq-7263ca596806-1\",\n      \"display_index\": 1,\n      \"source\": \"MedGen\",\n      \"source_id\": \"MedGen:C0346153\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C0346153\",\n      \"layer\": \"layer_1_graph\",\n      \"field\": \"curie\",\n      \"claim_text\": \"Disease record MedGen:C0346153\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"hedged\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": \"2026-04-22\",\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"cq-7263ca596806-2\",\n      \"display_index\": 2,\n      \"source\": \"MedGen\",\n      \"source_id\": \"MedGen:C2676676\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C2676676\",\n      \"layer\": \"layer_1_graph\",\n      \"field\": \"curie\",\n      \"claim_text\": \"Disease record MedGen:C2676676\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"hedged\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": \"2026-04-22\",\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"cq-7263ca596806-3\",\n      \"display_index\": 3,\n      \"source\": \"MedGen\",\n      \"source_id\": \"MedGen:C3280442\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C3280442\",\n      \"layer\": \"layer_1_graph\",\n      \"field\": \"curie\",\n      \"claim_text\": \"Disease record MedGen:C3280442\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"hedged\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": \"2026-04-22\",\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"cq-7263ca596806-4\",\n      \"display_index\": 4,\n      \"source\": \"MedGen\",\n      \"source_id\": \"MedGen:C4554406\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/medgen/C4554406\",\n      \"layer\": \"layer_1_graph\",\n      \"field\": \"curie\",\n      \"claim_text\": \"Disease record MedGen:C4554406\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"hedged\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": \"2026-04-22\",\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-383f6a58bd01-5\",\n      \"display_index\": 5,\n      \"source\": \"gene\",\n      \"source_id\": \"672\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/gene/672/\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"symbol\",\n      \"claim_text\": \"gene symbol: BRCA1\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-ef91c5735c20-6\",\n      \"display_index\": 6,\n      \"source\": \"clinvar\",\n      \"source_id\": \"267740\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"title\",\n      \"claim_text\": \"clinvar title: NM_007294.4(BRCA1):c.5243_5277+2788del\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-c1b826b727e2-7\",\n      \"display_index\": 7,\n      \"source\": \"omim\",\n      \"source_id\": \"113705\",\n      \"source_url\": \"https://omim.org/entry/113705\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"title\",\n      \"claim_text\": \"BRCA1 DNA REPAIR-ASSOCIATED PROTEIN\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-af5bcceaa1b1-8\",\n      \"display_index\": 8,\n      \"source\": \"gene\",\n      \"source_id\": \"672\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/gene/672\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"name\",\n      \"claim_text\": \"gene name: BRCA1\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ct-bd6399ba3151-9\",\n      \"display_index\": 9,\n      \"source\": \"clinicaltrials.gov\",\n      \"source_id\": \"NCT00590109\",\n      \"source_url\": \"https://clinicaltrials.gov/study/NCT00590109\",\n      \"layer\": \"layer_3_enrichment\",\n      \"field\": \"name\",\n      \"claim_text\": \"Clinical trial name: Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\",\n      \"evidence_kind\": \"external_annotation\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-ef91c5735c20-11\",\n      \"display_index\": 10,\n      \"source\": \"clinvar\",\n      \"source_id\": \"267741\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"title\",\n      \"claim_text\": \"clinvar title: NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ct-bd6399ba3151-13\",\n      \"display_index\": 11,\n      \"source\": \"clinicaltrials.gov\",\n      \"source_id\": \"NCT00597987\",\n      \"source_url\": \"https://clinicaltrials.gov/study/NCT00597987\",\n      \"layer\": \"layer_3_enrichment\",\n      \"field\": \"name\",\n      \"claim_text\": \"Clinical trial name: BRCA1 Haploinsufficiency and Gene Expression\",\n      \"evidence_kind\": \"external_annotation\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-ef91c5735c20-15\",\n      \"display_index\": 12,\n      \"source\": \"clinvar\",\n      \"source_id\": \"373892\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"title\",\n      \"claim_text\": \"clinvar title: NG_005905.2:g.(147057_150288)_(160933_166866)del\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ct-bd6399ba3151-16\",\n      \"display_index\": 13,\n      \"source\": \"clinicaltrials.gov\",\n      \"source_id\": \"NCT00617656\",\n      \"source_url\": \"https://clinicaltrials.gov/study/NCT00617656\",\n      \"layer\": \"layer_3_enrichment\",\n      \"field\": \"name\",\n      \"claim_text\": \"Clinical trial name: Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma\",\n      \"evidence_kind\": \"external_annotation\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-ef91c5735c20-18\",\n      \"display_index\": 14,\n      \"source\": \"clinvar\",\n      \"source_id\": \"4823850\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/clinvar/variation/4823850/\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"title\",\n      \"claim_text\": \"clinvar title: GRCh37/hg19 17q21.31(chr17:41267743-41267796)x3\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ct-bd6399ba3151-19\",\n      \"display_index\": 15,\n      \"source\": \"clinicaltrials.gov\",\n      \"source_id\": \"NCT00673335\",\n      \"source_url\": \"https://clinicaltrials.gov/study/NCT00673335\",\n      \"layer\": \"layer_3_enrichment\",\n      \"field\": \"name\",\n      \"claim_text\": \"Clinical trial name: Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation\",\n      \"evidence_kind\": \"external_annotation\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ne-ef91c5735c20-21\",\n      \"display_index\": 16,\n      \"source\": \"clinvar\",\n      \"source_id\": \"4848411\",\n      \"source_url\": \"https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/\",\n      \"layer\": \"layer_2_api\",\n      \"field\": \"title\",\n      \"claim_text\": \"clinvar title: NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)\",\n      \"evidence_kind\": \"primary_assertion\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    },\n    {\n      \"citation_id\": \"ct-bd6399ba3151-22\",\n      \"display_index\": 17,\n      \"source\": \"clinicaltrials.gov\",\n      \"source_id\": \"NCT00700778\",\n      \"source_url\": \"https://clinicaltrials.gov/study/NCT00700778\",\n      \"layer\": \"layer_3_enrichment\",\n      \"field\": \"name\",\n      \"claim_text\": \"Clinical trial name: Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations\",\n      \"evidence_kind\": \"external_annotation\",\n      \"assertion_confidence\": \"asserted\",\n      \"population_ancestry_context\": null,\n      \"license\": \"public_domain_us_gov\",\n      \"snapshot_date\": null,\n      \"entity_name\": null\n    }\n  ],\n  \"trust_signal\": {\n    \"outcome\": \"ask\",\n    \"risk_tier\": \"high\",\n    \"grounded\": true,\n    \"triangulated\": null,\n    \"citation_id\": null,\n    \"scope\": \"answer\",\n    \"message\": null,\n    \"fallback_link\": null\n  },\n  \"run_id\": \"594b6681-97af-4627-82d0-a4d08bce56c5\",\n  \"persona_name\": \"Avery\",\n  \"session_id\": \"594b6681-97af-4627-82d0-a4d08bce56c5\",\n  \"trust_line\": \"Based on 17 sources, not yet confirmed\",\n  \"clarifying_question\": null,\n  \"clarifying_options\": null\n}"
+  ]
+ },
+ "list_past_searches": {
+  "is_error": false,
+  "structured": {
+   "items": [
+    {
+     "trace_id": "594b6681-97af-4627-82d0-a4d08bce56c5",
+     "question": "Which diseases are associated with BRCA1?",
+     "asked_at": "2026-09-27T02:36:14.205266Z",
+     "trust_signal": "ask",
+     "citation_count": 17,
+     "has_saved_answer": false
+    },
+    {
+     "trace_id": "9d8590c8-d86b-4e37-a2d0-04ce558233f5",
+     "question": "Which diseases are associated with BRCA1?",
+     "asked_at": "2026-09-27T02:34:15.264237Z",
+     "trust_signal": "ask",
+     "citation_count": 18,
+     "has_saved_answer": false
+    },
+    {
+     "trace_id": "78d0722c-496f-4b01-85d3-da13d25a75be",
+     "question": "Which diseases are associated with BRCA1?",
+     "asked_at": "2026-09-27T02:33:05.423289Z",
+     "trust_signal": "ask",
+     "citation_count": 17,
+     "has_saved_answer": false
+    },
+    {
+     "trace_id": "9c39a4d6-bbf0-4ede-9ba2-3707ef20646b",
+     "question": "Which diseases are associated with BRCA1?",
+     "asked_at": "2026-09-27T02:24:41.690241Z",
+     "trust_signal": "ask",
+     "citation_count": 12,
+     "has_saved_answer": false
+    }
+   ],
+   "count": 4,
+   "omitted_count": 0
+  },
+  "text": [
+   "{\n  \"items\": [\n    {\n      \"trace_id\": \"594b6681-97af-4627-82d0-a4d08bce56c5\",\n      \"question\": \"Which diseases are associated with BRCA1?\",\n      \"asked_at\": \"2026-09-27T02:36:14.205266Z\",\n      \"trust_signal\": \"ask\",\n      \"citation_count\": 17,\n      \"has_saved_answer\": false\n    },\n    {\n      \"trace_id\": \"9d8590c8-d86b-4e37-a2d0-04ce558233f5\",\n      \"question\": \"Which diseases are associated with BRCA1?\",\n      \"asked_at\": \"2026-09-27T02:34:15.264237Z\",\n      \"trust_signal\": \"ask\",\n      \"citation_count\": 18,\n      \"has_saved_answer\": false\n    },\n    {\n      \"trace_id\": \"78d0722c-496f-4b01-85d3-da13d25a75be\",\n      \"question\": \"Which diseases are associated with BRCA1?\",\n      \"asked_at\": \"2026-09-27T02:33:05.423289Z\",\n      \"trust_signal\": \"ask\",\n      \"citation_count\": 17,\n      \"has_saved_answer\": false\n    },\n    {\n      \"trace_id\": \"9c39a4d6-bbf0-4ede-9ba2-3707ef20646b\",\n      \"question\": \"Which diseases are associated with BRCA1?\",\n      \"asked_at\": \"2026-09-27T02:24:41.690241Z\",\n      \"trust_signal\": \"ask\",\n      \"citation_count\": 12,\n      \"has_saved_answer\": false\n    }\n  ],\n  \"count\": 4,\n  \"omitted_count\": 0\n}"
+  ]
+ }
+}

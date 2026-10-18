@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import UTC, date, datetime, timedelta
 from datetime import time as dt_time
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import (
     Depends,
@@ -33,6 +33,11 @@ from system_03_search_agent.adapters.mcp.server import server as mcp_server
 from system_03_search_agent.adapters.mcp.server import (
     transport_security_settings as mcp_transport_security_settings,
 )
+from system_03_search_agent.adapters.web_sse.loop_stall import (
+    start_loop_stall_watch,
+    stop_loop_stall_watch,
+)
+from system_03_search_agent.adapters.web_sse.proxy_scheme import ProxySchemeMiddleware
 from system_03_search_agent.auth.dependencies import (
     _GUEST_SESSION_NO_LONGER_VALID_DETAIL,
     _GUEST_SESSION_REVOKED_REASON,
@@ -50,6 +55,7 @@ from system_03_search_agent.auth.router import router as auth_router
 from system_03_search_agent.auth.router import source_hash_for_request
 from system_03_search_agent.contracts.events import CitationPayload
 from system_03_search_agent.contracts.query import Query, RequestContext
+from system_03_search_agent.contracts.token_order import names_same_record, one_per_citation_id
 from system_03_search_agent.core.persona import persona_record_for_session
 from system_03_search_agent.core.run_registry import (
     CONCURRENT_RUN_CAP_RETRY_AFTER_S,
@@ -78,7 +84,13 @@ from system_03_search_agent.feedback import (
     InteractionNotFound,
     record_feedback,
 )
-from system_03_search_agent.feedback.history import DEFAULT_LIMIT, MAX_LIMIT, list_history
+from system_03_search_agent.feedback.contracts import MAX_CITATIONS_PER_ANSWER
+from system_03_search_agent.feedback.history import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    get_saved_answer,
+    list_history,
+)
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
     anon_daily_source_share,
@@ -237,9 +249,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     `app`, never to a mounted sub-app on its own.
     """
     _run_startup_migrations_if_requested()
-    async with AsyncExitStack() as stack:
-        await stack.enter_async_context(_mcp_asgi_app.router.lifespan_context(_mcp_asgi_app))
-        yield
+    stall_watch = start_loop_stall_watch()
+    try:
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(_mcp_asgi_app.router.lifespan_context(_mcp_asgi_app))
+            yield
+    finally:
+        await stop_loop_stall_watch(stall_watch)
 
 
 app = FastAPI(lifespan=_lifespan)
@@ -262,7 +278,7 @@ app.mount("/mcp", _mcp_asgi_app)
 # so the next reader can check the claim in one grep instead of trusting it,
 # which is the whole lesson build phase 4.15 drew from finding four of these
 # in one phase.
-_MAX_CITATIONS_PER_RUN = 50
+_MAX_CITATIONS_PER_RUN = MAX_CITATIONS_PER_ANSWER
 
 # F-4.0-A-02/A-03 (adversary round 1, build phase 4.0): the ONLY valid
 # `Last-Event-ID` shape is the digits `Event.seq` actually is (`ge=0`,
@@ -352,6 +368,19 @@ app.include_router(graphql_router, prefix=GRAPHQL_PATH)
 # a worse public surface than a middleware that costs one path comparison.
 app.add_middleware(RequestTimeoutMiddleware)
 
+# Item 11.30 fix B, 2026-09-22. Added LAST on purpose, because
+# `add_middleware` inserts at the front of the stack, so the last one added
+# is the OUTERMOST. Outermost is the requirement, not a preference: this has
+# to correct `scope["scheme"]` before Starlette's router builds a mount's
+# trailing-slash redirect as an absolute url from that same scope, which is
+# what made a `POST /mcp` answer `307` with a plaintext `location`.
+#
+# It trusts `x-forwarded-proto` and NEVER the client address, so every
+# rate limit that hashes the address reads exactly what it read before.
+# `proxy_scheme.py`'s docstring carries the full reasoning, including why
+# `--forwarded-allow-ips='*'` was rejected as the one-line alternative.
+app.add_middleware(ProxySchemeMiddleware)
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -405,6 +434,27 @@ def get_health() -> HealthResponse:
 # query endpoints in sync forever contradicts "finalized as the public API
 # surface." Decision logged in DECISIONS.md.
 # ---------------------------------------------------------------------------
+
+
+#: `POST /v1/query?reads=placement`: the client lays the answer out by
+#: `TokenPayload.placement`, so the record listing may be sent ahead of the
+#: summary and every token says where it belongs (build phase 8.7, card 50).
+#: A client that does not send it gets the stream every client built before
+#: that field reads: no `placement` key, the listing after the summary
+#: (fix round, F-8.7-A01 and F-8.7-A14). Documented in
+#: `visualizations/Schema_visualization.md` (the `placement` bullet) and
+#: `visualizations/System_3_deep_dive.md` (the API surface).
+_READS_PLACEMENT = "placement"
+_MAX_READS_LENGTH = 64
+
+
+def _reads_placement(reads: str | None) -> bool:
+    """Whether a `reads` query value declares `placement`. Any other value,
+    and any other name in the list, is ignored, so a later client may name
+    more without an older server refusing it."""
+    if not reads:
+        return False
+    return _READS_PLACEMENT in {part.strip() for part in reads.split(",")}
 
 
 class CreateRunRequest(BaseModel):
@@ -800,8 +850,12 @@ class HistoryItem(BaseModel):
     `trace_id` matches `max_length=64`, `question` matches `query_text`'s
     `max_length=2000`. `trust_signal` is one of four short literals
     (`answer`, `flag`, `ask`, `refuse`); 20 characters is headroom, not a
-    measured bound. No answer narrative: decision D-4.13-01 is why this
-    model has no such field to bound.
+    measured bound. No answer narrative in THIS model, and as of 2026-09-23
+    the reason is no longer decision D-4.13-01's "nothing stores one": the
+    table does store one now (alembic 0010). It is a list of questions, so
+    it carries one boolean saying whether each can be opened, and
+    `SavedAnswerResponse` below carries the answer itself when somebody
+    opens it.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -811,6 +865,74 @@ class HistoryItem(BaseModel):
     asked_at: datetime
     trust_signal: str = Field(..., max_length=20)
     citation_count: int = Field(..., ge=0)
+    #: Fix-plan item 10.2: whether this past search can be opened instead of
+    #: re-asked. Additive within v1 per `system-design-patterns` pattern 10,
+    #: and it defaults to False, so a client built before tonight reads this
+    #: response exactly as it did yesterday.
+    #:
+    #: What travels here is one boolean, never the answer. The answer has
+    #: its own endpoint, fetched only when a person actually clicks a row,
+    #: so listing history stays as cheap as it was.
+    has_saved_answer: bool = False
+
+
+class SavedAnswerResponse(BaseModel):
+    """`GET /v1/history/{trace_id}/answer`: the answer one past search gave.
+
+    Fix-plan item 10.2. What a person gets: they click a past search and see
+    the answer they already got, at once, with no second search charged to
+    them.
+
+    Every field mirrors a bound the write path already enforces rather than
+    inventing one: `trace_id` matches `InteractionRow.trace_id`'s 64,
+    `question` matches `query_text`'s 2000, `answer_markdown` matches the
+    32000 measured in alembic 0010, and `citations` carries the same
+    `MAX_CITATIONS_PER_ANSWER` capture already truncates to (100, card 54).
+
+    `citations` is typed as a list of plain objects, deliberately, and not
+    as `CitationPayload`. These rows were validated against that model when
+    the run produced them; re-validating a stored value here would mean one
+    citation whose schema has since been tightened could fail the whole
+    response and leave the person unable to open an answer they can see
+    listed. The endpoint drops an unreadable entry and discloses the drop
+    instead, the same posture `GET /v1/history` already takes towards a
+    stored row it cannot render.
+
+    `trust_line` is worker H's overnight addition, closing defect two in
+    `testing/Developer/reports/2026-09-23_overnight/findings.md`'s "Worker
+    B1" entries: the pinned wire contract had no field for the one plain
+    sentence a person read under their original answer (UI fix set 9, item
+    9.9, built in `synthesis/trust.py` and stored on
+    `interactions.answer_trust_line` since alembic 0010), so a reopened
+    answer dropped the hedge and read more confident than the one the
+    person actually saw. One new optional field, additive within v1 per
+    `system-design-patterns` pattern 10: it defaults to `None`, so nothing
+    that reads the old shape breaks, and a row saved before this field
+    existed, or a run whose synthesis produced no line, answers `None`
+    rather than a fabricated one.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    trace_id: str = Field(..., max_length=64)
+    question: str = Field(..., max_length=2000)
+    asked_at: datetime
+    depth: Literal["plain", "researcher"]
+    answer_markdown: str = Field(..., max_length=32000)
+    citations: list[dict[str, Any]] = Field(
+        default_factory=list, max_length=MAX_CITATIONS_PER_ANSWER
+    )
+    trust_signal: str = Field(..., max_length=20)
+    #: `max_length=200` mirrors `DonePayload.trust_line`'s own bound
+    #: (`contracts/events.py`), the same bound `InteractionRow.answer_trust_
+    #: line` already mirrors at the write path, rather than inventing a
+    #: third number for the same fact.
+    trust_line: str | None = Field(None, max_length=200)
+    #: The worst risk tier the live answer carried (card 71, alembic 0011),
+    #: so a reopened answer shows the same "High-risk claim" tag. Additive
+    #: within v1: `None` for a row saved before the column existed, which
+    #: the screen reads as "show no tag".
+    risk_tier: str | None = Field(None, max_length=16)
 
 
 class HistoryResponse(BaseModel):
@@ -965,11 +1087,83 @@ def get_v1_history(
                     asked_at=entry.asked_at,
                     trust_signal=entry.trust_signal,
                     citation_count=entry.citation_count,
+                    has_saved_answer=entry.has_saved_answer,
                 )
             )
         except ValidationError:
             omitted_count += 1
     return HistoryResponse(items=items, count=len(items), omitted_count=omitted_count)
+
+
+#: The four stored `audience_depth` values folded onto the two this wire
+#: contract publishes. `plain_language` is the web UI's Plain language
+#: setting; the other three are researcher-facing, and `researcher` is the
+#: product's own default, so an answer written at `clinical_brief` or
+#: `deep_technical` (reachable only from the CLI, MCP or GraphQL, never from
+#: this UI) reads back as `researcher` rather than as a value this endpoint
+#: never declared. Recorded as a finding on 2026-09-23 rather than resolved
+#: by widening the contract, which is the product owner's call.
+_WIRE_DEPTH_BY_STORED = {
+    "plain_language": "plain",
+    "researcher": "researcher",
+    "clinical_brief": "researcher",
+    "deep_technical": "researcher",
+}
+
+
+# Fix-plan item 10.2. What this is for, in the words of the person using the
+# product: they click a past search and the answer they already got is
+# there, with no second search charged to them.
+#
+# ONE 404 FOR THREE CAUSES, and it is deliberate rather than lazy. The row
+# not existing, the row belonging to somebody else, and the row holding no
+# saved answer all answer identically, because a 403 on another person's row
+# confirms that row exists and is someone's. `get_saved_answer` collapses
+# all three to `None` at the SQL boundary, so this handler has one branch
+# and cannot grow a second one that leaks the difference.
+#
+# `Depends(get_caller)` alone is what makes an unauthenticated request 401
+# rather than 404, exactly as on `GET /v1/history`: a client must be able to
+# tell "not signed in" from "nothing saved", because it does opposite things
+# with them.
+@app.get("/v1/history/{trace_id}/answer", response_model=SavedAnswerResponse)
+def get_v1_history_answer(
+    trace_id: str,
+    caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
+) -> SavedAnswerResponse:
+    try:
+        saved = get_saved_answer(owner_id=caller.owner_id, trace_id=trace_id)
+    except ValueError:
+        # `get_saved_answer` refuses an empty or over-long `trace_id` rather
+        # than querying. A caller cannot have a saved answer under such a
+        # key, so this is the same "no saved answer here" the 404 already
+        # says, and answering 422 instead would tell an unauthenticated
+        # prober which keys are even shaped like real ones.
+        saved = None
+    if saved is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="no saved answer for this search; ask it again to get a fresh one",
+        )
+
+    # A stored citation this response cannot render is dropped, never
+    # published half-formed and never allowed to take the whole answer down
+    # with it: the person can see this search listed, so failing the open
+    # entirely would leave them stuck on a row they can click and never
+    # read. Same posture as `GET /v1/history`'s per-row guard.
+    citations = [entry for entry in saved.citations if isinstance(entry, dict)]
+
+    return SavedAnswerResponse(
+        trace_id=saved.trace_id,
+        question=saved.question,
+        asked_at=saved.asked_at,
+        depth=_WIRE_DEPTH_BY_STORED.get(saved.depth, "researcher"),  # type: ignore[arg-type]
+        answer_markdown=saved.answer_markdown,
+        citations=citations[:MAX_CITATIONS_PER_ANSWER],
+        trust_signal=saved.trust_signal,
+        trust_line=saved.trust_line,
+        risk_tier=saved.risk_tier,
+    )
 
 
 def _guest_refund_callback(
@@ -1039,6 +1233,13 @@ def _guest_refund_callback(
 async def post_v1_query(
     request: CreateRunRequest,
     http_request: Request,
+    # Build phase 8.7 fix round, F-8.7-A01 and F-8.7-A14: what this client
+    # reads beyond the stream every client reads, as a comma-separated list
+    # (`_READS_PLACEMENT`). A query parameter, not a body field or a header:
+    # `CreateRunRequest` forbids extra keys, so a body field would make a new
+    # client fail against an older server, and a custom header would need a
+    # CORS preflight an older server refuses. An older server ignores it.
+    reads: str | None = FastAPIQuery(None, max_length=_MAX_READS_LENGTH),
     caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
     session: Session = Depends(get_session),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> CreateRunResponse:
@@ -1319,7 +1520,7 @@ async def post_v1_query(
         owner_id=caller.owner_id,
         audience_depth=audience_depth,
     )
-    context = RequestContext(surface="rest_sse")
+    context = RequestContext(surface="rest_sse", reads_placement=_reads_placement(reads))
     try:
         default_registry.create_run(
             query,
@@ -1670,21 +1871,42 @@ async def get_v1_query_citations(
     # through `CitationPayload(...).model_dump()`, so this is not expected
     # to fire; it exists so a future producer's bug degrades to "one
     # citation missing, logged" rather than "the whole export breaks".
-    citation_events_total = sum(1 for event in entry.events if event.type == "citation")
-    citations: list[CitationPayload] = []
+    #
+    # F-8.7-A04, card 57: one row per citation id. A citation the listing
+    # sent early is sent again once the summary is checked, the same
+    # citation with its checked words grown; that payload takes the earlier
+    # one's place (`contracts.token_order.one_per_citation_id`), so the
+    # export lists each source once, with the words each sentence was
+    # checked against, and counts it once against the cap.
+    parsed: list[CitationPayload] = []
     for event in entry.events:
         if event.type != "citation":
             continue
         try:
-            citations.append(CitationPayload(**event.payload))
+            parsed.append(CitationPayload(**event.payload))
         except (TypeError, ValueError):
             logger.warning(
                 "run %s produced a citation event whose payload does not "
                 "match CitationPayload; omitted from the export",
                 run_id,
             )
-        if len(citations) >= _MAX_CITATIONS_PER_RUN:
-            break
+    # A-87F-03: a repeat naming another record under an id already seen is
+    # dropped by the fold below (the first is kept, as it may already be
+    # cited), and the drop leaves a trace naming the id only, never record
+    # text. The export's rows are unchanged.
+    first_by_id: dict[str, CitationPayload] = {}
+    for citation in parsed:
+        first = first_by_id.setdefault(citation.citation_id, citation)
+        if first is not citation and not names_same_record(first, citation):
+            logger.warning(
+                "run %s repeated citation id %r naming a different record; "
+                "the repeat was dropped from the export and the first kept",
+                run_id,
+                citation.citation_id,
+            )
+    one_per_id = one_per_citation_id(parsed)
+    citation_events_total = len(one_per_id)
+    citations = one_per_id[:_MAX_CITATIONS_PER_RUN]
     # F-4.0-A-13 (adversary round 1, build phase 4.0): the local
     # `_MAX_CITATIONS_PER_RUN` break above was unreachable when this was
     # written (verified: `core/graph.py`'s own `_MAX_CITATIONS_PER_ANSWER =
@@ -1729,8 +1951,15 @@ async def post_v1_query_stop(
     # already-cancelled run is a no-op, never an error, so this endpoint
     # always returns 200 once ownership is established, regardless of
     # whether the run was still in flight.
-    default_registry.cancel_run(run_id)
-    return StopRunResponse(stopped=True)
+    #
+    # Card 59, A-59-03: `stopped` reports what happened, as GraphQL's
+    # `stopRun` does, rather than the fixed `True` it used to be. A run that
+    # had already finished, including one that sent `done` and is still
+    # saving its answer (D18: that answer stands), reads `stopped: false`,
+    # which the command line prints as "run was already finished". Same
+    # one-field shape; the web client does not read the body.
+    stopped = default_registry.cancel_run(run_id)
+    return StopRunResponse(stopped=stopped)
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,1066 @@
+{
+ "record": {
+  "id": "G-027",
+  "run": 2,
+  "pass": 2,
+  "worker": "A",
+  "account": "s3-consistency-a-20260925p81@example.com",
+  "category": "kisses",
+  "query_class": "single_hop",
+  "expected_outcome": "answer",
+  "question": "What genetic tests are available for Huntington disease?",
+  "session_id": "c103-28bdd9819734",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "5bac18a",
+  "started_at": "2026-09-25T09:58:40+00:00",
+  "run_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "MedGen:C0020179"
+  ],
+  "trust_outcome": "ask",
+  "trust_line": "Based on 29 sources, not yet confirmed",
+  "citations": 42,
+  "distinct_sources": 29,
+  "citations_by_layer": {
+   "layer_2_api": 20,
+   "layer_1_graph": 16,
+   "layer_3_enrichment": 6
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 0,
+  "tools": [
+   "pubtator_annotate",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 21,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 14,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 6,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   21
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 323,
+  "answer_start": "Found 1 disease record and 16 sequence variant records for Huntington disease [2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18]. \n\nClinical Context\n\n",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 6,
+  "server_elapsed_s": 6.954,
+  "seconds": 17.3,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 8,
+   "tool_result": 8,
+   "step": 1,
+   "token": 69,
+   "citation": 42,
+   "trust_signal": 43,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 0,
+   "ts": "2026-09-25T09:57:06.339934Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 2,
+   "ts": "2026-09-25T09:57:09.930313Z",
+   "payload": {
+    "narrative": "Asks for available genetic tests for a specific disease, a single-hop lookup-like question. (Huntington disease: 1 of 6 MedGen record matched by name)",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null,
+    "clarifying_options": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 4,
+   "ts": "2026-09-25T09:57:09.934376Z",
+   "payload": {
+    "narrative": "searching 3 layers for huntington disease. Layer 1, the knowledge graph: cypher_query; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search; Layer 2, live NCBI records: ncbi_efetch",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-8b09de50be48",
+      "layer": "layer_1_graph",
+      "persona": "Ochoa",
+      "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-e067b889cbf7",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-96b7308d53e7",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-547392b6e9a1",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-287a16da6e3e",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-6adf17ace2d6",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-a8df9aedf568",
+      "layer": "layer_3_enrichment",
+      "persona": "Koch",
+      "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-f1f7aa275269",
+      "layer": "layer_2_api",
+      "persona": "Levi-Montalcini",
+      "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "Huntington disease",
+      "curie": "MedGen:C0020179",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 6,
+   "ts": "2026-09-25T09:57:09.936608Z",
+   "payload": {
+    "call_id": "cq-8b09de50be48",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Ochoa",
+    "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 7,
+   "ts": "2026-09-25T09:57:09.936673Z",
+   "payload": {
+    "call_id": "pa-e067b889cbf7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 8,
+   "ts": "2026-09-25T09:57:09.936758Z",
+   "payload": {
+    "call_id": "ct-96b7308d53e7",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 9,
+   "ts": "2026-09-25T09:57:09.936781Z",
+   "payload": {
+    "call_id": "ne-547392b6e9a1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 10,
+   "ts": "2026-09-25T09:57:09.936802Z",
+   "payload": {
+    "call_id": "ne-287a16da6e3e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 11,
+   "ts": "2026-09-25T09:57:09.936824Z",
+   "payload": {
+    "call_id": "ne-6adf17ace2d6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 12,
+   "ts": "2026-09-25T09:57:09.936844Z",
+   "payload": {
+    "call_id": "pa-a8df9aedf568",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 13,
+   "ts": "2026-09-25T09:57:09.936866Z",
+   "payload": {
+    "call_id": "ne-f1f7aa275269",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 14,
+   "ts": "2026-09-25T09:57:10.128942Z",
+   "payload": {
+    "call_id": "pa-e067b889cbf7",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 15,
+   "ts": "2026-09-25T09:57:10.418211Z",
+   "payload": {
+    "call_id": "ct-96b7308d53e7",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 16,
+   "ts": "2026-09-25T09:57:10.428175Z",
+   "payload": {
+    "call_id": "ne-287a16da6e3e",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 17,
+   "ts": "2026-09-25T09:57:10.456429Z",
+   "payload": {
+    "call_id": "ne-547392b6e9a1",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "search: 1 id(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 18,
+   "ts": "2026-09-25T09:57:11.828876Z",
+   "payload": {
+    "call_id": "cq-8b09de50be48",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Ochoa",
+    "persona_about": "Discovered an enzyme that builds RNA in a test tube, which made it possible to read the genetic code experimentally.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Severo_Ochoa",
+    "summary": "21 row(s) of 21",
+    "result_count": 21,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 19,
+   "ts": "2026-09-25T09:57:11.993896Z",
+   "payload": {
+    "call_id": "pa-a8df9aedf568",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Koch",
+    "persona_about": "Identified the bacteria behind tuberculosis, cholera and anthrax, and set the postulates for proving that a microbe causes a disease.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Robert_Koch",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 20,
+   "ts": "2026-09-25T09:57:12.078067Z",
+   "payload": {
+    "call_id": "ne-f1f7aa275269",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "summary: 14 record(s)",
+    "result_count": 14,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 21,
+   "ts": "2026-09-25T09:57:12.128459Z",
+   "payload": {
+    "call_id": "ne-6adf17ace2d6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Levi-Montalcini",
+    "persona_about": "Discovered nerve growth factor, the first known molecule that tells nerve cells to grow and survive.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Rita_Levi-Montalcini",
+    "summary": "fetch: 6 record(s)",
+    "result_count": 6,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 22,
+   "ts": "2026-09-25T09:57:12.131368Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "MedGen:C0020179",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/C0020179",
+    "layer": "layer_2_api",
+    "source": "ncbi_efetch",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:409",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/409",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:21303",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/21303",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31915",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_002111.8(HTT):c.52CAG[27_35] (p.Gln18_Gln38delinsGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGln)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:31916",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/31916",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:417742",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/417742",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.2108C>T (p.Pro703Leu)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:982633",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/982633",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.8903G>A (p.Gly2968Asp)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1298952",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1298952",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.2758G>A (p.Asp920Asn)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1405485",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1405485",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.6250G>A (p.Gly2084Arg)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1355049",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1355049",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.7498G>A (p.Val2500Ile)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1599166",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1599166",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "curie",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1671702",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1671702",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.4638C>G (p.Val1546=)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:1809691",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/1809691",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99_100del (p.Gln34fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779747",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779747",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.107del (p.Gln36fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779748",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779748",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99_102del (p.Gln33fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:3779749",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3779749",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.99del (p.Gln33fs)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "ClinVar:4278357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4278357",
+    "layer": "layer_1_graph",
+    "source": "ClinVar",
+    "field": "name",
+    "entity_name": "NM_001388492.1(HTT):c.7849G>A (p.Val2617Met)",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27228260",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27228260/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "5654",
+    "source_url": "https://www.ncbi.nlm.nih.gov/medgen/5654",
+    "layer": "layer_2_api",
+    "source": "medgen",
+    "field": "clinical_features",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "@DISEASE_Huntington_Disease",
+    "source_url": "https://www.ncbi.nlm.nih.gov/mesh/D006816",
+    "layer": "layer_3_enrichment",
+    "source": "ncbi_mesh",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00052143",
+    "source_url": "https://clinicaltrials.gov/study/NCT00052143",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "28221321",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/28221321/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00075140",
+    "source_url": "https://clinicaltrials.gov/study/NCT00075140",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "29325616",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/29325616/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT00980694",
+    "source_url": "https://clinicaltrials.gov/study/NCT00980694",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "31371566",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/31371566/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT01554033",
+    "source_url": "https://clinicaltrials.gov/study/NCT01554033",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "37603337",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/37603337/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02336633",
+    "source_url": "https://clinicaltrials.gov/study/NCT02336633",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "cd41cb83-a9d8-4f11-ba03-8920caa8d89e",
+   "seq": 178,
+   "ts": "2026-09-25T09:57:21.855488Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 6,
+    "elapsed_ms": 6954,
+    "trust_outcome": "ask",
+    "trust_line": "Based on 29 sources, not yet confirmed",
+    "layer_calls_used": 7,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 disease record and 16 sequence variant records for Huntington disease [2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18]. \n\nClinical Context\n\nMedGen lists these clinical features: Chorea [1]. \n\nDisease records found\n\nDisease name: Huntington disease [2]. \n\nSequence variant records found\n\nSequenceVariant record ClinVar:409 [3]. SequenceVariant record ClinVar:21303 [4]. SequenceVariant ClinVar:31915, name: NM_002111.8(HTT):c.52CAG[27_35] (p.Gln18_Gln38delinsGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGlnGln) [5]. SequenceVariant record ClinVar:31916 [6]. SequenceVariant ClinVar:417742, name: NM_001388492.1(HTT):c.2108C>T (p.Pro703Leu) [7]. SequenceVariant ClinVar:982633, name: NM_001388492.1(HTT):c.8903G>A (p.Gly2968Asp) [8]. SequenceVariant ClinVar:1298952, name: NM_001388492.1(HTT):c.2758G>A (p.Asp920Asn) [9]. SequenceVariant ClinVar:1405485, name: NM_001388492.1(HTT):c.6250G>A (p.Gly2084Arg) [10]. SequenceVariant ClinVar:1355049, name: NM_001388492.1(HTT):c.7498G>A (p.Val2500Ile) [11]. SequenceVariant record ClinVar:1599166 [12]. SequenceVariant ClinVar:1671702, name: NM_001388492.1(HTT):c.4638C>G (p.Val1546=) [13]. SequenceVariant ClinVar:1809691, name: NM_001388492.1(HTT):c.99_100del (p.Gln34fs) [14]. SequenceVariant ClinVar:3779747, name: NM_001388492.1(HTT):c.107del (p.Gln36fs) [15]. SequenceVariant ClinVar:3779748, name: NM_001388492.1(HTT):c.99_102del (p.Gln33fs) [16]. SequenceVariant ClinVar:3779749, name: NM_001388492.1(HTT):c.99del (p.Gln33fs) [17]. SequenceVariant ClinVar:4278357, name: NM_001388492.1(HTT):c.7849G>A (p.Val2617Met) [18]. \n\nPubmed records found\n\nPubmed title: Huntington disease [19]. Pubmed title: Huntington disease [35]. Pubmed title: Huntington disease [37]. Pubmed title: Huntington disease: When does it begin [39]. Pubmed title: What Is Huntington Disease [41]. \n\nMedgen records found\n\nMedgen title: Huntington disease [20]. \n\nClinical features MedGen lists for Huntington disease\n\nMedgen clinical_features: Chorea [1]. Medgen clinical_features: Depression [21]. Medgen clinical_features: Gliosis [22]. Medgen clinical_features: Rigidity [23]. Medgen clinical_features: Seizure [24]. Medgen clinical_features: Hyperreflexia [25]. Medgen clinical_features: Bradykinesia [26]. Medgen clinical_features: Personality changes [27]. Medgen clinical_features: Abnormality of eye movement [28]. Medgen clinical_features: Dementia [29]. Medgen clinical_features: Cerebellar atrophy [30]. Medgen clinical_features: Gait ataxia [31]. Medgen clinical_features: Neuronal loss in central nervous system [32]. \n\nLiterature entity records found\n\nLiterature entity name: Huntington Disease [33]. \n\nClinical trial records found\n\nClinical trial name: Prospective Huntington At Risk Observational Study [34]. Clinical trial name: Family Health After Predictive Huntington Disease (HD) Testing [36]. Clinical trial name: Bioavailability of Ubiquinol in Huntington Disease [38]. Clinical trial name: Study of Huntington Patients in Connection With European Huntington's Disease Network (EHDN) [40]. Clinical trial name: Resveratrol and Huntington Disease [42]. \n\nNote: 4 further sequence variant records were found for this question and are not covered in the summary above"
+}

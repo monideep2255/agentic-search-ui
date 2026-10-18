@@ -1,0 +1,52 @@
+gp1 c2 i3 item_ok=False dropped_short=['may']
+   S: It can lead to serious problems including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophageal cancer
+   Q: GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   pairs: ['quality of', 'of life', 'life and', 'esophagitis esophageal', 'esophageal strictures', 'strictures and', 'precursor to', 'esophageal adenocarcinoma']
+gp2 c2 i3 item_ok=False dropped_short=['may']
+   S: GERD can lead to serious problems including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can precede esophageal cancer
+   Q: GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   pairs: ['gerd affects', 'quality of', 'of life', 'life and', 'esophagitis esophageal', 'esophageal strictures', 'strictures and', 'precursor to', 'esophageal adenocarcinoma']
+gp4 c2 i3 item_ok=False dropped_short=['may']
+   S: If left untreated, GERD can lead to serious problems including inflammation, narrowing of the esophagus, and a condition called Barrett esophagus, which can develop into esophageal cancer
+   Q: GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   pairs: ['gerd affects', 'quality of', 'of life', 'life and', 'esophagitis esophageal', 'esophageal strictures', 'strictures and', 'a precursor', 'precursor to', 'esophageal adenocarcinoma']
+gp5 c1 i3 item_ok=False dropped_short=['may']
+   S: It can lead to serious complications including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophageal cancer
+   Q: GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   pairs: ['quality of', 'of life', 'life and', 'esophagitis esophageal', 'esophageal strictures', 'strictures and', 'precursor to', 'esophageal adenocarcinoma']
+gr2 c1 i2 item_ok=False dropped_short=['may']
+   S: The condition is clinically diagnosed and affects quality of life, with potential complications including erosive esophagitis, esophageal strictures, and Barrett esophagus
+   Q: GERD is a clinical diagnosis and is most effectively treated with proton-pump inhibitors (PPIs). | GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   pairs: ['gerd is', 'diagnosis and', 'is most', 'treated with', 'with proton-pump', 'gerd affects', 'cause erosive', 'esophageal adenocarcinoma']
+gr3 c1 i5 item_ok=False dropped_short=['may']
+   S: Distinguishing physiological gastroesophageal reflux, which is common in children and managed conservatively, from pathologic GERD requiring medical management is essential
+   Q: This is often physiological and managed conservatively. | In contrast, GER disease (GERD) is a less common pathologic process causing troublesome symptoms, which may need medical management.
+   pairs: ['this is', 'is often', 'often physiological', 'in contrast', 'disease gerd', 'less common', 'pathologic process', 'symptoms which', 'need medical']
+gr5 c1 i2 item_ok=False dropped_short=['may']
+   S: The condition is among the most commonly reported symptom complexes in primary care and significantly impacts quality of life
+   Q: Symptoms potentially attributable to gastroesophageal reflux disease are among those most commonly reported to primary care providers in the outpatient setting. | GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma.
+   pairs: ['among those', 'those most', 'care providers', 'providers in', 'the outpatient', 'affects quality', 'strictures and', 'and barrett']
+cm5 c2 i3 item_ok=True dropped_short=['can']
+   S: Treatment focuses on avoiding those triggers, and most episodes resolve on their own, though a blood transfusion is occasionally needed
+   Q: treatment is geared toward avoidance of these and other stressors | Acute hemolysis is self-limited, but in rare instances it can be severe enough to warrant a blood transfusion
+   pairs: ['is geared', 'these and', 'and other', 'hemolysis is', 'is self-limited', 'warrant a']
+cp3 c1 i4 item_ok=False dropped_short=['may']
+   S: In children, GERD is less common than simple reflux and is a disease process that causes troublesome symptoms needing careful evaluation and sometimes medical treatment
+   Q: GER disease (GERD) is a less common pathologic process causing troublesome symptoms, which may need medical management
+   pairs: ['common pathologic', 'pathologic process', 'process causing', 'causing troublesome', 'symptoms which', 'need medical', 'medical management']
+cp3 c1 i6 item_ok=False dropped_short=['may']
+   S: Left untreated, GERD can reduce quality of life and lead to serious problems including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can develop into esophageal cancer
+   Q: GERD affects quality of life and may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma
+   pairs: ['gerd affects', 'affects quality', 'esophagitis esophageal', 'esophageal strictures', 'strictures and', 'precursor to', 'esophageal adenocarcinoma']
+cp4 c2 i3 item_ok=False dropped_short=['may']
+   S: It can lead to serious complications including inflammation of the esophagus, narrowing of the esophagus, and Barrett esophagus, which can precede esophageal cancer
+   Q: may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma
+   pairs: ['esophagitis esophageal', 'esophageal strictures', 'strictures and', 'precursor to', 'esophageal adenocarcinoma']
+cp5 c1 i2 item_ok=False dropped_short=['may']
+   S: The condition happens when stomach contents flow back into the esophagus or mouth, which can lead to complications such as inflammation, narrowing of the esophagus, and Barrett esophagus, which can precede esophageal cancer
+   Q: results from the reflux of stomach contents into the esophagus or oral cavity resulting in symptoms or complications | may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma
+   pairs: ['from the', 'the reflux', 'reflux of', 'or oral', 'symptoms or', 'esophagitis esophageal', 'esophageal strictures', 'strictures and', 'precursor to', 'esophageal adenocarcinoma']
+cr3 c1 i5 item_ok=False dropped_short=['may']
+   S: GERD can lead to erosive esophagitis, esophageal strictures, and Barrett esophagus, the latter being a precursor to esophageal adenocarcinoma
+   Q: may cause erosive esophagitis, esophageal strictures, and Barrett esophagus, a precursor to esophageal adenocarcinoma
+   pairs: ['cause erosive']

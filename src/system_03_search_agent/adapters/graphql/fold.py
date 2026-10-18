@@ -39,9 +39,9 @@ Depends on:
       RunResult, TrustSignal): the type layer this module folds events
       into.
     - system_03_search_agent.contracts.events (CitationPayload, DonePayload,
-      ErrorPayload, Event, GuardPayload, TokenPayload, ToolResultPayload,
-      TrustSignalPayload): the Section 2.3 payload models this module folds
-      events against.
+      ErrorPayload, Event, GuardPayload, ThinkPayload, TokenPayload,
+      ToolResultPayload, TrustSignalPayload): the Section 2.3 payload models
+      this module folds events against.
     - system_03_search_agent.core.run_registry (RunEntry, default_registry):
       the SAME registry instance every other surface uses. This module
       never builds a second registry.
@@ -89,10 +89,12 @@ from system_03_search_agent.contracts.events import (
     ErrorPayload,
     Event,
     GuardPayload,
+    ThinkPayload,
     TokenPayload,
     ToolResultPayload,
     TrustSignalPayload,
 )
+from system_03_search_agent.contracts.token_order import joined_text, updates_citation
 from system_03_search_agent.core.run_registry import RunEntry, default_registry
 from system_03_search_agent.harness.cost_control import sanitize_event_for_end_user
 from system_03_search_agent.synthesis.trust import aggregate
@@ -612,6 +614,16 @@ class _CitationCollector:
     answer then resolved to two sources asserting opposite things and the
     caller had no way to pick, and a claim-scoped trust signal naming that
     `citation_id` could not be bound to one citation either.
+
+    One repeat is not a duplicate (F-8.7-A04, card 57): the same citation
+    sent again, every field equal but its `claim_text`
+    (`contracts.token_order.updates_citation`). The listing's citations go
+    out before the writer, and one the summary also cites is sent again once
+    the summary is checked, carrying the words each sentence was checked
+    against. That payload takes the earlier one's place, so the caller gets
+    one citation per id with the fuller checked words, and nothing is
+    omitted or disclosed for it. An exact repeat changes nothing and is
+    still counted as a duplicate id, as before.
     """
 
     events_seen: int = 0
@@ -620,6 +632,8 @@ class _CitationCollector:
     duplicate_display_indexes: int = 0
     seen_ids: set[str] = field(default_factory=set)
     seen_display_indexes: set[int] = field(default_factory=set)
+    payload_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
+    capped_payload_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def omitted_total(self) -> int:
@@ -635,9 +649,30 @@ class _CitationCollector:
             self._omit(_OMISSION_INVALID)
             return
         if citation.citation_id in self.seen_ids:
+            earlier = self.payload_by_id.get(citation.citation_id)
+            if (
+                earlier is not None
+                and earlier != event.payload
+                and updates_citation(earlier, event.payload)
+            ):
+                self.payload_by_id[citation.citation_id] = dict(event.payload)
+                self.citations = [
+                    citation if kept.citation_id == citation.citation_id else kept
+                    for kept in self.citations
+                ]
+                return
             self._omit(_OMISSION_DUPLICATE_ID)
             return
         if len(self.citations) >= MAX_CITATIONS:
+            capped = self.capped_payload_by_id.get(citation.citation_id)
+            if (
+                capped is not None
+                and capped != event.payload
+                and updates_citation(capped, event.payload)
+            ):
+                # The same citation, already counted against the cap once.
+                return
+            self.capped_payload_by_id.setdefault(citation.citation_id, dict(event.payload))
             self._omit(_OMISSION_CAP)
             return
         if citation.display_index in self.seen_display_indexes:
@@ -647,6 +682,7 @@ class _CitationCollector:
             self.duplicate_display_indexes += 1
         self.seen_ids.add(citation.citation_id)
         self.seen_display_indexes.add(citation.display_index)
+        self.payload_by_id[citation.citation_id] = dict(event.payload)
         self.citations.append(citation)
 
     def disclosure_notes(self) -> list[str]:
@@ -687,7 +723,7 @@ class _CitationCollector:
 
 @dataclass
 class _Accumulator:
-    answer_parts: list[str] = field(default_factory=list)
+    answer_parts: list[TokenPayload] = field(default_factory=list)
     citations_collector: _CitationCollector = field(default_factory=_CitationCollector)
     trust_signals: list[TrustSignalPayload] = field(default_factory=list)
     unscoped_trust_signals: int = 0
@@ -698,6 +734,11 @@ class _Accumulator:
     non_fatal_error_classes: list[str] = field(default_factory=list)
     truncated_tool_results: int = 0
     malformed_events: int = 0
+    # T-8.10-06. Read from `think` and `done`, and reported by `_finalize`
+    # only under the rules `_parity_fields` states.
+    clarifying_question: str | None = None
+    clarifying_options: list[str] = field(default_factory=list)
+    trust_line: str | None = None
 
 
 def _parse_payload(acc: _Accumulator, event: Event, model: type[Any]) -> Any | None:
@@ -732,9 +773,11 @@ def _consume_event(acc: _Accumulator, event: Event) -> None:
     (unconditionally: this surface's `operator_mode` is a parameter kept
     only for interface symmetry with the core, since the caller pins it
     `False` in code, T-4.3's own scope reading), which drops a `cost`
-    event entirely and redacts `done.total_cost_usd`. `think`, `plan` and
+    event entirely and redacts `done.total_cost_usd`. `plan` and
     `tool_start` carry nothing this surface's schema has a field for and
-    are folded out entirely by matching no branch below.
+    are folded out entirely by matching no branch below. `think` is read
+    for its clarifying question and options only (T-8.10-06), and nothing
+    else in it reaches a result.
 
     `tool_result` is NOT folded out, and that is a change. It used to be,
     on the reasoning that it "carries nothing this surface's schema has a
@@ -752,7 +795,7 @@ def _consume_event(acc: _Accumulator, event: Event) -> None:
     if event.type == "token":
         payload = _parse_payload(acc, event, TokenPayload)
         if payload is not None:
-            acc.answer_parts.append(payload.text)
+            acc.answer_parts.append(payload)
     elif event.type == "citation":
         acc.citations_collector.accept(event)
     elif event.type == "trust_signal":
@@ -791,10 +834,28 @@ def _consume_event(acc: _Accumulator, event: Event) -> None:
         payload = _parse_payload(acc, event, ToolResultPayload)
         if payload is not None and payload.truncated:
             acc.truncated_tool_results += 1
+    elif event.type == "think":
+        # T-8.10-06. Only the clarifying question and its options are read;
+        # the rest of `think` stays folded out. The FIRST `think` carrying a
+        # non-empty question wins, as on the web (`useRunView.ts` finds the
+        # first such event), so a later event can never swap it. Trimmed,
+        # so a blank question counts as none.
+        payload = _parse_payload(acc, event, ThinkPayload)
+        if payload is not None and acc.clarifying_question is None:
+            question = (payload.clarifying_question or "").strip()
+            if question:
+                acc.clarifying_question = question
+                acc.clarifying_options = [
+                    option.strip()
+                    for option in payload.clarifying_options or []
+                    if option.strip()
+                ]
     elif event.type == "done":
         payload = _parse_payload(acc, event, DonePayload)
         if payload is not None:
             acc.terminal_trust_outcome = payload.trust_outcome
+            # T-8.10-06: read the way the web reads it, blank means none.
+            acc.trust_line = (payload.trust_line or "").strip() or None
         acc.terminal_event_seen = True
 
 
@@ -867,13 +928,71 @@ def _cap_notes(notes: list[str]) -> list[str]:
     return kept
 
 
-def _finalize(
-    acc: _Accumulator, *, run_finished: bool
-) -> tuple[str, TrustSignal, list[Citation], Disclosures]:
+@dataclass(frozen=True)
+class _Finalized:
+    """What `_finalize` hands both result builders, so `ask` and `run` fill
+    their shared fields from one computation and cannot disagree."""
+
+    answer: str
+    trust_signal: TrustSignal
+    citations: list[Citation]
+    disclosures: Disclosures
+    trust_line: str | None
+    clarifying_question: str | None
+    clarifying_options: list[str] | None
+
+
+def _parity_fields(
+    acc: _Accumulator, *, final_outcome: str, citations_returned: int
+) -> tuple[str | None, str | None, list[str] | None]:
+    """The trust line and the clarifying question and options this result
+    may carry (T-8.10-06), as `(trust_line, clarifying_question,
+    clarifying_options)`. Each is reported only when it cannot read more
+    confident than the rest of the result.
+
+    The trust line is the run's own sentence about its own verdict, so it
+    is reported only when this fold reported that same verdict: the run
+    reached `done`, no fatal error ended it, nothing this fold received was
+    dropped, and no floor lowered the outcome below the one `done` gave.
+    Any of those, and the line could say "Based on 3 sources" beside a
+    result that returns two, or beside a refusal.
+
+    The clarifying fields follow the web's rule for a question back
+    (`useRunView.ts`, `clarification`) and the MCP surface's
+    `_is_ask_back`: a `think` carried a question, the guardrail did not
+    refuse, no fatal error, the run finished, and no citation came back, so
+    they can never ride on an answer.
+    """
+    clean_run = (
+        acc.terminal_event_seen
+        and acc.fatal_error_payload is None
+        and acc.citations_collector.omitted_total == 0
+        and acc.malformed_events == 0
+    )
+    trust_line = (
+        acc.trust_line
+        if clean_run and final_outcome == acc.terminal_trust_outcome
+        else None
+    )
+    guard_refused = acc.guard_payload is not None and not acc.guard_payload.passed
+    ask_back = (
+        acc.clarifying_question is not None
+        and not guard_refused
+        and acc.fatal_error_payload is None
+        and acc.terminal_event_seen
+        and citations_returned == 0
+        and acc.citations_collector.events_seen == 0
+    )
+    if not ask_back:
+        return trust_line, None, None
+    return trust_line, acc.clarifying_question, (acc.clarifying_options or None)
+
+
+def _finalize(acc: _Accumulator, *, run_finished: bool) -> _Finalized:
     """Turn an `_Accumulator` that has consumed some (possibly incomplete)
-    prefix of a run's events into the four fields every result type on
-    this surface carries: `answer`, `trust_signal`, `citations`,
-    `disclosures`.
+    prefix of a run's events into the fields every result type on this
+    surface carries: `answer`, `trust_signal`, `citations`, `disclosures`,
+    and since T-8.10-06 the trust line and any clarifying question.
 
     Every floor below only ever LOWERS a verdict. No path in this function
     raises one, and that is the invariant to preserve when editing it.
@@ -981,7 +1100,7 @@ def _finalize(
         if update:
             trust_payload = trust_payload.model_copy(update=update)
 
-    answer_text = "".join(acc.answer_parts).strip()
+    answer_text = joined_text(acc.answer_parts).strip()
     if not answer_text:
         answer_text = _fallback_answer_text(
             guard_payload=acc.guard_payload,
@@ -1068,7 +1187,18 @@ def _finalize(
         run_failed=run_failed,
         notes=_cap_notes(notes + preserved_trust_warnings),
     )
-    return answer_text, TrustSignal.from_payload(trust_payload), citations, disclosures
+    trust_line, clarifying_question, clarifying_options = _parity_fields(
+        acc, final_outcome=trust_payload.outcome, citations_returned=len(citations)
+    )
+    return _Finalized(
+        answer=answer_text,
+        trust_signal=TrustSignal.from_payload(trust_payload),
+        citations=citations,
+        disclosures=disclosures,
+        trust_line=trust_line,
+        clarifying_question=clarifying_question,
+        clarifying_options=clarifying_options,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1124,14 +1254,17 @@ async def fold_run(
 
     # `subscribe` returns only at the run's terminal event or once the run
     # has ended, so by this line the run is over either way.
-    answer_text, trust_signal, citations, disclosures = _finalize(acc, run_finished=True)
+    folded = _finalize(acc, run_finished=True)
     return AskResult(
         run_id=run_id,
         persona_name=persona_name,
-        answer=answer_text,
-        trust_signal=trust_signal,
-        citations=citations,
-        disclosures=disclosures,
+        answer=folded.answer,
+        trust_signal=folded.trust_signal,
+        citations=folded.citations,
+        disclosures=folded.disclosures,
+        trust_line=folded.trust_line,
+        clarifying_question=folded.clarifying_question,
+        clarifying_options=folded.clarifying_options,
     )
 
 
@@ -1171,16 +1304,17 @@ async def fold_run_snapshot(run_id: str, *, operator_mode: bool = False) -> RunR
             # text as `grounded: true` on a run `ask` had refused
             # (F-4.3-A-13).
             break
-    answer_text, trust_signal, citations, disclosures = _finalize(
-        acc, run_finished=entry.finished
-    )
+    folded = _finalize(acc, run_finished=entry.finished)
     return RunResult(
         run_id=run_id,
         finished=entry.finished,
-        answer=answer_text,
-        trust_signal=trust_signal,
-        citations=citations,
-        disclosures=disclosures,
+        answer=folded.answer,
+        trust_signal=folded.trust_signal,
+        citations=folded.citations,
+        disclosures=folded.disclosures,
+        trust_line=folded.trust_line,
+        clarifying_question=folded.clarifying_question,
+        clarifying_options=folded.clarifying_options,
     )
 
 

@@ -1,0 +1,158 @@
+Commit 9c46d708, parked on phase/8.4 (tag deleted 2026-10-16)
+Subject: feat(write): merge a record's own sentences into one list entry
+
+Card 26 (2026-09-25). run_grounding_pass grounds a multi-sentence
+finding value as several sentences that all cite the same record
+(item 11.34), and core/graph.py's listing builder walks those
+sentences one row at a time with no dedup, so a three-sentence
+abstract shows as three rows under one heading. Adds
+merge_sentences_by_citation to synthesis/answer_layout.py: collapses
+entries sharing a finding's citation_id into one, sentences joined in
+survival order, first-occurrence position kept. The actual row-split
+loops live in core/graph.py's listing and plain_listing closures,
+outside this fence; the exact call sites are named in
+testing/Developer/reports/2026-09-25_phase_8.4/builder_F.md for
+whoever owns that file tonight.
+
+
+diff --git a/src/system_03_search_agent/synthesis/answer_layout.py b/src/system_03_search_agent/synthesis/answer_layout.py
+index 5aeb35c2..275810df 100644
+--- a/src/system_03_search_agent/synthesis/answer_layout.py
++++ b/src/system_03_search_agent/synthesis/answer_layout.py
+@@ -283,6 +283,58 @@ def emphasis_for(text: str, terms: list[str]) -> list[str]:
+     return found
+ 
+ 
++def merge_sentences_by_citation(
++    entries: list[tuple[str, SynthFinding | None]]
++) -> list[tuple[str, SynthFinding | None]]:
++    """Collapse a record's own several grounded sentences into one entry.
++
++    Card 26 (2026-09-25): "A record with several sentences shows as one
++    entry, not several list rows." Item 11.34 marks every sentence of a
++    multi-sentence finding value with that finding's own `ref_index`, so
++    `run_grounding_pass` grounds each sentence of a long abstract or gene
++    summary independently rather than losing the whole value to one
++    trailing, unreachable marker (`findings.build_structured_fallback_
++    narrative`'s docstring has the full mechanism, and `findings.
++    one_finding_per_record` is the sibling fix that keeps one row per
++    RECORD in the first place). The grounding pass then hands back one
++    surviving sentence per marked clause, still carrying that same
++    `ref_index`, so a caller walking those sentences one at a time to build
++    list rows (`core.graph`'s `listing` closure) puts each surviving
++    sentence of one three-sentence abstract on its own row, under one
++    shared record heading, instead of joining them into the one entry that
++    record actually is.
++
++    `entries` is `(sentence, finding_or_none)` pairs in the order a caller
++    already has them, the same shape `core.graph.listing` builds before
++    grouping by type. Two entries are the SAME record when their findings
++    share a `citation_id`, never by object identity: two markers of one
++    record are two distinct `SynthFinding` objects with identical field
++    values, both live cases in `findings.build_structured_fallback_
++    narrative`. Kept sentences join with a single space in survival order,
++    so a record's own sentences read together and in the order they
++    survived grounding, and the merged entry keeps the FIRST occurrence's
++    position, so a record's row still appears where its first sentence did.
++    An entry whose `finding` is None (an unmarked framing sentence
++    `run_grounding_pass` can still return) merges with nothing: it names no
++    record for a heading to attach to, and stays its own row exactly as
++    before.
++    """
++    merged: list[list[Any]] = []
++    index_by_citation: dict[str, int] = {}
++    for sentence, finding in entries:
++        if finding is None:
++            merged.append([sentence, None])
++            continue
++        key = finding.citation_id
++        existing = index_by_citation.get(key)
++        if existing is None:
++            index_by_citation[key] = len(merged)
++            merged.append([sentence, finding])
++            continue
++        merged[existing][0] = f"{merged[existing][0]} {sentence}"
++    return [(text, finding) for text, finding in merged]
++
++
+ # The two-column mappings this graph's records support (variant-to-disease
+ # detail, 2026-09-14). The earlier version of this comment said the graph
+ # has no variant-to-disease edge; it has one, `has_phenotype` from a
+diff --git a/tests/system_03_search_agent/synthesis/test_answer_layout.py b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+index 82a86e14..c66dbbb7 100644
+--- a/tests/system_03_search_agent/synthesis/test_answer_layout.py
++++ b/tests/system_03_search_agent/synthesis/test_answer_layout.py
+@@ -16,6 +16,7 @@ from system_03_search_agent.synthesis.answer_layout import (
+     grounding_input,
+     heading_is_supported,
+     key_terms,
++    merge_sentences_by_citation,
+     parse_synth_layout,
+     table_second_cell,
+ )
+@@ -642,3 +643,65 @@ def test_12_9_a_plain_label_is_a_title_and_never_a_code() -> None:
+     assert plain_record_label(gene, {"name": "BRCA1 and 53BP1 in repair"}, "NCBIGene:672") == (
+         "BRCA1 and 53BP1 in repair"
+     )
++
++
++# ---------------------------------------------------------------- card 26
++
++
++def test_a_multi_sentence_record_becomes_one_list_entry() -> None:
++    """Card 26 (2026-09-25): item 11.34's per-sentence marking, replayed
++    here as the three-sentence abstract of one paper surviving grounding as
++    three separate sentences that all carry the SAME finding (the real
++    mechanism: `findings.build_structured_fallback_narrative` marks every
++    sentence of one multi-sentence value with that finding's own
++    ref_index). Before the fix, three rows shared one heading; after, one
++    row carries all three sentences in order.
++    """
++    paper = _finding(
++        1, "Sentence one.", field="abstract", entity_type="Publication", tool="ncbi_efetch"
++    )
++    entries = [
++        ("Sentence one.", paper),
++        ("Sentence two.", paper),
++        ("Sentence three.", paper),
++    ]
++    merged = merge_sentences_by_citation(entries)
++    assert merged == [("Sentence one. Sentence two. Sentence three.", paper)]
++
++
++def test_two_different_records_stay_two_entries() -> None:
++    """The merge must never fold two DIFFERENT records into one row just
++    because they were grounded next to each other."""
++    first = _finding(1, "First record sentence.", entity_type="Publication", tool="ncbi_efetch")
++    second = _finding(2, "Second record sentence.", entity_type="Publication", tool="ncbi_efetch")
++    entries = [("First record sentence.", first), ("Second record sentence.", second)]
++    assert merge_sentences_by_citation(entries) == entries
++
++
++def test_an_unmarked_framing_sentence_is_never_merged() -> None:
++    """A sentence with no finding at all (bare framing, `run_grounding_pass`
++    can still return one) names no record, so it must stay its own row and
++    must never absorb, or be absorbed into, a neighbouring record's row."""
++    paper = _finding(1, "The record sentence.", entity_type="Publication", tool="ncbi_efetch")
++    entries: list[tuple[str, SynthFinding | None]] = [
++        ("Framing text.", None),
++        ("The record sentence.", paper),
++    ]
++    assert merge_sentences_by_citation(entries) == entries
++
++
++def test_a_record_that_reappears_later_still_merges_into_its_first_row() -> None:
++    """The merged row keeps the FIRST occurrence's position, so a record's
++    row still appears where its first sentence did even when its later
++    sentence arrives after another record's row."""
++    first = _finding(1, "First record sentence.", entity_type="Publication", tool="ncbi_efetch")
++    second = _finding(2, "Second record sentence.", entity_type="Publication", tool="ncbi_efetch")
++    entries = [
++        ("First record sentence.", first),
++        ("Second record sentence.", second),
++        ("First record's later sentence.", first),
++    ]
++    assert merge_sentences_by_citation(entries) == [
++        ("First record sentence. First record's later sentence.", first),
++        ("Second record sentence.", second),
++    ]

@@ -279,7 +279,7 @@ class Mutation:
         # `input` shadows a builtin. The name is part of the locked GraphQL
         # operation set in tracker/phase_4.3.md and is the conventional
         # GraphQL argument name, so the published schema is not renamed to
-        # satisfy a Python convention. This repo's ruff config does not
+        # satisfy a Python convention. This repository's ruff config does not
         # enable flake8-builtins, so no suppression is needed either.
         #
         # A state-changing operation, hence a mutation rather than a query:
@@ -345,7 +345,12 @@ class Mutation:
         # surface does. This surface has no field a cost figure could be
         # selected into, so an operator allowlist entry must not be able to
         # open one here.
-        run_context = RequestContext(surface="graphql", operator_mode=False)
+        # Build phase 8.7 fix round, F-8.7-A01: the fold joins tokens in
+        # reading order (`contracts.token_order.joined_text`), so this
+        # surface reads `placement` and opts in.
+        run_context = RequestContext(
+            surface="graphql", operator_mode=False, reads_placement=True
+        )
         try:
             default_registry.create_run(
                 core_query,
@@ -388,17 +393,19 @@ class Mutation:
         # mutation to find out. Idempotency requires that a repeated stop not
         # ERROR; it never required saying something untrue.
         #
-        # The read and the cancel are adjacent with NO await between them, so
-        # the event loop cannot advance the run's task in the gap: this is an
-        # exact report, not a sampled guess. `task.done()` is the only signal
-        # available synchronously (`entry.cancelled` is set later, by the
-        # drain loop, once the cancellation is actually observed).
+        # `cancel_run` itself reports whether it cancelled, so the answer
+        # and the action are one decision, not a read beside it (card 59,
+        # A-59-01). A run that already sent `done` is no longer stopped
+        # (D18: its answer stands, and history and memory keep it), and
+        # reading only `task.done()` here said `stopped: true` for it while
+        # `citations.runCancelled` said false. `stopped: false` now means
+        # "it had already finished"; the result keeps its two fields, so no
+        # client breaks.
         owner_id = _owner_id_of(info)
         resolved = str(run_id)
-        entry = _resolve_owned(resolved, owner_id)
-        was_in_flight = not entry.task.done()
-        default_registry.cancel_run(resolved)
-        return StopRunResult(run_id=resolved, stopped=was_in_flight)
+        _resolve_owned(resolved, owner_id)
+        stopped = default_registry.cancel_run(resolved)
+        return StopRunResult(run_id=resolved, stopped=stopped)
 
 
 # The one schema this surface serves. Built once at import time, with the
@@ -418,7 +425,7 @@ schema = strawberry.Schema(
 # which is the single most expensive failure available on this surface. A
 # name mismatch is therefore an import-time crash, not a runtime surprise.
 # `get_field_for_type` is Strawberry's own public lookup (verified present on
-# strawberry.Schema in the installed 0.324.0), used here rather than reaching
+# strawberry.Schema in the installed 0.327.7, re-verified 2026-10-15), used here rather than reaching
 # into the schema converter's internal type map, so this check cannot itself
 # break on a library internal.
 if schema.get_field_for_type(security.RUN_CREATING_FIELD_NAME, "Mutation") is None:

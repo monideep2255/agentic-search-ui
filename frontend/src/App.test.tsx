@@ -25,7 +25,7 @@
  * certified an interface wired to nothing.
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -110,6 +110,29 @@ async function ask(user: ReturnType<typeof userEvent.setup>, question: string) {
   const main = mainArea();
   await user.type(main.getByRole("textbox", { name: /question/i }), question);
   await user.click(main.getByRole("button", { name: /^search the knowledge graph$/i }));
+}
+
+/**
+ * D4 defect 12: `useAnswerReveal`/`usePacedEvents` hold the landed answer
+ * behind REAL `setTimeout` waits (`minBannerMs` 1500, `perItemMs` 110, a
+ * per-helper dwell), so a bare `findByTestId(..., { timeout: 10000 })` right
+ * after asking measured 6100-7700ms unloaded, 61-77% of its own ceiling with
+ * zero contention from anything else. Fake timers remove the race instead
+ * of widening the window: advance in small steps, each inside its own
+ * `act`, because the reveal schedules its NEXT timer in an effect that only
+ * runs once `act` returns (the same reason `hooks/useAnswerReveal.test.ts`'s
+ * own `advance` helper steps rather than jumping). Only ever called between
+ * two real-timer stretches of a test, never around a `userEvent` call, so
+ * no `userEvent.setup()` in this file needs `delay: null`.
+ */
+async function revealNow(ms = 8_000, step = 110) {
+  vi.useFakeTimers();
+  for (let elapsed = 0; elapsed < ms; elapsed += step) {
+    await act(async () => {
+      vi.advanceTimersByTime(Math.min(step, ms - elapsed));
+    });
+  }
+  vi.useRealTimers();
 }
 
 describe("App", () => {
@@ -552,7 +575,32 @@ describe("F-4.13-A-10: a restored row renders something asked_at makes possible"
     // renders (F-4.13-A-10's own description: "arrives on screen as bare
     // question text with no date and no meta").
     expect(item.textContent).not.toBe("What is BRCA1?");
-    expect(item.textContent).toMatch(/3 source/i);
+    // Card 22 fix round: the count is the answer's sources cited, named as
+    // the live item names it, so a reload keeps the same words.
+    expect(item.textContent).toMatch(/3 sources cited/i);
+  });
+
+  it("card 109: a row with no saved answer reads 'No answer saved', an answered row keeps its count, a row without the flag keeps its count", async () => {
+    fetchHistoryMock.mockResolvedValue({
+      items: [
+        { trace_id: "stopped-1", question: "Stopped question", asked_at: "2026-08-20T12:00:00Z", trust_signal: "refuse", citation_count: 21, has_saved_answer: false },
+        { trace_id: "answered-1", question: "Answered question", asked_at: "2026-08-20T12:00:00Z", trust_signal: "answer", citation_count: 4, has_saved_answer: true },
+        { trace_id: "answered-odd", question: "Odd outcome question", asked_at: "2026-08-20T12:00:00Z", trust_signal: "refuse", citation_count: 2, has_saved_answer: true },
+        { trace_id: "old-1", question: "Older api question", asked_at: "2026-08-20T12:00:00Z", citation_count: 7 },
+      ],
+      count: 4,
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await signIn(user);
+
+    const rail = await screen.findByTestId("history-rail");
+    const row = (name: RegExp) => within(rail).getByRole("button", { name });
+    expect(row(/stopped question/i).textContent).toMatch(/No answer saved/);
+    expect(row(/stopped question/i).textContent).not.toMatch(/sources cited/i);
+    expect(row(/^answered question/i).textContent).toMatch(/4 sources cited/i);
+    expect(row(/odd outcome/i).textContent).toMatch(/2 sources cited/i);
+    expect(row(/older api/i).textContent).toMatch(/7 sources cited/i);
   });
 
   it("does not render 'Invalid Date' for a restored row with a malformed asked_at", async () => {
@@ -606,7 +654,7 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     fetchHistoryMock.mockResolvedValue({ items: [], count: 0 });
   });
 
-  it("moves the re-asked row to the top instead of relabeling it in place", async () => {
+  it("puts the re-ask on top as a new row, keeps the restored row, and relabels nothing in place", async () => {
     // Two restored rows, newest first (the server's own order). The
     // OLDER one, "What is BRCA1?", is re-asked from the rail.
     //
@@ -615,7 +663,11 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     // `history`, NOTHING is added and NOTHING is moved, so the row stays
     // in its original, lower position. The prototype's `start()` instead
     // filters the old entry out and unshifts a fresh one to the top
-    // (`app.html` around line 1262), which is what this test requires.
+    // (`app.html` around line 1262).
+    //
+    // Card 112 kept the new row on top and dropped the filter: each search
+    // is its own row on the server, and filtering earlier ones out made them
+    // vanish from "Your searches" until a reload (11 rows fell to 5).
     fetchHistoryMock.mockResolvedValue({
       items: [
         { trace_id: "restored-newer", question: "Which variant is pathogenic in CFTR?" },
@@ -637,20 +689,25 @@ describe("F-4.13-A-07: re-asking a restored question", () => {
     );
 
     const afterRail = screen.getByTestId("history-rail");
-    // No duplicate: still exactly one row for the re-asked question.
+    // Card 112: the restored row stays, and the re-ask is a second row.
     expect(
       within(afterRail).getAllByRole("button", { name: /what is brca1\?/i }),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
 
-    // Moved to the top: ahead of the row that was newer before the re-ask.
+    // The new row is on top, ahead of the row that was newer before the
+    // re-ask; the restored row keeps its place below it.
     const buttonTexts = within(afterRail)
       .getAllByRole("button")
       .map((button) => button.textContent ?? "");
     const brca1Index = buttonTexts.findIndex((text) => /what is brca1\?/i.test(text));
+    const restoredIndex = buttonTexts.findIndex(
+      (text, index) => index > brca1Index && /what is brca1\?/i.test(text),
+    );
     const cftrIndex = buttonTexts.findIndex((text) => /cftr/i.test(text));
     expect(brca1Index).toBeGreaterThan(-1);
     expect(cftrIndex).toBeGreaterThan(-1);
     expect(brca1Index).toBeLessThan(cftrIndex);
+    expect(restoredIndex).toBeGreaterThan(cftrIndex);
   });
 
   it("does not relabel an unrelated restored row's meta when a different question lands", async () => {
@@ -724,9 +781,10 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
 
     // 2. Re-ask A from the rail, the exact interaction F-4.13-A-07's fix
-    //    exists to enable. Filter-then-unshift REMOVES the old row and adds
-    //    one, so the list length is 1 before and 1 after: the moment a
-    //    length-derived id stops being unique.
+    //    exists to enable. Filter-then-unshift used to REMOVE the old row
+    //    and add one, so the list length was 1 before and 1 after: the
+    //    moment a length-derived id stops being unique. Card 112 keeps the
+    //    old row, so the rail now holds two rows for A, each its own id.
     let rail = await screen.findByTestId("history-rail");
     await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(2));
@@ -740,8 +798,8 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
 
     rail = screen.getByTestId("history-rail");
     expect(
-      within(rail).getByRole("button", { name: /what is brca1\?/i }),
-    ).toBeInTheDocument();
+      within(rail).getAllByRole("button", { name: /what is brca1\?/i }),
+    ).toHaveLength(2);
     expect(within(rail).getByRole("button", { name: /cftr/i })).toBeInTheDocument();
 
     // 4. Each row must run ITS OWN question. Both are asserted rather than
@@ -750,7 +808,7 @@ describe("F-4.13-RV-01: a rail row's identity survives the list shrinking", () =
     //    fix deliberately changed, and pinning only one would go vacuous the
     //    next time that ordering moves.
     createRunMock.mockClear();
-    await user.click(within(rail).getByRole("button", { name: /what is brca1\?/i }));
+    await user.click(within(rail).getAllByRole("button", { name: /what is brca1\?/i })[0]!);
     await waitFor(() => expect(createRunMock).toHaveBeenCalledTimes(1));
     expect(createRunMock).toHaveBeenCalledWith(
       expect.objectContaining({ text: "What is BRCA1?" }),
@@ -923,6 +981,23 @@ describe("F-4.13-FV-01: a landing run does not rewrite another row's meta", () =
     //    vitest suites use; `answer-cap` is reached only by the browser
     //    suite, and waiting for it here made an earlier version of this
     //    clause fail for a reason unrelated to what it tests.
+    // NOT converted to `revealNow()` (D4 defect 12). Unlike this file's
+    // other three sites, this test interleaves several REAL-timer waits
+    // (`createRun`, then `releaseHistory()`, then the history-rail and
+    // "9 sources" finds) between the ask and this point, so the pacing
+    // hooks' own first `setTimeout` is very likely already scheduled, and
+    // possibly already fired, on the REAL clock before this line ever
+    // installs fake timers. `vi.useFakeTimers()` only intercepts timers
+    // scheduled AFTER it is installed; a real timer already in flight stays
+    // real and outside `revealNow`'s advance loop. Measured: converting
+    // this site left the run stuck at `step-Write` after a full 20000ms
+    // fake-timer advance, `source-1` never appearing at all, confirmed by a
+    // debug dump of every `data-testid` on screen at that point. Fixing it
+    // properly needs fake timers installed from the START of the test
+    // (before `ask`), with every intervening real-timer wait re-verified
+    // under that regime too, which is a materially larger and riskier
+    // change than the other three sites needed. Left on the original real
+    // wait rather than force a fix that risks a new, subtler flake.
     await screen.findByTestId("source-1", undefined, { timeout: 10000 });
 
     // The restored row must still report ITS OWN run. This run produced one
@@ -1060,7 +1135,8 @@ describe("system notes: App forwards the run's disclosures to AnswerScreen", () 
 
     // 2026-09-14: the answer reveal holds landing for at least 1.5s, so this
     // waits as long as the other landed-answer arms in this file do.
-    const note = await screen.findByTestId("answer-note-0", undefined, { timeout: 10000 });
+    await revealNow();
+    const note = screen.getByTestId("answer-note-0");
     expect(note.textContent).toMatch(/showing 5 of 30 matching rows/i);
   });
 });
@@ -1168,7 +1244,8 @@ describe("privacy: the previous person's thread is cleared on sign-out", () => {
     //    archives the landed turn into `thread`, so `thread` is non-empty
     //    the instant sign-out fires below.
     await ask(user, "What is BRCA1?");
-    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("source-1");
     await user.type(
       screen.getByLabelText(/ask a follow-up question/i),
       "What variants cause it?",
@@ -1185,7 +1262,8 @@ describe("privacy: the previous person's thread is cleared on sign-out", () => {
     // 3. The next person signs in and lands their OWN, unrelated answer.
     await signIn(user);
     await ask(user, "What variants cause cystic fibrosis?");
-    await screen.findByTestId("source-1", undefined, { timeout: 10000 });
+    await revealNow();
+    screen.getByTestId("source-1");
 
     // The first person's archived turn must not be here. `AnswerScreen`
     // only renders the `data-testid="thread"` wrapper when `previousTurns`

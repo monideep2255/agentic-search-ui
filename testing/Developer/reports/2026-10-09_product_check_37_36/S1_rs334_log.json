@@ -1,0 +1,43 @@
+{
+  "tag": "S1_rs334",
+  "question": "What is rs334 and what condition is it associated with?",
+  "mode": "Researcher",
+  "steps": [
+    {
+      "step": "bundle",
+      "bundle": [
+        "index-DB6gWcmy.js"
+      ]
+    },
+    {
+      "step": "signed in",
+      "ok": true
+    },
+    {
+      "step": "mode",
+      "pressed": "true"
+    },
+    {
+      "step": "landed",
+      "secs": 15.064,
+      "which": [
+        "trust-line"
+      ]
+    },
+    {
+      "step": "answer texts",
+      "emailStillVisible": false,
+      "answerBody": "? Answered14.6s · 3 tool calls · 1 source cited from 1 layer\n\nHide work ▴\n0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n2.1s\nTHINK\nOne to two direct API calls: look up rs334 in dbSNP and then its associated condition in ClinVar or MedGen. (not recognised as a gene symbol: rs334)\n2.1s\nPLAN\nLayer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup\n2.5s\nACT\nlitvar2_lookup — 1 result\n2.6s\nACT\nncbi_dbsnp — 1 result\n7.9s\nACT\ncypher_query — 0 results\n\nFound 1 variant record record for rs334: not-provided, protective, likely-benign, pathogenic, other.⁠1\n\nVARIANT RECORD RECORDS FOUND\nVARIANT IDENTIFIER \nnot-provided, protective, likely-benign, pathogenic, other rs334 ⁠1\nNOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources\n▶\nSOURCES\n1\n▶\nLIVE NCBI APIS\n1\nBased on 1 source cited, not yet confirmed\n·\nHigh-risk claim",
+      "answerMeta": "? Answered14.6s · 3 tool calls · 1 source cited from 1 layer",
+      "trust": "Based on 1 source cited, not yet confirmed\n·\nHigh-risk claim",
+      "workPanel": "0.0s\nGUARD\nIn scope. The question can be grounded in NCBI records.\n2.1s\nTHINK\nOne to two direct API calls: look up rs334 in dbSNP and then its associated condition in ClinVar or MedGen. (not recognised as a gene symbol: rs334)\n2.1s\nPLAN\nLayer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_dbsnp; Layer 3, literature and trials: litvar2_lookup\n2.5s\nACT\nlitvar2_lookup — 1 result\n2.6s\nACT\nncbi_dbsnp — 1 result\n7.9s\nACT\ncypher_query — 0 results",
+      "sources": "▶\nSOURCES\n1\n▶\nLIVE NCBI APIS\n1",
+      "notes": "NOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources",
+      "refusal": null
+    },
+    {
+      "step": "answer 390",
+      "overflow390": 0
+    }
+  ]
+}

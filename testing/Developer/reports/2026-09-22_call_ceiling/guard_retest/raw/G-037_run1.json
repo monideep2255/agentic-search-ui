@@ -1,0 +1,2047 @@
+{
+ "record": {
+  "id": "G-037",
+  "run": 1,
+  "pass": 1,
+  "worker": "A",
+  "account": "s3-item1-c-24fb67-20260922@example.com",
+  "category": "kisses",
+  "query_class": "exploratory",
+  "expected_outcome": "answer",
+  "question": "Find GEO expression datasets studying TP53 in human tumour samples.",
+  "session_id": "c103-180fd9330e0a",
+  "audience_depth": "researcher (omitted, account default)",
+  "deployed_commit": "693c020",
+  "started_at": "2026-09-23T00:46:27+00:00",
+  "run_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+  "outcome": "answered",
+  "timed_out": false,
+  "guard_passed": true,
+  "guard_category": "ok",
+  "guard_reason": null,
+  "think_query_class": "single_hop",
+  "resolved_entities": [
+   "NCBIGene:7157"
+  ],
+  "trust_outcome": "flag",
+  "trust_line": "Sources disagree on at least one claim",
+  "citations": 94,
+  "distinct_sources": 82,
+  "citations_by_layer": {
+   "layer_1_graph": 60,
+   "layer_2_api": 24,
+   "layer_3_enrichment": 10
+  },
+  "must_cite_total": 2,
+  "must_cite_hits": 1,
+  "tools": [
+   "ncbi_efetch",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "clinicaltrials_search",
+   "ncbi_efetch",
+   "cypher_query",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "cypher_query",
+   "pubtator_annotate",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch",
+   "ncbi_efetch"
+  ],
+  "layers": [
+   "layer_1_graph",
+   "layer_2_api",
+   "layer_3_enrichment"
+  ],
+  "tool_calls": [
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": true
+   },
+   {
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "result_count": 59,
+    "truncated": true
+   },
+   {
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 1,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 10,
+    "truncated": false
+   },
+   {
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "result_count": 5,
+    "truncated": false
+   }
+  ],
+  "l1_row_counts": [
+   1,
+   59
+  ],
+  "l1_empty_calls": 0,
+  "tool_errors": [],
+  "rate_limit_signals": 0,
+  "answer_words": 1939,
+  "answer_start": "Found 1 gene record for TP53, of 125 available: tumor protein p53 [1]. \n\nGene records found\n\nGene NCBIGene:7157, name: tumor protein p53 [1]. gene symbol: TP53 ",
+  "error_payload": null,
+  "total_cost_usd": 0.0,
+  "total_tool_calls": 11,
+  "server_elapsed_s": 5.971,
+  "seconds": 10.0,
+  "event_types": {
+   "guard": 1,
+   "think": 1,
+   "plan": 1,
+   "tool_start": 15,
+   "tool_result": 15,
+   "step": 1,
+   "token": 156,
+   "citation": 94,
+   "trust_signal": 95,
+   "done": 1
+  }
+ },
+ "events": [
+  {
+   "type": "guard",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 0,
+   "ts": "2026-09-23T00:44:55.083250Z",
+   "payload": {
+    "passed": true,
+    "category": "ok",
+    "reason": null
+   }
+  },
+  {
+   "type": "think",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 2,
+   "ts": "2026-09-23T00:44:58.193207Z",
+   "payload": {
+    "narrative": "Directly query GEO for expression datasets with TP53 and human tumour samples.",
+    "query_class": "single_hop",
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ],
+    "clarifying_question": null
+   }
+  },
+  {
+   "type": "plan",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 4,
+   "ts": "2026-09-23T00:44:58.196334Z",
+   "payload": {
+    "narrative": "searching 3 layers for NCBIGene:7157. Layer 1, the knowledge graph: cypher_query; Layer 2, live NCBI records: ncbi_efetch; Layer 3, literature and trials: pubtator_annotate, clinicaltrials_search",
+    "tool_calls": [
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-d3806c96344d",
+      "layer": "layer_1_graph",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-308627d52f8a",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-0bd87b14bc05",
+      "layer": "layer_3_enrichment",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "clinicaltrials_search",
+      "call_id": "ct-762fc73d7e40",
+      "layer": "layer_3_enrichment",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-743b608cc04c",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0276da19eaab",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-748ebfcbcf78",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-82a14496c64d",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-4956033e5b5d",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "pubtator_annotate",
+      "call_id": "pa-0198a7244265",
+      "layer": "layer_3_enrichment",
+      "persona": "Florey",
+      "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-06bccbb63a31",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-366485e47a97",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-0875073a0fb6",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "ncbi_efetch",
+      "call_id": "ne-944bc6494c86",
+      "layer": "layer_2_api",
+      "persona": "Chase",
+      "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+     },
+     {
+      "tool": "cypher_query",
+      "call_id": "cq-303bf61ae3da",
+      "layer": "layer_1_graph",
+      "persona": "Luria",
+      "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+      "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+     }
+    ],
+    "resolved_entities": [
+     {
+      "text": "TP53",
+      "curie": "NCBIGene:7157",
+      "confidence": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 6,
+   "ts": "2026-09-23T00:44:58.197960Z",
+   "payload": {
+    "call_id": "cq-d3806c96344d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 7,
+   "ts": "2026-09-23T00:44:58.197998Z",
+   "payload": {
+    "call_id": "ne-308627d52f8a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 8,
+   "ts": "2026-09-23T00:44:58.198010Z",
+   "payload": {
+    "call_id": "pa-0bd87b14bc05",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 9,
+   "ts": "2026-09-23T00:44:58.198019Z",
+   "payload": {
+    "call_id": "ct-762fc73d7e40",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 10,
+   "ts": "2026-09-23T00:44:58.198028Z",
+   "payload": {
+    "call_id": "ne-743b608cc04c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 11,
+   "ts": "2026-09-23T00:44:58.198040Z",
+   "payload": {
+    "call_id": "ne-0276da19eaab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 12,
+   "ts": "2026-09-23T00:44:58.198051Z",
+   "payload": {
+    "call_id": "ne-748ebfcbcf78",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 13,
+   "ts": "2026-09-23T00:44:58.198064Z",
+   "payload": {
+    "call_id": "ne-82a14496c64d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 14,
+   "ts": "2026-09-23T00:44:58.198076Z",
+   "payload": {
+    "call_id": "ne-4956033e5b5d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 15,
+   "ts": "2026-09-23T00:44:58.198088Z",
+   "payload": {
+    "call_id": "pa-0198a7244265",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "running",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 16,
+   "ts": "2026-09-23T00:44:58.198096Z",
+   "payload": {
+    "call_id": "ne-06bccbb63a31",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 17,
+   "ts": "2026-09-23T00:44:58.198104Z",
+   "payload": {
+    "call_id": "ne-366485e47a97",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 18,
+   "ts": "2026-09-23T00:44:58.198113Z",
+   "payload": {
+    "call_id": "ne-0875073a0fb6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 19,
+   "ts": "2026-09-23T00:44:58.198124Z",
+   "payload": {
+    "call_id": "ne-944bc6494c86",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "running",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase"
+   }
+  },
+  {
+   "type": "tool_start",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 20,
+   "ts": "2026-09-23T00:44:58.198136Z",
+   "payload": {
+    "call_id": "cq-303bf61ae3da",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "running",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria"
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 21,
+   "ts": "2026-09-23T00:44:58.439570Z",
+   "payload": {
+    "call_id": "ne-308627d52f8a",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "dataset_report: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 22,
+   "ts": "2026-09-23T00:44:58.440230Z",
+   "payload": {
+    "call_id": "pa-0bd87b14bc05",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "ok: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 23,
+   "ts": "2026-09-23T00:44:58.479555Z",
+   "payload": {
+    "call_id": "ne-0276da19eaab",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 24,
+   "ts": "2026-09-23T00:44:58.529220Z",
+   "payload": {
+    "call_id": "ne-743b608cc04c",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 25,
+   "ts": "2026-09-23T00:44:58.600653Z",
+   "payload": {
+    "call_id": "ct-762fc73d7e40",
+    "tool": "clinicaltrials_search",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 26,
+   "ts": "2026-09-23T00:44:58.602831Z",
+   "payload": {
+    "call_id": "ne-748ebfcbcf78",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "search: 10 id(s)",
+    "result_count": 10,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 27,
+   "ts": "2026-09-23T00:44:58.707314Z",
+   "payload": {
+    "call_id": "cq-d3806c96344d",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "1 row(s) of 1",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 28,
+   "ts": "2026-09-23T00:44:58.774784Z",
+   "payload": {
+    "call_id": "ne-944bc6494c86",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 29,
+   "ts": "2026-09-23T00:44:58.803008Z",
+   "payload": {
+    "call_id": "ne-82a14496c64d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "search: 5 id(s)",
+    "result_count": 5,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 30,
+   "ts": "2026-09-23T00:44:59.497426Z",
+   "payload": {
+    "call_id": "cq-303bf61ae3da",
+    "tool": "cypher_query",
+    "layer": "layer_1_graph",
+    "status": "ok",
+    "persona": "Luria",
+    "persona_about": "Showed with Delbruck that bacterial resistance arises from random mutation rather than adaptation, the fluctuation test of 1943.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Salvador_Luria",
+    "summary": "59 row(s) of 124",
+    "result_count": 59,
+    "truncated": true
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 31,
+   "ts": "2026-09-23T00:44:59.665334Z",
+   "payload": {
+    "call_id": "pa-0198a7244265",
+    "tool": "pubtator_annotate",
+    "layer": "layer_3_enrichment",
+    "status": "ok",
+    "persona": "Florey",
+    "persona_about": "Led the Oxford team that turned penicillin into a purified, tested medicine and organised its mass production for the war.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Howard_Florey",
+    "summary": "ok: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 32,
+   "ts": "2026-09-23T00:44:59.842660Z",
+   "payload": {
+    "call_id": "ne-06bccbb63a31",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 33,
+   "ts": "2026-09-23T00:44:59.863758Z",
+   "payload": {
+    "call_id": "ne-366485e47a97",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "summary: 1 record(s)",
+    "result_count": 1,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 34,
+   "ts": "2026-09-23T00:44:59.889732Z",
+   "payload": {
+    "call_id": "ne-4956033e5b5d",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "fetch: 10 record(s)",
+    "result_count": 10,
+    "truncated": false
+   }
+  },
+  {
+   "type": "tool_result",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 35,
+   "ts": "2026-09-23T00:44:59.942752Z",
+   "payload": {
+    "call_id": "ne-0875073a0fb6",
+    "tool": "ncbi_efetch",
+    "layer": "layer_2_api",
+    "status": "ok",
+    "persona": "Chase",
+    "persona_about": "Ran the blender experiment with Hershey that proved DNA carries the genes a virus passes on.",
+    "persona_wikipedia": "https://en.wikipedia.org/wiki/Martha_Chase",
+    "summary": "summary: 5 record(s)",
+    "result_count": 5,
+    "truncated": false
+   }
+  },
+  {
+   "type": "step",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 36,
+   "ts": "2026-09-23T00:44:59.949246Z",
+   "payload": {
+    "step": "write",
+    "status": "started"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCBIGene:7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "NCBIGene",
+    "field": "name",
+    "entity_name": "tumor protein p53",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "symbol",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24395704",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24395704/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3898631",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "191170",
+    "source_url": "https://omim.org/entry/191170",
+    "layer": "layer_2_api",
+    "source": "omim",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200305791",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200305791",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02289326",
+    "source_url": "https://clinicaltrials.gov/study/NCT02289326",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24395704",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24395704/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0000122",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27328919",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "3905024",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200310906",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200310906",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "7157",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_2_api",
+    "source": "gene",
+    "field": "summary",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT02612285",
+    "source_url": "https://clinicaltrials.gov/study/NCT02612285",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27328919",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0002244",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "hematopoietic progenitor cell differentiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36251447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36251447/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4055875",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200315234",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200315234",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03149679",
+    "source_url": "https://clinicaltrials.gov/study/NCT03149679",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36251447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36251447/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006289",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "nucleotide-excision repair",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36692074",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36692074/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083530",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200346344",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200346344",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03466034",
+    "source_url": "https://clinicaltrials.gov/study/NCT03466034",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36692074",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36692074/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006355",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "4083687",
+    "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/",
+    "layer": "layer_2_api",
+    "source": "clinvar",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "200346694",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gds/200346694",
+    "layer": "layer_2_api",
+    "source": "gds",
+    "field": "title",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "NCT03645200",
+    "source_url": "https://clinicaltrials.gov/study/NCT03645200",
+    "layer": "layer_3_enrichment",
+    "source": "clinicaltrials.gov",
+    "field": "name",
+    "entity_name": null,
+    "evidence_kind": "external_annotation"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_3_enrichment",
+    "source": "pubmed",
+    "field": "pmid",
+    "entity_name": null,
+    "evidence_kind": "literature_mention"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006357",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "24395704",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/24395704/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006914",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "autophagy",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "27328919",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006915",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36251447",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36251447/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006974",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36692074",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36692074/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006979",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to oxidative stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "36766853",
+    "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/",
+    "layer": "layer_2_api",
+    "source": "pubmed",
+    "field": "abstract",
+    "entity_name": null,
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0006983",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "ER overload response",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007265",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "Ras protein signal transduction",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0007623",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "circadian rhythm",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008104",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intracellular protein localization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008285",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell population proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0008340",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "determination of adult lifespan",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009299",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mRNA transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009410",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0009411",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to UV",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010212",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010332",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to gamma radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0010628",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of gene expression",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0016032",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "viral process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030308",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of cell growth",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0030330",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "DNA damage response, signal transduction by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0031571",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "mitotic G1 DNA damage checkpoint signaling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0032211",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of telomere maintenance via telomerase",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0033209",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "tumor necrosis factor-mediated signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0034644",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to UV",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042149",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to glucose starvation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042771",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0042981",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043065",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043066",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0043153",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "entrainment of circadian clock by photoperiod",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045815",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "transcription initiation-coupled chromatin remodeling",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045892",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045893",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of DNA-templated transcription",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045899",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of RNA polymerase II transcription preinitiation complex assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0045944",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of transcription by RNA polymerase II",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0046677",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "response to antibiotic",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048147",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of fibroblast proliferation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048512",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "circadian behavior",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0048539",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "bone marrow development",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051053",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of DNA metabolic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051097",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "negative regulation of helicase activity",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051262",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein tetramerization",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0051726",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "regulation of cell cycle",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060218",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "hematopoietic stem cell differentiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0060333",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "type II interferon-mediated signaling pathway",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0062100",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of programmed necrotic cell death",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0065003",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "protein-containing complex assembly",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070059",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0070245",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "positive regulation of thymocyte apoptotic process",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071456",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to hypoxia",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071466",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to xenobiotic stimulus",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071479",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to ionizing radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0071480",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "cellular response to gamma radiation",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0072331",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "signal transduction by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "citation",
+   "payload": {
+    "source_id": "GO:0072332",
+    "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+    "layer": "layer_1_graph",
+    "source": "GO",
+    "field": "name",
+    "entity_name": "intrinsic apoptotic signaling pathway by p53 class mediator",
+    "evidence_kind": "primary_assertion"
+   }
+  },
+  {
+   "type": "done",
+   "version": "v1",
+   "trace_id": "700523be-e7a9-4883-9759-9613d5e3ede1",
+   "seq": 383,
+   "ts": "2026-09-23T00:45:03.477304Z",
+   "payload": {
+    "total_cost_usd": 0.0,
+    "total_tool_calls": 11,
+    "elapsed_ms": 5971,
+    "trust_outcome": "flag",
+    "trust_line": "Sources disagree on at least one claim",
+    "layer_calls_used": 15,
+    "next_step": null,
+    "next_step_query": null
+   }
+  }
+ ],
+ "answer_text": "Found 1 gene record for TP53, of 125 available: tumor protein p53 [1]. \n\nGene records found\n\nGene NCBIGene:7157, name: tumor protein p53 [1]. gene symbol: TP53 [2]. gene name: TP53 [7]. This gene encodes a tumor suppressor protein containing transcriptional activation, DNA binding, and oligomerization domains [14]. The encoded protein responds to diverse cellular stresses to regulate expression of target genes, thereby inducing cell cycle arrest, apoptosis, senescence, DNA repair, or changes in metabolism [14]. Mutations in this gene are associated with a variety of human cancers, including hereditary cancers such as Li-Fraumeni syndrome [14]. Alternative splicing of this gene and the use of alternate promoters result in multiple transcript variants and isoforms [14]. Additional isoforms have also been shown to result from the use of alternate translation initiation codons from identical transcript variants (PMIDs: 12032546, 20937277) [14]. [provided by RefSeq, Dec 2016] [14]. \n\nPubmed records found\n\npubmed title: Mutant TP53 posttranslational modifications: challenges and opportunities [3]. pubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data [11]. pubmed title: Mutation of the TP53 gene in acute lymphoblastic leukemia does not affect survival outcomes after haploidentical hematopoietic stem cell transplantation [18]. pubmed title: TP53 signal pathway confers potential therapy target in acute myeloid leukemia [24]. pubmed title: The Role of TP53 in Adaptation and Evolution [30]. The wild-type (WT) human p53 (TP53) tumor suppressor can be posttranslationally modified at over 60 of its 393 residues [36]. These modifications contribute to changes in TP53 stability and in its activity as a transcription factor in response to a wide variety of intrinsic and extrinsic stresses in part through regulation of protein-protein and protein-DNA interactions [36]. The TP53 gene frequently is mutated in cancers, and in contrast to most other tumor suppressors, the mutations are mostly missense often resulting in the accumulation of mutant (MUT) protein, which may have novel or altered functions [36]. Most MUT TP53s can be posttranslationally modified at the same residues as in WT TP53 [36]. Strikingly, however, codons for modified residues are rarely mutated in human tumors, suggesting that TP53 modifications are not essential for tumor suppression activity [36]. Nevertheless, these modifications might alter MUT TP53 activity and contribute to a gain-of-function leading to increased metastasis and tumor progression [36]. Furthermore, many of the signal transduction pathways that result in TP53 modifications are altered or disrupted in cancers [36]. Understanding the signaling pathways that result in TP53 modification and the functions of these modifications in both WT TP53 and its many MUT forms may contribute to more effective cancer therapies [36]. TP53 gene mutations are one of the most frequent somatic events in cancer [38]. The IARC TP53 Database (http://p53.iarc.fr) is a popular resource that compiles occurrence and phenotype data on TP53 germline and somatic variations linked to human cancer [38]. The deluge of data coming from cancer genomic studies generates new data on TP53 variations and attracts a growing number of database users for the interpretation of TP53 variants [38]. Here, we present the current contents and functionalities of the IARC TP53 Database and perform a systematic analysis of TP53 somatic mutation data extracted from this database and from genomic data repositories [38]. However, the more complete screening achieved by genomic studies highlighted some overlooked facts about TP53 mutations, such as the presence of a significant number of mutations occurring outside the DNA-binding domain in specific cancer types [38]. We also provide an update on TP53 inherited variants including the ones that should be considered as neutral frequent variations [38]. We thus provide an update of current knowledge on TP53 variations in human cancer as well as inform users on the efficient use of the IARC TP53 Database [38]. Previous studies have demonstrated that TP53 mutation is correlated with insufficient therapy response and unfavorable prognosis in acute lymphoblastic leukemia (ALL) [40]. Few studies have investigated the impact of TP53 mutation in ALL patients after haploidentical hematopoietic stem cell transplantation (haplo-HSCT) [40]. We completed a retrospective study of 65 ALL patients with available TP53 status who underwent haplo-HSCT [40]. They were divided into a TP53 mutation group (TP53mut ) and a TP53 wild-type (TP53wt ) group [40]. TP53mut showed comparable 2-year cumulative incidence of relapse (CIR) rates (13.1% vs 12.5%, P\u00a0=\u00a0.96) and 2-year leukemia-free survival (LFS) (74.2% vs 77.4%, P\u00a0=\u00a0.80) with TP53wt [40]. No significant differences in 2-year overall survival (OS) rates (82.9% vs 87.3%, P\u00a0=\u00a0.61) or 2-year NRM rates (12.7% vs 10.2%, P\u00a0=\u00a0.69) were observed in TP53mut and TP53wt patients [40]. Multivariate analysis suggested that white blood cell (WBC) count at initial diagnosis (>50 \u00d7\u2009109 /L: hazard ratio [HR]\u00a0=\u00a03.860, P\u00a0=\u00a0.016) and age (>40\u2009years old: HR\u00a0=\u00a04.120, P\u00a0=\u00a0.012) are independent risk factors for 2-year LFS [40]. Our study showed that TP53 mutations may not be related to the unfavorable impact on survival in ALL patients after treatment with haplo-HSCT [40]. The present results suggested that haplo-HSCT may eliminate the poor prognosis effect of TP53 mutation in ALL [40]. TP53 mutation is a frequent tumor suppressor mutation and a critical prognostic indicator across studies in many malignant tumors including hematologic malignancies [42]. However, the role of TP53 and its correlative pathway in acute myeloid leukemia (AML) is enigmatic, which may provide possible emerging strategies with the potential to improve outcomes in AML [42]. Accordingly, we focus not only on the TP53 mutation but also on the underlying mechanisms of the mutated TP53 signal pathway [42]. While it is now generally accepted that TP53 mutations are widely associated with a dismal prognosis, resistance to chemotherapy, and high incidence of relapse and refractory AML [42]. Hereby, the current therapeutics targeting TP53 mutant AML are summarized in this review [42]. This will address emerging TP53-based therapeutic approaches, facilizing the TP53-targeted treatment options [42]. The TP53 gene is a major player in cancer formation, and it is considered the most important tumor suppressor gene [44]. The p53 protein acts as a transcription factor, and it is involved in DNA repair, senescence, cell-cycle control, autophagy, and apoptosis [44]. Beyond cancer, there is evidence that TP53 is associated with fertility, aging, and longevity [44]. Additionally, more evidence exists that genetic variants in TP53 are associated with environmental adaptation [44]. Special TP53 amino-acid residues or pathogenic TP53 mutations seem to be adaptive for animals living in hypoxic and cold environments or having been exposed to starvation, respectively [44]. At the somatic level, it has recently been proven that multiple cancer genes, including TP53, are under positive selection in healthy human tissues [44]. It is not clear why these driver mutations do not transform these tissues into cancerous ones [44]. Other studies have shown that elephants have multiple TP53 copies, probably this being the reason for the very low cancer incidence in these large animals [44]. This may explain the famous Peto's paradox [44]. This review discusses in detail the multilevel role of TP53 in adaptation, according to the published evidence [44]. This role is complicated, and it extends from cells to individuals and to populations [44]. \n\nClinvar records found\n\nclinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [4]. clinvar title: NC_000017.11:g.7666193C>T [12]. clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [19]. clinvar title: NM_000546.6(TP53):c.1101-73G>C [25]. clinvar title: NM_000546.6(TP53):c.-28-3132T>C [31]. \n\nOmim records found\n\nTUMOR PROTEIN p53 [5]. TP53 [5]. \n\nGds records found\n\ngds title: Lack of tumor-derived LCN2 sensitizes pancreatic cancer cells to ferroptosis induction [6]. gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas [13]. gds title: Exportin-1 is a therapeutic vulnerability in atypical teratoid/rhabdoid tumors [20]. gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas -- ATAC [26]. gds title: ATRX loss predicts poor outcomes and reveals a therapeutic vulnerability to TEAD inhibition in soft tissue sarcomas -- RNA [32]. \n\nClinical trial records found\n\nClinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [8]. Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [15]. Clinical trial name: The p53 Colorectal Cancer Trial [21]. Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [27]. Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [33]. \n\nPublication records found\n\nPublication pmid: 24395704 [9]. Publication pmid: 27328919 [16]. Publication pmid: 36251447 [22]. Publication pmid: 36692074 [28]. Publication pmid: 36766853 [34]. \n\nBiological process records found\n\nBiologicalProcess GO:0000122, name: negative regulation of transcription by RNA polymerase II [10]. BiologicalProcess GO:0002244, name: hematopoietic progenitor cell differentiation [17]. BiologicalProcess GO:0006289, name: nucleotide-excision repair [23]. BiologicalProcess GO:0006355, name: regulation of DNA-templated transcription [29]. BiologicalProcess GO:0006357, name: regulation of transcription by RNA polymerase II [35]. BiologicalProcess GO:0006914, name: autophagy [37]. BiologicalProcess GO:0006915, name: apoptotic process [39]. BiologicalProcess GO:0006974, name: DNA damage response [41]. BiologicalProcess GO:0006979, name: response to oxidative stress [43]. BiologicalProcess GO:0006983, name: ER overload response [45]. BiologicalProcess GO:0007265, name: Ras protein signal transduction [46]. BiologicalProcess GO:0007623, name: circadian rhythm [47]. BiologicalProcess GO:0008104, name: intracellular protein localization [48]. BiologicalProcess GO:0008285, name: negative regulation of cell population proliferation [49]. BiologicalProcess GO:0008340, name: determination of adult lifespan [50]. BiologicalProcess GO:0009299, name: mRNA transcription [51]. BiologicalProcess GO:0009410, name: response to xenobiotic stimulus [52]. BiologicalProcess GO:0009411, name: response to UV [53]. BiologicalProcess GO:0010212, name: response to ionizing radiation [54]. BiologicalProcess GO:0010332, name: response to gamma radiation [55]. BiologicalProcess GO:0010628, name: positive regulation of gene expression [56]. BiologicalProcess GO:0016032, name: viral process [57]. BiologicalProcess GO:0030308, name: negative regulation of cell growth [58]. BiologicalProcess GO:0030330, name: DNA damage response, signal transduction by p53 class mediator [59]. BiologicalProcess GO:0031571, name: mitotic G1 DNA damage checkpoint signaling [60]. BiologicalProcess GO:0032211, name: negative regulation of telomere maintenance via telomerase [61]. BiologicalProcess GO:0033209, name: tumor necrosis factor-mediated signaling pathway [62]. BiologicalProcess GO:0034644, name: cellular response to UV [63]. BiologicalProcess GO:0042149, name: cellular response to glucose starvation [64]. BiologicalProcess GO:0042771, name: intrinsic apoptotic signaling pathway in response to DNA damage by p53 class mediator [65]. BiologicalProcess GO:0042981, name: regulation of apoptotic process [66]. BiologicalProcess GO:0043065, name: positive regulation of apoptotic process [67]. BiologicalProcess GO:0043066, name: negative regulation of apoptotic process [68]. BiologicalProcess GO:0043153, name: entrainment of circadian clock by photoperiod [69]. BiologicalProcess GO:0045815, name: transcription initiation-coupled chromatin remodeling [70]. BiologicalProcess GO:0045892, name: negative regulation of DNA-templated transcription [71]. BiologicalProcess GO:0045893, name: positive regulation of DNA-templated transcription [72]. BiologicalProcess GO:0045899, name: positive regulation of RNA polymerase II transcription preinitiation complex assembly [73]. BiologicalProcess GO:0045944, name: positive regulation of transcription by RNA polymerase II [74]. BiologicalProcess GO:0046677, name: response to antibiotic [75]. BiologicalProcess GO:0048147, name: negative regulation of fibroblast proliferation [76]. BiologicalProcess GO:0048512, name: circadian behavior [77]. BiologicalProcess GO:0048539, name: bone marrow development [78]. BiologicalProcess GO:0051053, name: negative regulation of DNA metabolic process [79]. BiologicalProcess GO:0051097, name: negative regulation of helicase activity [80]. BiologicalProcess GO:0051262, name: protein tetramerization [81]. BiologicalProcess GO:0051726, name: regulation of cell cycle [82]. BiologicalProcess GO:0060218, name: hematopoietic stem cell differentiation [83]. BiologicalProcess GO:0060333, name: type II interferon-mediated signaling pathway [84]. BiologicalProcess GO:0062100, name: positive regulation of programmed necrotic cell death [85]. BiologicalProcess GO:0065003, name: protein-containing complex assembly [86]. BiologicalProcess GO:0070059, name: intrinsic apoptotic signaling pathway in response to endoplasmic reticulum stress [87]. BiologicalProcess GO:0070245, name: positive regulation of thymocyte apoptotic process [88]. BiologicalProcess GO:0071456, name: cellular response to hypoxia [89]. BiologicalProcess GO:0071466, name: cellular response to xenobiotic stimulus [90]. BiologicalProcess GO:0071479, name: cellular response to ionizing radiation [91]. BiologicalProcess GO:0071480, name: cellular response to gamma radiation [92]. BiologicalProcess GO:0072331, name: signal transduction by p53 class mediator [93]. BiologicalProcess GO:0072332, name: intrinsic apoptotic signaling pathway by p53 class mediator [94]. \n\nNote: this answer was truncated because only 60 of the 125 records that matched this question in the graph were retrieved"
+}
