@@ -43,7 +43,7 @@ Why it is written down this bluntly: across the fix loop from 2026-09-12 the dec
 
 ## Entry format
 
-Append to the table in `LEARNINGS.md`, newest last:
+Append the row at the end of `LEARNINGS.md`, which is the end of the Lessons table (the table is the last section of the file), newest last, with no blank line before it:
 
 | Date | Applies to | What broke | What was tried | What fixed it |
 |------|-----------|------------|----------------|---------------|
@@ -51,11 +51,12 @@ Append to the table in `LEARNINGS.md`, newest last:
 
 The last two cells (`What was tried` and `What fixed it`) are each wrapped in a `<details>` dropdown, and every existing row follows that shape. The first three cells stay visible so the table scans for "have we hit this before"; the rest opens on demand. Match the shape when appending, or the table stops scanning.
 
-After appending, run `python tracker/check_doc_drift.py --check`. It fails on three things:
+After appending, run `python tracker/check_doc_drift.py --check`. It fails on four things:
 
 - A row that is missing a wrapper.
 - A row whose column count is wrong.
 - A blank line inside the table, which ends the table when rendered and turns every row below it into loose text. That happened on 2026-08-14 and hid 273 of 311 rows while every source-level check still passed, so this is a gate rather than a suggestion.
+- A dated row outside the Lessons table, which is what appending anywhere but the end of the file produces. 140 rows had landed that way before the table was gathered on 2026-10-17.
 
 Applies to: the tool, layer, build phase, or subsystem, so a future reader can filter. Tag generously; a missed tag is a missed recall.
 

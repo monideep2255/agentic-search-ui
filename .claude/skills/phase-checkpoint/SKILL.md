@@ -135,7 +135,8 @@ A planned edit that conflicts with a product-owner decision, at this step or any
 
 - Scan the session for failures that took more than a couple of minutes, wrong assumptions that cost rework, or fixes whose reason is not obvious from the code.
 - For each one not yet in LEARNINGS.md, append a row in the `learnings` skill's shape: Date, Applies to, What broke, then a `<details><summary>what was tried</summary>` block and a `<details><summary>what fixed it</summary>` block.
-- Append-only, never rewrite an existing row. No blank line inside the table.
+- Append-only, never rewrite an existing row. Append at the end of the file, which is the end of the Lessons table, with no blank line before the row; the drift check fails a dated row outside the table.
+- Before moving on, confirm the new row is the last line of `LEARNINGS.md`. A document whose rows land in another section is a shape problem: the registry must pin its sections, and a `none` shape in `tracker/Living_documents.md` is the gap to report.
 - If nothing this session met the bar, say so and move on.
 
 ### Step 2: session doc (planning-phase mode only)
@@ -246,7 +247,7 @@ Run `python3 tracker/check_doc_sync.py`. It compares the board, `testing/Retest_
 
 ### Step 7: the two checks (all modes)
 
-- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
+- `python3 tracker/check_doc_drift.py --check`. It checks the structure of every tracked document (tables of contents, duplicate phase headings, a "Last updated" line older than a date in its own body, the two append-only tables, including a dated row outside either) and its phase and pull request references, and fails on a defect or on a fact it could not compute. It compares no count and runs no tests, so it takes seconds.
 - `python3 tracker/check_living_docs.py --shape`: every registered anchor exists.
 
 A nonzero exit from either blocks the checkpoint: fix the document the script names, then rerun. Never declare the checkpoint done on a failing or unrun check, and never edit a checker so it passes.
