@@ -1,6 +1,6 @@
 # The verify loop: the team checks the product before the owner does
 
-A proposal, not yet approved. It answers card 42 of `testing/UI_fix_plan.md`, the product owner's request of 2026-09-26:
+A proposal, approved as proposed on 2026-09-26 (`DECISIONS.md`), with both decisions at its end answered that day. Built since: the pre-commit skill renamed to `precommit`, and `/verify` (`.claude/skills/verify/`); `/design` does not exist yet. It answers card 42 of `testing/UI_fix_plan.md`, the product owner's request of 2026-09-26:
 
 > the bossman mode team should be able to write the code, verify the code, judge, averserial, then have a /design for what I want and in the end /verify the QA work. This whole end to end is what we need to build.
 

@@ -2,7 +2,7 @@
 
 Since 2026-09-25 the build loop is described in one home: `.claude/skills/bossman-mode/SKILL.md` and its four reference files. This document keeps the one table nothing else holds (the provider mapping) and points at where everything else went. From 2026-07-26 to 2026-09-25 it was the stage-by-stage quick reference; the build harness review of 2026-09-25 (D5) found the one loop described in seven files, 1,268 live lines, with one change to the premise-gate stage made in four of them.
 
-Last updated: 2026-09-25.
+Last updated: 2026-10-17.
 
 ## Where the cadence lives now
 
@@ -52,8 +52,8 @@ One constraint from that arrangement does belong here, because it governs the ca
 - A review run on the fallback records findings and closes nothing.
 - The phase does not reach its merge until those stages have run on the primary provider, and the re-run counts against the 8 dispatches.
 
-Switching the harness to a different provider means editing this one table and nothing else. Nothing in these three places names a product directly:
+Switching the harness to a different provider means editing this one table and nothing else. Of these three places, only the record page names a product:
 
 - The stage table, in `SKILL.md` under "The stages"
 - The team table, in `SKILL.md` under "The team"
-- `Phase_6_execution_flow.html`
+- `Phase_6_execution_flow.html`, which as the record of 2026-09-24 carries its own copy of this table's first two provider columns as they stood that day

@@ -736,10 +736,13 @@ The workflow contains no inline shell: every gate step's body is a single token 
 | `GRAPH_PG_USER` | yes | `src/system_03_search_agent/tools/graph_connection.py` | Layer 1 psycopg2 connections fail; defaults to empty |
 | `GRAPH_PG_PASSWORD` | yes | `src/system_03_search_agent/tools/graph_connection.py` | Layer 1 psycopg2 authentication fails; defaults to empty |
 | `GRAPH_PG_DBNAME` | yes | `src/system_03_search_agent/tools/graph_connection.py` | Layer 1 connections use wrong database; defaults to empty |
+| `GRAPH_BOX_HOST` | yes | nothing under `src/`. Read by `services/graph_query_service/deploy/deploy.sh` and `services/graph_query_service/deploy/check_drift.sh`, operator-run scripts, each falling back to the line in `.env` | A graph service deploy or drift check cannot reach the box. The running product is unaffected |
 | `GRAPH_SNAPSHOT_VERSION` | no | `src/system_03_search_agent/tools/cypher_query.py`, `src/system_03_search_agent/export/manifest.py` | Nothing breaks. Both readers fall back to `_DEFAULT_GRAPH_SNAPSHOT_VERSION`, which is `ncbi_kg_v1_2026-04-22`. That constant is hand-maintained and nothing re-reads it from the graph |
 | `GUARD_MODEL` | yes | `src/system_03_search_agent/harness/tiers.py` | Guard tier falls back to app config default if unset |
 | `PLAN_MODEL` | yes | `src/system_03_search_agent/harness/tiers.py` | Plan tier falls back to app config default if unset |
 | `SYNTH_MODEL` | yes | `src/system_03_search_agent/harness/tiers.py` | Synth tier falls back to app config default if unset |
+| `JEV_MODEL` | no | `src/system_03_search_agent/harness/tiers.py` | Nothing. Jev's model falls back to `_DEFAULT_MODELS["jev"]` |
+| `CLASSIFIER_PROVIDER` | no | `src/system_03_search_agent/harness/decide.py`, read there for `decide()` and the reworded-sentence check alike | Nothing breaks. Unset, or anything but `jev`, means the guard tier decides alone and Jev is never asked |
 | `NCBI_EUTILS_RPS` | no | `src/system_03_search_agent/tools/ncbi_transport.py` | Nothing. Each family falls back to its `default_requests_per_second` in `_FAMILY_CONFIGS` |
 | `NCBI_DATASETS_RPS` | no | `src/system_03_search_agent/tools/ncbi_transport.py` | Same fallback |
 | `NCBI_PUBCHEM_RPS` | no | `src/system_03_search_agent/tools/ncbi_transport.py` | Same fallback |
@@ -749,7 +752,7 @@ The workflow contains no inline shell: every gate step's body is a single token 
 | `NCBI_CLINICALTRIALS_RPS` | no | `src/system_03_search_agent/tools/ncbi_transport.py` | Same fallback |
 | `NCBI_API_KEY` | yes | `src/system_03_search_agent/tools/ncbi_transport.py` | E-utilities rate limit stays at 3/sec instead of 10/sec; Layer 2 access rate-limited |
 | `NCBI_EMAIL` | yes | nothing under `src/` or `services/` | Declared as a live assignment in `env.example` and not yet wired. E-utilities requests carry no email parameter |
-| `OPENROUTER_API_KEY` | yes | (LiteLLM reads this indirectly for OpenRouter provider) | Model calls via OpenRouter fail without authentication |
+| `OPENROUTER_API_KEY` | yes | LiteLLM, indirectly, for every tier call; read directly for Jev's calls by `src/system_03_search_agent/harness/decide.py`, `src/system_03_search_agent/synthesis/sentence_check.py` and `src/system_03_search_agent/core/graph.py` | Model calls via OpenRouter fail without authentication, Jev's included |
 | `ANTHROPIC_API_KEY` | yes | (LiteLLM reads this indirectly for Anthropic provider) | Model calls via Anthropic provider fail |
 | `OPENAI_API_KEY` | yes | (LiteLLM reads this indirectly for OpenAI provider) | Model calls via OpenAI provider fail |
 | `USER_DB_URL` | yes | `src/system_03_search_agent/data/base.py` | User database connections fail; auth, interactions, and candidate tables unreachable |
@@ -766,6 +769,9 @@ The workflow contains no inline shell: every gate step's body is a single token 
 | `RUN_MIGRATIONS_ON_STARTUP` | yes | `src/system_03_search_agent/adapters/web_sse/app.py` | Database schema migrations skipped on startup if not set |
 | `APP_ENV` | yes | `src/system_03_search_agent/adapters/web_sse/app.py` | Health endpoint returns `unknown` for `app_env` if not set |
 | `CORS_ORIGINS` | yes | `src/system_03_search_agent/adapters/web_sse/app.py` | CORS headers not validated; defaults to empty |
+| `MCP_ALLOWED_HOSTS` | yes | `src/system_03_search_agent/adapters/mcp/server.py` | The `/mcp` route answers only on the SDK's localhost hostnames, so a deployment that forgets it is refused rather than opened. A malformed value stops the app at startup |
+| `MCP_ALLOWED_ORIGINS` | yes | `src/system_03_search_agent/adapters/mcp/server.py` | Only the SDK's localhost origins are admitted for a browser caller. A client that sends no `Origin` header is unaffected |
+| `LOOP_STALL_WATCH` | no | `src/system_03_search_agent/adapters/web_sse/loop_stall.py` | Nothing. The event loop lag watcher runs unless it is set to `0`, `false`, `off` or `no` |
 | `LANGSMITH_ENDPOINT` | no | `src/system_03_search_agent/observability/config.py` | Nothing. A fallback variant, with `LANGCHAIN_ENDPOINT` beside it |
 | `LANGCHAIN_ENDPOINT` | no | `src/system_03_search_agent/observability/config.py` | Nothing. A fallback variant |
 | `LANGSMITH_TRACING` | no | `src/system_03_search_agent/observability/config.py` | Nothing. A tracing-flag variant |
@@ -787,13 +793,13 @@ The workflow contains no inline shell: every gate step's body is a single token 
 
 ### Variables read in code but absent from env.example
 
-Seventeen names are read in the application code and absent from `env.example`.
+These names are read in the application code and absent from `env.example`. "Counts" below gives how many, with its date.
 
 Seven are the per-family rate-limit overrides that `ncbi_transport.py` reads through `_FAMILY_CONFIGS`, one per API family: `NCBI_EUTILS_RPS`, `NCBI_DATASETS_RPS`, `NCBI_PUBCHEM_RPS`, `NCBI_VARIATION_RPS`, `NCBI_PUBTATOR_RPS`, `NCBI_LITVAR2_RPS`, `NCBI_CLINICALTRIALS_RPS`.
 
 Those are the live knobs on every Layer 2 and Layer 3 pool that `.claude/rules/tool-call-budgets.md` governs, and none is discoverable from `env.example`.
 
-The remaining ten names follow, rendered as seven bullets because three tracing-flag variants are named inside a sibling's bullet rather than given one each:
+The remaining names follow. Three tracing-flag variants are named inside a sibling's bullet rather than given one each:
 
 - `GRAPH_SNAPSHOT_VERSION`: read independently by `src/system_03_search_agent/tools/cypher_query.py` and `src/system_03_search_agent/export/manifest.py`. The second restates the constants rather than importing them, deliberately, because the first module's are private. It is on the live answer path, not CLI-only. Falls back to `_DEFAULT_GRAPH_SNAPSHOT_VERSION`, not to an empty string.
 - `S3_BASE_URL`: read by `src/system_03_search_agent/adapters/cli/main.py`, the `s3` command. Points the CLI at a non-default API host.
@@ -802,11 +808,15 @@ The remaining ten names follow, rendered as seven bullets because three tracing-
 - `LANGSMITH_TRACING_V2`: read by `src/system_03_search_agent/observability/config.py` as a variant. Additional variants `LANGCHAIN_TRACING_V2`, `LANGSMITH_TRACING`, and `LANGCHAIN_TRACING` are also read but only `LANGCHAIN_TRACING_V2` is declared in env.example.
 - `LANGCHAIN_API_KEY`: read by `src/system_03_search_agent/observability/config.py` as a fallback variant of the declared `LANGSMITH_API_KEY`. Undeclared.
 - `LANGCHAIN_PROJECT`: read by `src/system_03_search_agent/observability/config.py` as a fallback variant of the declared `LANGSMITH_PROJECT`. Undeclared.
+- `CLASSIFIER_PROVIDER`: read by `src/system_03_search_agent/harness/decide.py`. `jev` makes Jev the classifier; anything else, unset included, keeps the guard tier deciding alone.
+- `JEV_MODEL`: read by `src/system_03_search_agent/harness/tiers.py`. Falls back to `_DEFAULT_MODELS["jev"]`.
+- `LOOP_STALL_WATCH`: read by `src/system_03_search_agent/adapters/web_sse/loop_stall.py`. The event loop lag watcher is on unless it says `0`, `false`, `off` or `no`.
 
 ### Variables in env.example but read by nothing under src/ or services/
 
 - `REDIS_URL`: a live assignment in `env.example`, read by nothing under `src/` or `services/`. Needed when the Section 4.3 response cache is wired.
 - `NCBI_EMAIL`: a live assignment in `env.example`, read by nothing under `src/` or `services/`.
+- `GRAPH_BOX_HOST`: a live assignment in `env.example`, read by no Python under `src/` or `services/`. Only the two operator-run shell scripts under `services/graph_query_service/deploy/` read it.
 - `PER_STEP_TIMEOUT_SECONDS`: a live assignment in `env.example`, read by nothing. The per-step budgets actually enforced come from `_TIER_STEP_BUDGET_S` in `src/system_03_search_agent/harness/harness.py`, read by `budget_for_step`.
 - `NIXPACKS_NO_CACHE`: deployment-only build hint (not read by app code).
 - `NIXPACKS_NODE_VERSION`: deployment-only build hint for frontend toolchain (not read by app code).
@@ -819,12 +829,12 @@ No central settings.py or config.py exists in the main codebase. The observabili
 
 ### Counts
 
-Measured rather than asserted:
+Measured on 2026-10-17 rather than asserted:
 
-- `env.example` declares 40 variables. Re-derive with `grep -cE '^[A-Za-z0-9_]+=' env.example`.
-- Seventeen names are read in code and absent from it: seven `NCBI_*_RPS` rate-limit overrides, `GRAPH_SNAPSHOT_VERSION`, the two `S3_` command-line variables, and seven LangSmith and LangChain naming variants.
-- Twelve of the forty declared variables are read by no code under `src/` or `services/`. Re-derive with `grep -rE "os\.environ|os\.getenv" src services --include="*.py"` and compare against `env.example`. They split into two groups, and the difference matters:
-  - Consumed elsewhere, so their absence from our code is correct: `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, which LiteLLM reads; `VITE_API_BASE_URL`, which Vite inlines at frontend build time; and `BUILD_OPENROUTER_API_KEY`, which belongs to the build harness.
+- `env.example` declares 43 variables. Re-derive with `grep -cE '^[A-Za-z0-9_]+=' env.example`.
+- Twenty names are read in code and absent from it: seven `NCBI_*_RPS` rate-limit overrides, `GRAPH_SNAPSHOT_VERSION`, the two `S3_` command-line variables, seven LangSmith and LangChain naming variants, `CLASSIFIER_PROVIDER`, `JEV_MODEL` and `LOOP_STALL_WATCH`.
+- Twelve of the forty-three declared variables are read by no Python under `src/` or `services/`. Re-derive with `grep -rE "os\.environ|os\.getenv" src services --include="*.py"` and compare against `env.example`. They split into two groups, and the difference matters:
+  - Consumed elsewhere, so their absence from our code is correct: `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, which LiteLLM reads; `VITE_API_BASE_URL`, which Vite inlines at frontend build time; `BUILD_OPENROUTER_API_KEY`, which belongs to the build harness; and `GRAPH_BOX_HOST`, which two operator-run deploy scripts read. `OPENROUTER_API_KEY` left this group when Jev's calls began reading it directly.
   - Read by nothing in this repository's application code: `NCBI_EMAIL`, `REDIS_URL`, `PER_STEP_TIMEOUT_SECONDS`, `PORT`, `LOG_LEVEL`, `NIXPACKS_NO_CACHE`, `NIXPACKS_NODE_VERSION`. `PORT` and the two `NIXPACKS_` values are read by the platform, from `railway.json` and the builder. The other four are unwired.
 
 ## How to re-verify this guide

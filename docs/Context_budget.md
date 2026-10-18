@@ -65,14 +65,16 @@ Two plugins are off by default. `/release-workflow` switches the security plugin
 
 A rule with a `paths:` list in its frontmatter loads when a matching file is read. A session transcript showed the `nested_memory` load for these rules. The exact globs are in each rule's frontmatter in `.claude/rules/`; read them there, since this list can go stale.
 
-- ai-security-standards: Python, TypeScript and TSX files.
+- ai-security-standards: Python, TypeScript, TSX and shell files, migrations, and the agents, skills, hooks and settings under `.claude/`.
 - supply-chain-security: requirements files, `pyproject.toml`, `package.json`.
-- production-standards and production-examples: `src/`, `frontend/`, `tests/`.
+- production-standards and production-examples: `src/`, `frontend/`, `tests/`, `services/`, `alembic/`.
 - design-consistency: `frontend/`.
 - dependency-tracking: the hooks, `.claude/settings.json`, and the search agent source.
 - prompt-cache-discipline: the harness, orchestrator and core graph files of the search agent.
 - tool-call-budgets: the search agent tools, the call budget, the graph query service and their tests.
 - attack-the-constraint, v1-scope-boundary and system-design-patterns: the build ledgers, source folders and harness files named in their frontmatter.
+- bossman-mode, decision-logging, goal-contracts, plan-then-fan-out and self-eval-loop: the build ledgers and the skill, agent, gate or report files named in their frontmatter.
+- preserve-your-thinking: `requirements/`, the Markdown under `docs/`, `PROGRESS.md` and `README.md`.
 
 A rule that must fire on a shell command cannot use a path, so `CLAUDE.md` keeps a pointer for it.
 

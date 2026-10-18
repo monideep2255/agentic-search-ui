@@ -238,7 +238,7 @@ python3 eval/golden/build_dataset.py
 # Verify a subset while iterating
 python3 eval/golden/build_dataset.py --limit 10
 
-# Validate the result and run the 26 premise arms
+# Validate the result and run the eval tests, the golden premise arms among them
 python -m pytest tests/system_03_search_agent/eval/ -q
 ```
 
@@ -263,4 +263,4 @@ Stated here rather than discovered later, because a verify surface that cannot s
 - Compute-tool questions are out of scope by the PRD's v1 boundary: no BLAST, no sequence-similarity search, no VCF ingestion. Q2, Q7 and Q9 are the fast-follow set and are not among the 50.
 - ACMG classification is out of scope. The system assembles evidence and renders no verdict, so a rendered verdict is a hard-fail rather than a low score.
 
-Last updated: 2026-08-30.
+Last updated: 2026-10-17.
