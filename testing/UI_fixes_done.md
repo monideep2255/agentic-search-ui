@@ -216,6 +216,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 38, slice C | A gene's graph papers are listed by their PubMed titles, notation kept exactly | Live, awaiting your retest | 117 |
 | card 105 | After picking a "How far back" window, the graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Live, awaiting your retest | 108 |
 | card 125 | No paper's title or abstract can pose as the answer writer's instructions; records read exactly as PubMed writes them | Live, awaiting your retest | 117, 1 |
+| disclaimer phone layout (#282, v0.3.2) | On a phone the disclaimer opens at its heading and uses nearly the whole width; on a computer it looks as before | Live, awaiting your retest | 61 |
 
 ## What is done, in summary
 
@@ -257,13 +258,13 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-18, AT THE END OF THE POSTER RELEASE DAY. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-18, IN THE EVENING OF THE POSTER RELEASE DAY. THE ONE THING TO KNOW:
 
-- Production is on `v0.3.0` (merge `59aba7d8`), released for the innovation day poster after your four release calls; no card was built today, by your freeze of 2026-10-17
+- Production is on `v0.3.2` (merge `0e277d61`): the day's release, then the disclaimer fixed for phones (#282) after you saw it on yours, released inside the freeze by your call
 - Before the release the lead drove all 61 retest rows by hand in a browser on develop: 48 work, 7 partly, 6 cannot be triggered, none fail (`testing/Developer/reports/2026-10-18_browser_retest/report.md`)
 - After it, production answered the retest questions as develop does, and the poster's demo questions five runs each (the report's "Production check")
-- New cards 129 to 145, the findings of that run and of the production check
-- Nothing is parked: no branch, tag or worktree other than `develop`, `production` and the release tags
+- Develop and production were made identical, changelog included; after this checkpoint develop leads by documents only, by your call
+- New cards 129 to 145. Nothing is parked: no branch, tag or worktree other than `develop`, `production` and the release tags
 
 `HANDOFF.md` says what to do next.
 
@@ -273,7 +274,7 @@ What is live on develop:
 - Card 98 (an empty guard reply asks the person to try again) is live with no query to type.
 - Develop's API carries `CLASSIFIER_PROVIDER=jev`, `SYSTEM_DAILY_CAP_USD=25`, `PER_QUERY_COST_CAP_USD=0.25` (set 2026-10-09 with the owner's yes) and its own `SYNTH_MODEL`, so a code default does not change develop's writer.
 - What each numbered phase delivered and what stays open: its ledger, `tracker/phase_N.M.md`; phase 8.7's is `tracker/phase_8.7.md`.
-- Production runs the same code as develop since 2026-10-18, with develop's settings; its crowd limits are raised to 1000 guest runs and $25 a day until after the event (`DECISIONS.md`, 2026-10-18). The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`.
+- Production runs the same code as develop since 2026-10-18, with develop's settings; its crowd limits stay at 1000 guest runs and $25 a day (`DECISIONS.md`, 2026-10-18). The release job tags `production` and never pushes to it, and only the owner changes `develop` and `production`.
 
 What awaits the product owner is under "What is waiting on the product owner" below.
 
@@ -302,7 +303,7 @@ This section is also the shared plan.
 ### What is waiting on the product owner
 
 - `testing/Retest_product_owner.md`, newest first; each names its queries in `testing/Test_queries_and_workflows.md`, and the lead's browser verdict on every row is in `testing/Developer/reports/2026-10-18_browser_retest/report.md`.
-- After the poster event: production's crowd limits back to 200 guest runs and $10 a day, and the order of cards 129 to 145.
+- After the poster event: the order of cards 129 to 145.
 - Card 72 evidence: two of slice B's product check runs stopped at the safety check; develop's log shows the guard model's classify call timing out twice each, provider "unknown". Card 84's row asks you to read a week of such lines on 23 October.
 - Designs with you: card 56's next slice (its design and the first slice's reviews are in `testing/Developer/reports/2026-10-17_card56/`), card 126 (how records count as the same fact), and cards 18 and 37 slice A2.
 - Cards 84 and 72, step 3b: on 23 October, a week of `event loop lag` lines decides whether the gatekeeper's freeze fix is worth building (`testing/Developer/reports/2026-10-15_card84_72/design.md`).
@@ -573,6 +574,15 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### 2026-10-18, evening, in one table
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Develop and production identical | Release v0.3.1 carried the day's documents and the v0.3.0 changelog into production; each changelog then reached production by a changelog-only pull request (#279 to #281, #284, #285) | Done; documents lead after this checkpoint by your call |
+| Disclaimer phone layout (#282, v0.3.2) | You saw it on your phone: it opened scrolled past its heading with 40px a side. Fixed to the design system's phone layout, checked on four phone sizes and at 1280, on production too | Live, retest row 1 |
+| Crowd limits | Kept at 1000 guest runs and $25 a day after the event, by your call | Decided |
+| Poster QR code | Made for the production address, kept on your machine, not in the repository | Done |
 
 ### 2026-10-18, poster release day, in one table
 

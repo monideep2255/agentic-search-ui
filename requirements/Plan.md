@@ -1050,6 +1050,11 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-18, EVENING. THE DISCLAIMER FIXED FOR PHONES AND RELEASED AS V0.3.2; DEVELOP AND PRODUCTION MADE IDENTICAL. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-18 from "The disclaimer's phone layout".
+
+- What landed: the disclaimer opens at its heading and fits a phone (#282, v0.3.2), matched to the design system's phone layout, checked on four phone sizes and at 1280 on production. Release v0.3.1 and two changelog-only pull requests left develop and production with the same files.
+- Decided: production's crowd limits stay at 1000 guest runs and $25 a day; documents may lead production after the evening ship.
+
 2026-10-18. THE POSTER RELEASE DAY: RELEASE V0.3.0 TO PRODUCTION; ALL 61 RETEST ROWS DRIVEN BY HAND IN A BROWSER; PRODUCTION CHECKED SIDE BY SIDE WITH DEVELOP. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-18.
 
 - What landed: release v0.3.0 (#275, merge `59aba7d8`, tag `v0.3.0`, changelog back-merge #277) after the owner's four calls: release as it stands, production's settings made consistent with develop's by name only, crowd limits for the event, the migrations. Merged with admin rights by the owner's call; deployed by hand from source because the merge triggered no deploy (`LEARNINGS.md`, 2026-10-18).

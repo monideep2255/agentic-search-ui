@@ -13,22 +13,22 @@ Last updated: 2026-10-18.
 
 ## What is live
 
-- Production: `v0.3.0`, merge `59aba7d8`, released 2026-10-18 for the innovation day poster. Deployed by hand from source because the merge triggered no Railway deploy (`LEARNINGS.md`, 2026-10-18); migrations at 0011; healthy.
-- Production's settings match develop's, and its crowd limits are raised for the event: 1000 guest runs and $25 a day (`DECISIONS.md`, 2026-10-18).
-- Develop: the same code as production, plus documents only; the changelog's v0.3.0 section arrived by back-merge #277. Deployed and healthy. CI is green.
+- Production: `v0.3.2`, merge `0e277d61`, released 2026-10-18 for the innovation day poster: the day's release plus the disclaimer's phone fix (#282). Healthy; its settings match develop's, and its crowd limits stay at 1000 guest runs and $25 a day (`DECISIONS.md`, 2026-10-18).
+- Develop: the same code as production; it leads by documents only, by the owner's call, until the next release. Deployed and healthy. CI is green.
+- Each release's changelog reaches production by a changelog-only pull request after its back-merge, until the release job is fixed (`testing/Future.md`, row 64).
 - Nothing is being built. Locally only `develop`; on GitHub only `develop` and `production`.
+- The poster's QR code is on the owner's machine, not in the repository; it encodes the production web address, so no release changes it.
 
 ## What awaits the product owner
 
-- Retests: the rows in `testing/Retest_product_owner.md`. Every row was driven by hand in a browser on develop on 2026-10-18, with a verdict and a take each: `testing/Developer/reports/2026-10-18_browser_retest/report.md` (its recordings are local only, in that folder).
-- After the event: set production's crowd limits back to 200 guest runs and $10 a day; the privacy call on rewriting git history (`DECISIONS.md`, 2026-10-17).
-- The findings of that retest and of the production check, filed as board cards 129 to 145, to order with the owner after the event.
+- Retests: the rows in `testing/Retest_product_owner.md`, newest first. Row 1 is the disclaimer on a phone; every other row has the lead's browser verdict in `testing/Developer/reports/2026-10-18_browser_retest/report.md`.
+- After the poster event: the order of cards 129 to 145; the privacy call on rewriting git history (`DECISIONS.md`, 2026-10-17).
 - Designs, after the event: card 56's next slice, card 126 and the other "Design with you first" cards.
 - On 23 October, card 84's row: a week of the server's lag lines decides the freeze fix.
 
 ## The one next action
 
-The poster event: the QR code opens `https://search-agent-web-production.up.railway.app`, and the owner checks it from a phone. Demo questions checked on production, five runs each, are in the report's "Production check"; keep the bronchiolitis question and the breast cancer gene count off the poster. After the event, the owner orders cards 129 to 145, then building resumes.
+The poster event. Afterwards the owner orders cards 129 to 145 and building resumes, starting from the board's To do column.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
@@ -38,7 +38,7 @@ How to start a session: read this file, then `git status --short` and `git workt
 - Retests: `testing/Retest_product_owner.md`
 - The cutoff and closed items: `testing/UI_fixes_done.md`; older: `testing/UI_fixes_archive.md`
 - Queries to type: `testing/Test_queries_and_workflows.md`
-- Each card's reviews: `testing/Developer/reports/<date>_card*`; today's retest and release: `testing/Developer/reports/2026-10-18_browser_retest/`, `2026-10-17_poster_release/`
+- Each card's reviews: `testing/Developer/reports/<date>_card*`; the release day: `testing/Developer/reports/2026-10-18_browser_retest/`, `2026-10-17_poster_release/`
 - Releases: `docs/build/Release_flow.md`; the changelog: `CHANGELOG.md`
 - Factory's brief: `docs/build/Factory_onboarding.md`; other work: `testing/Future.md`
 - Models: `docs/architecture/Model_architecture.md`
