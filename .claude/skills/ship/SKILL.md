@@ -57,6 +57,7 @@ What it reads:
 - It runs `git fetch` for the base first (`origin/develop`, or `--base <ref>`), so a stale or force-pushed remote cannot hide a commit. `--no-fetch` skips that on purpose, for example offline.
 - Every commit in `origin/develop..HEAD`, ONE AT A TIME: every added line, the name of every file it adds, its message, and its author and committer email. A value added in one commit and deleted in a later one is still published, so it is still a finding, reported as `commit <sha> file:line`. A merge commit is read through its remerge diff, so a change made while resolving it is read too.
 - The staged diff, the unstaged diff, and every untracked file git does not ignore, whole, with its name.
+- Every tracked symlink's stored target, which is a path: every symlink in the index, those already on the base included, and every symlink an outgoing commit or the working copy adds or changes. The target goes through every rule below and the private-name check's `--message` mode, and an absolute target (`/`, `\`, `~` or a drive letter) FAILS as `absolute-symlink`. A relative target that leaves the repository prints a `NOTE` naming only the link, not a failure, since `reference/agentic-search-data-engineering` points to a public sibling repository.
 - Nothing is skipped silently. No line is cut short. `.gitattributes` cannot hide a file, because any file git calls binary is read from its blob and judged by content. UTF-16 and text with a stray NUL byte are decoded and read. A text file over 2 MB FAILS the scan: shrink or split it.
 
 What it catches, each reported as `FAIL <where> [category] <mask>`:
@@ -76,6 +77,7 @@ What it still cannot catch, so a clean run is necessary and not sufficient:
 - The inside of a screenshot or an archive (the `NOT SCANNED` lines).
 - An email written out in words (`name at domain dot com`), and an internal ticket key on its own.
 - An annotated tag's message. /ship does not push tags; push one only after reading its message.
+- Where a relative symlink that leaves the repository (a `NOTE` line) points: its text passes every rule, but only a person can confirm the place it names is public.
 - A leak already public on `develop`, `production` or another pushed branch. Removing one needs the owner, since it means rewriting history.
 
 A finding stops the push. Where it is decides the fix:

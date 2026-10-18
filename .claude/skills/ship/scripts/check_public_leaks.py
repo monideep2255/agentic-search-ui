@@ -20,6 +20,12 @@ would carry:
   while resolving the merge is read too.
 - The staged diff, the unstaged diff, and every untracked file git does not
   ignore, whole, with its name.
+- Every tracked symlink's stored target, which is a path git keeps as the
+  link's blob (mode 120000): every symlink in the index (`git ls-files -s`),
+  so a link already on the base is read too, and every symlink an outgoing
+  commit adds or changes, or the working copy changes. Reading the file a link
+  points to is not reading the link: its own text is a path and can name a
+  private place.
 
 Nothing passes unread:
 
@@ -45,6 +51,12 @@ What it looks for, one category name each:
   personal-email,  identity-email (an author or committer email that is not a GitHub noreply
   address), ipv4-address, ipv6-address, ssh-host (including a `git@` remote on
   a host that is not a public forge), internal-host.
+- A symlink's stored target is read with every rule above, and also fails as
+  absolute-symlink when it is absolute (it starts with `/`, `\\`, `~` or a
+  drive letter), since an absolute path names a place on one machine. A
+  relative target that leaves the repository (`../...`) is printed as a NOTE
+  naming only the link, not a failure: a link to a public sibling repository
+  is legitimate, and a person confirms where it points.
 
 Author and committer DISPLAY NAMES are not scanned: the owner's name is public,
 and a list of other names cannot live in a public file. Annotated tag messages
@@ -59,7 +71,9 @@ be listed in a public file, so this script also runs the owner's machine-local
 check, `verify_no_local_refs.py`, when the repository's pre-commit hook `exec`
 line names a script of exactly that name. It runs it twice: with `--message`
 over every line this scan read (commits, names, messages, working tree,
-untracked files), and with `--all` over the whole tracked tree. Only its verdict
+untracked files, and every symlink's stored target), and with `--all` over the
+whole tracked tree. The `--all` mode reads the file a link points to, never the
+link's own text, which is why the targets go through `--message`. Only its verdict
 and its own check names are printed, mapped back to this scan's locations. When
 the check is absent, is not that script, or cannot run, the scan says so and
 exits 1, unless `--allow-missing-private-check` is passed.
@@ -77,6 +91,7 @@ import binascii
 import ipaddress
 import math
 import os
+import posixpath
 import re
 import shlex
 import subprocess
@@ -460,7 +475,11 @@ FILE_NAME_RE = re.compile(
     r"\.(?:py|md|json|ts|tsx|js|jsx|txt|yml|yaml|html|css|sh|toml|cfg|ini)$", re.IGNORECASE
 )
 HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
-INDEX_RE = re.compile(r"^index ([0-9a-f,]+)\.\.([0-9a-f]+)")
+INDEX_RE = re.compile(r"^index ([0-9a-f,]+)\.\.([0-9a-f]+)(?: ([0-7]+))?")
+NEW_MODE_RE = re.compile(r"^new mode ([0-7]+)")
+SYMLINK_MODE = "120000"
+# An absolute symlink target: a POSIX root, a UNC or rooted Windows path, a home, a drive letter.
+ABSOLUTE_TARGET_RE = re.compile(r"^(?:/|\\|~|[A-Za-z]:)")
 LINE_BREAK_RE = re.compile(r"\r\n|\r|\n")
 # Characters str.splitlines() treats as line ends; the private check's file must keep one line per unit.
 SPLITLINES_CHARS = re.compile("[\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
@@ -470,8 +489,8 @@ SPLITLINES_CHARS = re.compile("[\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
 class Unit:
     """One line of outgoing text and where it comes from."""
 
-    kind: str  # "content", "name", "message", "binary"
-    source: str  # "commit", "staged", "working tree", "untracked"
+    kind: str  # "content", "name", "message", "binary", "symlink"
+    source: str  # "commit", "staged", "working tree", "untracked", "index"
     commit: str | None
     path: str | None
     line: int
@@ -990,6 +1009,7 @@ class FilePatch:
     binary: bool = False
     old_blob: str | None = None
     new_blob: str | None = None
+    new_mode: str | None = None
     added: list[tuple[int, str]] = field(default_factory=list)
 
 
@@ -1023,6 +1043,7 @@ def parse_patches(text: str, source: str) -> list[FilePatch]:
             continue
         if raw.startswith("new file mode"):
             current.new_file = True
+            current.new_mode = raw.split()[-1]
         elif raw.startswith("deleted file mode"):
             current.deleted = True
         elif raw.startswith("index "):
@@ -1030,6 +1051,12 @@ def parse_patches(text: str, source: str) -> list[FilePatch]:
             if match:
                 current.old_blob = match.group(1).split(",")[0]
                 current.new_blob = match.group(2)
+                if match.group(3):
+                    current.new_mode = match.group(3)
+        elif raw.startswith("new mode "):
+            mode = NEW_MODE_RE.match(raw)
+            if mode:
+                current.new_mode = mode.group(1)
         elif raw.startswith(("Binary files ", "GIT binary patch")):
             current.binary = True
         elif raw.startswith("+++ "):
@@ -1120,12 +1147,38 @@ def _add_whole(report: ScanReport, patch: FilePatch, data: bytes, old: bytes | N
     _add_text(report, patch, numbered, len(data))
 
 
+def _symlink_target(data: bytes) -> str:
+    return data.decode("utf-8", "surrogateescape").encode("utf-8", "replace").decode("utf-8")
+
+
+def _add_symlink_patch(root: Path, report: ScanReport, patch: FilePatch) -> None:
+    """A symlink a commit or the working copy adds or changes: read its stored target whole."""
+    if patch.source == "staged":
+        return  # the index pass reads every staged symlink
+    if patch.source == "working tree":
+        try:
+            target: str | None = os.readlink(root / patch.path)
+        except OSError:
+            target = None
+    else:
+        data = _blob(root, patch.new_blob)
+        target = None if data is None else _symlink_target(data)
+    if target is None:
+        # Fall back to the diff's own added text, which is the target.
+        target = "".join(text for _, text in patch.added)
+    if target:
+        report.units.append(Unit("symlink", patch.source, patch.commit, patch.path, 0, target))
+
+
 def _add_patches(root: Path, report: ScanReport, patches: list[FilePatch]) -> None:
     for patch in patches:
         if patch.deleted:
             continue
         if patch.new_file:
             report.units.append(Unit("name", patch.source, patch.commit, patch.path, 0, patch.path))
+        if patch.new_mode == SYMLINK_MODE:
+            _add_symlink_patch(root, report, patch)
+            continue
         needs_bytes = patch.binary or any("\0" in text for _, text in patch.added)
         if not needs_bytes:
             size = sum(len(text.encode("utf-8", "replace")) + 1 for _, text in patch.added)
@@ -1229,6 +1282,44 @@ def scan_untracked(root: Path, report: ScanReport) -> None:
         _add_whole(report, patch, data)
 
 
+def scan_symlinks(root: Path, report: ScanReport) -> None:
+    """Every symlink in the index, the ones already on the base included: read its stored target.
+
+    The private-name check's `--all` mode reads the file a link points to, never
+    the link's own text, so without this pass a link whose target names a private
+    place would stay in the tree unread.
+    """
+    listing = _git(root, "ls-files", "-s", "-z")
+    seen: set[str] = set()
+    for record in listing.stdout.decode("utf-8", "replace").split("\0"):
+        if not record or "\t" not in record:
+            continue
+        meta, rel = record.split("\t", 1)
+        fields = meta.split()
+        if len(fields) < 2 or fields[0] != SYMLINK_MODE or rel in seen:
+            continue
+        seen.add(rel)
+        data = _blob(root, fields[1])
+        if data is None:
+            report.too_large.append((Unit("symlink", "index", None, rel, 0, ""), -1))
+            continue
+        target = _symlink_target(data)
+        if target:
+            report.units.append(Unit("symlink", "index", None, rel, 0, target))
+
+
+def target_is_absolute(target: str) -> bool:
+    return bool(ABSOLUTE_TARGET_RE.match(target))
+
+
+def target_leaves_repository(path: str, target: str) -> bool:
+    """A relative target that resolves, by its text alone, outside the repository's root."""
+    if target_is_absolute(target):
+        return False
+    joined = posixpath.normpath(posixpath.join(posixpath.dirname(path), target))
+    return joined == ".." or joined.startswith("../")
+
+
 def run_scan(root: Path, base: str, *, fetch: bool = True) -> tuple[ScanReport, str]:
     if fetch:
         fetch_base(root, base)
@@ -1237,9 +1328,12 @@ def run_scan(root: Path, base: str, *, fetch: bool = True) -> tuple[ScanReport, 
     scan_commits(root, base, report)
     scan_worktree(root, report)
     scan_untracked(root, report)
+    scan_symlinks(root, report)
     for unit in report.units:
         for category, matched in _scan_unit(unit):
             report.findings.append(Finding(unit, category, mask(matched)))
+        if unit.kind == "symlink" and target_is_absolute(unit.text):
+            report.findings.append(Finding(unit, "absolute-symlink", mask(unit.text)))
     for sha, role, email in report.identity:
         report.findings.append(
             Finding(None, "identity-email", mask(email), f"commit {sha[:8]} {role}-email")
@@ -1401,6 +1495,9 @@ def _where(unit: Unit, bad_paths: set[str]) -> str:
         return f"{prefix}file name {shown}"
     if unit.kind == "binary":
         return f"{prefix}{shown} (binary, text run {unit.line})"
+    if unit.kind == "symlink":
+        state = "" if unit.commit else f", {'tracked' if unit.source == 'index' else unit.source}"
+        return f"{prefix}symlink {shown} (stored target{state})"
     return f"{prefix}{shown}:{unit.line}"
 
 
@@ -1458,11 +1555,24 @@ def _main(args: argparse.Namespace, cwd: Path | None) -> int:
                 bad_paths.add(unit.path)
     bad_paths.update(path for path, number, _ in private.tree_hits if number == 0)
 
+    changed_cache: list[set[str]] = []
+
+    def on_base_note(unit: Unit | None) -> str:
+        """A tracked symlink the push does not change is already public: say so."""
+        if unit is None or unit.kind != "symlink" or unit.source != "index":
+            return ""
+        if not changed_cache:
+            changed_cache.append(_changed_paths(root, args.base))
+        if unit.path in changed_cache[0]:
+            return ""
+        return " (already on the base: remove it here and tell the owner)"
+
     exit_code = 0
     fails: list[str] = []
     for finding in report.findings:
         where = finding.where_override or _where(finding.unit, bad_paths)  # type: ignore[arg-type]
-        fails.append(f"FAIL {where} [{finding.category}] {finding.masked}")
+        note = on_base_note(finding.unit)
+        fails.append(f"FAIL {where} [{finding.category}] {finding.masked}{note}")
     fails = list(dict.fromkeys(fails))
     for line in fails:
         print(line)
@@ -1485,18 +1595,31 @@ def _main(args: argparse.Namespace, cwd: Path | None) -> int:
         print(
             f"NOT SCANNED {where}: binary, a person must look at it (only its text runs were read)"
         )
+    leaving = {
+        unit.path
+        for unit in report.units
+        if unit.kind == "symlink" and unit.path and target_leaves_repository(unit.path, unit.text)
+    }
+    for path in sorted(leaving):
+        shown = _hidden(path) if path in bad_paths else path
+        print(
+            f"NOTE symlink {shown}: its relative target leaves the repository; a person confirms "
+            "it points to a public place (not a failure)"
+        )
 
     if private.status == "pass":
         print(
-            f"{PRIVATE_CHECK_NAME}: PASS (it read every line, file name and message this scan read, "
-            f"in {report.commits} commit(s) and the working tree, and every tracked file)"
+            f"{PRIVATE_CHECK_NAME}: PASS (it read every line, file name, message and symlink "
+            f"target this scan read, in {report.commits} commit(s) and the working tree, and "
+            "every tracked file)"
         )
     elif private.status == "findings":
         changed = _changed_paths(root, args.base)
         private_lines: list[tuple[str, str, str]] = []
         for number, name in private.message_hits:
             if 1 <= number <= len(report.units):
-                private_lines.append((name, _where(report.units[number - 1], bad_paths), ""))
+                unit = report.units[number - 1]
+                private_lines.append((name, _where(unit, bad_paths), on_base_note(unit)))
             else:
                 private_lines.append((name, "an unplaced line", ""))
         for path, number, name in private.tree_hits:
@@ -1519,10 +1642,12 @@ def _main(args: argparse.Namespace, cwd: Path | None) -> int:
             )
             exit_code = 1
 
-    scanned = sum(1 for u in report.units if u.kind != "name")
+    scanned = sum(1 for u in report.units if u.kind not in ("name", "symlink"))
     names = sum(1 for u in report.units if u.kind == "name")
+    links = sum(1 for u in report.units if u.kind == "symlink")
     print(
-        f"scanned {scanned} lines, {names} file names and {report.commits} commit(s) against "
+        f"scanned {scanned} lines, {names} file names, {links} symlink target(s) and "
+        f"{report.commits} commit(s) against "
         f"{args.base} (merge base {merge_base[:8]}); {len(fails)} finding(s), "
         f"{len(report.too_large)} file(s) too large to scan, "
         f"{len(report.binaries)} binary file(s) for a person to look at"
