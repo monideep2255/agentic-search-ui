@@ -60,7 +60,7 @@ It is a PROTOTYPE. What that means in practice, stated because a demo link invit
 - No account is needed. An anonymous visitor gets a small free allowance of searches, counted server-side.
 - CI runs Section 24's ten gates on every pull request and on every push to `develop` or `production` (build phases 4.14 and 4.15).
   - Since 2026-09-27, rulesets let only the owner's account change `develop` and `production`, and neither may be force-pushed or deleted.
-  - The gates are still ADVISORY rather than merge-blocking: a documentation-only change runs no workflow, so a required check would never report on it. The only thing stopping a red merge is the owner choosing not to click.
+  - The gates are still ADVISORY rather than merge-blocking: a push that changes only Markdown runs no workflow, so a required check would never report on it. The only thing stopping a red merge is the owner choosing not to click.
   - Since build phase 4.15 that exposure is one step further from the audience: a merge to `develop` reaches the develop deployment, and production moves only on a deliberate release.
 - Coverage is uneven by organism and by database. Treat an answer as a starting point for verification, never as an endpoint.
 
@@ -115,7 +115,7 @@ This is System 3 of a three-system project. System 1 (ETL pipelines) and System 
 
 | Layer | What | Access method | Latency |
 |-------|------|---------------|---------|
-| Layer 1: knowledge graph | 5 NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy) pre-ingested into PostgreSQL + AGE | Cypher queries via psycopg2 (read-only) | <10ms per query |
+| Layer 1: knowledge graph | 5 NCBI databases (Gene, ClinVar, MedGen, PubMed, Taxonomy) pre-ingested into PostgreSQL + AGE | Cypher queries through the read-only HTTPS graph query service, or psycopg2 directly (read-only) | <10ms per query |
 | Layer 2: on-demand NCBI APIs | 30+ databases reached at query time via E-utilities (EFetch, ELink), Datasets, PubChem, dbSNP and Pathogen Detection | httpx async calls | 200-500ms per call |
 | Layer 3: enrichment APIs | PubTator3, LitVar2, ClinicalTrials.gov | httpx async calls | 500ms-2s per call |
 
@@ -192,9 +192,10 @@ agentic-search-ui/
       contracts/                # Pydantic event models, the query contract, JSONSchemas
       guardrail/                # The Section 10 pipeline: pre-filter, classifier, forbidden-type screen
       harness/                  # Tiers, cost caps, timeouts, coordinator-worker, prompt-cache prefix
-      orchestrator/             # Step budgets and query-class routing
+      orchestrator/             # The few-shot routing pool (Section 17), loaded once per process
       synthesis/                # Grounding, citations, trust, freshness, conflict detection, refusal
       tools/                    # cypher_query, ncbi_efetch, ncbi_dbsnp, pubtator_annotate, litvar2_lookup, pathogen_detection, clinicaltrials_search
+      eval/                     # The offline evaluation harness: golden dataset, rubric, hard-fails, cost report (build phase 5.1)
       export/                   # KGX subgraph export (build phase 4.4)
       feedback/                 # Interaction capture and the weekly review ritual (build phase 4.6), plus the durable history read path (build phase 4.13)
       observability/            # LangSmith tracing, PostHog analytics, the append-only tool-call audit log (build phase 5.0)
@@ -212,11 +213,15 @@ agentic-search-ui/
         answer/                 # The follow-up field and the history rail
         chat/                   # Stop button, guardrail banner, cap message
         shell/                  # App bar, account menu, disclaimer modal, persona chip
-        auth/, brand/, controls/, feedback/, guest/
+        auth/, brand/, controls/, feedback/, guest/, tour/
       hooks/                    # useAgentRun (SSE over fetch), useRunView (events to screens)
       lib/                      # events.ts (typed AgentEvent union), api.ts, routing.ts, guestSession.ts
       stubs/                    # The stub registry: every surface still rendering from a local stand-in
     e2e/                        # Playwright specs, including the live diagnostics gated behind RUN_LIVE_DIAGNOSTICS
+  services/                     # The read-only HTTPS graph query service deployed beside the graph (build phase 4.11)
+  clients/                      # system3-cli, the installable command line and local MCP server
+  eval/                         # The golden dataset files the evaluation harness reads
+  visualizations/               # Architecture, schema and deep-dive diagrams in Mermaid
   tests/                        # pytest suite, including the per-phase premise gates and mutation harnesses
   testing/                      # UI testing entry point: manual workflows, the ranked spec, evidence and feedback capture (see testing/Developer/Developer_workflows.md)
   docs/                         # Architecture, NCBI, build process, the design system, and rules/ for the one rule read on demand
@@ -228,6 +233,8 @@ agentic-search-ui/
   .github/                      # CI workflow (ci.yml) and one script per Section 24 gate (gates/)
   CLAUDE.md                     # Instructions for the LLM CLI tooling
   AGENTS.md                     # Instructions for other AI agents
+  HANDOFF.md                    # What is live, what awaits the product owner, the one next action
+  CHANGELOG.md                  # One entry per production release
   DECISIONS.md                  # Decision log
   LEARNINGS.md                  # What broke during the build and what fixed it
   PROGRESS.md                   # The plain-language update, written for a non-technical reader
@@ -246,7 +253,7 @@ agentic-search-ui/
 
 ## Documentation
 
-The reference documents are indexed in [`docs/README.md`](docs/README.md) and described in the reference docs table of [`CLAUDE.md`](CLAUDE.md).
+The reference documents are indexed in [`docs/README.md`](docs/README.md) and described in the reference docs table of [`.claude/README.md`](.claude/README.md).
 
 | Doc | What it covers |
 |-----|---------------|
@@ -298,7 +305,7 @@ Cost caps enforced per-query via the multi-model harness. Guard tier uses the ch
 
 - The knowledge graph that System 3 queries was built by the data engineering repository (System 1 + System 2).
 - That repository is symlinked at `reference/agentic-search-data-engineering` for documentation access.
-- System 3 connects to the graph as a read-only client via psycopg2.
+- System 3 connects to the graph as a read-only client, through the HTTPS graph query service or psycopg2 directly.
 
 Do not add any of these to this repository:
 
@@ -320,4 +327,4 @@ You are welcome to use, fork and build on this code. When you share a copy or so
 
 Apache 2.0 grants no rights to the project's names or marks (Section 6). Call your derivative something of your own.
 
-Last updated: 2026-09-27
+Last updated: 2026-10-17

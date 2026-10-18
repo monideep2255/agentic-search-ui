@@ -4,7 +4,7 @@ Reference material for System 3. Start here to find the right document without o
 
 Planning documents live in `requirements/`, not here. This folder holds reference and how-to material. The distinction that matters: `requirements/` says what we are building and why, `docs/` says how things actually work.
 
-Last updated: 2026-09-26.
+Last updated: 2026-10-17.
 
 ## Table of contents
 
@@ -43,6 +43,7 @@ Last updated: 2026-09-26.
 | `System_3_architecture_brainstorming.md` | The search agent's design: agent loop, tools, multi-model harness, cost model, deployment |
 | `Three_layer_data_architecture.md` | Layer 1 the graph, Layer 2 on-demand NCBI APIs, Layer 3 enrichment, and how the agent uses each |
 | `Biolink_repos_explained.md` | The BioLink model: categories, predicates, CURIEs. Needed to read the graph schema |
+| `Model_architecture.md` | Which language model answers each tier on develop, every place the loop calls a model, what checks each call's output, and Jev as the classifier, live on develop |
 | `Multi_agent_system_design_explained.md` | Converted external reading on how groups of AI agents fail in a shared environment: correlated failure, tacit collusion, trust and dissent errors, turf wars, and the bounded-swarm architecture that contains them |
 
 ### `build/` how the work gets done
@@ -50,15 +51,16 @@ Last updated: 2026-09-26.
 | Doc | What it is |
 |-----|-----------|
 | `Build_workflow_cadence.md` | Since 2026-09-25 a pointer that keeps the provider mapping, the tier-to-model table. Until then it was the quick reference for one build phase: its stages, who acts at each, the model and effort per stage, where every file gets written, and a blocking premise gate at stage 5 until 2026-09-24. The loop now lives in `.claude/skills/bossman-mode/SKILL.md` |
-| `Phase_6_execution_flow.html` | The build loop as it stood on 2026-09-24, as a visual page. Opens in a browser with no server. Also published as a Claude artifact. A record, not the loop that runs today |
+| `Phase_6_execution_flow.html` | The build loop as it stood on 2026-09-24, as a visual page. Opens in a browser with no server. Also published as an artifact. A record, not the loop that runs today |
 | `Debugging_guide.md` | Which file to open when something is wrong, and what every source file does. A symptom index plus a full inventory of `src/` |
 | `Agent_teams_tmux_quickstart.md` | tmux launch guide so parallel builders appear in live panes rather than invisible background sessions |
+| `README.md` | The build folder's own index: every other file in `build/` and `build/design/`, grouped by what you need |
 
 ### `ncbi/` the data sources and their traps
 
 | Doc | What it is |
 |-----|-----------|
-| `Tool_implementation_mechanics.md` | Nineteen per-tool API traps from tech spec section 6. Facts a builder needs before wiring a tool. The policy versions live in the rules; this holds only the facts |
+| `Tool_implementation_mechanics.md` | The per-tool API traps from tech spec section 6. Facts a builder needs before wiring a tool. The policy versions live in the rules; this holds only the facts |
 | `NCBI_databases_and_APIs_reference.md` | All 39 NCBI databases: endpoints, rate limits, record counts |
 | `NCBI_repos_deep_dive.md` | Thirteen NCBI GitHub repositories analyzed: what to reuse, what to adapt, what not to build locally |
 
@@ -68,19 +70,23 @@ Last updated: 2026-09-26.
 |-----|-----------|
 | `Knowledge_graph_on_server_reference.md` | Operating the live graph: SSH access, Cypher examples, indexes, node and edge counts, cost |
 | `Project_overview_A_to_Z.md` | The navigation hub with pointers into every doc across the whole project, including the data engineering repository |
+| `Graph_query_service_runbook.md` | Operating the read-only HTTPS graph query service that fronts the graph (build phase 4.11): install, redeploy, verify, logs, outages, rollback, the credential |
+| `Graph_data_hand_over_2026-09-25.md` | Measured graph-data gaps handed from System 3 to the data-engineering repository to fix at the source |
 
 ### `rules/` a rule read on demand
 
 | Doc | What it is |
 |-----|-----------|
-| `Sandbox_diagnosis.md` | How to classify a command the sandbox blocked (filesystem deny, a blocked HTTPS host, a failed SSH connection) and the durable fix for each, before ever disabling the sandbox. Moved out of `.claude/rules/` on 2026-09-26 so it no longer loads into every session and agent; `CLAUDE.md` names when to read it |
+| `Sandbox_diagnosis.md` | How to classify a command the sandbox blocked (filesystem deny, a blocked HTTPS host, a failed SSH connection) and the durable fix for each, before ever disabling the sandbox. Moved out of `.claude/rules/` on 2026-09-26 so it no longer loads into every session and agent; `.claude/README.md` names when to read it |
 
 ### At the root
 
 | File | What it is |
 |------|-----------|
+| `Agent_mods.md` | Every agent mod, how it starts, what it blocks, and how to turn one off |
+| `Context_budget.md` | What loads every turn and what loads on demand, the measured token budget, and how to re-measure it |
 | `Claude_security_plugin_usage.md` | How to run the on-demand security scan and apply patches. Pinned here, see below |
-| `Claude_Code_model_fallback_setup.md` | Personal dev-workflow note on switching Claude Code to a cheaper model backend past a weekly usage limit, without spending real money on prototype development |
+| `Claude_Code_model_fallback_setup.md` | A local note, gitignored and not in the repository, on switching the LLM CLI tooling to a cheaper model backend past a weekly usage limit, without spending real money on prototype development |
 | `publish_body.sh` | Derives the publishable fragment from a standalone HTML page in this repository |
 
 ## What is not here
@@ -88,7 +94,7 @@ Last updated: 2026-09-26.
 | Looking for | It lives in |
 |-------------|-------------|
 | The PRD, tech spec, evaluation playbook, strategic memo | `requirements/` |
-| The build order and its 26 phases | `requirements/Technical_specification.md` section 25 |
+| The build order and its numbered phases | `requirements/Technical_specification.md` section 25 |
 | The gate list, every obligation mapped to its owner | `requirements/phase_5/Coverage_map.md` |
 | Decisions and their rationale | `DECISIONS.md` at the repository root |
 | What broke during the build and what fixed it | `LEARNINGS.md` at the repository root |
@@ -97,7 +103,7 @@ Last updated: 2026-09-26.
 
 ## Two things to know about this folder
 
-`Claude_security_plugin_usage.md` cannot move. The locked technical specification references it at this exact path, and that spec is frozen until the Plan.md step 6.2 reconciliation. It is also a symlink into the owner's private reference repository rather than a real file here, so it resolves only on a machine with that repository checked out alongside this one, and will dangle in a fresh clone or in CI. `data-engineering/` is pinned for the same reason.
+`Claude_security_plugin_usage.md` cannot move. The locked technical specification references it at this exact path, and that spec is locked; its one planned reconciliation, Plan.md step 6.2, is complete. It is also a symlink into the owner's private reference repository rather than a real file here, so it resolves only on a machine with that repository checked out alongside this one, and will dangle in a fresh clone or in CI. `data-engineering/` is pinned for the same reason.
 
 HTML pages here are the source, not a copy. The file in this folder is what gets edited and version controlled. Publishing derives a fragment from it with `publish_body.sh`, into a temp path rather than into the repository. Never edit a published page and expect the repository to follow; the dependency runs one way.
 
