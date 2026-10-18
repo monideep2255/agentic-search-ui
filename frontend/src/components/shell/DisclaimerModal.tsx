@@ -90,7 +90,10 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
         ),
       ).filter((el) => el.offsetParent !== null);
 
-    focusable()[0]?.focus();
+    // preventScroll: the first control is the checkbox near the bottom, and a
+    // plain focus() scrolled a phone-height dialog past its own title, so a
+    // visitor landed mid-text (owner, 2026-10-18).
+    focusable()[0]?.focus({ preventScroll: true });
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -133,6 +136,9 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
         justifyContent: "center",
         p: 3,
         bgcolor: "rgba(11,33,56,.55)",
+        // The design system's phone layout (prototype/app.html, max-width 720px):
+        // a 14px scrim pad and the dialog pinned to the top.
+        "@media (max-width:720px)": { p: "14px", alignItems: "flex-start" },
       }}
     >
       <Box
@@ -145,8 +151,15 @@ export function DisclaimerModal({ onAccept }: DisclaimerModalProps) {
           bgcolor: designTokens.surface,
           borderRadius: 1,
           maxWidth: 900,
-          width: "calc(100% - 32px)",
+          width: "100%",
           maxHeight: "calc(100vh - 32px)",
+          // The phone layout's 28px (prototype/app.html), in dvh where the
+          // browser has it: on a phone 100vh reaches under the browser's own
+          // toolbar, so the dialog's foot could sit beneath it.
+          "@media (max-width:720px)": { maxHeight: "calc(100vh - 28px)" },
+          "@supports (height: 100dvh)": {
+            "@media (max-width:720px)": { maxHeight: "calc(100dvh - 28px)" },
+          },
           overflowY: "auto",
           overflowX: "hidden",
           // The only shadow in the product.
