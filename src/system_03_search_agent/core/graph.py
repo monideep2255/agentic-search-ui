@@ -13233,6 +13233,7 @@ def _answer_parts(
     condition_names: dict[str, str | None] | None = None,
     lead_index: int | None = None,
     listing_sentences: tuple[str, ...] = (),
+    summary_has_extra_clause: bool = True,
 ) -> _AnswerParts:
     """The answer as typed token chunks, in reading order, in three parts.
 
@@ -13819,7 +13820,20 @@ def _answer_parts(
         # The lead carries the emphasis: it is the one claim `mainPointFor`
         # reads on the frontend, the first that is not a list row.
         sentence_token(lead_text, emphasize=True)
-        if summary_sentence:
+        # Card 131 part 2 (owner, 2026-10-22): the count line is skipped when
+        # it cites only records the opening sentence already cites, so the
+        # answer does not say one thing twice. Structural only: markers are
+        # compared, never words. The count stays visible in the list. A count
+        # line that carries more than the bare count (a known total or an
+        # honest gap, told by the call site) is kept, and so is one with no
+        # markers to compare.
+        summary_ids = marker_ids(summary_sentence) if summary_sentence else []
+        repeats_lead = (
+            bool(summary_ids)
+            and not summary_has_extra_clause
+            and set(summary_ids) <= set(marker_ids(lead_text))
+        )
+        if summary_sentence and not repeats_lead:
             sentence_token(summary_sentence, emphasize=researcher)
         paragraph_break()
     elif summary_sentence:
@@ -15501,6 +15515,15 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             condition_names=condition_names,
             lead_index=lead_index,
             listing_sentences=listing_shown,
+            # Card 131 part 2: the count line says more than the bare count
+            # when it states a graph total or may state an honest gap. Both
+            # are known here from the inputs, not read back from the text.
+            summary_has_extra_clause=(
+                (_known_total_available(findings) if _ok_finding_was_truncated(findings) else None)
+                is not None
+                or _asked_field(clinical_features_asked, state.get("failed_searches", []))
+                is not None
+            ),
         )
         summary_tokens = list(parts.summary)
         note_tokens = list(parts.notes)
