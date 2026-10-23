@@ -1,0 +1,45 @@
+What sequence data is linked to PMID 11237011?
+New search
+
+✓ Answered6.3s · 6 tool calls · 11 sources cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+Found 5 nuccore records, 1 sra record and 5 assembly records for PMID 11237011.⁠1–11
+
+NUCCORE RECORDS FOUND
+RECORD	IDENTIFIER	
+Homo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6	nuccore 1317049034	⁠1
+Homo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6	nuccore 1317049037	⁠2
+Homo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18	nuccore 1519474710	⁠3
+Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5	nuccore 1519499590	⁠4
+Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12	nuccore 1519499605	⁠5
+SRA RECORDS FOUND
+RECORD	IDENTIFIER	CREATED	
+SRR9496657	sra 8317276	2020	⁠6
+ASSEMBLY RECORDS FOUND
+RECORD	IDENTIFIER	STATUS	
+GRCh38.p11	GCF_000001405.37	Chromosome	⁠7
+GRCh38.p14	GCF_000001405.40	Chromosome	⁠8
+GRCh38.p12	GCF_000001405.38	Chromosome	⁠9
+GRCh38.p13	GCF_000001405.39	Chromosome	⁠10
+GRCh37.p12	GCF_000001405.24	Chromosome	⁠11
+NOTES
+NCBI lists 1587 sequence records linked to PMID 11237011; this answer shows 5.
+NCBI lists 29 genome assemblies linked to PMID 11237011; this answer shows 5.
+▶
+SOURCES
+11
+Based on 11 sources cited from Assembly, Nucleotide and SRA
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

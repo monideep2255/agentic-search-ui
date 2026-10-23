@@ -1,0 +1,36 @@
+done 9.366s
+WHERE THIS ANSWER COMES FROM
+mutL homolog 1 (MLH1)	⁠1, 8
+Muir-Torré syndrome	⁠2
+Colorectal cancer, hereditary nonpolyposis, type 2	⁠3
+Mismatch repair cancer syndrome 1	⁠4
+mutS homolog 2	⁠5
+Lynch syndrome 1	⁠6
+Mismatch repair cancer syndrome 2	⁠7
+Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.	⁠9
+NM_000249.4(MLH1):c.545+1271_677+737delinsCA	⁠10
+DNA MISMATCH REPAIR PROTEIN MLH1; MLH1	⁠11
+Showing 1–10 of 23
+
+WHERE THIS ANSWER COMES FROM
+The IMPACT Study - Identification of Men With a Genetic Predisposition to ProstAte Cancer	⁠12
+Methylation Tolerance-Based Functional Assay to Assess Variants of Unknown Significance in the MLH1 and MSH2 Genes and Identify Patients With Lynch Syndrome.	⁠13
+NM_000249.4(MLH1):c.453+625_545+920delinsT	⁠14
+Study of MK-3475 in Patients With Microsatellite Unstable (MSI) Tumors (Cohorts A, B and C)	⁠15
+MLH1 single-nucleotide variant in circulating tumor DNA predicts overall survival of patients with hepatocellular carcinoma.	⁠16
+NM_000249.4(MLH1):c.1039-1013G>A	⁠17
+Surgery in Preventing Ovarian Cancer in Patients With Genetic Mutations	⁠18
+AI-generated MLH1 small binder improves prime editing efficiency.	⁠19
+NM_000249.4(MLH1):c.2187G>A (p.Leu729=)	⁠20
+Stand up to Cancer: MAGENTA (Making Genetic Testing Accessible)	⁠21
+[21] L3 · literature
+clinicaltrials.gov NCT02993068
+name
+Open the record
+Showing 11–20 of 23
+
+WHERE THIS ANSWER COMES FROM
+DNA mismatch repair mediated by Mlh1-Pms1 endonuclease-catalyzed mispair excision.	⁠22
+NM_000249.4(MLH1):c.941_957del (p.Val314fs)	⁠23
+Durvalumab and Tremelimumab in Treating Patients With Microsatellite Stable Metastatic Colorectal Cancer to the Liver	⁠24
+Showing 21–23 of 23

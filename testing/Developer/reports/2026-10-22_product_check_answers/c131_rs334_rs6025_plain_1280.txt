@@ -1,0 +1,35 @@
+What are rs334 and rs6025?
+New search
+
+? Answered11.7s · 5 tool calls · 2 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 2 genetic variants related to rs334 and rs6025.⁠3, 4
+
+One variant is known in the literature as c.20A>T, and another is known as c.1691G>A.⁠3, 4
+
+WHERE THIS ANSWER COMES FROM
+Genetic variant (HBB), clinical significance: not-provided, protective, likely-benign, pathogenic, other	⁠1
+Genetic variant (F5), consequence: coding_sequence_variant, missense_variant	⁠2
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+2
+Based on 2 sources cited, all from dbSNP
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

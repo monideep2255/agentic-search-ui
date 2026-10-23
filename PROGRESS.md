@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-18.
+Last updated: 2026-10-23.
 
 ## Table of contents
 
@@ -56,6 +56,20 @@ The two ends are the ones worth noticing. On the left, a question can be turned 
 ## What works today
 
 You can ask a question and get a real, cited answer back, streamed to a web page as it is written.
+
+### The night of 22 October
+
+NEW OVERNIGHT, on the practice site, all checked by a second pair of eyes before it went in and then tried on the running site at desktop and phone width:
+
+- A gene that two sources both found is now one row naming both, instead of two rows for the same gene, so the totals under an answer agree with the list. The team's own check of this one on the running site had not finished when this was written.
+- Papers found by the extra context services now show their real title instead of a number twice over.
+- The notes under an answer no longer say "listed below" when the list is above, and a line like "this answer shows 10" now counts what the answer really shows, never "shows 0".
+- When the writer's sentences only repeated the records already listed and were all dropped, the answer now says so in one line, instead of showing no summary and no reason.
+- In the researcher view the opening count line counts papers ("Found 5 papers for BRCA1.") instead of pasting their titles with doubled full stops, and names the two variants in a question about two variants.
+- When the system asks you to be more specific, its link to a search on the government site now reads "Search NCBI for GERD" instead of a long web address.
+- The About page's example of the line under an answer now matches the real line.
+- Asking the system to remove something from the database now gets a reply that also says what to ask instead.
+- Three software packages were updated so that the automatic checks, which had started failing on every change because of newly published security notices, pass again. Nothing changes on screen.
 
 ### 18 October
 
@@ -353,6 +367,28 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 22 October
+
+THE HONEST HEADLINE AS OF 22 OCTOBER, in one sentence:
+
+- six pieces of answer-quality work were built overnight and then held back rather than released, because each fixed one thing and made another worse or could break something for another way of using the product, so the biggest gaps found on 18 October are still there.
+
+What the night held back, in plain words:
+
+- The fix for questions that get a list with no written summary let through confident wrong statements that the current version correctly removes (for example saying a variant is in the wrong gene), so it waits for a choice between two ways forward.
+- The fix for "How many genes are associated with breast cancer?" now answers that question, but made two other answers worse, so it waits for the redesign of how names are matched.
+- The fix for the bronchiolitis question being asked back cut the wrong asking from 3 in 10 to 3 in 38 tries, but broke the terminal tool for people who installed it earlier.
+- Skipping an opening count line that repeats the sentence before it was built and held back, because that count is the one number a reader can check.
+- The terminal's stop key (Ctrl-C) no longer called an error in one version, but the fix left one case where it could not exit at all.
+- A note for answers that mention a very large number of items was built and waits for the owner's choice of wording.
+
+What the night found and left open:
+
+- A retracted research paper is listed by its full title with nothing saying it was retracted.
+- Some written summaries open in the middle of a thought, such as "Another finds ...".
+- A heading can still sit over one broken fragment, and one question still says "Found 40" over 41 genes.
+- The headings on some tables still read "variant record records found".
 
 ### 18 October
 
@@ -744,6 +780,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A night of small wording fixes in and six larger fixes held back | Eight changes went live: one row for a gene two sources both found, real paper titles, notes that no longer point the wrong way, a clearer reason when no summary is shown, an opening count that counts papers, a readable search link, a corrected About page example and a better reply when asked to change the database. Three software packages were updated to clear new security notices. Six larger fixes were built and held back as drafts because each made something else worse or would have broken a way of using the product | 22 October |
 | Release day for the poster, every waiting change tried by hand, and the disclaimer fixed for phones | The public site was brought up to date with the practice site, with the same settings and raised daily limits for the event crowd. Before that, all 61 changes waiting for the product owner were tried by hand in a browser and the findings written down as seventeen new pieces of work | 18 October 2026 |
 | A day of designing with the owner, one protection in and two pieces taken back | The answer writer can no longer be steered by text inside a paper, and records read exactly as the paper writes them; it took three tries. A disagreement warning and the first part of the coronavirus fix were built and taken back before anyone saw them, each for a reason the reviewers found. The coronavirus fix was designed with the product owner in nine decisions | 17 October |
 | A night of six changes, three taken back and three rebuilt | Six changes went live: a note that variant classifications were not retrieved, a properly named rs334 record, a line naming the databases an answer rests on, the species shown beside a gene's counterparts, a date window that leaves out undated papers, and real titles on a gene's papers. Three others were taken back because each could lose part of an answer for programs that read it, or attach a gene to the wrong variant. Three first tries were rebuilt once after their reviewers found a wrong detail. Six new small problems were written down | 17 October |
@@ -1263,9 +1300,9 @@ Where the finished work sits against what is still ahead:
 
 THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not by a number on an old list.
 
-1. The innovation day poster: the public site is ready, the five demo questions were checked on it, and the raised daily limits stay in place after the event.
-2. The product owner retests what went live, newest first, with the lead's own verdict on each change beside it.
-3. On 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
+1. The product owner retests what went live, newest first: the eight changes of the night of 22 October are at the top, with the team's own check beside each (the gene found by two sources still awaits its check).
+2. The product owner decides on the six pieces held back overnight: two ways forward for the confident-wrong-statement fix, whether the breast cancer fix waits for the redesign of name matching, what to do about the terminal tool that breaks for earlier installs, whether the opening count line may be skipped, the stop-key redesign, and the wording of the large-number note.
+3. Today, 23 October, a week of the new freeze count decides whether the gatekeeper's freeze fix is worth building.
 4. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
 5. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
 6. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
@@ -1391,15 +1428,19 @@ Nothing here is hidden or forgotten. Each one is written down with a decision ab
 
 | Problem, in plain terms | When it gets fixed |
 |-------------------------|--------------------|
-| "How many genes are associated with breast cancer?" answers with one record called "Seen by breast cancer nurse" | On the list of work to do, found on 18 October; after the poster |
-| Many everyday questions show a list of records with no written summary, and summaries often open by counting instead of answering | On the list of work to do, found on 18 October |
-| A comparison of two genes describes only one, and a question about babies with bronchiolitis is asked back about half the time | On the list of work to do, found on 18 October |
-| Totals that disagree by one between a list and the line under it | On the list of work to do, found on 18 October |
+| "How many genes are associated with breast cancer?" answers with one record called "Seen by breast cancer nurse" | A fix was built on 22 October and held back: it answers that question but made two other answers worse; it waits for the redesign of how names are matched |
+| Many everyday questions show a list of records with no written summary, and summaries often open by counting instead of answering | Partly fixed on 22 October (the papers count line); the fix for missing summaries was built and held back because it let through confident wrong statements, and waits for a choice between two ways forward |
+| A comparison of two genes describes only one, and a question about babies with bronchiolitis is asked back about half the time | On the list of work to do, found on 18 October; the bronchiolitis fix was built and held back on 22 October because it breaks the terminal tool for earlier installs |
+| Totals that disagree by one between a list and the line under it | Fixed on 22 October for a gene found by two sources; one question still says "Found 40" over 41 genes, a different cause on the list of work to do |
 | A reopened saved answer cannot open its OMIM source, and the history shows only the latest 20 searches | On the list of work to do, found on 18 October |
 | "SARS CoV-2" typed with a space can still be answered about the disease SARS, and "Illumina" can still be read as a gene and refused | Designed with the product owner on 17 October; the first part was taken back the same day and waits for a new design |
 | When two databases disagree on a dangerous fact and something else also asks you to check the answer, the line under it gives no warning | Taken back on 17 October after the warning fired where nothing disagreed; waits for a new design |
+| A retracted research paper is listed by its full title with nothing saying it was retracted | On the list of work to do, found on 22 October; needs a design with the product owner for the mark |
+| Some written summaries open in the middle of a thought, such as "Another finds ..." | On the list of work to do, found on 22 October; the cause is not yet known |
+| In the terminal tool, pressing Ctrl-C to stop a search is reported as an error | A fix was built and held back on 22 October because it left one case where the tool could not exit |
+| A heading can sit over one broken fragment of a sentence, and a paper's number can sit after the subject instead of the claim | On the list of work to do, found on 22 October; the heading waits on a rule the product owner accepted earlier |
 | After a question about tuberculosis, "And its SRA runs?" searches our own database, not the sequencing records | On the list of work to do, found on 17 October |
-| A CFTR papers answer in the researcher view can show no written summary and no note saying why | On the list of work to do, found on 17 October; the cause is not yet known |
+| A CFTR papers answer in the researcher view can show no written summary and no note saying why | Partly fixed on 22 October: a note now says why when every sentence only repeated the records; the case where some sentences were removed still shows neither |
 | After you pick a "How far back" window, an answer lists at most five papers from that window | On the list of work to do, found on 17 October |
 | A question about rs334 and its condition names no condition, although sickle cell disease is on record | On the list of work to do, found on 17 October |
 | An answer to a variant question can repeat a word in its opening sentence and table heading, such as "variant record record" | On the list of work to do, found on 17 October |

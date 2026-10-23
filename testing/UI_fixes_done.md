@@ -217,6 +217,14 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 105 | After picking a "How far back" window, the graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Live, awaiting your retest | 108 |
 | card 125 | No paper's title or abstract can pose as the answer writer's instructions; records read exactly as PubMed writes them | Live, awaiting your retest | 117, 1 |
 | disclaimer phone layout (#282, v0.3.2) | On a phone the disclaimer opens at its heading and uses nearly the whole width; on a computer it looks as before | Live, awaiting your retest | 61 |
+| card 141 | The reply to a request to change the graph adds what to ask instead: "Ask what the graph holds about a gene, variant, or condition and I can assemble cited evidence." | Live, awaiting your retest | 89, 111 |
+| card 143 | The About page's example trust line reads "Based on 1 source cited, from MedGen", and its "What you get" step says the trust line says how many sources the answer rests on and which database they come from | Live, awaiting your retest | none, open the About page |
+| card 138 | Every ask-back's NCBI link reads "Search NCBI for" the term, never the raw address | Live, awaiting your retest | 68, 84, 108 |
+| card 131, part 1 | In Researcher the count line counts papers ("Found 5 papers for BRCA1.") and names two variants ("Found 2 variant records for rs334 and rs6025: rs334 [1] and rs6025 [2].") | Live, awaiting your retest | 108, 119 |
+| card 128, part | When every sentence the writer wrote only repeated a listed record and all were dropped, the answer says why no written summary is shown | Live, awaiting your retest | 117 |
+| card 139, part: notes 1 and 2 | Notes sit under the records on every surface and never say "listed below"; "this answer shows N" counts what the answer shows, and never "shows 0" | Live, awaiting your retest | 104 |
+| card 134 | Papers from the enrichment layer show their PubMed title instead of "28340353 PMID:28340353"; a paper with no usable title shows "PMID:n" | Live, awaiting your retest | 117, 1 |
+| card 133 and card 137, part 1 | A gene two sources both found is one row naming both, so no gene shows twice and the list total, sources count, Found and Based on lines agree | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-22_product_check_card133/report.md`) | 24, 118 |
 
 ## What is done, in summary
 
@@ -258,13 +266,14 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-18, IN THE EVENING OF THE POSTER RELEASE DAY. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-23, AT THE CHECKPOINT CLOSING THE OVERNIGHT RUN OF 2026-10-22. THE ONE THING TO KNOW:
 
-- Production is on `v0.3.2` (merge `0e277d61`): the day's release, then the disclaimer fixed for phones (#282) after you saw it on yours, released inside the freeze by your call
-- Before the release the lead drove all 61 retest rows by hand in a browser on develop: 48 work, 7 partly, 6 cannot be triggered, none fail (`testing/Developer/reports/2026-10-18_browser_retest/report.md`)
-- After it, production answered the retest questions as develop does, and the poster's demo questions five runs each (the report's "Production check")
-- Develop and production were made identical, changelog included; after this checkpoint develop leads by documents only, by your call
-- New cards 129 to 145. Nothing is parked: no branch, tag or worktree other than `develop`, `production` and the release tags
+- Eight cards went live on develop overnight, each behind CI and a fresh verifier: 141 (#287), 143 (#288), 138 (#289), 128 part (#291), 131 part 1 (#292), 139 notes 1 and 2 (#297), 134 (#299), and 133 with 137 part 1 (#300); plus #290, a dependency update nobody sees (graphql-core 3.2.12, vite 8.1.6, vitest 4.1.12) that cleared advisories which had turned the audit gates red on every pull request
+- Six cards were built and parked as draft pull requests for your call: 130 (#294), 129 (#295), 131 part 2 (#296), 145 (#293), 142 (#298) and 139 note 3 (#301). Under "What is parked, and why"
+- Product check on deployed develop: passed for every merged card except 133 with 137 part 1, whose product check is owed (`testing/Developer/reports/2026-10-22_product_check_card133/report.md` had no findings written at checkpoint time)
+- Two cards filed: 146 (a retracted paper has no mark) and 147 (a summary that opens mid-thought)
+- Spend: about $1.20 of your $8 at the last reading, from the local key's usage; develop's own key is separate
+- Nothing tonight touched production after the redeploy at the start of the night, at your request: production runs release v0.3.2's code with the rotated keys
 
 `HANDOFF.md` says what to do next.
 
@@ -287,7 +296,19 @@ This section is also the shared plan.
 
 ### What is parked, and why
 
-- Nothing is parked on a branch or a tag since the overnight of 2026-10-15 to 16, your rule that parked work is worked on, not stored, and tonight kept it: no branch, tag or worktree other than develop and the night's docs branch. Every parked branch and tag was finished through the review loop: merged (card 24, from `parked/phase-8.4-2026-09-25`) or closed with its reviews and final diff kept on develop (cards 15, 20, 29, 101 and 110). Each closed card's reasons are in its board row and its `DECISIONS.md` row dated 2026-10-15 or 16.
+- Parked on the night of 2026-10-22, each a draft pull request open on purpose with its options written on it, and each card stays in the board's To do:
+
+| Card | Pull request | Why it is parked |
+|---|---|---|
+| 130 | #294 | Root fix built and parked: it let through confident wrong records develop strips ("rs6025 is in HBB"); two options on the PR for you |
+| 129 | #295 | Built and parked into card 56's redesign: breast cancer fixed, but "developmental delay" and a "both breast and ovarian cancer" count got worse; card 56 call 1 is the binding rule it needs |
+| 131 | #296 | Part 1 live (#292). Part 2, skipping a count line the lead repeats, parked: the count line is the only checked number; two options on the PR |
+| 145 | #293 | Built and parked under your rule: ask-backs fell from 3 in 10 to 3 in 38, but an installed command line fails on the new "plan" record and a word the question contains can still bind; options on the PR |
+| 142 | #298 | Built and parked: its fix round made Ctrl-C unable to exit in one case; a redesign is on the PR |
+| 139 | #301 | Notes 1 and 2 live (#297). Note 3 built and parked for your call: a scale note, or keep develop's "ask" floor; options on the PR |
+
+- Not parked on a branch but unfinished, in the board's To do: card 128 (an answer where some sentences were stripped shows no summary and no reason), card 137 part 2 (a heading over one broken fragment waits for you, because its fix changes your accepted rule that keeps a sentence whose uncited ending was stripped; diagnosis in `testing/Developer/reports/2026-10-22_card133_137/diagnosis.md`) and card 133 (query 116's "Found 40" over 41 gene rows, a separate cause in the opening line).
+- Before the night of 2026-10-22, nothing was parked on a branch or a tag since the overnight of 2026-10-15 to 16, your rule that parked work is worked on, not stored. Every parked branch and tag of that time was finished through the review loop: merged (card 24, from `parked/phase-8.4-2026-09-25`) or closed with its reviews and final diff kept on develop (cards 15, 20, 29, 101 and 110). Each closed card's reasons are in its board row and its `DECISIONS.md` row dated 2026-10-15 or 16.
 - Cards 84 and 72, step 3b, the server-pause fix: designed on 2026-10-15 (`testing/Developer/reports/2026-10-15_card84_72/design.md`) and not built, because the design lets a question after a long pause through where develop refuses it; that rule is yours to decide.
 - Phase 8.7 merged on 2026-10-09, so cards 18, 30 and 38 were built from their diagnoses in `testing/Developer/reports/2026-10-08_overnight/`: card 38 is live in two slices, card 30 in step 1, and card 18 was closed on 2026-10-16 (see its board row).
 - THE ARCHITECTURE WORK IS NOT PARKED.
@@ -303,7 +324,8 @@ This section is also the shared plan.
 ### What is waiting on the product owner
 
 - `testing/Retest_product_owner.md`, newest first; each names its queries in `testing/Test_queries_and_workflows.md`, and the lead's browser verdict on every row is in `testing/Developer/reports/2026-10-18_browser_retest/report.md`.
-- After the poster event: the order of cards 129 to 145.
+- From the night of 2026-10-22: the calls on the six draft pull requests (#293 to #296, #298, #301), each with its options on the pull request; card 137 part 2 (your accepted rule about a sentence whose uncited ending was stripped); card 139 note 3's wording and threshold; card 139's V-139-01 (a kind showing none gets no count line); design of the mark for a retracted paper (card 146).
+- The order of cards 129 to 145 after the poster event stands, with the parked ones above.
 - Card 72 evidence: two of slice B's product check runs stopped at the safety check; develop's log shows the guard model's classify call timing out twice each, provider "unknown". Card 84's row asks you to read a week of such lines on 23 October.
 - Designs with you: card 56's next slice (its design and the first slice's reviews are in `testing/Developer/reports/2026-10-17_card56/`), card 126 (how records count as the same fact), and cards 18 and 37 slice A2.
 - Cards 84 and 72, step 3b: on 23 October, a week of `event loop lag` lines decides whether the gatekeeper's freeze fix is worth building (`testing/Developer/reports/2026-10-15_card84_72/design.md`).
@@ -328,6 +350,15 @@ Carried from 2026-09-29 and not re-checked today:
 
 ### Loose ends, named rather than left
 
+- FROM THE NIGHT OF 2026-10-22, found by the reviews and product checks and left open in the card's report folder under `testing/Developer/reports/2026-10-22_*`:
+  - Card 133 and 137 part 1: J-133-05 (query 116 "Found 40" over 41 gene rows) and V-133-01 to 04, minor.
+  - Card 134: J-134-04, a PubTator3-first paper with no title shows its number though PubMed's title is in the answer, as develop did; A-134-02 is card 146.
+  - Card 139: V-139-01, a kind showing none gets no count line, your wording call.
+  - Card 128: V-128-06 and V-128-07; one run showed no summary and no note, the stripped-sentence path.
+  - Card 131 part 1: V-131-04 (a paper's marker sits after the subject), A-131-01 and A-131-04 (the nouns in the offer, note and heading, card 121), A-131-03 (derived rows).
+  - Card 138: F-138-V-02, V-03, V-06 (minor), and the BRCA1 ask-back searches the whole phrase "recent papers on BRCA1", older than the card.
+  - Card 141: V-141-01, a vague "that variant" follow-up is refused as no grounded evidence, already so on develop. Card 143: V-143-01 to 03, minor.
+  - Summaries that open mid-thought are card 147.
 - FROM THE NIGHT OF 2026-10-16 TO 17, found by the product checks and not fixed in the same pull request:
   - Card 8's info card ("Trust signals") overflows a phone by up to about 100 px; judged true before card 8 from the popover's code, not measured on develop before card 8 (card 123).
   - Card 105: one 1993 enrichment-layer paper is still listed from outside a picked window (card 124).
@@ -438,7 +469,7 @@ board on 2026-09-24.
 
 ### Next, in order
 
-- Rewritten 2026-10-18, at the checkpoint closing the poster release day, in the order of the board's To do column, top to bottom, one line per card: its Next move, then its status cell.
+- Rewritten 2026-10-23, at the checkpoint closing the overnight run of 2026-10-22, in the order of the board's To do column, top to bottom, one line per card: its Next move, then its status cell.
 - The board is the order; this list gives each card's state or a pointer to its detail.
 - `testing/Board_plan.md` holds the dependencies and the waves, and the order work is built in.
 
@@ -483,36 +514,35 @@ board on 2026-09-24.
 39. Card 124 (Team: buildable now): Nobody on it; filed 2026-10-17 overnight
 40. Card 126 (Design with you first): Built 2026-10-17 and closed by your call the same day, never pushed: the line fired on answers where nothing disagrees, because the check that compares records matches any record with the same field, not the same variant and not only cited records (A-126-01, A-126-02, J-126-02). The next build fixes that comparison first (same variant, cited records only; A-126-03, 04, 14), then the line (A-126-06, 07, 12, J-126-01). Diff kept: `closed_branch.patch`
 41. Card 127 (Team: buildable now): Nobody on it; filed 2026-10-17, built after card 56 merges
-42. Card 128 (Team: buildable now): Nobody on it; filed 2026-10-17, needs a diagnosis first
-43. Card 129 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-44. Card 130 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-45. Card 131 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+42. Card 128 (Team: buildable now): Part live (#291). Still open: an answer where some sentences were stripped shows no summary and no reason
+43. Card 129 (Team: buildable now): Built and parked 2026-10-22 as draft #295 into card 56's redesign: breast cancer fixed, but "developmental delay" and a "both breast and ovarian cancer" count got worse; card 56 call 1 is the binding rule it needs
+44. Card 130 (Team: buildable now): Root fix built and parked 2026-10-22 as draft #294: it let through confident wrong records develop strips ("rs6025 is in HBB"); two options on the PR for you
+45. Card 131 (Team: buildable now): Part 1 live (#292). Part 2, skipping a count line the lead repeats, parked 2026-10-22 as draft #296: the count line is the only checked number; two options on the PR
 46. Card 132 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-47. Card 133 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-48. Card 134 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-49. Card 135 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-50. Card 136 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-51. Card 137 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-52. Card 138 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-53. Card 139 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-54. Card 140 (Design with you first): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-55. Card 141 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-56. Card 142 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-57. Card 143 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-58. Card 144 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
-59. Card 145 (Team: buildable now): Nobody on it; filed 2026-10-18 from the production check, after the poster
-60. Card 11.11 (Yours: your architecture work): Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision
-61. Card 11.29 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](UI_fix_plan.md#detail-1129)
-62. Card 11.32 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](UI_fix_plan.md#detail-1132)
-63. Card 11.38 (Yours: your architecture work): Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](UI_fix_plan.md#detail-1138)
+47. Card 133 (Team: buildable now): Live (#300) except query 116's "Found 40" over 41 gene rows, a separate cause in the opening line
+48. Card 135 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+49. Card 136 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+50. Card 137 (Team: buildable now): Part 1 live (#300). Part 2, a heading over one broken fragment, waits for you: its fix changes your accepted rule that keeps a sentence whose uncited ending was stripped (diagnosis `testing/Developer/reports/2026-10-22_card133_137/`)
+51. Card 139 (Team: buildable now): Notes 1 and 2 live (#297). Note 3 built and parked 2026-10-22 as draft #301 for your call: a scale note, or keep develop's "ask" floor; options on the PR
+52. Card 140 (Design with you first): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+53. Card 142 (Team: buildable now): Built and parked 2026-10-22 as draft #298: its fix round made Ctrl-C unable to exit in one case; a redesign is on the PR
+54. Card 144 (Team: buildable now): Nobody on it; filed 2026-10-18 from the browser retest, after the poster
+55. Card 145 (Team: buildable now): Built and parked 2026-10-22 as draft #293 under your rule: ask-backs fell from 3 in 10 to 3 in 38, but an installed command line fails on the new "plan" record and a word the question contains can still bind; options on the PR
+56. Card 146 (Design with you first): Nobody on it; filed 2026-10-22 overnight
+57. Card 147 (Team: buildable now): Nobody on it; filed 2026-10-22 overnight, needs a diagnosis first
+58. Card 11.11 (Yours: your architecture work): Tenth in "Next, in order". It was listed as in progress until 2026-09-24 with nobody on it, so it moved out of section 1. 12.9 and 12.10 answered part of its ask. The answer-writing model is unchanged: switching models is a separate decision
+59. Card 11.29 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: a discussion that precedes a build under `/bossman-mode`, not a question waiting on them. Raised 2026-09-20. Full detail: [11.29](#detail-1129)
+60. Card 11.32 (Yours: your architecture work): Reclassified 2026-09-22 by the product owner: scoped in a discussion first, then built under `/bossman-mode`, still against the locked Section 6 tool list. Raised 2026-09-20. BACKLOG ONLY, nothing designed and nothing promised. Full detail: [11.32](#detail-1132)
+61. Card 11.38 (Yours: your architecture work): Raised 2026-09-22 by the product owner, who named the guardrail and the resource choice. BACKLOG ONLY, nothing designed and nothing promised. IDENTIFIED 2026-09-23 from the two links the product owner gave: it is `typesafe/jev-1.13` from TypeSafe, and it fits two of the three places they named and not the third. CORRECTION, because the assistant said the opposite hours earlier: it is NOT a harness config change, because it answers on its own `POST /api/alpha/decisions` endpoint rather than chat completions, so a trial needs a new client path. Full detail: [11.38](#detail-1138)
 
 ### How to start the next session
 
 1. Read `HANDOFF.md`, "The one next action" (the lead rewrites it at each checkpoint, so read the current one), then "Where we stopped" above, then the session tables under "Session history" below, newest first.
-2. Run `git status` and `git worktree list`. Local carries only `develop`; GitHub carries only `develop` and `production` (`git ls-remote --heads origin`). Anything else is new since 2026-10-18 and `HANDOFF.md` names it.
+2. Run `git status` and `git worktree list`. Local carries only `develop`; GitHub carries only `develop` and `production` (`git ls-remote --heads origin`). Anything else is new since 2026-10-23 and `HANDOFF.md` names it. The six draft pull requests of the night of 2026-10-22 (#293 to #296, #298, #301) are the exception, parked open on purpose.
 3. Read "What is parked, and why" before picking anything up. OMIM is live WITH its title filter; the two ship together and neither is re-enabled or removed without the other.
 4. Retests: `testing/Retest_product_owner.md`.
-   - Every row was driven by hand in a browser on 2026-10-18, verdicts in `testing/Developer/reports/2026-10-18_browser_retest/report.md`. Its newest row is card 125, merged on 2026-10-17; below it the overnight of 2026-10-16 to 17: cards 38 (slices C and B), 105, 8, 37 (slice A1) and 30 (step 1), then 24, 118, 75, 94's timeout fix, 17 and 115, then 114, 35 and 111, and the older rows below them.
+   - Rows 1 to 8 are the cards merged overnight on 2026-10-22: 133 with 137 part 1 (#300), 134, 139 notes 1 and 2, 128, 131 part 1, 138, 143 and 141. The team checked all but the first on deployed develop at 1280 and 390, in the reports each row names under `testing/Developer/reports/2026-10-22_product_check_*`.
+   - Below them, every older row was driven by hand in a browser on 2026-10-18, verdicts in `testing/Developer/reports/2026-10-18_browser_retest/report.md`: the disclaimer (#282) first, then card 125 and the overnight of 2026-10-16 to 17, and the older rows below.
    - Each names its queries in `testing/Test_queries_and_workflows.md`.
 5. Then take the next card from the board's To do column, as `HANDOFF.md` says.
    - Test queries sign in with throwaway accounts made on develop only with the owner's yes, their details kept in the scratchpad and never committed; the golden run is an alarm, run only when the owner asks (2026-10-08).
@@ -574,6 +604,29 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### 2026-10-22, overnight, in one table
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Dependency update (#290) | graphql-core 3.2.12, vite 8.1.6 and vitest 4.1.12, clearing new advisories that had turned the dependency audit gates red on every pull request | Merged; nothing visible, so no product check and no retest row |
+| Card 141 (#287) | The reply to "Remove that variant node from the knowledge graph." adds "Ask what the graph holds about a gene, variant, or condition and I can assemble cited evidence." | Merged, in Retest, queries 89 and 111; passed at 1280 and 390; V-141-01 open |
+| Card 143 (#288) | The About page's example trust line and "What you get" step now match the real line | Merged, in Retest, the About page; passed at 1280 and 390; V-143-01 to 03 minor |
+| Card 138 (#289) | Every ask-back's NCBI link reads "Search NCBI for GERD" (or the term), never the raw address | Merged, in Retest, queries 68, 84 and 108; passed at 1280 and 390; three minor items open |
+| Card 128 (#291) | When every written sentence only repeated a record and all were dropped, the answer says why no summary is shown | Part merged, in Retest, query 117; not observed in 3 CFTR runs; the stripped-sentence path stays open on the board |
+| Card 131, part 1 (#292) | The count line counts papers and names two variants | Part merged, in Retest, queries 108 and 119; its own line passed; part 2 parked as #296 |
+| Card 139, notes 1 and 2 (#297) | Notes no longer say "listed below"; "this answer shows N" counts what the answer shows, never "shows 0" | Part merged, in Retest, query 104; passed at 1280 and 390; note 3 parked as #301 |
+| Card 134 (#299) | Papers from the enrichment layer show their PubMed title | Merged, in Retest, queries 117 and 1; passed at 1280 and 390; J-134-04 open |
+| Cards 133 and 137, part 1 (#300) | A gene two sources both found is one row naming both, and the totals agree | Merged, in Retest, queries 24 and 118; product check passed at 1280 and 390; card 133 stays for query 116, card 137 for part 2 |
+| Card 130 (#294) | Root fix built: it let through confident wrong records develop strips | Parked as a draft pull request; two options on it |
+| Card 129 (#295) | Built into card 56's redesign: breast cancer fixed, two counts got worse | Parked as a draft pull request; waits on card 56 call 1 |
+| Card 131, part 2 (#296) | Skip a count line the lead repeats | Parked as a draft pull request; two options on it |
+| Card 145 (#293) | Ask-backs fell from 3 in 10 to 3 in 38 | Parked as a draft pull request; an installed command line fails on the new "plan" record |
+| Card 142 (#298) | Ctrl-C no longer called an error | Parked as a draft pull request; its fix round made Ctrl-C unable to exit in one case |
+| Card 139, note 3 (#301) | A scale note for the entities note | Parked as a draft pull request for your call |
+| Card 137, part 2 | A heading over one broken fragment | Waits for you; its fix changes your accepted rule |
+| Cards 146 and 147 | Filed: a retracted paper has no mark; a summary opens mid-thought | On the board, nobody on them |
+| Production | Redeployed at the start of the night at your request, with the rotated keys; nothing else touched it | Release v0.3.2's code |
 
 ### 2026-10-18, evening, in one table
 

@@ -1,0 +1,22 @@
+{
+ "name": "c131_rs334_rs6025_plain",
+ "q": "What are rs334 and rs6025?",
+ "mode": "Plain language",
+ "width": 1280,
+ "loadedFreshAt": 1280,
+ "events": {
+  "banner_found": 10.678,
+  "first_records": 10.678,
+  "answer_body": 10.678,
+  "done": 12.202
+ },
+ "banner_text": "Ehrlich, Koch and Ramon y Cajal found 4 records",
+ "meta": "? Answered11.7s · 5 tool calls · 2 sources cited from 2 layers",
+ "notes": [],
+ "body": [
+  "? Answered11.7s · 5 tool calls · 2 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 2 genetic variants related to rs334 and rs6025.⁠3, 4\n\nOne variant is known in the literature as c.20A>T, and another is known as c.1691G>A.⁠3, 4\n\nWHERE THIS ANSWER COMES FROM\nGenetic variant (HBB), clinical significance: not-provided, protective, likely-benign, pathogenic, other\t⁠1\nGenetic variant (F5), consequence: coding_sequence_variant, missense_variant\t⁠2\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n2\nBased on 2 sources cited, all from dbSNP\n·\nHigh-risk claim"
+ ],
+ "main": "What are rs334 and rs6025?\nNew search\n\n? Answered11.7s · 5 tool calls · 2 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 2 genetic variants related to rs334 and rs6025.⁠3, 4\n\nOne variant is known in the literature as c.20A>T, and another is known as c.1691G>A.⁠3, 4\n\nWHERE THIS ANSWER COMES FROM\nGenetic variant (HBB), clinical significance: not-provided, protective, likely-benign, pathogenic, other\t⁠1\nGenetic variant (F5), consequence: coding_sequence_variant, missense_variant\t⁠2\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n2\nBased on 2 sources cited, all from dbSNP\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0,
+ "overflow_390_resized": 0
+}

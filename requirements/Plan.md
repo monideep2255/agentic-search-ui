@@ -1050,6 +1050,25 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-22, OVERNIGHT. THE UI FIX LOOP: EIGHT CARDS MERGED, ONE DEPENDENCY UPDATE MERGED, SIX BUILT AND PARKED AS DRAFT PULL REQUESTS, TWO CARDS FILED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-22 (and the one dated 2026-10-21).
+
+- What merged: card 141 (#287), card 143 (#288), card 138 (#289), card 128 part (#291), card 131 part 1 (#292), card 139 notes 1 and 2 (#297), card 134 (#299), cards 133 and 137 part 1 (#300), and #290, the dependency update (graphql-core 3.2.12, vite 8.1.6, vitest 4.1.12) that cleared advisories turning the audit gates red on every pull request. Each card merged on green CI and a fresh verifier finding nothing worse than develop.
+- What was checked: each merged card on deployed develop at 1280 and 390 (`testing/Developer/reports/2026-10-22_product_check_*`), all passed except cards 133 and 137 part 1, whose product check is owed.
+- What was parked, each card staying in the board's To do:
+
+| Card | Pull request | Why |
+|---|---|---|
+| 130 | #294 (draft) | Root fix let through confident wrong records develop strips; two options on the pull request |
+| 129 | #295 (draft) | Joins card 56's redesign: breast cancer fixed, two other answers got worse |
+| 131 part 2 | #296 (draft) | Skipping a repeated count line; the count line is the only checked number |
+| 145 | #293 (draft) | Ask-backs fell from 3 in 10 to 3 in 38, but an installed command line fails on the new "plan" record |
+| 142 | #298 (draft) | Its fix round made Ctrl-C unable to exit in one case |
+| 139 note 3 | #301 (draft) | A scale note or develop's "ask" floor, for the owner's call |
+
+- Waiting on the owner without a pull request: card 137 part 2, whose fix changes an accepted rule, and card 128's stripped-sentence path.
+- Filed: cards 146 (a retracted paper has no mark) and 147 (a summary opens mid-thought).
+- Decisions logged: the night's approvals and ceilings (merge on green CI and a fresh verifier, revert and park on a failed check, the model spend ceiling, test queries as the gate, throwaway accounts on develop only, no deployment setting changes), each card's merge or park with the findings named open, and the 2026-10-21 key rotation. Production was not touched after its redeploy at the start of the night; it runs release v0.3.2's code with the rotated keys.
+
 2026-10-18, EVENING. THE DISCLAIMER FIXED FOR PHONES AND RELEASED AS V0.3.2; DEVELOP AND PRODUCTION MADE IDENTICAL. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-18 from "The disclaimer's phone layout".
 
 - What landed: the disclaimer opens at its heading and fits a phone (#282, v0.3.2), matched to the design system's phone layout, checked on four phone sizes and at 1280 on production. Release v0.3.1 and two changelog-only pull requests left develop and production with the same files.

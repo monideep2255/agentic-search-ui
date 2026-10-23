@@ -1,0 +1,21 @@
+{
+ "name": "brca1_do_plain",
+ "q": "What does BRCA1 do?",
+ "mode": "Plain language",
+ "width": 390,
+ "loadedFreshAt": 390,
+ "events": {
+  "banner_found": 5.488,
+  "first_records": 5.488,
+  "answer_body": 5.488,
+  "done": 8.79
+ },
+ "banner_text": "Perutz, Tsien and Nightingale found 95 records",
+ "meta": "✓ Answered8.3s · 13 tool calls · 17 sources cited from 3 layers",
+ "notes": [],
+ "body": [
+  "✓ Answered8.3s · 13 tool calls · 17 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nBRCA1 is a gene that helps keep our DNA stable and acts as a tumor suppressor, meaning it helps stop cells from turning cancerous.⁠19 I found 1 gene related to BRCA1.⁠1\n\nThe protein it makes teams up with other protective proteins, DNA damage sensors, and signaling molecules to form a large complex that watches over the genome.⁠19 This protein is involved in transcription, fixing double-strand breaks in DNA, and genetic recombination.⁠19\n\nThe gene itself spans 22 exons across roughly 110 kilobases of DNA.⁠19 Changes in this gene account for about 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠19\n\nWHERE THIS ANSWER COMES FROM\nBRCA1 DNA repair associated (BRCA1)⁠1, 2\nBRCA1 Haploinsufficiency Is Masked by RNF168-Mediated Chromatin Ubiquitylation.⁠3\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠4\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠5\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠6\nBRCA1: An Endocrine and Metabolic Regulator.⁠7\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠8\nBRCA1 Haploinsufficiency and Gene Expression⁠9\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠10\nNG_005905.2:g.(147057_150288)_(160933_166866)del⁠11\nShowing 1–10 of 17\n‹ Previous\nPage 1 of 2\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n17\nBased on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases"
+ ],
+ "main": "What does BRCA1 do?\nNew search\n\n✓ Answered8.3s · 13 tool calls · 17 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nBRCA1 is a gene that helps keep our DNA stable and acts as a tumor suppressor, meaning it helps stop cells from turning cancerous.⁠19 I found 1 gene related to BRCA1.⁠1\n\nThe protein it makes teams up with other protective proteins, DNA damage sensors, and signaling molecules to form a large complex that watches over the genome.⁠19 This protein is involved in transcription, fixing double-strand breaks in DNA, and genetic recombination.⁠19\n\nThe gene itself spans 22 exons across roughly 110 kilobases of DNA.⁠19 Changes in this gene account for about 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠19\n\nWHERE THIS ANSWER COMES FROM\nBRCA1 DNA repair associated (BRCA1)⁠1, 2\nBRCA1 Haploinsufficiency Is Masked by RNF168-Mediated Chromatin Ubiquitylation.⁠3\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠4\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠5\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠6\nBRCA1: An Endocrine and Metabolic Regulator.⁠7\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠8\nBRCA1 Haploinsufficiency and Gene Expression⁠9\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠10\nNG_005905.2:g.(147057_150288)_(160933_166866)del⁠11\nShowing 1–10 of 17\n‹ Previous\nPage 1 of 2\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n17\nBased on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

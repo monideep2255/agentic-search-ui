@@ -1,0 +1,33 @@
+{
+ "name": "c131_q108_brca1_plain",
+ "q": "recent papers on BRCA1",
+ "mode": "Plain language",
+ "width": 1280,
+ "loadedFreshAt": 1280,
+ "events": {
+  "answer_body": 1.594,
+  "clarifying": 1.594,
+  "picked": 2.225,
+  "banner_found": 13.779,
+  "first_records": 13.779,
+  "done": 24.975
+ },
+ "clarifying_options": [
+  "Recent papers on BRCA1 from the last 12 months?",
+  "Recent papers on BRCA1 from the last 5 years?",
+  "Recent papers on BRCA1 from the last 10 years?"
+ ],
+ "banner_text": "Ramon y Cajal, Florey and Chain found 94 records",
+ "after_pick": {
+  "first_records": 11.55,
+  "done": 22.75
+ },
+ "meta": "✓ Answered22.5s · 13 tool calls · 17 sources cited from 2 layers",
+ "notes": [],
+ "body": [
+  "✓ Answered22.5s · 13 tool calls · 17 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 5 published papers related to BRCA1.⁠1–5\n\nIn basic terms, BRCA1 is a gene that produces a large protein acting as a tumor suppressor and helping keep the genome stable.⁠19 The BRCA1 protein joins with other tumor-suppressing proteins and DNA-damage sensors to form a large complex, and it is involved in transcription, DNA break repair, and recombination.⁠19 Changes in this gene account for roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠19\n\nWHERE THIS ANSWER COMES FROM\nThe antitumorigenic roles of BRCA1-BARD1 in DNA repair and replication.\t⁠1\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.\t⁠2\nEXO1 protects BRCA1-deficient cells against toxic DNA lesions.\t⁠3\nBRCA1 and BRCA2: from cancer susceptibility to synthetic lethality.\t⁠4\nHSP90 buffers deleterious genetic variations in BRCA1.\t⁠5\nBRCA1\t⁠6, 9\nNM_007294.4(BRCA1):c.5243_5277+2788del\t⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\t⁠10\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG\t⁠11\nShowing 1–10 of 17\n‹ Previous\nPage 1 of 2\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n17\nBased on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases"
+ ],
+ "main": "▶\nrecent papers on BRCA1\n0 tool calls · 0 sources cited\nPlain language\nShow answer\nRecent papers on BRCA1 from the last 10 years?\nNew search\n\n✓ Answered22.5s · 13 tool calls · 17 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 5 published papers related to BRCA1.⁠1–5\n\nIn basic terms, BRCA1 is a gene that produces a large protein acting as a tumor suppressor and helping keep the genome stable.⁠19 The BRCA1 protein joins with other tumor-suppressing proteins and DNA-damage sensors to form a large complex, and it is involved in transcription, DNA break repair, and recombination.⁠19 Changes in this gene account for roughly 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠19\n\nWHERE THIS ANSWER COMES FROM\nThe antitumorigenic roles of BRCA1-BARD1 in DNA repair and replication.\t⁠1\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.\t⁠2\nEXO1 protects BRCA1-deficient cells against toxic DNA lesions.\t⁠3\nBRCA1 and BRCA2: from cancer susceptibility to synthetic lethality.\t⁠4\nHSP90 buffers deleterious genetic variations in BRCA1.\t⁠5\nBRCA1\t⁠6, 9\nNM_007294.4(BRCA1):c.5243_5277+2788del\t⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\t⁠10\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG\t⁠11\nShowing 1–10 of 17\n‹ Previous\nPage 1 of 2\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n17\nBased on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0,
+ "overflow_390_resized": 0
+}

@@ -1,0 +1,110 @@
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered14.6s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 54 papers for CFTR, of 1962 available.⁠1–20
+
+The Hdj-2/Hsc70 chaperone pair facilitates early steps in CFTR biogenesis, and the Hsc70 co-chaperone CHIP targets immature CFTR for proteasomal degradation.⁠1, 22 Sodium 4-phenylbutyrate downregulates Hsc70 with implications for intracellular trafficking of DeltaF508-CFTR.⁠7
+
+CHANNEL REGULATION AND PROTEIN INTERACTIONS
+
+The two nucleotide binding domains have differential functions on CFTR, and protein kinase A associates with CFTR through ezrin.⁠5, 9 E3KARP mediates the association of ezrin and protein kinase A with CFTR in airway cells.⁠12 AMP-activated protein kinase inhibits CFTR through a novel interaction, and PDZ-domain-mediated bivalent interaction regulates CFTR single-channel gating.⁠11, 23 The PDZ-interacting domain of CFTR is required for functional expression at the apical membrane, and the NHERF PDZ1 domain structurally contacts the CFTR carboxyl-terminus.⁠10, 28 An accessory protein facilitates CFTR–CFTR interaction to potentiate chloride channel activity.⁠15
+
+MUTATIONS AND GENOTYPE–PHENOTYPE STUDIES
+
+A homozygous D579G cystic fibrosis patient showed pancreatic sufficiency and minor lung involvement, and a novel D513G missense mutation was identified in a French CBAVD patient.⁠2, 6 Genetic findings in congenital bilateral aplasia of the vas deferens patients included six novel mutations.⁠3 The S1235R mutation's frequency and clinical significance were assessed collaboratively, and CFTR mutations including three novel substitutions were characterized in asthma, bronchiectasis, and COPD patients.⁠26, 30 A regulatory DNase I hypersensitive site 20.9 kb upstream of CFTR was also analyzed.⁠4
+
+CLINICAL AND POPULATION ASSOCIATIONS
+
+Neonatal screening studies addressed early diagnosis of cystic fibrosis and prevalence of CFTR mutations in hypertrypsinaemia.⁠21, 24 Worldwide genetic analysis of the CFTR region was also reported, as was the influence of the mannose binding lectin gene on chronic liver disease severity in cystic fibrosis.⁠17, 29
+
+ARTICLE RECORDS FOUND
+The Hdj-2/Hsc70 chaperone pair facilitates early steps in CFTR biogenesis.⁠1
+PMID:10075921
+Identification of a D579G homozygote cystic fibrosis patient with pancreatic sufficiency and minor lung involvement. Mutations in brief no. 221. Online.⁠2
+PMID:10094564
+Genetic findings in congenital bilateral aplasia of vas deferens patients and identification of six novel mutatations. Mutations in brief no. 138. Online.⁠3
+PMID:10200050
+Analysis of a DNase I hypersensitive site located -20.9 kb upstream of the CFTR gene.⁠4
+PMID:10561583
+Differential function of the two nucleotide binding domains on cystic fibrosis transmembrane conductance regulator.⁠5
+PMID:10581360
+A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient. Mutations in brief no. 175. Online.⁠6
+PMID:10651488
+Sodium 4-phenylbutyrate downregulates Hsc70: implications for intracellular trafficking of DeltaF508-CFTR.⁠7
+PMID:10666020
+Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element.⁠8
+PMID:10766763
+Protein kinase A associates with cystic fibrosis transmembrane conductance regulator via an interaction with ezrin.⁠9
+PMID:10799517
+The PDZ-interacting domain of cystic fibrosis transmembrane conductance regulator is required for functional expression in the apical plasma membrane.⁠10
+PMID:10852925
+Showing 1–10 of 54
+‹ Previous
+Page 1 of 6
+Next ›
+GENE RECORDS FOUND
+CFTR⁠55, 59
+NCBIGene:1080
+PUBMED RECORDS FOUND
+Molecular Structure of the Human CFTR Ion Channel.⁠56
+PMID:28340353
+ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction.⁠61
+PMID:36207272
+ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.⁠64
+PMID:36220763
+Molecular structures reveal synergistic rescue of Δ508 CFTR by Trikafta modulators.⁠67
+PMID:36264792
+In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.⁠70
+PMID:38388235
+CLINVAR RECORDS FOUND
+NM_000492.4(CFTR):c.1209+1988_1392+2067inv⁠57
+VCV001705265
+NM_000492.4(CFTR):c.1392+2072_1392+2074del⁠62
+VCV001705266
+NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA⁠65
+VCV001705980
+NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT⁠68
+VCV001705981
+NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del⁠71
+VCV001706438
+OMIM RECORDS FOUND
+CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR⁠58
+omim 602421
+CLINICAL TRIAL RECORDS FOUND
+NPDT Evaluation in Children With CFTR and (PSC)⁠60
+NCT00179439
+COMPLETED
+Study of VX-809 in Cystic Fibrosis Subjects With the ∆F508-CFTR Gene Mutation⁠63
+NCT00865904
+COMPLETED
+Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects⁠66
+NCT01078740
+COMPLETED
+Effects of Sildenafil on CFTR-dependent Ion Transport Activity⁠69
+NCT01132482
+COMPLETED
+Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators⁠72
+NCT01348204
+COMPLETED
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

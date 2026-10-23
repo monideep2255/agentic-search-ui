@@ -1,0 +1,32 @@
+{
+ "name": "c131_q108_brca1_researcher",
+ "q": "recent papers on BRCA1",
+ "mode": "Researcher",
+ "width": 390,
+ "loadedFreshAt": 390,
+ "events": {
+  "answer_body": 2.677,
+  "clarifying": 2.677,
+  "picked": 3.272,
+  "banner_found": 12.167,
+  "first_records": 12.167,
+  "done": 20.758
+ },
+ "clarifying_options": [
+  "Recent papers on BRCA1 from the last 12 months?",
+  "Recent papers on BRCA1 from the last 5 years?",
+  "Recent papers on BRCA1 from the last 10 years?"
+ ],
+ "banner_text": "Khorana, Chargaff and McClintock found 94 records",
+ "after_pick": {
+  "first_records": 8.89,
+  "done": 17.49
+ },
+ "meta": "✓ Answered17.1s · 13 tool calls · 17 sources cited from 2 layers",
+ "notes": [],
+ "body": [
+  "✓ Answered17.1s · 13 tool calls · 17 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nFound 5 papers for BRCA1.⁠1–5\n\nDNA REPAIR AND REPLICATION\n\nBRCA1 promotes DNA double-strand break repair by homologous recombination and protects replication forks from attrition, partnering with BARD1 and other cofactors to mediate DNA resection and RAD51 recruitment.⁠19\n\nENDOCRINE AND METABOLIC REGULATION\n\nCorrelations between metabolic disorders including diabetes and the metabolic syndrome and BRCA1 mutations have also been discussed.⁠20\n\nSTROMAL NICHE AND TUMOR INITIATION\n\nIn BRCA1+/mut carriers, the premalignant stromal niche promotes epithelial proliferation and mutant BRCA1-driven tumorigenesis in trans, with pre-cancer-associated fibroblasts producing protumorigenic factors including MMP3.⁠21\n\nPUBMED RECORDS FOUND\nThe antitumorigenic roles of BRCA1-BARD1 in DNA repair and replication.⁠1\nPMID:32094664\nBRCA1: An Endocrine and Metabolic Regulator.⁠2\nPMID:35432218\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠3\nPMID:36914836\nEXO1 protects BRCA1-deficient cells against toxic DNA lesions.⁠4\nPMID:38266640\nHSP90 buffers deleterious genetic variations in BRCA1.⁠5\nPMID:41265458\nGENE RECORDS FOUND\nBRCA1⁠6, 9\nNCBIGene:672\nCLINVAR RECORDS FOUND\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠7\nVCV000267740\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠11\nVCV000267741\nNG_005905.2:g.(147057_150288)_(160933_166866)del⁠13\nVCV000373892\nGRCh37/hg19 17q21.31(chr17:41267743-41267796)x3⁠15\nVCV004823850\nNM_007294.4(BRCA1):c.2145C>G (p.Thr715=)⁠17\nVCV004848411\nOMIM RECORDS FOUND\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠8\nomim 113705\nCLINICAL TRIAL RECORDS FOUND\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠10\nNCT00590109\nCOMPLETED\nBRCA1 Haploinsufficiency and Gene Expression⁠12\nNCT00597987\nCOMPLETED\nStudy to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma⁠14\nNCT00617656\nTERMINATED\nLetrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation⁠16\nNCT00673335\nCOMPLETED\nRecombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations⁠18\nNCT00700778\nTERMINATED\n▶\nSOURCES\n17\nBased on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases"
+ ],
+ "main": "▶\nrecent papers on BRCA1\n0 tool calls · 0 sources cited\nResearcher\nShow answer\nRecent papers on BRCA1 from the last 10 years?\nNew search\n\n✓ Answered17.1s · 13 tool calls · 17 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nFound 5 papers for BRCA1.⁠1–5\n\nDNA REPAIR AND REPLICATION\n\nBRCA1 promotes DNA double-strand break repair by homologous recombination and protects replication forks from attrition, partnering with BARD1 and other cofactors to mediate DNA resection and RAD51 recruitment.⁠19\n\nENDOCRINE AND METABOLIC REGULATION\n\nCorrelations between metabolic disorders including diabetes and the metabolic syndrome and BRCA1 mutations have also been discussed.⁠20\n\nSTROMAL NICHE AND TUMOR INITIATION\n\nIn BRCA1+/mut carriers, the premalignant stromal niche promotes epithelial proliferation and mutant BRCA1-driven tumorigenesis in trans, with pre-cancer-associated fibroblasts producing protumorigenic factors including MMP3.⁠21\n\nPUBMED RECORDS FOUND\nThe antitumorigenic roles of BRCA1-BARD1 in DNA repair and replication.⁠1\nPMID:32094664\nBRCA1: An Endocrine and Metabolic Regulator.⁠2\nPMID:35432218\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠3\nPMID:36914836\nEXO1 protects BRCA1-deficient cells against toxic DNA lesions.⁠4\nPMID:38266640\nHSP90 buffers deleterious genetic variations in BRCA1.⁠5\nPMID:41265458\nGENE RECORDS FOUND\nBRCA1⁠6, 9\nNCBIGene:672\nCLINVAR RECORDS FOUND\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠7\nVCV000267740\nNM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠11\nVCV000267741\nNG_005905.2:g.(147057_150288)_(160933_166866)del⁠13\nVCV000373892\nGRCh37/hg19 17q21.31(chr17:41267743-41267796)x3⁠15\nVCV004823850\nNM_007294.4(BRCA1):c.2145C>G (p.Thr715=)⁠17\nVCV004848411\nOMIM RECORDS FOUND\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠8\nomim 113705\nCLINICAL TRIAL RECORDS FOUND\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠10\nNCT00590109\nCOMPLETED\nBRCA1 Haploinsufficiency and Gene Expression⁠12\nNCT00597987\nCOMPLETED\nStudy to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma⁠14\nNCT00617656\nTERMINATED\nLetrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation⁠16\nNCT00673335\nCOMPLETED\nRecombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations⁠18\nNCT00700778\nTERMINATED\n▶\nSOURCES\n17\nBased on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}
