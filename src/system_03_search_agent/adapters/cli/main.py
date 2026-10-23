@@ -1193,15 +1193,16 @@ async def _run_ask(
             # delivered before the interrupt (idempotent via
             # `_printed_references`, so this is always this renderer's
             # first and only call to it on this path, never a
-            # double-print), and its own "the run ended before a final
-            # answer was received" stderr notice, exactly like a dropped
-            # connection would already get. Its RETURN VALUE is discarded
+            # double-print). `interrupted=True` (card 142) keeps it from
+            # writing an "error:" line: a stop the person asked for is
+            # not an error, while a dropped connection still gets "the
+            # run ended before a final answer". Its RETURN VALUE is discarded
             # on purpose: `_handle_interrupt_during_stream` already
             # proved exit code 130 is the right, conventional signal for
             # an interrupted run, and `finish()` has no way to know this
             # run was interrupted rather than merely truncated, so left
             # alone it would return EXIT_FAILURE (1) instead.
-            renderer.finish()
+            renderer.finish(interrupted=True)
             return EXIT_INTERRUPTED
         return outcome
     exit_code = renderer.finish()
@@ -1250,7 +1251,7 @@ async def _handle_interrupt_during_stream(
     stop call is best-effort at that point, not something worth blocking
     exit on.
     """
-    stderr.write("s3: interrupted, stopping the run...\n")
+    stderr.write("s3: the run was stopped at your request.\n")
     if not pending_next.done():
         pending_next.cancel()
 
