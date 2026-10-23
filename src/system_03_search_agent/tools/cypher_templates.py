@@ -815,7 +815,11 @@ def select_template(
        count form, for a single anchor only (a count over several anchors
        has no single record to cite it to, the same refusal
        `cypher_query._derived_source_curie` already makes, so it goes to
-       the model path).
+       the model path). One exception (card 129, 2026-10-22): a genes
+       count over several Disease anchors takes the gene-list template
+       `_disease_genes_template`, so each gene is its own cited record and
+       the answer's count line counts them; the model-written count bound
+       one of the anchors and answered "1 record".
     """
     if not entity_bindings:
         return None
@@ -905,7 +909,19 @@ def select_template(
     shape = _resolve_shape(tool_input, shapes, len(param_names))
     if shape is None:
         return None
-    if anchor_label == "Disease" and shape == "genes" and not wants_count:
+    # Card 129 (2026-10-22): a genes count over SEVERAL Disease records
+    # ("How many genes are associated with breast cancer?", which binds six
+    # MedGen records) has no one record to cite a count row to, and on the
+    # model path the generated query bound one anchor and counted 0. The
+    # gene list answers it instead: one cited row per distinct gene, each
+    # beside the records it is linked to, and the count line states how
+    # many, with the true total when the row cap cut the list. One anchor
+    # keeps the count form, which cites its count to that record.
+    if (
+        anchor_label == "Disease"
+        and shape == "genes"
+        and (not wants_count or len(param_names) > 1)
+    ):
         return _disease_genes_template(param_names)
     hop = _HOPS[(anchor_label, shape)]
     if wants_count and len(param_names) > 1:
