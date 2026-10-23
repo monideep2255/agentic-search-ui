@@ -10,13 +10,17 @@ number again.
 
 The PubTator3 response already holds each paper's PubMed title, as its
 `title` passage. The fix keeps that title on the row and labels the row by
-it. With no title held, the row reads "Title not retrieved" beside its PMID,
-never the number twice and never an invented title. The row's cited fact,
-what the writer is shown and the per-page fold do not move.
+it. With no usable title held (none, or only a bracketed one the shared
+placeholder rule removes), the row is named by its PMID once, "PMID:42477928",
+as card 38 slice C names a graph paper, never the bare number beside it and
+never an invented title. When the live PubMed search holds the same paper's
+title, PubMed's view names it whichever finding came first. The row's cited
+fact and what the writer is shown do not move.
 
 The document shapes below are PubTator3's own, read live on 2026-10-22 for
-PMIDs 28340353 and 20301425 (the two papers in the report), trimmed to the
-title passage and the start of the abstract.
+PMIDs 28340353 and 20301425 (the two papers in the report) and 42477928 (a
+Chinese paper whose English title PubMed writes in square brackets), trimmed
+to the title passage and the start of the abstract.
 """
 
 from __future__ import annotations
@@ -32,10 +36,6 @@ from system_03_search_agent.contracts.token_order import in_reading_order
 from system_03_search_agent.core import graph as graph_module
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.coordinator_worker import Finding
-from system_03_search_agent.synthesis.answer_layout import (
-    UNTITLED_PAPER_LABEL,
-    summary_label,
-)
 from system_03_search_agent.synthesis.findings import (
     SYNTH_SYSTEM_INSTRUCTION,
     build_synth_findings,
@@ -49,6 +49,11 @@ CFTR_TITLE = "Molecular Structure of the Human CFTR Ion Channel."
 HBOC_PMID = "20301425"
 HBOC_RAW_TITLE = "<i>BRCA1-</i> and <i>BRCA2</i>-Associated Hereditary Breast and Ovarian Cancer"
 HBOC_TITLE = "BRCA1- and BRCA2-Associated Hereditary Breast and Ovarian Cancer"
+OVARIAN_PMID = "42477928"
+OVARIAN_TITLE = (
+    "[Clinical and familial characterisation of ovarian cancer patients with germline "
+    "mutations in the BRCA1/2 gene and the current status of prevention in high-risk groups]."
+)
 
 
 def _doc(pmid: str, title: str | None) -> dict:
@@ -158,8 +163,23 @@ def test_the_parser_keeps_the_title_passage_as_written() -> None:
 
 def test_the_parser_removes_only_pubmeds_formatting_tags() -> None:
     assert _publication(HBOC_PMID, HBOC_RAW_TITLE).title == HBOC_TITLE
-    notation = "The CFTR c.3140-26A>G variant in children <5 years"
-    assert _publication(CFTR_PMID, notation).title == notation
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "The CFTR c.3140-26A>G variant in children <5 years",
+        # Each of these is what a broad `<[^>]*>` rule would cut into a wrong
+        # title: "Lep  mice", "p.(Arg)", "children 60".
+        "Leptin deficiency in Lep <ob> mice",
+        "NM_000162.5(GCK):c.363+318G>A and p.(Arg<Ter>)",
+        "Risk in children <5 years and adults >60",
+    ],
+)
+def test_angle_brackets_that_are_not_formatting_tags_survive(title: str) -> None:
+    assert _publication(CFTR_PMID, title).title == title
+    finding = _pubtator_finding(_publication(CFTR_PMID, title))
+    assert finding.structured_fields["rows"][0]["fields"]["title"] == title
 
 
 def test_a_document_without_a_title_passage_has_no_title() -> None:
@@ -185,16 +205,12 @@ def test_the_row_keeps_its_cited_fact_and_carries_the_title_last() -> None:
     assert [(f.field, f.field_value) for f in synth] == [("pmid", CFTR_PMID)]
 
 
-def test_a_placeholder_title_is_not_kept_on_the_row() -> None:
-    finding = _pubtator_finding(_publication(CFTR_PMID, "[Not Available]."))
+@pytest.mark.parametrize("title", ["[Not Available].", OVARIAN_TITLE])
+def test_a_bracketed_title_is_not_kept_on_the_row(title: str) -> None:
+    """The shared placeholder rule (`article_titles._BRACKETED_ONLY`, card 38
+    slice C) is not changed here, so a fully bracketed title is withheld."""
+    finding = _pubtator_finding(_publication(OVARIAN_PMID, title))
     assert "title" not in finding.structured_fields["rows"][0]["fields"]
-
-
-def test_the_summary_names_an_untitled_paper_by_its_pmid() -> None:
-    finding = _pubtator_finding(_publication(CFTR_PMID, None))
-    row = finding.structured_fields["rows"][0]
-    synth, _ = build_synth_findings([finding], graph_module._pick_representative_field)
-    assert summary_label(synth[0], row) == f"PMID:{CFTR_PMID}"
 
 
 # ------------------------------------------------------------ the page
@@ -271,9 +287,10 @@ def _rows(tokens: list[dict]) -> list[list[str]]:
 
 def _no_doubled_number(rows: list[list[str]]) -> None:
     for cells in rows:
-        for pmid in (CFTR_PMID, HBOC_PMID):
+        for pmid in (CFTR_PMID, HBOC_PMID, OVARIAN_PMID):
             assert cells[:2] != [pmid, f"PMID:{pmid}"], cells
             assert cells[:1] != [pmid], cells
+            assert not any("Title not retrieved" in cell for cell in cells), cells
 
 
 @pytest.mark.asyncio
@@ -303,30 +320,45 @@ async def test_plain_language_lists_a_held_title(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_with_no_title_held_the_row_says_so_and_keeps_its_number(monkeypatch) -> None:
-    findings = [_pubtator_finding(_publication(CFTR_PMID, None))]
+@pytest.mark.parametrize("title", [None, OVARIAN_TITLE])
+async def test_with_no_usable_title_the_row_is_named_by_its_pmid(monkeypatch, title) -> None:
+    """As card 38 slice C names a graph paper with a placeholder title: the
+    PMID with its system, in the Paper cell and the Identifier cell."""
+    findings = [_pubtator_finding(_publication(OVARIAN_PMID, title))]
     tokens, _ = await _page(monkeypatch, "researcher", findings)
     rows = _rows(tokens)
-    assert rows == [[UNTITLED_PAPER_LABEL, f"PMID:{CFTR_PMID}"]], rows
+    assert rows == [[f"PMID:{OVARIAN_PMID}", f"PMID:{OVARIAN_PMID}"]], rows
     _no_doubled_number(rows)
     plain_tokens, _ = await _page(monkeypatch, "plain_language", findings)
     assert _rows(plain_tokens) == [["Published paper"]], _rows(plain_tokens)
 
 
 @pytest.mark.asyncio
-async def test_when_the_background_search_finishes_the_paper_is_listed_once_by_title(
-    monkeypatch,
+@pytest.mark.parametrize("pubmed_first", [True, False])
+@pytest.mark.parametrize(
+    ("pmid", "pubmed_title", "pubtator_title"),
+    [
+        (CFTR_PMID, CFTR_TITLE, CFTR_TITLE),
+        (CFTR_PMID, CFTR_TITLE, None),
+        # PubMed keeps the bracketed English title that the PubTator3 row
+        # withholds (A-134-09): PubMed's view names the paper.
+        (OVARIAN_PMID, OVARIAN_TITLE, OVARIAN_TITLE),
+    ],
+)
+async def test_when_the_background_search_holds_the_title_pubmeds_row_names_the_paper(
+    monkeypatch, pmid, pubmed_title, pubtator_title, pubmed_first
 ) -> None:
-    """As today: the live PubMed title row and the literature-index row
-    share the paper's page, and the paper is one row named by its title."""
-    pubmed, output = _pubmed_finding(CFTR_PMID, CFTR_TITLE)
-    for title in (CFTR_TITLE, None):
-        findings = [pubmed, _pubtator_finding(_publication(CFTR_PMID, title))]
-        tokens, _ = await _page(
-            monkeypatch, "researcher", findings, {"ne-card134": output}
-        )
+    """The live PubMed title row and the literature-index row share the
+    paper's page. Whichever finding comes first, the paper is one row named
+    by PubMed's own title, never by its number."""
+    pubmed, output = _pubmed_finding(pmid, pubmed_title)
+    pubtator = _pubtator_finding(_publication(pmid, pubtator_title))
+    findings = [pubmed, pubtator] if pubmed_first else [pubtator, pubmed]
+    for depth in ("researcher", "plain_language"):
+        tokens, _ = await _page(monkeypatch, depth, findings, {"ne-card134": output})
         rows = _rows(tokens)
-        named = [cells for cells in rows if CFTR_TITLE in cells]
-        assert len(named) == 1, rows
-        assert not any(UNTITLED_PAPER_LABEL in cells for cells in rows), rows
+        assert [cells for cells in rows if pubmed_title in cells], (depth, rows)
+        paper_rows = [cells for cells in rows if pmid in " ".join(cells) or pubmed_title in cells]
+        assert len(paper_rows) == 1, (depth, rows)
+        assert not any(cells[0] in (pmid, f"PMID:{pmid}") for cells in rows), (depth, rows)
         _no_doubled_number(rows)

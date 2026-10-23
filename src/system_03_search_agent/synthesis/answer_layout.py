@@ -937,13 +937,22 @@ _LABEL_FIELDS = ("name", "title", "symbol", "preferred_name")
 LABEL_FIELDS = _LABEL_FIELDS
 _URL_PREFIX = re.compile(r"^\s*https?://", re.IGNORECASE)
 
-#: Card 134 (2026-10-22): the label of a literature-index paper (a PubTator3
-#: `Publication` row) whose row holds no usable title. Its only other value
-#: is its PubMed number, which the Identifier cell beside it already shows,
-#: so naming the row by that number read "28340353 PMID:28340353". This says
-#: what is true instead and never stands in for a title.
-UNTITLED_PAPER_LABEL = "Title not retrieved"
-_UNTITLED_PAPER_TYPES: frozenset[str] = frozenset({"Publication"})
+#: Card 134 (2026-10-22): a literature-index paper (a PubTator3 `Publication`
+#: row) whose row holds no usable title is named by its PubMed number with its
+#: system, "PMID:42477928", as a graph paper with only a placeholder title is
+#: (card 38 slice C), never the bare number beside that same identifier
+#: ("42477928 PMID:42477928") and never a sentence about the title.
+_TITLED_BY_ROW_TYPES: frozenset[str] = frozenset({"Publication"})
+
+
+def _is_untitled_paper_row(finding: SynthFinding, row_fields: dict[str, Any] | None) -> bool:
+    """Card 134: a `Publication` row whose finding and row name nothing."""
+    if finding.entity_type not in _TITLED_BY_ROW_TYPES or finding.field in _LABEL_FIELDS:
+        return False
+    return not any(
+        isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value)
+        for value in ((row_fields or {}).get(key) for key in _LABEL_FIELDS)
+    )
 
 
 def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str:
@@ -979,9 +988,12 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
             return value.strip()[:500]
-    if finding.entity_type in _UNTITLED_PAPER_TYPES and finding.field not in _LABEL_FIELDS:
-        # Card 134: no title on the row, so never the number a second time.
-        return UNTITLED_PAPER_LABEL
+    if _is_untitled_paper_row(finding, row_fields):
+        # Card 134: no title on the row, so the paper's PMID, once, in the
+        # form its Identifier cell and its source card use.
+        identifier = record_identifier({"fields": row_fields or {}})
+        if identifier:
+            return identifier
     for candidate in (
         finding.field_value if finding.field in _LABEL_FIELDS else "",
         finding.curie,
@@ -1011,7 +1023,7 @@ def plain_record_label(
     where the code lives for anyone who wants it.
     """
     label = record_label(finding, row_fields)
-    if label == UNTITLED_PAPER_LABEL and finding.entity_type in _UNTITLED_PAPER_TYPES:
+    if _is_untitled_paper_row(finding, row_fields):
         # Card 134: Plain language keeps its everyday noun for a paper with
         # no title, "Published paper", as before.
         noun = plain_noun(finding.entity_type)
@@ -1784,13 +1796,7 @@ def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
     if finding.name_resolved or finding.field in _LABEL_FIELDS:
         return clip_to_word(finding.field_value)
     fields = (row or {}).get("fields")
-    label = record_label(finding, fields if isinstance(fields, dict) else None)
-    if label == UNTITLED_PAPER_LABEL and finding.entity_type in _UNTITLED_PAPER_TYPES:
-        # Card 134: a summary names an untitled paper by its PubMed number,
-        # with its system ("PMID:28340353"), since no Identifier cell is
-        # beside it there.
-        return record_identifier(row) or label
-    return label
+    return record_label(finding, fields if isinstance(fields, dict) else None)
 
 
 def answer_summary_sentence(

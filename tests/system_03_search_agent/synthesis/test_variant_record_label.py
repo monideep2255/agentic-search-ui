@@ -220,11 +220,11 @@ def test_a_pubtator3_publication_row_keeps_its_label_column_and_plain_label() ->
     assert finding.entity_type == "Publication"
     assert "Publication" not in TABLE_COLUMNS
     label, plain, extra, second = _develop_label_for(finding, row["fields"])
-    # Card 134: a publication row with no title is never named by its number
-    # a second time beside its Identifier cell, and Plain language reads its
+    # Card 134: a publication row with no title is named by its PMID with
+    # its system, never the bare number, and Plain language reads its
     # everyday noun. The row's cited fact is still its PMID.
     assert finding.field == "pmid" and finding.field_value == "12345678"
-    assert label == "Title not retrieved"
+    assert label == "PMID:12345678"
     assert plain == "Published paper"
     assert extra is None
     assert second is None

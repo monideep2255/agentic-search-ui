@@ -9,6 +9,7 @@ What the person saw on deployed develop (`testing/Developer/reports/2026-10-18_b
 - [Options](#options)
 - [The fix](#the-fix)
 - [Before and after](#before-and-after)
+- [Fix round](#fix-round)
 
 ## Cause
 
@@ -47,7 +48,8 @@ PubTator3 keeps PubMed's inline formatting as markup (`<i>...</i>`), so the titl
 - `tools/pubtator_annotate_schemas.py`: `PubtatorPublication.title`, an additive optional field (design decision 11), at most 500 characters.
 - `tools/pubtator_annotate.py`: `_publication_title` reads the first passage whose `infons.type` is exactly "title", removes only the exact formatting tags `i`, `b`, `u`, `em`, `strong`, `sup` and `sub`, and collapses whitespace. Variant notation such as "c.3140-26A>G" and "<5 years" is kept as written. A title over 500 characters is withheld with a `fields_withheld` note, never clipped.
 - `core/graph.py`, the `pubtator_annotate` branch only: the row gains `title`, cleaned by `article_titles.clean_article_title` (the graph paper's rule, so a "[Not Available]." placeholder is dropped). It sits after `pmid`, so the row's cited fact, what the writer is shown and the per-page fold are unchanged; only the list label reads it.
-- `synthesis/answer_layout.py`: with no title on a `Publication` row, `record_label` returns "Title not retrieved" beside the PMID; Plain language keeps "Published paper"; a summary sentence names the paper "PMID:28340353".
+- `synthesis/answer_layout.py`: with no title on a `Publication` row, `record_label` returns the PMID with its system, "PMID:42477928", as card 38 slice C names a graph paper with a placeholder title; Plain language keeps "Published paper".
+- `synthesis/findings.py`, `_listing_rank` (fix round): in the per-page fold, a `Publication` row's PMID view ranks after a view that names the paper, so PubMed's own title row names the paper whichever finding came first.
 
 ## Before and after
 
@@ -56,12 +58,25 @@ PubTator3 keeps PubMed's inline formatting as markup (`<i>...</i>`), so the titl
 | Researcher, title held | 28340353 · PMID:28340353 | Molecular Structure of the Human CFTR Ion Channel. · PMID:28340353 |
 | Researcher, title held with markup | 20301425 · PMID:20301425 | BRCA1- and BRCA2-Associated Hereditary Breast and Ovarian Cancer · PMID:20301425 |
 | Plain language, title held | Published paper | Molecular Structure of the Human CFTR Ion Channel. |
-| Researcher, no title held | 28340353 · PMID:28340353 | Title not retrieved · PMID:28340353 |
+| Researcher, no usable title held (none, or a bracketed translated title the shared rule withholds) | 42477928 · PMID:42477928 | PMID:42477928 · PMID:42477928 |
 | Plain language, no title held | Published paper | Published paper |
-| Background search finishes | One row, the live PubMed title | Unchanged |
+| Background search finishes, PubMed finding first | One row, the live PubMed title | Unchanged |
+| Background search finishes, PubTator3 finding first | 42477928 · PMID:42477928 | PubMed's title · PMID:42477928 |
 
 Time cost: none. No new call, no new wait; the title comes from a response the run already received.
 
 Tests: `tests/system_03_search_agent/core/test_enrichment_paper_titles.py`, from the live PubTator3 document shapes. Removing the row's `title` or the honest-label branch turns them red with the reported "28340353 PMID:28340353" row.
 
 Seen and not fixed here: a graph `Article` whose PubMed title is only a bracketed placeholder still reads "PMID:n" in both the Paper and the Identifier cells (card 38 slice C's "keeps its number"). Changing it would move a row waiting on the owner's retest, so it is left as it is.
+
+## Fix round
+
+Findings from `judge.md` and `adversary.md`, 2026-10-22, fixed in one round:
+
+| Finding | Change |
+|---|---|
+| A-134-01, 04, 09 | "Title not retrieved" is gone: it was false for a non-English paper whose bracketed English title the shared `_BRACKETED_ONLY` rule withholds. The row is named "PMID:42477928" instead. The shared rule is unchanged. The fold now lets PubMed's title row name the paper whichever finding comes first (also J-134-04) |
+| J-134-07 | Tests with "Lep <ob> mice", "p.(Arg<Ter>)" and "children <5 years and adults >60", which a greedy `<[^>]*>` rule turns red (checked by mutation) |
+| A-134-06 | The `summary_label` branch is removed: papers are counted in the summary, never named, so it could not run |
+
+Left as they are, on the coordinator's word: A-134-02 (retractions, a new card), A-134-03, 05, 07, 08 and J-134-01, 02, 03, 06.

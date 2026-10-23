@@ -1430,7 +1430,20 @@ def _listing_rank(finding: SynthFinding) -> tuple[int, int]:
     from system_03_search_agent.synthesis.grounding import split_into_sentences
 
     multi_sentence = 1 if len(split_into_sentences(finding.field_value)) > 1 else 0
-    return (multi_sentence, finding.ref_index)
+    return (multi_sentence, _number_only_paper_view(finding), finding.ref_index)
+
+
+def _number_only_paper_view(finding: SynthFinding) -> int:
+    """1 for a literature-index paper's PMID view, which names nothing.
+
+    Card 134 (2026-10-22): a PubTator3 `Publication` finding cites the
+    paper's PMID. When the live PubMed search returned the same paper, its
+    `title` finding shares the page and names it, so that view is kept
+    whichever of the two was admitted first; before, the lower `ref_index`
+    won and the PMID view could name the paper by its number beside PubMed's
+    own title. Keyed on the exact row type and field, metadata only.
+    """
+    return 1 if finding.entity_type == "Publication" and finding.field == "pmid" else 0
 
 
 # T-4.5-07, Section 14.5. The depth directives live in the DYNAMIC SUFFIX,
