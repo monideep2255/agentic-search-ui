@@ -1109,7 +1109,7 @@ Queries to try:
 What you should see:
 
 - A request to change the data is refused as something the product cannot do, not as an attack.
-- It is refused, with the grey label "Read-only system" and the sentence "This system only reads from NCBI records. It cannot add, change, or remove data."
+- It is refused, with the grey label "Read-only system" and the sentences "This system only reads from NCBI records. It cannot add, change, or remove data. Ask what the graph holds about a gene, variant, or condition and I can assemble cited evidence." (the last sentence since card 141)
 - It is not labelled "Not a research question".
 - No citation chips.
 - Before phase 8.6's re-land, this request got the label "Not a research question", which says nothing about what the product can do (F-8.6-G01). The follow-up's golden run gave the read-only reply in 3 of 3 passes.
