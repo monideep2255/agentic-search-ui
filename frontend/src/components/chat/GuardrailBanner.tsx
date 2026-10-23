@@ -43,7 +43,7 @@ export const CATEGORY_COPY: Record<GuardPayload["category"], string> = {
   // write, so a request to change data is refused by design rather than by
   // capacity or by policy.
   write_seeking:
-    "This system only reads from NCBI records. It cannot add, change, or remove data.",
+    "This system only reads from NCBI records. It cannot add, change, or remove data. Ask what the graph holds about a gene, variant, or condition and I can assemble cited evidence.",
   // Added 2026-09-22 with the `compute_request` guard category. Section
   // 12.6's table has no row for it, exactly as it has none for
   // `write_seeking`: the locked section predates both categories. The
