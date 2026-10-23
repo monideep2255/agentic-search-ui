@@ -10070,9 +10070,31 @@ def _paper_link_none_message(state: GraphState) -> str | None:
     return paper_links.none_linked_message(plan.pmid, plan.targets)
 
 
-def _paper_link_notes(state: GraphState) -> list[str]:
+def _paper_link_shown(
+    state: GraphState, target: str, citations: Sequence[CitationPayload]
+) -> int:
+    """Card 139: how many of one kind's linked records this answer cites.
+
+    The records are the ones the kind's ESummary call returned, matched to
+    the answer's citations by page (`source_page_key`), so the count is taken
+    after the per-kind row cut and after grounding: what a reader can see.
+    """
+    raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs") or {}
+    purpose = paper_links.summary_purpose(target)
+    pages: set[str] = set()
+    for planned in state.get("tool_calls") or []:
+        if getattr(planned, "purpose", "") != purpose:
+            continue
+        output = raw_outputs.get(planned.tool_call.call_id)
+        if output is not None:
+            pages.update(key for record in output.records if (key := source_page_key(record.source_url)))
+    return len({key for citation in citations if (key := source_page_key(citation.source_url)) in pages})
+
+
+def _paper_link_notes(state: GraphState, citations: Sequence[CitationPayload]) -> list[str]:
     """Card 74: under an answer that lists some linked records, the kinds NCBI
-    lists none of, and how many NCBI lists where more than are shown."""
+    lists none of, and how many NCBI lists where more than are shown. Card
+    139: "shown" is the answer's own citations of that kind."""
     plan = state.get("paper_link_plan")
     notes: list[str] = []
     for target, out in _paper_link_results(state):
@@ -10080,7 +10102,10 @@ def _paper_link_notes(state: GraphState) -> list[str]:
             notes.append(paper_links.empty_target_note(plan.pmid, target))
         elif out.status == "ok":
             count = paper_links.count_note(
-                plan.pmid, target, out.total_available or out.record_count
+                plan.pmid,
+                target,
+                out.total_available or out.record_count,
+                _paper_link_shown(state, target, citations),
             )
             if count is not None:
                 notes.append(count)
@@ -15378,7 +15403,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             for note in (
                 truncation_note,
                 _isolate_count_note(state),
-                *_paper_link_notes(state),
+                *_paper_link_notes(state, citations),
                 _window_no_papers_note(state, query),
                 _isolate_disclosure_note(state),
                 _disease_lookup_failed_note(state),

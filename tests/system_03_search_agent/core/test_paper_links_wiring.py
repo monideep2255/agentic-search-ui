@@ -20,6 +20,7 @@ exercise: the live ELink and ESummary responses, read for PMID 11237011 in
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -235,7 +236,9 @@ async def test_links_feed_the_summaries_and_an_empty_kind_costs_no_summary(
         paper_link_plan=plan_result["paper_link_plan"],
         layer2_raw_outputs=act["layer2_raw_outputs"],
     )
-    assert graph_module._paper_link_notes(write_state) == [
+    # The answer cites every linked record it was given, so no count note.
+    cited = [SimpleNamespace(source_url=url) for url in sorted(urls)]
+    assert graph_module._paper_link_notes(write_state, cited) == [
         "NCBI lists no linked SRA run records for PMID 11237011."
     ]
     assert graph_module._paper_link_none_message(write_state) is None
@@ -296,17 +299,101 @@ def test_a_failed_link_search_makes_no_claim_that_none_are_listed() -> None:
     )
 
 
-def test_more_linked_records_than_are_shown_says_how_many_NCBI_lists() -> None:
-    plan = graph_module._PaperLinkPlan(pmid="11237011", targets=("nuccore",))
-    planned = graph_module._planned_from_breadth(paper_links.link_calls("11237011", ("nuccore",))[0])
-    big = _link_output("nuccore", [str(i) for i in range(1, 6)], total=1533)
-    state: dict[str, Any] = {
+def _link_and_summary_state(target: str, linked: int, total: int | None, summarised: int) -> dict[str, Any]:
+    """A write state holding one kind's link search and its summary output."""
+    plan = graph_module._PaperLinkPlan(pmid="11237011", targets=(target,))
+    link = graph_module._planned_from_breadth(paper_links.link_calls("11237011", (target,))[0])
+    ids = [str(i) for i in range(1, linked + 1)]
+    summary = graph_module._planned_from_breadth(paper_links.plan_summary_follow_up(target, ids)[0])
+    summary_out = NcbiEfetchOutput(
+        status="ok", action="summary", record_count=summarised, total_available=summarised, truncated=False,
+        records=[
+            NcbiEfetchRecord(id=i, db=target, source_url=f"https://www.ncbi.nlm.nih.gov/{target}/{i}")
+            for i in ids[:summarised]
+        ],
+    )
+    return {
         "paper_link_plan": plan,
-        "tool_calls": [planned],
-        "layer2_raw_outputs": {planned.tool_call.call_id: big},
+        "tool_calls": [link, summary],
+        "layer2_raw_outputs": {
+            link.tool_call.call_id: _link_output(target, ids, total=total),
+            summary.tool_call.call_id: summary_out,
+        },
     }
-    assert graph_module._paper_link_notes(state) == [
-        "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 10."
+
+
+def _cited(state: dict[str, Any], target: str, count: int) -> list[SimpleNamespace]:
+    """`count` citations of the kind's summarised records, one with a trailing slash."""
+    summary_out = list(state["layer2_raw_outputs"].values())[1]
+    urls = [record.source_url for record in summary_out.records][:count]
+    return [SimpleNamespace(source_url=url + ("/" if n == 0 else "")) for n, url in enumerate(urls)]
+
+
+def test_more_linked_records_than_are_shown_says_how_many_NCBI_lists() -> None:
+    """Query 104's shape (card 139): NCBI lists 1533, ten are summarised, the
+    answer cites five. The note counts the five, not the ten summarised."""
+    state = _link_and_summary_state("nuccore", linked=20, total=1533, summarised=10)
+    assert graph_module._paper_link_notes(state, _cited(state, "nuccore", 5)) == [
+        "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 5."
     ]
-    state["layer2_raw_outputs"] = {planned.tool_call.call_id: _link_output("nuccore", ["1", "2"])}
-    assert graph_module._paper_link_notes(state) == []
+    # A citation of some other record is not a sequence record shown.
+    other = [SimpleNamespace(source_url="https://www.ncbi.nlm.nih.gov/gene/672")]
+    assert graph_module._paper_link_notes(state, _cited(state, "nuccore", 5) + other) == [
+        "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 5."
+    ]
+
+
+def test_six_to_ten_linked_records_with_fewer_shown_still_get_the_count() -> None:
+    """Card 139: the old default of ten hid the note when NCBI listed 6 to 10."""
+    state = _link_and_summary_state("assembly", linked=8, total=None, summarised=8)
+    assert graph_module._paper_link_notes(state, _cited(state, "assembly", 5)) == [
+        "NCBI lists 8 genome assemblies linked to PMID 11237011; this answer shows 5."
+    ]
+    # Every linked record shown: nothing to say.
+    assert graph_module._paper_link_notes(state, _cited(state, "assembly", 8)) == []
+    small = _link_and_summary_state("nuccore", linked=2, total=None, summarised=2)
+    assert graph_module._paper_link_notes(small, _cited(small, "nuccore", 2)) == []
+
+
+@pytest.mark.asyncio
+async def test_the_written_answer_counts_the_records_it_shows(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Card 139, the whole path for query 104's shape: Plan, Act and Write with
+    NCBI linking 1533 sequence records. The note's number is the number of
+    sequence record pages the answer cites, on the same answer it sits under."""
+    from tests.system_03_search_agent.core.test_write_answer_structure import _install
+    from tests.system_03_search_agent.core.test_write_answer_structure import _state as _write_state
+
+    _stub_decisions(monkeypatch, "sequences")
+    _install(monkeypatch, lambda _lines: "ok")
+    plan_result = await graph_module.plan_node(_state(QUESTION, [PAPER]))
+    _install_ncbi(
+        monkeypatch,
+        {"nuccore": _link_output("nuccore", [str(1000 + i) for i in range(20)], total=1533)},
+    )
+    act = await graph_module.act_node(
+        _state(QUESTION, [PAPER], tool_calls=plan_result["tool_calls"],
+               paper_link_plan=plan_result["paper_link_plan"])
+    )
+    state = _write_state("researcher")
+    state.update(
+        tool_calls=plan_result["tool_calls"],
+        paper_link_plan=plan_result["paper_link_plan"],
+        layer2_raw_outputs=act["layer2_raw_outputs"],
+        findings=act["findings"],
+        findings_count=len(act["findings"]),
+        failed_searches=[],
+    )
+    result = await graph_module.write_node(state)
+    text = " ".join(e.payload["text"] for e in result["events"] if e.type == "token")
+    shown = {
+        e.payload["source_url"].rstrip("/")
+        for e in result["events"]
+        if e.type == "citation" and "/nuccore/" in e.payload["source_url"]
+    }
+    # Populate check: the answer shows sequence records, and fewer than ten.
+    assert 0 < len(shown) < paper_links.MAX_LINKED_PER_DB, shown
+    assert (
+        f"NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows {len(shown)}."
+        in text
+    ), text
+    assert "this answer shows 10" not in text
