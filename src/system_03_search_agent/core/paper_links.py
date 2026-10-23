@@ -117,6 +117,11 @@ def link_calls(pmid: str, targets: Iterable[str]) -> tuple[PlannedCall, ...]:
     )
 
 
+def summary_purpose(target: str) -> str:
+    """The purpose of the ESummary call that cites one target's linked records."""
+    return _SUMMARY_PURPOSE.format(db=target)
+
+
 def plan_summary_follow_up(target: str, ids: Iterable[str]) -> tuple[PlannedCall, ...]:
     """The ESummary call for the linked ids of one target, or nothing for no valid id."""
     selected = select_ids(ids, MAX_LINKED_PER_DB)
@@ -127,7 +132,7 @@ def plan_summary_follow_up(target: str, ids: Iterable[str]) -> tuple[PlannedCall
             tool="ncbi_efetch",
             layer="layer_2_api",
             prefix="ne",
-            purpose=_SUMMARY_PURPOSE.format(db=target),
+            purpose=summary_purpose(target),
             tool_input=NcbiEfetchInput.model_validate(
                 {"action": "summary", "db": target, "ids": selected}
             ),
@@ -150,9 +155,21 @@ def none_linked_message(pmid: str, targets: Iterable[str]) -> str:
     return f"NCBI lists no linked {listed} for PMID {pmid}."
 
 
-def count_note(pmid: str, target: str, total: int, shown: int = MAX_LINKED_PER_DB) -> str | None:
-    """The sentence naming how many linked records NCBI lists when more than are shown."""
-    if total <= shown:
+def count_note(pmid: str, target: str, total: int, shown: int) -> str | None:
+    """The sentence naming how many linked records NCBI lists when more than are shown.
+
+    Card 139 (2026-10-22): `shown` is the number of this kind's records the
+    answer cites, counted by the caller after every cut, never the number
+    summarised. It used to default to `MAX_LINKED_PER_DB`, so the note said
+    "this answer shows 10" over the five rows the write step keeps per kind,
+    and said nothing at all when NCBI listed six to ten.
+
+    None when the answer shows no record of the kind (J-139-02, A-139-01): a
+    zero would read as the product choosing to show none, when the kind's
+    summary call failed or no row of it survived, and a failed call has its
+    own note.
+    """
+    if shown == 0 or total <= shown:
         return None
     return (
         f"NCBI lists {total} {noun(target, total)} linked to PMID {pmid}; "

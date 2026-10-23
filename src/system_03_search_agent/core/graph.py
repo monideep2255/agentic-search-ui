@@ -582,6 +582,7 @@ from system_03_search_agent.synthesis.answer_layout import (
 from system_03_search_agent.synthesis.article_titles import (
     apply_resolved_article_titles,
     article_curies_to_name,
+    clean_article_title,
     resolve_article_titles,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
@@ -5089,6 +5090,15 @@ def _layer_tool_output_to_structured_fields(
                     {
                         "pmid": publication.pmid,
                         "annotation_count": publication.total_annotations,
+                        # Card 134: the paper's PubMed title, from the same
+                        # response, so the list row names the paper even when
+                        # the background PubMed search did not finish. It
+                        # stays AFTER `pmid`: the row's cited fact, its
+                        # finding and the per-page fold are exactly as before,
+                        # and only the row's label (`answer_layout.
+                        # record_label`) reads it. Cleaned as a graph paper's
+                        # title is, and absent when that withholds it.
+                        "title": clean_article_title(publication.title),
                     },
                     publication.source_url,
                 )
@@ -10070,9 +10080,31 @@ def _paper_link_none_message(state: GraphState) -> str | None:
     return paper_links.none_linked_message(plan.pmid, plan.targets)
 
 
-def _paper_link_notes(state: GraphState) -> list[str]:
+def _paper_link_shown(
+    state: GraphState, target: str, citations: Sequence[CitationPayload]
+) -> int:
+    """Card 139: how many of one kind's linked records this answer cites.
+
+    The records are the ones the kind's ESummary call returned, matched to
+    the answer's citations by page (`source_page_key`), so the count is taken
+    after the per-kind row cut and after grounding: what a reader can see.
+    """
+    raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs") or {}
+    purpose = paper_links.summary_purpose(target)
+    pages: set[str] = set()
+    for planned in state.get("tool_calls") or []:
+        if getattr(planned, "purpose", "") != purpose:
+            continue
+        output = raw_outputs.get(planned.tool_call.call_id)
+        if output is not None:
+            pages.update(key for record in output.records if (key := source_page_key(record.source_url)))
+    return len({key for citation in citations if (key := source_page_key(citation.source_url)) in pages})
+
+
+def _paper_link_notes(state: GraphState, citations: Sequence[CitationPayload]) -> list[str]:
     """Card 74: under an answer that lists some linked records, the kinds NCBI
-    lists none of, and how many NCBI lists where more than are shown."""
+    lists none of, and how many NCBI lists where more than are shown. Card
+    139: "shown" is the answer's own citations of that kind."""
     plan = state.get("paper_link_plan")
     notes: list[str] = []
     for target, out in _paper_link_results(state):
@@ -10080,7 +10112,10 @@ def _paper_link_notes(state: GraphState) -> list[str]:
             notes.append(paper_links.empty_target_note(plan.pmid, target))
         elif out.status == "ok":
             count = paper_links.count_note(
-                plan.pmid, target, out.total_available or out.record_count
+                plan.pmid,
+                target,
+                out.total_available or out.record_count,
+                _paper_link_shown(state, target, citations),
             )
             if count is not None:
                 notes.append(count)
@@ -10648,8 +10683,13 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
         "because the query reached its cost limit"
     )
     if omission_remains:
-        return base + ", so the omission described above was not repaired"
-    return base + ", and the records it would have added are listed below as found"
+        # Card 139 (J-139-01): this clause said "the omission described
+        # above", but the web screen hides the incomplete-answer note that
+        # describes it, so it now names what was not done and points nowhere.
+        return base + ", so it could not add the records it found the answer left out"
+    # Card 139: the notes follow the listing on every surface (`_AnswerParts`:
+    # summary, listing, notes), so a note never points "below" at it.
+    return base + ", and the records it would have added are listed in this answer as found"
 
 
 #: Card 63: the NCBI databases a failed-call note can name, as a person
@@ -10951,6 +10991,20 @@ def _build_writer_failed_note() -> str:
     )
 
 
+def _build_restatements_only_note() -> str:
+    """Tell the reader no summary is shown because it only repeated the list.
+
+    Card 128 (owner, 2026-10-22, reworded the same night). Every sentence the
+    writer wrote grounded and was dropped as a restatement of a listed
+    record. Opens "Note:" and has no trailing period, the shape the coverage
+    grader and the app's note handling depend on.
+    """
+    return (
+        "Note: no written summary is shown, because the sentences written "
+        "only repeated the records listed above"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -10964,9 +11018,11 @@ def _build_structured_fallback_note() -> str:
     reason every other note here carries that shape: the coverage grader
     splits on those and counts an unmarked continuation as an uncited claim.
     """
+    # Card 139: this note renders after the listing on screen, in the saved
+    # answer and on the command line, so it names no direction.
     return (
         "Note: no written summary could be checked against the records, "
-        "so the records found are listed below with their sources"
+        "so this answer lists the records found with their sources"
     )
 
 
@@ -13342,36 +13398,139 @@ def _answer_parts(
     class ListedRow:
         # A row already shown, with what it shows: its cells and, for a
         # mapping row, the record fields its disease cell was built from.
+        # Card 133 and 137: `names` holds every name the row shows, the
+        # first as its own cell and any later one in brackets after it, and
+        # `same_record_kind` is the record kind a differently named repeat
+        # must share, "" when the row's identifier is not its own.
         token: TokenPayload
         cells: list[str]
         fields: dict[str, Any] | None = None
+        names: list[str] = dataclasses.field(default_factory=list)
+        same_record_kind: str = ""
 
     def record_merge_key(finding: SynthFinding, identifier: str) -> tuple[str, str]:
         # Card 104: a candidate repeat is the same page, keyed the way
         # Sources keys a page (`source_page_key`, trailing slash ignored),
         # with the same identifier cell. Whether it merges is then decided
-        # by `merged_cells`: every shown cell, the name included, must agree.
+        # by `merged_cells`.
         page = source_page_key(finding.source_url) or finding.citation_id
         return (page, identifier)
 
-    def merged_cells(shown: list[str], later: list[str]) -> list[str] | None:
+    def own_record_kind(finding: SynthFinding, identifier: str) -> str:
+        # Card 133 and 137 (DECISIONS.md, 2026-10-22): two rows whose page
+        # key and the record's OWN identifier both match are one record,
+        # even when the graph names it "BRCA1 DNA repair associated" and
+        # the live lookup "BRCA1". Returns the identity such a repeat must
+        # share (its record kind, plus an edge's two ends), or "" when the
+        # identifier cannot vouch for the row:
+        #   - a blank identifier (the name is then the only thing that
+        #     tells two records on one page apart, J-103-06);
+        #   - a borrowed one: an edge citing its endpoint's CURIE, or a GO
+        #     term cited through its gene (J-103-05), or a row whose fields
+        #     were not read, so a borrow could not be ruled out;
+        #   - one that is not the record's primary id for its kind
+        #     (J-133-01): a graph row's identifier must be its own CURIE,
+        #     never a `taxid` or other field read before it; a live row's
+        #     must be the id its citation gives it in its own database,
+        #     only where that database is the row's kind and the graph
+        #     holds it ("NCBIGene:672" for a live gene record), never a
+        #     shared or page-derived id ("nuccore 568815597");
+        #   - an edge whose two ends are not both known (J-133-02): two
+        #     edges on one page are one only when they join the same two
+        #     records;
+        #   - a `derived` projection, a second view, not a record kind.
+        from system_03_search_agent.tools.graph_schema_constants import EDGE_LABELS
+
+        if not identifier.strip():
+            return ""
+        row = _row_for(finding, findings)
+        row_fields = row.get("fields") if row is not None else None
+        if not isinstance(row_fields, dict) or not row_fields:
+            return ""
+        if row_fields.get("_cited_via_endpoint_curie") or row_fields.get("_cited_via_gene_curie"):
+            return ""
+        kind = entity_type_noun(finding.entity_type or "")
+        if kind in ("", "derived"):
+            return ""
+        curie = str((row or {}).get("curie") or "").strip()
+        if curie:
+            if identifier != curie:
+                return ""
+        else:
+            citation = citation_by_id.get(finding.citation_id)
+            source = (citation.source if citation is not None else "").strip()
+            source_id = (citation.source_id if citation is not None else "").strip()
+            own = record_identifier(None, source, source_id) if source_id.isdigit() else ""
+            if (
+                source.lower() != kind
+                or identifier != own
+                or not re.fullmatch(r"[A-Za-z]+:\d+", own)
+            ):
+                return ""
+        is_edge = (
+            "_edge_start_id" in row_fields
+            or "_edge_end_id" in row_fields
+            or (finding.entity_type or "").strip().lower() in EDGE_LABELS
+        )
+        if not is_edge:
+            return kind
+        ends = (row_fields.get("_edge_start_id"), row_fields.get("_edge_end_id"))
+        if any(end in (None, "") for end in ends):
+            return ""
+        return f"{kind}|{ends[0]}|{ends[1]}"
+
+    #: A table cell holds at most this many characters (`TokenPayload.
+    #: cells`, `contracts/events.py`); a merged name past it is never built.
+    merged_name_limit = 500
+
+    def shown_name(names: list[str]) -> str | None:
+        # Never hide a name: the first as the row reads it, each later one
+        # in its own brackets, "mutL homolog 1 (MLH1)". A name that already
+        # carries brackets ("tumor protein p53 (Homo sapiens)") leads, so
+        # no bracket sits inside another (A-133-01); two such names, or a
+        # result a cell cannot hold (J-133-03), build nothing, and the rows
+        # stay apart as on develop.
+        if len(names) == 1:
+            return names[0]
+        bracketed = [name for name in names if "(" in name or ")" in name]
+        if len(bracketed) > 1:
+            return None
+        ordered = bracketed + [name for name in names if name not in bracketed]
+        text = ordered[0] + "".join(f" ({name})" for name in ordered[1:])
+        return text if len(text) <= merged_name_limit else None
+
+    def merged_cells(
+        row: ListedRow, later: list[str], later_kind: str
+    ) -> tuple[list[str], list[str]] | None:
         # Card 104 fix round (J-103-03, A-103-02, A-103-06): two rows merge
         # only when every cell agrees. A blank cell on one row may take the
-        # other row's value; two different values, the name included, keep
-        # two rows, so a merge never hides anything a row showed. The name
-        # is never taken from the other row: with no identifier it is the
-        # only thing that tells two records on one page apart.
-        if len(shown) != len(later) or not shown or shown[0] != later[0]:
+        # other row's value; two different values keep two rows, so a merge
+        # never hides anything a row showed. The name is never taken from
+        # the other row. Card 133 and 137: two names merge only when both
+        # rows are the same kind of record on their own identifier, and
+        # the row then shows both names.
+        shown = row.cells
+        if len(shown) != len(later) or not shown:
             return None
-        out: list[str] = []
-        for first, second in zip(shown, later, strict=True):
+        names = list(row.names or [shown[0]])
+        if later[0] not in names:
+            if not later[0] or not row.same_record_kind or row.same_record_kind != later_kind:
+                return None
+            if len(names) >= 4:
+                return None
+            names.append(later[0])
+        name = shown_name(names)
+        if name is None:
+            return None
+        out: list[str] = [name]
+        for first, second in zip(shown[1:], later[1:], strict=True):
             if first == second or not second:
                 out.append(first)
             elif not first:
                 out.append(second)
             else:
                 return None
-        return out
+        return out, names
 
     def in_citation_order(ids: list[str]) -> list[str]:
         return sorted(
@@ -13387,17 +13546,20 @@ def _answer_parts(
         sentence: str,
         cells: list[str],
         mapping: tuple[str, int, dict[str, Any] | None, str | None] | None = None,
+        kind: str = "",
     ) -> bool:
         # A repeat of a shown record joins the first row it agrees with:
         # every citation number of both rows, ascending, none dropped by a
         # cap, and both grounded sentences in the row's text, so a surface
         # that prints the text (the command line) still prints every number.
         # When the merge cannot keep all of that, the repeat stays its own
-        # row, as before card 104.
+        # row, as before card 104. `kind` is the repeat's own record kind
+        # (`own_record_kind`), "" when its identifier cannot vouch for it.
         for first in listed.get(key, []):
-            merged = merged_cells(first.cells, cells)
-            if merged is None:
+            joined = merged_cells(first, cells, kind)
+            if joined is None:
                 continue
+            merged, names = joined
             fields = first.fields
             linked: list[str] = []
             if mapping is not None:
@@ -13421,6 +13583,7 @@ def _answer_parts(
             first.token.cells = merged
             first.cells = merged
             first.fields = fields
+            first.names = names
             return True
         return False
 
@@ -13429,8 +13592,11 @@ def _answer_parts(
         key: tuple[str, str],
         cells: list[str],
         fields: dict[str, Any] | None = None,
+        kind: str = "",
     ) -> None:
-        listed.setdefault(key, []).append(ListedRow(tokens[-1], list(cells), fields))
+        listed.setdefault(key, []).append(
+            ListedRow(tokens[-1], list(cells), fields, [cells[0]] if cells else [], kind)
+        )
 
     # A cited Disease finding per CURIE, so a mapping row can carry the
     # marker of every disease its cell names beside its own record's.
@@ -13584,12 +13750,15 @@ def _answer_parts(
             label = plain_record_label(finding, _row_fields_for(finding, findings), identifier)
             # One row per record: two claims about the same record (its title
             # and its symbol) are one row, not two identical ones. Card 104:
-            # keyed on the page, as Sources is, with citations merged.
+            # keyed on the page, as Sources is, with citations merged. Card
+            # 133 and 137: the same kind of record on its own identifier is
+            # one row however each layer names it.
             record_key = record_merge_key(finding, identifier)
-            if merge_into(listed_records, record_key, sentence, [label]):
+            kind = own_record_kind(finding, identifier)
+            if merge_into(listed_records, record_key, sentence, [label], kind=kind):
                 continue
             sentence_token(sentence, kind="list_item", cells=[label])
-            remember(listed_records, record_key, [label])
+            remember(listed_records, record_key, [label], kind=kind)
         # Beneath the one list, so the list itself stays one list: each
         # disease's features under a heading that names the disease.
         for entries in feature_blocks.values():
@@ -13763,22 +13932,25 @@ def _answer_parts(
                 # title and its symbol) are one row, not two identical ones.
                 # Card 104: a repeat of the same page and identifier whose
                 # cells agree joins the first row with every citation.
+                # Card 133 and 137: so does a repeat named differently, when
+                # it is the same kind of record on its own identifier.
                 record_key = record_merge_key(finding, identifier)
+                kind = own_record_kind(finding, identifier)
                 if not as_table:
-                    if not merge_into(listed_records, record_key, sentence, cells):
+                    if not merge_into(listed_records, record_key, sentence, cells, kind=kind):
                         sentence_token(sentence, kind="list_item", cells=cells)
-                        remember(listed_records, record_key, cells)
+                        remember(listed_records, record_key, cells, kind=kind)
                     continue
                 mapping = (
                     (entity_type, mapping_at, row_fields, finding.source_url)
                     if mapping_at is not None
                     else None
                 )
-                if merge_into(listed_records, record_key, sentence, cells, mapping):
+                if merge_into(listed_records, record_key, sentence, cells, mapping, kind):
                     continue
                 linked = linked_disease_ids(entity_type, row_fields) if mapped else []
                 sentence_token(sentence, kind="table_row", cells=cells, extra_marker_ids=linked)
-                remember(listed_records, record_key, cells, row_fields)
+                remember(listed_records, record_key, cells, row_fields, kind)
 
             # Card 23 (owner, 2026-10-06): directly under the
             # variant-to-disease table, and under no other table, one
@@ -14902,6 +15074,22 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         and grounding.claims
     ):
         grounding, restatements_dropped = drop_record_restatements(grounding, synth_findings)
+    # Card 128: every sentence the writer wrote grounded and was then dropped
+    # as a restatement, so no written sentence survives. Three facts must
+    # hold for the note's words to be true: nothing was stripped by the
+    # grounding pass or the sentence check (A-128-01), every dropped
+    # sentence's record is in the listing shown (A-128-02, checked against
+    # the listing's own claims), and the restore below did not put the
+    # sentences back (J-128-01, checked again at the note).
+    all_sentences_were_restatements = (
+        bool(restatements_dropped)
+        and not grounding.claims
+        and prose_before_drop.stripped_count == 0
+        and listing_grounding is not None
+        and bool(listing_grounding.claims)
+        and {c.finding.citation_id for c in prose_before_drop.claims}
+        <= {c.finding.citation_id for c in listing_grounding.claims}
+    )
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
@@ -15053,6 +15241,18 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             structured_fallback_note = _build_writer_failed_note()
         else:
             structured_fallback_note = _build_structured_fallback_note()
+    elif (
+        all_sentences_were_restatements
+        and restatements_dropped
+        and not structured_fallback_used
+        # Card 128 (owner, 2026-10-22): another note already says why the
+        # summary is missing, card 105's picked window with no papers. The
+        # fallback, writer-failed and cap-list notes sit in the branch above.
+        and _window_no_papers_note(state, query) is None
+    ):
+        # Card 128 (owner, 2026-10-22): say why there is no written summary.
+        # The trust outcome is left as it is on this path.
+        structured_fallback_note = _build_restatements_only_note()
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
@@ -15129,12 +15329,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # product owner reading a live answer where the two notes contradicted).
     incomplete_answer_note: str | None = None
     repair_cap_note: str | None = None
+    restatements_only_note_shown = structured_fallback_note == _build_restatements_only_note()
     if omitted_findings and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
         incomplete_answer_note = _build_incomplete_answer_note(
             omitted_findings,
             len(synth_findings) - len(omitted_findings),
-            summary_exists=not structured_fallback_used,
+            summary_exists=not structured_fallback_used and not restatements_only_note_shown,
         )
     # F-4.5-A-04: a cap hit inside the repair is disclosed whether or not an
     # omission remains. Before the findings tail the two always coincided;
@@ -15374,7 +15575,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             for note in (
                 truncation_note,
                 _isolate_count_note(state),
-                *_paper_link_notes(state),
+                *_paper_link_notes(state, citations),
                 _window_no_papers_note(state, query),
                 _isolate_disclosure_note(state),
                 _disease_lookup_failed_note(state),

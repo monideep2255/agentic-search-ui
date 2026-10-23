@@ -1056,6 +1056,20 @@ const mono = { fontFamily: "ui-monospace, monospace" } as const;
 export { isLinkableCitationUrl };
 
 /**
+ * The words a refusal's search link shows, in place of the raw address.
+ * "Search NCBI for GERD" when the address carries a `term`, else
+ * "Search NCBI". The href is never changed, only the text a reader sees.
+ */
+export function refusalLinkText(raw: string): string {
+  try {
+    const term = (new URL(raw).searchParams.get("term") ?? "").trim();
+    return term ? `Search NCBI for ${term}` : "Search NCBI";
+  } catch {
+    return "Search NCBI";
+  }
+}
+
+/**
  * Is this refusal's fallback address safe to turn into a link? (R14)
  *
  * SEPARATE FROM `isLinkableCitationUrl` above, and the difference is the
@@ -1166,7 +1180,7 @@ function RefusalBlock({
               rel="noopener noreferrer"
               sx={{ color: designTokens.link }}
             >
-              {link}
+              {refusalLinkText(link)}
             </Box>
           ) : (
             /*

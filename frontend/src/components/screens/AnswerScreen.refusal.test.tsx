@@ -30,7 +30,7 @@ import { describe, expect, it } from "vitest";
 import type { AgentEvent } from "../../lib/events";
 import { useRunView } from "../../hooks/useRunView";
 import type { RunView } from "../../hooks/useRunView";
-import { AnswerScreen, isLinkableRefusalLink } from "./AnswerScreen";
+import { AnswerScreen, isLinkableRefusalLink, refusalLinkText } from "./AnswerScreen";
 
 let seq = 0;
 
@@ -142,9 +142,10 @@ describe("a refusal reads as a calm labelled block, never as an error", () => {
     expect(block).toHaveTextContent("No answer found in NCBI records");
     expect(block).toHaveTextContent(/I could not find grounded evidence for this/);
 
-    // The visible text of the anchor is the address itself, so a reader can
-    // see where it goes before following it.
-    const link = screen.getByRole("link", { name: FALLBACK_LINK });
+    // The visible text is plain words naming the term, never the raw address;
+    // the href still points at the NCBI search for that term.
+    const link = screen.getByRole("link", { name: "Search NCBI for BRCA9" });
+    expect(link.textContent).not.toMatch(/https?:\/\//);
     expect(link).toHaveAttribute("href", FALLBACK_LINK);
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
@@ -182,6 +183,17 @@ describe("a refusal reads as a calm labelled block, never as an error", () => {
     // refusal was trying to hand the reader.
     expect(block).toHaveTextContent(hostile);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("words the link text: no term, plus signs and %20 become spaces", () => {
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/")).toBe("Search NCBI");
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/?term=")).toBe("Search NCBI");
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/?term=cystic+fibrosis")).toBe(
+      "Search NCBI for cystic fibrosis",
+    );
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/?term=cystic%20fibrosis")).toBe(
+      "Search NCBI for cystic fibrosis",
+    );
   });
 
   it("pins the host rule itself, subdomains included", () => {

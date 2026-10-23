@@ -35,7 +35,9 @@ speaks to its reader too, under the product owner's six rules:
 - Rule 1: the opening sentence. Plain language reads "I found 5 published
   papers on this topic [1][2]...", everyday nouns and no titles inline
   (`answer_summary_sentence`'s plain branch, `plain_noun`); every other depth
-  keeps the technical "Found 5 pubmed records: <titles>" form.
+  keeps the technical form, which also counts papers without naming their
+  titles ("Found 5 papers [1]...[5]."). Records of other types keep their
+  names, and card 131 keeps a paper's title out of the line.
 - Rule 2: the record list. Plain language gets ONE list under
   `PLAIN_SOURCES_HEADING`, titles only (`plain_record_label`); Researcher gets
   the records grouped by type as tables with an `IDENTIFIER_COLUMN_LABEL`
@@ -935,6 +937,23 @@ _LABEL_FIELDS = ("name", "title", "symbol", "preferred_name")
 LABEL_FIELDS = _LABEL_FIELDS
 _URL_PREFIX = re.compile(r"^\s*https?://", re.IGNORECASE)
 
+#: Card 134 (2026-10-22): a literature-index paper (a PubTator3 `Publication`
+#: row) whose row holds no usable title is named by its PubMed number with its
+#: system, "PMID:42477928", as a graph paper with only a placeholder title is
+#: (card 38 slice C), never the bare number beside that same identifier
+#: ("42477928 PMID:42477928") and never a sentence about the title.
+_TITLED_BY_ROW_TYPES: frozenset[str] = frozenset({"Publication"})
+
+
+def _is_untitled_paper_row(finding: SynthFinding, row_fields: dict[str, Any] | None) -> bool:
+    """Card 134: a `Publication` row whose finding and row name nothing."""
+    if finding.entity_type not in _TITLED_BY_ROW_TYPES or finding.field in _LABEL_FIELDS:
+        return False
+    return not any(
+        isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value)
+        for value in ((row_fields or {}).get(key) for key in _LABEL_FIELDS)
+    )
+
 
 def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str:
     """The label a code-built list row shows for one record. Never a URL.
@@ -969,6 +988,12 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
             return value.strip()[:500]
+    if _is_untitled_paper_row(finding, row_fields):
+        # Card 134: no title on the row, so the paper's PMID, once, in the
+        # form its Identifier cell and its source card use.
+        identifier = record_identifier({"fields": row_fields or {}})
+        if identifier:
+            return identifier
     for candidate in (
         finding.field_value if finding.field in _LABEL_FIELDS else "",
         finding.curie,
@@ -998,6 +1023,11 @@ def plain_record_label(
     where the code lives for anyone who wants it.
     """
     label = record_label(finding, row_fields)
+    if _is_untitled_paper_row(finding, row_fields):
+        # Card 134: Plain language keeps its everyday noun for a paper with
+        # no title, "Published paper", as before.
+        noun = plain_noun(finding.entity_type)
+        return noun[:1].upper() + noun[1:]
     if _row_type_label(finding, row_fields) is not None:
         # The label is the record's own code (an rs id), so a reader sees its
         # everyday noun and, where the row gives one, its gene.
@@ -1751,6 +1781,14 @@ def _gap_clause(record_count: int, asked: AskedField) -> str:
     return f", and none of their {asked.source} records lists {asked.label}"
 
 
+def _is_paper_finding(finding: SynthFinding) -> bool:
+    """A paper record: its type is a paper type. A projected ("derived")
+    row keeps develop's naming, whatever its source page (card 131's fresh
+    verifier, V-131-01 and V-131-02: a source-page rule split the two
+    depths' counts and could count a gene symbol as a paper)."""
+    return _lead_in_nouns(finding.entity_type or "")[0] == "paper"
+
+
 def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
     """The name the summary sentence prints for one answer finding, from
     the finding's own value when that value names the record, else the same
@@ -1935,12 +1973,28 @@ def answer_summary_sentence(
             clause += " " + "".join(f"[{display_slots[f.citation_id]}]" for f in named_diseases)
         return finish(body + clause + ".")
 
+    # Paper records are counted, never named: their titles are in the list
+    # right below, and a stored title carries its own full stop. Every other
+    # type keeps its names. The nouns keep first-appearance order, the same
+    # order the Plain language sentence uses, paper included.
+    paper_key = "<paper>"
+    paper_slots: set[int] = set()
     counts: dict[str, int] = {}
     for finding in counted:
+        if _is_paper_finding(finding):
+            paper_slots.add(display_slots[finding.citation_id])
+            counts[paper_key] = counts.get(paper_key, 0) + 1
+            continue
         noun = entity_type_noun(finding.entity_type) if finding.entity_type else "record"
+        # A type that already ends in "record" ("variant record") must not
+        # take a second one ("variant record records").
+        if noun.endswith(" record"):
+            noun = noun.removesuffix(" record")
         counts[noun] = counts.get(noun, 0) + 1
 
     def plural(noun: str, count: int) -> str:
+        if noun == paper_key:
+            return f"{count} {'paper' if count == 1 else 'papers'}"
         unit = "record" if count == 1 else "records"
         return f"{count} {noun} {unit}" if noun != "record" else f"{count} {unit}"
 
@@ -1952,11 +2006,15 @@ def answer_summary_sentence(
         head += f", of {total} available"
 
     if len(counted) <= MAX_SUMMARY_NAMES:
+        paper_markers = "".join(f"[{slot}]" for slot in sorted(paper_slots))
+        if paper_markers:
+            head += " " + paper_markers
         named = [
             f"{summary_label(f, row_for(f))} [{display_slots[f.citation_id]}]"
             for f in sorted(counted, key=lambda f: display_slots[f.citation_id])
+            if not _is_paper_finding(f)
         ]
-        body = f"{head}: {joined(named)}"
+        body = f"{head}: {joined(named)}" if named else head
     else:
         body = f"{head} " + "".join(f"[{slot}]" for slot in markers)
 
