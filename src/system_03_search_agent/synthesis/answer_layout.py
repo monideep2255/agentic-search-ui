@@ -1935,9 +1935,18 @@ def answer_summary_sentence(
             clause += " " + "".join(f"[{display_slots[f.citation_id]}]" for f in named_diseases)
         return finish(body + clause + ".")
 
+    papers = 0
     counts: dict[str, int] = {}
     for finding in counted:
+        singular, _plural = _lead_in_nouns(finding.entity_type or "")
+        if singular == "paper":
+            papers += 1
+            continue
         noun = entity_type_noun(finding.entity_type) if finding.entity_type else "record"
+        # A type that already ends in "record" ("variant record") must not
+        # take a second one ("variant record records").
+        if noun.endswith(" record"):
+            noun = noun.removesuffix(" record")
         counts[noun] = counts.get(noun, 0) + 1
 
     def plural(noun: str, count: int) -> str:
@@ -1945,15 +1954,19 @@ def answer_summary_sentence(
         return f"{count} {noun} {unit}" if noun != "record" else f"{count} {unit}"
 
     parts = [plural(noun, count) for noun, count in counts.items()]
+    if papers:
+        # Papers are counted, never named here: their titles are in the list
+        # right below, and a stored title carries its own full stop.
+        parts.insert(0, f"{papers} {'paper' if papers == 1 else 'papers'}")
     what = joined(parts)
     subject = f" for {clip_to_word(entity_label, 200)}" if entity_label and entity_label.strip() else ""
     head = f"Found {what}{subject}"
     if total is not None:
         head += f", of {total} available"
 
-    if len(counted) <= MAX_SUMMARY_NAMES:
+    if len(counted) <= MAX_SUMMARY_NAMES and not papers:
         named = [
-            f"{summary_label(f, row_for(f))} [{display_slots[f.citation_id]}]"
+            f"{summary_label(f, row_for(f)).rstrip().rstrip('.').rstrip()} [{display_slots[f.citation_id]}]"
             for f in sorted(counted, key=lambda f: display_slots[f.citation_id])
         ]
         body = f"{head}: {joined(named)}"
