@@ -345,6 +345,18 @@ async def test_no_restatements_note_when_a_written_sentence_survives(monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_no_note_when_card_105s_window_note_already_explains(monkeypatch) -> None:
+    """Card 128 (owner, 2026-10-22): one note explains the missing summary."""
+    line = "No PubMed papers from the last 5 years were found for BRCA1."
+    monkeypatch.setattr(graph_module, "_window_no_papers_note", lambda _state, _query: line)
+    _install(monkeypatch, _restating_reply)
+    result = await graph_module.write_node(_state("researcher"))
+    notes = [t["text"] for t in _tokens(result) if t["kind"] == "note"]
+    assert line in notes, notes
+    assert not _card_128_notes(result)
+
+
+@pytest.mark.asyncio
 async def test_one_surviving_sentence_blocks_the_note(monkeypatch) -> None:
     """Card 128 (A-128-04): the boundary is one sentence, not three."""
 

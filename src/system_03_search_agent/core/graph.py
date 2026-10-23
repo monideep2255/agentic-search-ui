@@ -15083,7 +15083,15 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             structured_fallback_note = _build_writer_failed_note()
         else:
             structured_fallback_note = _build_structured_fallback_note()
-    elif all_sentences_were_restatements and restatements_dropped and not structured_fallback_used:
+    elif (
+        all_sentences_were_restatements
+        and restatements_dropped
+        and not structured_fallback_used
+        # Card 128 (owner, 2026-10-22): another note already says why the
+        # summary is missing, card 105's picked window with no papers. The
+        # fallback, writer-failed and cap-list notes sit in the branch above.
+        and _window_no_papers_note(state, query) is None
+    ):
         # Card 128 (owner, 2026-10-22): say why there is no written summary.
         # The trust outcome is left as it is on this path.
         structured_fallback_note = _build_restatements_only_note()
