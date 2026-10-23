@@ -814,7 +814,7 @@ async def test_12_9_a_papers_question_gives_plain_titles_and_a_researcher_pmids(
     researcher = await graph_module.write_node(_papers_state("researcher"))
 
     assert _opening(plain) == "I found 2 published papers on this topic [1][2]. ", _opening(plain)
-    assert _opening(researcher).startswith("Found 2 pubmed records: "), _opening(researcher)
+    assert _opening(researcher).startswith("Found 2 papers "), _opening(researcher)
     assert [t["cells"] for t in _rows(plain)] == [[title] for _, title in _PAPERS]
     assert all(t["kind"] == "list_item" for t in _rows(plain))
 

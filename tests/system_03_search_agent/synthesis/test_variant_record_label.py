@@ -339,11 +339,11 @@ async def test_researcher_page_names_rs334_and_shows_gene_and_significance(monke
 
 @pytest.mark.asyncio
 async def test_opening_sentence_is_pinned_as_it_reads_now(monkeypatch) -> None:
-    """Pins the sentence as it reads with this change. The doubled "record
-    record" is card 121, not this slice: it is pinned here, not fixed."""
+    """Pins the sentence as it reads with this change. Card 131 fixed
+    the doubled "record record"."""
     tokens, _ = await _page(monkeypatch, "researcher")
     first = next(t["text"] for t in tokens if t["text"].startswith("Found"))
-    assert first.strip() == "Found 1 variant record record: rs334 [1].", first
+    assert first.strip() == "Found 1 variant record: rs334 [1].", first
     assert SIGNIFICANCE not in first
 
 
