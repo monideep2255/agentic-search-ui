@@ -18,7 +18,7 @@ describe("the notes the web UI hides", () => {
   it("shows the no-written-summary note (owner decision D1, 2026-10-05)", () => {
     expect(
       isHiddenNote(
-        "Note: no written summary could be checked against the records, so the records found are listed below with their sources",
+        "Note: no written summary could be checked against the records, so this answer lists the records found with their sources",
       ),
     ).toBe(false);
     // The earlier wording of the same note stays visible too.
@@ -64,7 +64,7 @@ describe("the notes the web UI hides", () => {
 describe("the no-written-summary note reaches the screen", () => {
   it("renders the one plain line among the answer's notes", () => {
     const note =
-      "Note: no written summary could be checked against the records, so the records found are listed below with their sources";
+      "Note: no written summary could be checked against the records, so this answer lists the records found with their sources";
     render(
       <AnswerScreen
         question="Which genes cause MODY?"

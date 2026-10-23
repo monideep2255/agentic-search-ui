@@ -83,7 +83,7 @@ const doneEvent = (): AgentEvent =>
   ev("done", { total_cost_usd: 0.01, total_tool_calls: 1, elapsed_ms: 9000, trust_outcome: "answer" });
 
 const NO_SUMMARY_NOTE =
-  "Note: no written summary could be checked against the records, so the records found are listed below with their sources";
+  "Note: no written summary could be checked against the records, so this answer lists the records found with their sources";
 
 function Screen({
   events,
