@@ -88,7 +88,11 @@ strawberry-graphql==0.327.7
 # exact text. 3.2.11, published 2026-06-05, is the version every earlier run
 # used; pip-audit finds no known vulnerability in it. Moving to 3.3.0 is a
 # reviewed change of its own.
-graphql-core==3.2.11
+# Moved to 3.2.12 on 2026-10-22, the owner's call that night: pip-audit
+# flagged 3.2.11 for two denial-of-service flaws (CVE-2026-75507,
+# CVE-2026-75508). 3.2.12, published 2026-08-27, is the patch release that
+# fixes both, still on the 3.2 line the error mask's tests were written for.
+graphql-core==3.2.12
 
 # Config
 python-dotenv>=1.0
