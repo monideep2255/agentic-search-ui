@@ -1158,6 +1158,7 @@ async def _run_ask(
         renderer = Renderer(stdout, stderr, operator=False, persona_name=persona_name)
     stream_iter = client.stream_events(run_id).__aiter__()
 
+    stop_note: list[str] = []
     with sigint_scope or contextlib.nullcontext():
         outcome = await _consume_stream_with_interrupt(
             stream_iter,
@@ -1166,6 +1167,7 @@ async def _run_ask(
             run_id=run_id,
             interrupt_signals=interrupt_signals,
             stderr=report,
+            stop_note=stop_note,
         )
     if outcome is not None:
         if outcome != EXIT_INTERRUPTED and as_json:
@@ -1179,9 +1181,13 @@ async def _run_ask(
             return outcome
         if outcome == EXIT_INTERRUPTED:
             if as_json:
+                confirmed = stop_note[:1] == ["stopped"]
                 renderer.record_failure(  # type: ignore[union-attr]
                     "interrupted",
-                    "s3: you stopped this search. Start a new search if you still need an answer.",
+                    "s3: you stopped this search. Start a new search if you still need an answer."
+                    if confirmed
+                    else "s3: you pressed Ctrl-C, but the stop was not confirmed, so the run may "
+                    "still be going. Start a new search if you still need an answer.",
                 )
             # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
             # state with no `done`/fatal `error`/guard event ever
@@ -1202,7 +1208,14 @@ async def _run_ask(
             # an interrupted run, and `finish()` has no way to know this
             # run was interrupted rather than merely truncated, so left
             # alone it would return EXIT_FAILURE (1) instead.
-            renderer.finish(interrupted=True)
+            try:
+                renderer.finish(interrupted=True)
+            except (BrokenPipeError, ValueError):
+                # Ctrl-C reaches the whole pipeline (`| tee`, `| head`), so
+                # the reader may already be gone. The person asked to stop:
+                # exit 130 quietly, and keep the interpreter from raising
+                # again when it flushes the dead pipe at shutdown.
+                _silence_closed_stdout(stdout)
             return EXIT_INTERRUPTED
         return outcome
     exit_code = renderer.finish()
@@ -1226,6 +1239,16 @@ async def _run_ask(
 # ---------------------------------------------------------------------------
 
 
+def _silence_closed_stdout(stdout: TextIO) -> None:
+    """Points a closed pipe's file descriptor at the null device so the
+    interpreter's exit-time flush cannot fail with BrokenPipeError."""
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, stdout.fileno())
+    except (AttributeError, OSError, ValueError):
+        pass  # not a real file (a test buffer, say): nothing to redirect
+
+
 def _swallow_task_exception(task: asyncio.Task[object]) -> None:
     """Prevents an "exception was never retrieved" warning from a
     best-effort background stop call that nobody waits on after a second
@@ -1235,6 +1258,13 @@ def _swallow_task_exception(task: asyncio.Task[object]) -> None:
         task.exception()
 
 
+_STOP_LINE = "s3: the run was stopped at your request; the answer above is incomplete.\n"
+_STOP_UNCONFIRMED_LINE = (
+    "s3: you pressed Ctrl-C, but the server did not confirm the stop, so the run may "
+    "still be going; the answer above is incomplete.\n"
+)
+
+
 async def _handle_interrupt_during_stream(
     pending_next: asyncio.Task[object],
     *,
@@ -1242,7 +1272,7 @@ async def _handle_interrupt_during_stream(
     run_id: str,
     interrupt_signals: asyncio.Queue[None] | None,
     stderr: TextIO,
-) -> int:
+) -> str:
     """Ctrl-C sends `POST /v1/query/{run_id}/stop` before the process
     exits, so an interrupted session halts the server-side loop instead
     of leaving it running unseen. A second Ctrl-C arriving while that
@@ -1250,11 +1280,15 @@ async def _handle_interrupt_during_stream(
     for its response: a user who interrupts twice wants out, and the
     stop call is best-effort at that point, not something worth blocking
     exit on.
-    """
-    stderr.write("s3: the run was stopped at your request.\n")
-    if not pending_next.done():
-        pending_next.cancel()
 
+    Card 142: the stop line is written only after the server's reply is
+    read, so it never claims a stop that did not happen. Returns:
+    - "stopped": the server confirmed; the stop line was written.
+    - "finished": the server says the run had already finished
+      (`stopped: false`); nothing is written and `pending_next` is left
+      alone so the caller keeps reading the finished run's stream.
+    - "unconfirmed": the stop call failed, or a second Ctrl-C ended the wait.
+    """
     stop_task: asyncio.Task[bool] = asyncio.ensure_future(client.stop(run_id))
     stop_task.add_done_callback(_swallow_task_exception)
 
@@ -1273,12 +1307,31 @@ async def _handle_interrupt_during_stream(
         # not awaited further, not cancelled, since cancelling an
         # in-flight HTTP request here would abandon it mid-write with no
         # cleaner outcome either way. We simply stop waiting on it.
+        if not pending_next.done():
+            pending_next.cancel()
         stderr.write("s3: interrupted again, exiting immediately\n")
-        return EXIT_INTERRUPTED
+        return "unconfirmed"
 
     if second_interrupt_task is not None and not second_interrupt_task.done():
         second_interrupt_task.cancel()
-    return EXIT_INTERRUPTED
+
+    try:
+        stopped = stop_task.result()
+    except Exception:  # noqa: BLE001 - any failed stop is reported as unconfirmed
+        stopped = None
+    if stopped is None:
+        if not pending_next.done():
+            pending_next.cancel()
+        stderr.write(_STOP_UNCONFIRMED_LINE)
+        return "unconfirmed"
+    if not stopped:
+        return "finished"
+    if not pending_next.done():
+        pending_next.cancel()
+    elif not pending_next.cancelled():
+        pending_next.exception()  # retrieved, so asyncio prints no warning
+    stderr.write(_STOP_LINE)
+    return "stopped"
 
 
 async def _consume_stream_with_interrupt(
@@ -1289,6 +1342,7 @@ async def _consume_stream_with_interrupt(
     run_id: str,
     interrupt_signals: asyncio.Queue[None] | None,
     stderr: TextIO,
+    stop_note: list[str] | None = None,
 ) -> int | None:
     """Feeds every event to `renderer.handle` until the stream ends on
     its own, which happens when the server closes the SSE response after
@@ -1355,16 +1409,21 @@ async def _consume_stream_with_interrupt(
             done, _pending = await asyncio.wait(wait_for, return_when=asyncio.FIRST_COMPLETED)
 
             if pending_interrupt is not None and pending_interrupt in done:
-                interrupted_pending_next = pending_next
-                pending_next = None
                 pending_interrupt = None
-                return await _handle_interrupt_during_stream(
-                    interrupted_pending_next,
+                interrupt_outcome = await _handle_interrupt_during_stream(
+                    pending_next,
                     client=client,
                     run_id=run_id,
                     interrupt_signals=interrupt_signals,
                     stderr=stderr,
                 )
+                if interrupt_outcome == "finished":
+                    # The run had already finished: carry on reading it.
+                    continue
+                pending_next = None
+                if stop_note is not None:
+                    stop_note.append(interrupt_outcome)
+                return EXIT_INTERRUPTED
 
             if pending_next in done:
                 task = pending_next
