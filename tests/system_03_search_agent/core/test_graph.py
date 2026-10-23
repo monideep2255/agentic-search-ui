@@ -6578,6 +6578,21 @@ def test_build_partial_answer_note_names_every_unaddressed_entity() -> None:
     assert "MedGen:C0346153" in note_multi
 
 
+def test_build_partial_answer_note_is_one_plain_sentence() -> None:
+    """Card 139 (owner decision, 2026-10-22): the note opens "Note:", is one
+    sentence with no interior full stop, and ends on the names, so the
+    coverage grader never splits it into an uncited claim."""
+    note = graph_module._build_partial_answer_note(["CFTR", "TP53"])
+    assert note == (
+        "Note: this answer does not address the following entities named in "
+        "the question, so ask about each one on its own for a complete answer: "
+        "CFTR, TP53"
+    )
+    assert "." not in note and ";" not in note, note
+    # The prefix the web view classifies a kind-less note by.
+    assert note.startswith("Note: this answer does not address the following entities")
+
+
 def test_first_same_entity_pair_never_pairs_two_different_genes() -> None:
     """F-3.4-A-01's own live-found regression: a Layer 1 "name" finding
     for TP53 and a Layer 2 "symbol" finding for BRCA1 share a canonical
