@@ -88,6 +88,14 @@ import {
 } from "../../lib/architectureFacts";
 import { designTokens, layerColour } from "../../theme";
 
+/**
+ * The About page's example trust line (card 143). The live line is built by
+ * the backend (`answer_trust_line`, card 8): "Based on N source(s) cited,
+ * all from <database>". This example has one source, matching the single
+ * cited MedGen chip shown above it. AboutScreen.test.tsx pins its shape.
+ */
+export const ABOUT_TRUST_LINE_EXAMPLE = "Based on 1 source cited, from MedGen";
+
 export const mono = { fontFamily: "ui-monospace, monospace" } as const;
 
 export function Page({ title, lede, children }: { title: string; lede: string; children?: React.ReactNode }) {
@@ -1180,7 +1188,7 @@ function AnswerMock() {
             border: `1px solid ${designTokens.ok}`,
           }}
         >
-          Grounded · every claim cited
+          {ABOUT_TRUST_LINE_EXAMPLE}
         </Box>
       </Box>
 
@@ -1501,7 +1509,7 @@ export function AboutScreen({
         <JourneyStop index={6} title="What you get">
           <StopText>
             A paragraph you can check line by line. Every sentence carries a numbered chip pointing
-            at the record behind it, a trust line says whether the whole answer was grounded, and
+            at the record behind it, a trust line says how many sources the answer rests on and which database they come from, and
             each source opens as a card with a link to the NCBI record it came from. Below the
             answer, a follow-up field carries the conversation forward, and if you are signed in
             the question is kept in your history.

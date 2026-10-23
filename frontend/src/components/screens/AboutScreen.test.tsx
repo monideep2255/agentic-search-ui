@@ -49,7 +49,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { AboutScreen } from "./InfoScreens";
+import { ABOUT_TRUST_LINE_EXAMPLE, AboutScreen } from "./InfoScreens";
 
 /** The seven stops, in the order the walk must present them. */
 const STOPS = [
@@ -177,7 +177,11 @@ describe("AboutScreen: what happens to your question", () => {
 
     const mock = screen.getByTestId("about-answer-mock");
     expect(mock).toHaveTextContent("A cited sentence");
-    expect(mock).toHaveTextContent("Grounded · every claim cited");
+    expect(mock).toHaveTextContent(ABOUT_TRUST_LINE_EXAMPLE);
+    // Same shape the backend's answer_trust_line produces (card 8), and the
+    // retired pill text must not come back.
+    expect(ABOUT_TRUST_LINE_EXAMPLE).toMatch(/^Based on 1 source cited, from [A-Za-z ]+$/);
+    expect(mock).not.toHaveTextContent("Grounded · every claim cited");
     expect(mock).toHaveTextContent("L1 · knowledge graph");
     expect(mock).toHaveTextContent("Ask a follow-up");
   });
