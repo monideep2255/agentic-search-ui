@@ -40,11 +40,11 @@ import pytest
 from system_03_search_agent.contracts.events import ToolCall
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.core import graph as graph_module
-from system_03_search_agent.synthesis.grounding import GroundingResult
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.coordinator_worker import Finding
 from system_03_search_agent.synthesis import answer_layout
 from system_03_search_agent.synthesis.findings import SYNTH_SYSTEM_INSTRUCTION
+from system_03_search_agent.synthesis.grounding import GroundingResult
 from system_03_search_agent.tools.cypher_query import CypherQueryInput
 
 _FINDING_LINE = re.compile(r"^\[(\d+)\]\s+(.+)$", re.MULTILINE)
