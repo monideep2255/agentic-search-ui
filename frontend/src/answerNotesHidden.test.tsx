@@ -49,6 +49,7 @@ describe("the notes the web UI hides", () => {
       "Note: this answer does not address the following entities named in your question",
       "Note: this answer's completeness check could not run to the end",
       "Note: the records below were retrieved for this question",
+      "Note: no written summary is shown, because the sentences written only repeated the records listed above",
       "This is a research summary, not medical advice",
     ];
     for (const note of kept) {
@@ -69,6 +70,22 @@ describe("the no-written-summary note reaches the screen", () => {
       <AnswerScreen
         question="Which genes cause MODY?"
         claims={[{ text: "GCK[1]", layer: 1, citations: [1] }]}
+        sources={[]}
+        systemNotes={[note]}
+      />,
+    );
+    expect(screen.getByText(note)).toBeInTheDocument();
+  });
+});
+
+describe("the card 128 note reaches the screen", () => {
+  it("renders as a note, opening Note: so a kind-less token is a system note too", () => {
+    const note =
+      "Note: no written summary is shown, because the sentences written only repeated the records listed above";
+    render(
+      <AnswerScreen
+        question="CFTR papers"
+        claims={[{ text: "CFTR[1]", layer: 1, citations: [1] }]}
         sources={[]}
         systemNotes={[note]}
       />,
