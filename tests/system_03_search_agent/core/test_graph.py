@@ -6578,6 +6578,16 @@ def test_build_partial_answer_note_names_every_unaddressed_entity() -> None:
     assert "MedGen:C0346153" in note_multi
 
 
+def test_partial_answer_note_is_one_sentence_the_frontend_detects() -> None:
+    """Card 139, note 3 (owner, 2026-10-22): one sentence opening "Note:",
+    no interior full stop, and the opening words `useRunView.ts` lists in
+    `SYSTEM_NOTE_PREFIXES`, so the line stays a note and not a claim."""
+    note = graph_module._build_partial_answer_note(["breast cancer", "TP53"])
+    assert note.startswith("Note: this answer does not address the following entities")
+    assert note.endswith("breast cancer, TP53")
+    assert "." not in note
+
+
 def test_first_same_entity_pair_never_pairs_two_different_genes() -> None:
     """F-3.4-A-01's own live-found regression: a Layer 1 "name" finding
     for TP53 and a Layer 2 "symbol" finding for BRCA1 share a canonical
@@ -6812,6 +6822,194 @@ async def test_write_stays_answer_when_every_named_entity_is_addressed(
 
     narrative = "".join(e.payload["text"] for e in events if e.type == "token")
     assert "does not address" not in narrative
+
+
+# Card 139, note 3: the note names the question's mentions, never the
+# records a mention was expanded into (a disease's MedGen records, a
+# window's genes). Diagnosis:
+# testing/Developer/reports/2026-10-22_card139/diagnosis.md.
+
+_BREAST_CANCER_RECORDS = ["MedGen:C0006142", "MedGen:C0678222", "MedGen:C1458155"]
+
+
+def _mentions(pairs: list[tuple[str, str]]) -> dict[str, str]:
+    return {curie: text for text, curie in pairs}
+
+
+def test_unaddressed_mentions_one_mention_with_several_records_names_nothing() -> None:
+    """Card 129's judge's shape: "breast cancer" bound three MedGen records
+    and the answer cited one. One mention, addressed; nothing to name."""
+    mention_by_curie = _mentions([("breast cancer", c) for c in _BREAST_CANCER_RECORDS])
+    result = graph_module._unaddressed_mentions(
+        _BREAST_CANCER_RECORDS, _BREAST_CANCER_RECORDS[1:], mention_by_curie
+    )
+    assert result == []
+
+
+def test_unaddressed_mentions_one_mention_with_no_record_cited_names_nothing() -> None:
+    """Even every record of a lone mention uncited is not a partial answer
+    to a question that named one thing."""
+    mention_by_curie = _mentions([("breast cancer", c) for c in _BREAST_CANCER_RECORDS])
+    result = graph_module._unaddressed_mentions(
+        _BREAST_CANCER_RECORDS, _BREAST_CANCER_RECORDS, mention_by_curie
+    )
+    assert result == []
+
+
+def test_unaddressed_mentions_names_the_one_mention_left_out() -> None:
+    """Two mentions, one with no record cited: that mention is named, as
+    Think extracted it, once, with its records grouped under it."""
+    targets = ["NCBIGene:672", *_BREAST_CANCER_RECORDS]
+    mention_by_curie = _mentions(
+        [("BRCA1", "NCBIGene:672")] + [("breast cancer", c) for c in _BREAST_CANCER_RECORDS]
+    )
+    result = graph_module._unaddressed_mentions(
+        targets, _BREAST_CANCER_RECORDS, mention_by_curie
+    )
+    assert result == [("breast cancer", _BREAST_CANCER_RECORDS)]
+
+
+def test_unaddressed_mentions_counts_a_mention_addressed_by_any_one_record() -> None:
+    targets = ["NCBIGene:672", *_BREAST_CANCER_RECORDS]
+    mention_by_curie = _mentions(
+        [("BRCA1", "NCBIGene:672")] + [("breast cancer", c) for c in _BREAST_CANCER_RECORDS]
+    )
+    result = graph_module._unaddressed_mentions(
+        targets, _BREAST_CANCER_RECORDS[:2], mention_by_curie
+    )
+    assert result == []
+
+
+def test_unaddressed_mentions_never_names_a_windows_genes() -> None:
+    """Query 29's shape: a window's genes, each carrying its own symbol as
+    its mention. The question named a region, so none is named back."""
+    genes = [("CFTR", "NCBIGene:1080"), ("CFTR-AS1", "NCBIGene:111082990"),
+             ("LOC105375467", "NCBIGene:105375467")]
+    targets = [curie for _, curie in genes]
+    result = graph_module._unaddressed_mentions(
+        targets, targets[1:], _mentions(genes), frozenset(targets)
+    )
+    assert result == []
+
+
+async def _write_with_targets(
+    query_text: str,
+    targets: list[str],
+    resolved: list[tuple[str, str]],
+    cited: list[tuple[str, str]],
+    coordinate_window: object | None = None,
+) -> tuple[str, str]:
+    """Run write_node with one graph finding citing `cited` (curie, url)
+    and the planned call naming `targets`; return (narrative, outcome)."""
+    from system_03_search_agent.harness.coordinator_worker import Finding
+
+    rows = [
+        {
+            "node_or_edge_type": "Gene",
+            "curie": curie,
+            "fields": {"name": f"record {curie}"},
+            "source_url": url,
+            "graph_snapshot_version": "v1",
+        }
+        for curie, url in cited
+    ]
+    finding = Finding(
+        call_id="cq-mentions",
+        tool="cypher_query",
+        layer="layer_1_graph",
+        source="structured_pass_through",
+        structured_fields={
+            "status": "ok", "row_count": len(rows), "total_available": len(rows),
+            "truncated": False, "rows": rows, "error": None,
+        },
+        extracted_entities=None,
+        normalized_ids=None,
+        evidence_summary=None,
+    )
+    query = _valid_query(text=query_text)
+    state = _write_state(query, [finding])
+    state["resolved_entities"] = [
+        SimpleNamespace(text=text, curie=curie) for text, curie in resolved
+    ]
+    if coordinate_window is not None:
+        state["coordinate_window"] = coordinate_window
+    state["tool_calls"] = [
+        graph_module._PlannedToolCall(
+            tool_call=ToolCall(tool="cypher_query", call_id="cq-mentions", layer="layer_1_graph"),
+            cypher_input=CypherQueryInput(
+                query_intent=query_text,
+                query_class="lookup",
+                target_entities=targets,
+                row_limit=100,
+            ),
+        ),
+    ]
+    events = (await graph_module.write_node(state))["events"]
+    narrative = "".join(e.payload["text"] for e in events if e.type == "token")
+    done_event = next(event for event in events if event.type == "done")
+    return narrative, done_event.payload["trust_outcome"]
+
+
+@pytest.mark.asyncio
+async def test_write_names_no_record_of_a_one_mention_disease_question(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Card 129's breast cancer shape, full path: one mention, three MedGen
+    records, one cited. Before card 139's note 3 the note named the other
+    two records' titles as if the person had typed them."""
+    narrative, outcome = await _write_with_targets(
+        "What genes are associated with breast cancer?",
+        _BREAST_CANCER_RECORDS,
+        [("breast cancer", c) for c in _BREAST_CANCER_RECORDS],
+        [("MedGen:C0006142", "https://www.ncbi.nlm.nih.gov/medgen/C0006142")],
+    )
+    assert "does not address" not in narrative
+    assert outcome == "answer"
+
+
+@pytest.mark.asyncio
+async def test_write_names_the_mention_a_two_mention_question_left_out(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Two mentions, BRCA1 cited and breast cancer not: the note names
+    "breast cancer", the words Think extracted, and no MedGen record."""
+    narrative, outcome = await _write_with_targets(
+        "How is BRCA1 linked to breast cancer?",
+        ["NCBIGene:672", *_BREAST_CANCER_RECORDS],
+        [("BRCA1", "NCBIGene:672")] + [("breast cancer", c) for c in _BREAST_CANCER_RECORDS],
+        [("NCBIGene:672", "https://www.ncbi.nlm.nih.gov/gene/672")],
+    )
+    assert (
+        "Note: this answer does not address the following entities named in the "
+        "question, which you can ask about by name: breast cancer"
+    ) in narrative
+    assert "MedGen:" not in narrative
+    assert outcome == "ask"
+
+
+@pytest.mark.asyncio
+async def test_write_names_no_gene_of_a_window_question(
+    _mock_litellm: AsyncMock,
+) -> None:
+    """Query 29's shape, full path: a window's genes, one cited. The person
+    named a region, so no note names CFTR-AS1 or the LOC record back as
+    "named in the question"."""
+    from system_03_search_agent.core import coordinate_window
+
+    query_text = "What genes sit in chr7:117,480,025-117,668,665 on GRCh38?"
+    window = coordinate_window.parse_coordinate_window(query_text)
+    assert window is not None
+    genes = [("CFTR", "NCBIGene:1080"), ("CFTR-AS1", "NCBIGene:111082990"),
+             ("LOC105375467", "NCBIGene:105375467")]
+    narrative, outcome = await _write_with_targets(
+        query_text,
+        [curie for _, curie in genes],
+        genes,
+        [("NCBIGene:1080", "https://www.ncbi.nlm.nih.gov/gene/1080")],
+        coordinate_window=window,
+    )
+    assert "does not address" not in narrative
+    assert outcome == "answer"
 
 
 # ---------------------------------------------------------------------------
