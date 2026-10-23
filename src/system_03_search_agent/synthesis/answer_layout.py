@@ -35,7 +35,9 @@ speaks to its reader too, under the product owner's six rules:
 - Rule 1: the opening sentence. Plain language reads "I found 5 published
   papers on this topic [1][2]...", everyday nouns and no titles inline
   (`answer_summary_sentence`'s plain branch, `plain_noun`); every other depth
-  keeps the technical "Found 5 pubmed records: <titles>" form.
+  keeps the technical form, which also counts papers without naming their
+  titles ("Found 5 papers [1]...[5]."). Records of other types keep their
+  names, and card 131 keeps a paper's title out of the line.
 - Rule 2: the record list. Plain language gets ONE list under
   `PLAIN_SOURCES_HEADING`, titles only (`plain_record_label`); Researcher gets
   the records grouped by type as tables with an `IDENTIFIER_COLUMN_LABEL`
@@ -1751,6 +1753,17 @@ def _gap_clause(record_count: int, asked: AskedField) -> str:
     return f", and none of their {asked.source} records lists {asked.label}"
 
 
+def _is_paper_finding(finding: SynthFinding) -> bool:
+    """A paper record: its type is a paper type, or it is a projected
+    ("derived") row whose own source page is a PubMed or PMC page."""
+    if _lead_in_nouns(finding.entity_type or "")[0] == "paper":
+        return True
+    url = (finding.source_url or "").lower()
+    return (finding.entity_type or "").lower() == "derived" and (
+        "pubmed.ncbi.nlm.nih.gov" in url or "pmc.ncbi.nlm.nih.gov" in url
+    )
+
+
 def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:
     """The name the summary sentence prints for one answer finding, from
     the finding's own value when that value names the record, else the same
@@ -1935,12 +1948,17 @@ def answer_summary_sentence(
             clause += " " + "".join(f"[{display_slots[f.citation_id]}]" for f in named_diseases)
         return finish(body + clause + ".")
 
-    papers = 0
+    # Paper records are counted, never named: their titles are in the list
+    # right below, and a stored title carries its own full stop. Every other
+    # type keeps its names. The nouns keep first-appearance order, the same
+    # order the Plain language sentence uses, paper included.
+    paper_key = "<paper>"
+    paper_slots: set[int] = set()
     counts: dict[str, int] = {}
     for finding in counted:
-        singular, _plural = _lead_in_nouns(finding.entity_type or "")
-        if singular == "paper":
-            papers += 1
+        if _is_paper_finding(finding):
+            paper_slots.add(display_slots[finding.citation_id])
+            counts[paper_key] = counts.get(paper_key, 0) + 1
             continue
         noun = entity_type_noun(finding.entity_type) if finding.entity_type else "record"
         # A type that already ends in "record" ("variant record") must not
@@ -1950,26 +1968,28 @@ def answer_summary_sentence(
         counts[noun] = counts.get(noun, 0) + 1
 
     def plural(noun: str, count: int) -> str:
+        if noun == paper_key:
+            return f"{count} {'paper' if count == 1 else 'papers'}"
         unit = "record" if count == 1 else "records"
         return f"{count} {noun} {unit}" if noun != "record" else f"{count} {unit}"
 
     parts = [plural(noun, count) for noun, count in counts.items()]
-    if papers:
-        # Papers are counted, never named here: their titles are in the list
-        # right below, and a stored title carries its own full stop.
-        parts.insert(0, f"{papers} {'paper' if papers == 1 else 'papers'}")
     what = joined(parts)
     subject = f" for {clip_to_word(entity_label, 200)}" if entity_label and entity_label.strip() else ""
     head = f"Found {what}{subject}"
     if total is not None:
         head += f", of {total} available"
 
-    if len(counted) <= MAX_SUMMARY_NAMES and not papers:
+    if len(counted) <= MAX_SUMMARY_NAMES:
+        paper_markers = "".join(f"[{slot}]" for slot in sorted(paper_slots))
+        if paper_markers:
+            head += " " + paper_markers
         named = [
-            f"{summary_label(f, row_for(f)).rstrip().rstrip('.').rstrip()} [{display_slots[f.citation_id]}]"
+            f"{summary_label(f, row_for(f))} [{display_slots[f.citation_id]}]"
             for f in sorted(counted, key=lambda f: display_slots[f.citation_id])
+            if not _is_paper_finding(f)
         ]
-        body = f"{head}: {joined(named)}"
+        body = f"{head}: {joined(named)}" if named else head
     else:
         body = f"{head} " + "".join(f"[{slot}]" for slot in markers)
 

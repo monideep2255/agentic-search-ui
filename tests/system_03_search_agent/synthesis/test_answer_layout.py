@@ -8,6 +8,7 @@ control and once without it.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import re
 
 import pytest
@@ -1416,7 +1417,7 @@ def _count_finding(index: int, entity_type: str, value: str) -> SynthFinding:
     )
 
 
-def test_card_131_count_line_never_pastes_titles_or_doubles_full_stops() -> None:
+def test_card_131_count_line_counts_papers_and_keeps_other_names() -> None:
     from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
 
     papers = [
@@ -1426,10 +1427,29 @@ def test_card_131_count_line_never_pastes_titles_or_doubles_full_stops() -> None
     text = answer_summary_sentence(papers, {"c-1": 1, "c-2": 2}, "BRCA1", None, lambda _f: None)
     assert text == "Found 2 papers for BRCA1 [1][2].", text
 
-    genes = [_count_finding(1, "Gene", "Gene one."), _count_finding(2, "Gene", "Gene two.")]
-    text = answer_summary_sentence(genes, {"c-1": 1, "c-2": 2}, "BRCA1", None, lambda _f: None)
-    assert text == "Found 2 gene records for BRCA1: Gene one [1] and Gene two [2].", text
-    assert ".." not in text and "., " not in text
+    mixed = [
+        _count_finding(1, "Gene", "BRCA1"),
+        _count_finding(2, "Article", "A paper title."),
+        _count_finding(3, "Disease", "Breast cancer"),
+    ]
+    slots = {"c-1": 1, "c-2": 2, "c-3": 3}
+    text = answer_summary_sentence(mixed, slots, "BRCA1", None, lambda _f: None)
+    assert text == (
+        "Found 1 gene record, 1 paper and 1 disease record for BRCA1 [2]: BRCA1 [1] and Breast cancer [3]."
+    ), text
+    assert "A paper title" not in text
+    plain = answer_summary_sentence(mixed, slots, "BRCA1", None, lambda _f: None, audience_depth="plain_language")
+    assert plain.index("gene") < plain.index("paper") < plain.index("condition"), plain
+
+
+def test_card_131_a_derived_row_from_a_pubmed_page_counts_as_a_paper() -> None:
+    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+
+    row = _count_finding(1, "derived", "Projected title.")
+    row = replace(row, source_url="https://pubmed.ncbi.nlm.nih.gov/111/")
+    other = replace(_count_finding(2, "derived", "Other value"), source_url="https://example.org/2/")
+    text = answer_summary_sentence([row, other], {"c-1": 1, "c-2": 2}, "", None, lambda _f: None)
+    assert "Projected title" not in text and "Other value [2]" in text, text
 
 
 def test_card_131_a_type_already_ending_in_record_takes_no_second_record() -> None:

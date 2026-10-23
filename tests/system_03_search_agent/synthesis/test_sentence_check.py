@@ -527,8 +527,8 @@ def test_the_opening_sentence_counts_a_paper_cited_twice_once() -> None:
     findings = [PAPER, title, other]
     slots = {"c-1": 1, "c-t": 2, "c-o": 3}
     text = answer_summary_sentence(findings, slots, "", None, lambda _f: None)
-    assert text is not None and text.startswith("Found 2 papers"), text
-    assert "PPIs and bone health." not in text, "papers are counted, not named by title"
+    assert text is not None and text == "Found 2 papers [2][3]."
+    assert "PPIs and bone health" not in text and "MEFV" not in text, "papers are counted, not named by title"
 
 
 # ---------------------------------------------------------------------------
