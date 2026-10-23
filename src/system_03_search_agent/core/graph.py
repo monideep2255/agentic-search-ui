@@ -10080,9 +10080,31 @@ def _paper_link_none_message(state: GraphState) -> str | None:
     return paper_links.none_linked_message(plan.pmid, plan.targets)
 
 
-def _paper_link_notes(state: GraphState) -> list[str]:
+def _paper_link_shown(
+    state: GraphState, target: str, citations: Sequence[CitationPayload]
+) -> int:
+    """Card 139: how many of one kind's linked records this answer cites.
+
+    The records are the ones the kind's ESummary call returned, matched to
+    the answer's citations by page (`source_page_key`), so the count is taken
+    after the per-kind row cut and after grounding: what a reader can see.
+    """
+    raw_outputs: dict[str, NcbiEfetchOutput] = state.get("layer2_raw_outputs") or {}
+    purpose = paper_links.summary_purpose(target)
+    pages: set[str] = set()
+    for planned in state.get("tool_calls") or []:
+        if getattr(planned, "purpose", "") != purpose:
+            continue
+        output = raw_outputs.get(planned.tool_call.call_id)
+        if output is not None:
+            pages.update(key for record in output.records if (key := source_page_key(record.source_url)))
+    return len({key for citation in citations if (key := source_page_key(citation.source_url)) in pages})
+
+
+def _paper_link_notes(state: GraphState, citations: Sequence[CitationPayload]) -> list[str]:
     """Card 74: under an answer that lists some linked records, the kinds NCBI
-    lists none of, and how many NCBI lists where more than are shown."""
+    lists none of, and how many NCBI lists where more than are shown. Card
+    139: "shown" is the answer's own citations of that kind."""
     plan = state.get("paper_link_plan")
     notes: list[str] = []
     for target, out in _paper_link_results(state):
@@ -10090,7 +10112,10 @@ def _paper_link_notes(state: GraphState) -> list[str]:
             notes.append(paper_links.empty_target_note(plan.pmid, target))
         elif out.status == "ok":
             count = paper_links.count_note(
-                plan.pmid, target, out.total_available or out.record_count
+                plan.pmid,
+                target,
+                out.total_available or out.record_count,
+                _paper_link_shown(state, target, citations),
             )
             if count is not None:
                 notes.append(count)
@@ -10658,8 +10683,13 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
         "because the query reached its cost limit"
     )
     if omission_remains:
-        return base + ", so the omission described above was not repaired"
-    return base + ", and the records it would have added are listed below as found"
+        # Card 139 (J-139-01): this clause said "the omission described
+        # above", but the web screen hides the incomplete-answer note that
+        # describes it, so it now names what was not done and points nowhere.
+        return base + ", so it could not add the records it found the answer left out"
+    # Card 139: the notes follow the listing on every surface (`_AnswerParts`:
+    # summary, listing, notes), so a note never points "below" at it.
+    return base + ", and the records it would have added are listed in this answer as found"
 
 
 #: Card 63: the NCBI databases a failed-call note can name, as a person
@@ -10988,9 +11018,11 @@ def _build_structured_fallback_note() -> str:
     reason every other note here carries that shape: the coverage grader
     splits on those and counts an unmarked continuation as an uncited claim.
     """
+    # Card 139: this note renders after the listing on screen, in the saved
+    # answer and on the command line, so it names no direction.
     return (
         "Note: no written summary could be checked against the records, "
-        "so the records found are listed below with their sources"
+        "so this answer lists the records found with their sources"
     )
 
 
@@ -15427,7 +15459,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             for note in (
                 truncation_note,
                 _isolate_count_note(state),
-                *_paper_link_notes(state),
+                *_paper_link_notes(state, citations),
                 _window_no_papers_note(state, query),
                 _isolate_disclosure_note(state),
                 _disease_lookup_failed_note(state),
