@@ -10951,6 +10951,19 @@ def _build_writer_failed_note() -> str:
     )
 
 
+def _build_restatements_only_note() -> str:
+    """Tell the reader no summary is shown because it only repeated the list.
+
+    Card 128 (owner, 2026-10-22). Every sentence the writer wrote grounded
+    and was dropped as a restatement of a listed record. Worded as the owner
+    decided; no trailing period, like every other note here.
+    """
+    return (
+        "No written summary: the sentences written only repeated "
+        "the records listed below"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -14902,6 +14915,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         and grounding.claims
     ):
         grounding, restatements_dropped = drop_record_restatements(grounding, synth_findings)
+    # Card 128: every sentence the writer wrote grounded and was then dropped
+    # as a restatement of a listed record, so no written sentence survives.
+    # Read here, before the listing is merged into `grounding` below.
+    all_sentences_were_restatements = bool(restatements_dropped) and not grounding.claims
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
@@ -15053,6 +15070,10 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             structured_fallback_note = _build_writer_failed_note()
         else:
             structured_fallback_note = _build_structured_fallback_note()
+    elif all_sentences_were_restatements and not structured_fallback_used:
+        # Card 128 (owner, 2026-10-22): say why there is no written summary.
+        # The trust outcome is left as it is on this path.
+        structured_fallback_note = _build_restatements_only_note()
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may

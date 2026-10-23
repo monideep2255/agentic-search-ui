@@ -288,9 +288,25 @@ async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_
     assert not any(t["kind"] == "note" and "no written summary could be checked" in t["text"] for t in tokens), (
         "restatements are not a grounding failure; the fallback note must not appear"
     )
+    # Card 128 (owner, 2026-10-22), REVERSING the pin that stood here: with
+    # every written sentence dropped as a restatement, the answer says why
+    # there is no written summary. The trust outcome is unchanged.
+    notes = [t["text"] for t in tokens if t["kind"] == "note"]
+    assert (
+        "No written summary: the sentences written only repeated the records listed below" in notes
+    ), notes
     done = next(e.payload for e in result["events"] if e.type == "done")
     assert done["trust_outcome"] == "answer", done
     assert len(_sources(result)) == 6
+
+
+@pytest.mark.asyncio
+async def test_no_restatements_note_when_a_written_sentence_survives(monkeypatch) -> None:
+    """Card 128: the note shows only when no written sentence is left."""
+    _install(monkeypatch, _relating_reply)
+    tokens = _tokens(await graph_module.write_node(_state("researcher")))
+    assert any(t["kind"] == "claim" for t in tokens), "populate-check: a written sentence must survive"
+    assert not any(t["kind"] == "note" and "No written summary" in t["text"] for t in tokens), tokens
 
 
 @pytest.mark.asyncio
