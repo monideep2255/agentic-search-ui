@@ -40,6 +40,7 @@ import pytest
 from system_03_search_agent.contracts.events import ToolCall
 from system_03_search_agent.contracts.query import Query
 from system_03_search_agent.core import graph as graph_module
+from system_03_search_agent.synthesis.grounding import GroundingResult
 from system_03_search_agent.harness import harness as harness_module
 from system_03_search_agent.harness.coordinator_worker import Finding
 from system_03_search_agent.synthesis import answer_layout
@@ -258,6 +259,12 @@ async def test_both_modes_cite_the_prepared_set(monkeypatch) -> None:
     assert len(_sources(plain)) == 6
 
 
+_CARD_128_NOTE = (
+    "Note: no written summary is shown, because the sentences written only repeated "
+    "the records listed above"
+)
+
+
 def _restating_reply(lines: dict[int, str]) -> str:
     return " ".join(f"{body} [{index}]." for index, body in lines.items())
 
@@ -293,20 +300,116 @@ async def test_researcher_drops_restatements_the_list_carries_and_keeps_a_cited_
     # there is no written summary. The trust outcome is unchanged.
     notes = [t["text"] for t in tokens if t["kind"] == "note"]
     assert (
-        "No written summary: the sentences written only repeated the records listed below" in notes
+        _CARD_128_NOTE in notes
     ), notes
     done = next(e.payload for e in result["events"] if e.type == "done")
     assert done["trust_outcome"] == "answer", done
     assert len(_sources(result)) == 6
 
 
+def _card_128_notes(result) -> list[str]:
+    return [
+        t["text"] for t in _tokens(result)
+        if t["kind"] == "note" and "no written summary is shown" in t["text"]
+    ]
+
+
+def _written_sentences(result) -> list[str]:
+    """Claim tokens that are written sentences, not the code-built count line."""
+    return [
+        t["text"] for t in _tokens(result)
+        if t["kind"] == "claim" and "NCBIGene:672 is associated with" in t["text"]
+    ]
+
+
 @pytest.mark.asyncio
-async def test_no_restatements_note_when_a_written_sentence_survives(monkeypatch) -> None:
+async def test_note_shows_when_only_two_sentences_were_written_and_both_repeated(monkeypatch) -> None:
+    """Card 128: the note does not depend on how many sentences were dropped."""
+
+    def reply(lines: dict[int, str]) -> str:
+        return " ".join(f"{lines[i]} [{i}]." for i in sorted(lines)[:2])
+
+    _install(monkeypatch, reply)
+    result = await graph_module.write_node(_state("researcher"))
+    assert _CARD_128_NOTE in _card_128_notes(result)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+async def test_no_restatements_note_when_a_written_sentence_survives(monkeypatch, depth) -> None:
     """Card 128: the note shows only when no written sentence is left."""
     _install(monkeypatch, _relating_reply)
-    tokens = _tokens(await graph_module.write_node(_state("researcher")))
-    assert any(t["kind"] == "claim" for t in tokens), "populate-check: a written sentence must survive"
-    assert not any(t["kind"] == "note" and "No written summary" in t["text"] for t in tokens), tokens
+    result = await graph_module.write_node(_state(depth))
+    assert _written_sentences(result), "populate-check: a written sentence must survive"
+    assert not _card_128_notes(result)
+
+
+@pytest.mark.asyncio
+async def test_one_surviving_sentence_blocks_the_note(monkeypatch) -> None:
+    """Card 128 (A-128-04): the boundary is one sentence, not three."""
+
+    def reply(lines: dict[int, str]) -> str:
+        first = min(lines)
+        return " ".join(
+            f"NCBIGene:672 is associated with disease name number {index} [{index}]." if index == first
+            else f"{body} [{index}]."
+            for index, body in lines.items()
+        )
+
+    _install(monkeypatch, reply)
+    result = await graph_module.write_node(_state("researcher"))
+    assert _written_sentences(result), "populate-check: one written sentence must survive"
+    assert not _card_128_notes(result)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["plain_language", "researcher"])
+async def test_no_note_when_the_restatements_are_put_back(monkeypatch, depth) -> None:
+    """J-128-01: when the listing grounds nothing the dropped sentences return."""
+    _install(monkeypatch, _restating_reply)
+    real = graph_module.run_grounding_pass
+
+    def _no_listing(*args, **kwargs):
+        if kwargs.get("code_built_listing"):
+            return GroundingResult(narrative="", claims=[], stripped_count=0, refused=False)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(graph_module, "run_grounding_pass", _no_listing)
+    result = await graph_module.write_node(_state(depth))
+    restored = [t for t in _tokens(result) if t["kind"] == "claim" and "disease name number 1" in t["text"]]
+    assert restored, "populate-check: the restored sentences must be on screen"
+    assert not _card_128_notes(result)
+
+
+@pytest.mark.asyncio
+async def test_no_note_when_some_sentences_were_stripped_not_repeated(monkeypatch) -> None:
+    """A-128-01: a sentence that failed its check is not a restatement."""
+
+    def reply(lines: dict[int, str]) -> str:
+        return " ".join(
+            f"{body} [{index}]." if index % 2
+            else f"This record shows a completely different value XYZ123 [{index}]."
+            for index, body in lines.items()
+        )
+
+    _install(monkeypatch, reply)
+    result = await graph_module.write_node(_state("researcher"))
+    assert not _card_128_notes(result)
+
+
+@pytest.mark.asyncio
+async def test_no_note_when_a_dropped_record_is_not_in_the_listing(monkeypatch) -> None:
+    """A-128-02: "listed above" must be true, and the incomplete-answer note
+    must not say "the summary above" beside a note saying there is none."""
+    _install(monkeypatch, _restating_reply)
+    real = graph_module.build_structured_fallback_narrative
+
+    def _without_third(findings):
+        return real([f for f in findings if f.citation_id != "cq-aq-3"])
+
+    monkeypatch.setattr(graph_module, "build_structured_fallback_narrative", _without_third)
+    result = await graph_module.write_node(_state("researcher"))
+    assert not _card_128_notes(result)
 
 
 @pytest.mark.asyncio
