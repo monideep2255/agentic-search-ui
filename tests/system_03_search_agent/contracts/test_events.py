@@ -1178,3 +1178,61 @@ def test_the_done_event_carries_the_layer_call_count_and_may_omit_it() -> None:
             total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="refuse",
             layer_calls_used=-1,
         )
+
+
+def test_a_plan_decided_record_round_trips_through_the_done_event() -> None:
+    """Card 145 (DECISIONS.md 2026-10-22): "plan" is an allowed decider, for
+    the second-reading record, and survives a done event's JSON round trip."""
+    from system_03_search_agent.contracts.events import DecisionRecord
+
+    record = DecisionRecord(
+        name="think.second_reading",
+        options=["resolved", "asked_back"],
+        chosen="resolved: croup",
+        decided_by="plan",
+    )
+    done = DonePayload(
+        total_cost_usd=0.0,
+        total_tool_calls=1,
+        elapsed_ms=10,
+        trust_outcome="answer",
+        decisions=[record],
+    )
+    again = DonePayload.model_validate_json(done.model_dump_json())
+    assert again.decisions == [record]
+    assert again.decisions[0].decided_by == "plan"
+    assert again.decisions[0].fallback_reason is None
+    with pytest.raises(ValidationError):
+        DecisionRecord(name="x", options=["a"], chosen="a", decided_by="synth")
+
+
+def test_an_old_done_payload_with_jev_and_guard_records_still_validates() -> None:
+    """The change is additive: a saved answer's done payload from before
+    "plan" existed reads exactly as it did."""
+    old = {
+        "total_cost_usd": 0.01,
+        "total_tool_calls": 2,
+        "elapsed_ms": 900,
+        "trust_outcome": "answer",
+        "decisions": [
+            {
+                "name": "think.recent_years",
+                "options": ["recent_bounded", "recent_unbounded", "not_recent"],
+                "chosen": "not_recent",
+                "decided_by": "jev",
+                "jev_choice": "not_recent",
+                "jev_confidence": 0.9,
+            },
+            {
+                "name": "plan.literature",
+                "options": ["papers", "not_papers"],
+                "chosen": "not_papers",
+                "decided_by": "guard",
+                "guard_choice": "not_papers",
+                "fallback_reason": "jev_timeout",
+            },
+        ],
+    }
+    payload = DonePayload.model_validate(old)
+    assert [d.decided_by for d in payload.decisions or []] == ["jev", "guard"]
+    assert payload.model_dump(exclude_none=True)["decisions"] == old["decisions"]

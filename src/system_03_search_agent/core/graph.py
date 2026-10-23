@@ -460,7 +460,7 @@ import unicodedata
 import uuid
 import weakref
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Final, Literal, TypeVar
@@ -4029,7 +4029,11 @@ def _picked_publication_window(query: Any) -> breadth_plan.PublicationWindow | N
 
 
 async def _run_think_classification(
-    harness: Harness, trace_id: str, think_messages: list[Message]
+    harness: Harness,
+    trace_id: str,
+    think_messages: list[Message],
+    *,
+    second_reading: bool = False,
 ) -> _ThinkClassification | dict[str, Any]:
     """Think's own classification call, with its one retry.
 
@@ -4038,6 +4042,11 @@ async def _run_think_classification(
     person waits for whichever is slower, not for both in turn. Returns
     the classification, or the node's early-exit state (`cap_exceeded`
     or `step_error`) exactly as `think_node` used to return it inline.
+
+    `second_reading` (card 145 fix round, J-145-05): the call is
+    `_read_question_again`'s, whose failure ends nothing, since the run
+    goes on and asks back. Its failures are then logged at info, never as
+    "step failed", and the early-exit state is returned the same way.
     """
     # Product-owner decision, 2026-09-12: about 1 search in 7 on develop
     # ended with "the plan tier did not return valid JSON for query
@@ -4087,6 +4096,11 @@ async def _run_think_classification(
         except cost_control.QueryCapExceededError:
             return {"cap_exceeded": True}
         except HarnessCallError as exc:
+            if second_reading:
+                logger.info(
+                    "second reading's call failed (%s, trace %s)", exc.error_class, trace_id
+                )
+                return {"step_error": {"source": "think", "error_class": exc.error_class}}
             return {"step_error": _step_error_kwargs("think", exc)}
 
         try:
@@ -4104,7 +4118,8 @@ async def _run_think_classification(
             # 200 characters as a repr, so a newline or control character in
             # the reply or in a key name cannot forge a second log line.
             # Model output only, never a credential or an account field.
-            logger.warning(
+            logger.log(
+                logging.INFO if second_reading else logging.WARNING,
                 "think classification unusable (attempt %d of 2, trace %s): "
                 "%s; reply length %d, starts %r",
                 attempt,
@@ -4140,7 +4155,8 @@ async def _run_think_classification(
         # default, and an unparseable response is the same failure one
         # layer earlier. Mirrors `guardrail_node`'s identical handling of
         # `classifier.ClassificationUnavailableError`.
-        _log_step_failed("think", "recoverable", parse_error)
+        if not second_reading:
+            _log_step_failed("think", "recoverable", parse_error)
         return {
             "step_error": {
                 "fatal": True,
@@ -4375,187 +4391,61 @@ async def _think(
         return outcome
     classification = outcome
 
-    # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
-    if (
-        (window_genes is not None and window_genes.genes)
-        or accession_plan is not None
-        or isolate_question is not None
-    ):
-        # A window question's entities are the window's genes, so the model's
-        # gene-shaped spans ("ACMG", "dbVar", "ClinVar", "copy number variant")
-        # are not confirmed live. Each confirmation is a Layer 2 call counted
-        # against the per-query ceiling of 20, a window question already
-        # spends fifteen fixed calls (two to resolve the window, two for the
-        # overlap records, eleven for a gene question's fan-out), and on one
-        # of five live passes of the golden coordinate question the model's
-        # spans pushed it past the ceiling: the overlap records were refused
-        # and the answer carried no citations. With the guesses skipped the
-        # count is the same on every pass.
-        model_resolution = _EntityResolution(
-            curies=[], unresolved_symbols=[], confirmed=(), disclosures=()
-        )
-    else:
-        model_resolution = await _confirm_extracted_entities(classification.entities)
-    # Card 56 (2026-10-05): the organism spans Taxonomy did not reject, read
-    # from the lookup `_confirm_extracted_entities` just made (cached, so no
-    # second call). They keep the fallbacks below from cutting a token out
-    # of an organism's name, and let the question asked back name the
-    # organism instead of asking for a gene. Empty on the window, accession
-    # and isolate paths, which confirm no model span at all.
-    organism_spans: list[str] = []
-    if not (
-        (window_genes is not None and window_genes.genes)
-        or accession_plan is not None
-        or isolate_question is not None
-    ):
-        organism_spans = await _organism_spans_not_rejected(classification.entities)
-    if window_genes is not None:
-        # The window's genes come first, ahead of anything the model named,
-        # and their presence is what stops the gene-shaped and disease
-        # fallbacks below from running on a question that already resolved.
-        window_confirmed = [(gene.symbol, gene.curie) for gene in window_genes.genes]
-        model_resolution = _EntityResolution(
-            curies=[curie for _, curie in window_confirmed] + list(model_resolution.curies),
-            unresolved_symbols=list(model_resolution.unresolved_symbols),
-            confirmed=tuple(window_confirmed) + tuple(model_resolution.confirmed),
-            disclosures=tuple(model_resolution.disclosures)
-            + (coordinate_window.window_disclosure(window, window_genes),),
-        )
-    if isolate_question is not None and isolate_question.clarification is None:
-        # The organism is the question's entity, resolved from the table;
-        # the disclosure names the prefixes searched and the ones left out.
-        organism = isolate_question.organism
-        assert organism is not None
-        model_resolution = _EntityResolution(
-            curies=[organism.curie] + list(model_resolution.curies),
-            unresolved_symbols=list(model_resolution.unresolved_symbols),
-            confirmed=((organism.label, organism.curie),) + tuple(model_resolution.confirmed),
-            disclosures=tuple(model_resolution.disclosures)
-            + (isolate_search.disclosure(isolate_question),),
-        )
+    reading = await _resolve_reading(
+        query.text,
+        classification,
+        exact_matches,
+        window,
+        window_genes,
+        accession_plan,
+        isolate_question,
+    )
 
-    # UI fix set 8 (2026-09-13), the GCK fallback. Originally gated on the
-    # model having extracted NO gene span at all, and always on every
-    # candidate confirming live; see `_gene_shaped_fallback_candidates` for
-    # how this differs from the guess build phase 4.7 retired. The organism rule is the model path's
-    # own: an organism that cannot be honoured skips the fallback rather
-    # than resolving against human (F-4.7-A-03).
-    # GCK refusal fix (2026-09-14): the fallback also runs when the model
-    # DID name gene spans and every one of them failed live confirmation,
-    # not only when it named none. The candidates are the same gene-shaped
-    # tokens, live-confirmed and capped at three; a candidate that fails
-    # is dropped, so a lone mistyped symbol (BRCA9) keeps its refusal by
-    # name through `unresolved_symbols`, which this branch never clears.
-    if not model_resolution.curies and accession_plan is None and isolate_question is None:
-        fallback_taxon = await _confirmed_taxon_for_extraction(classification.entities)
-        if fallback_taxon is not None:
-            fallback_confirmed = await _confirm_fallback_candidates(
-                _gene_shaped_fallback_candidates(query.text, exact_matches, organism_spans),
-                fallback_taxon,
-            )
-            if fallback_confirmed:
-                # A symbol the fallback confirmed is no longer unresolved;
-                # any OTHER failed span keeps its place so it is still named.
-                confirmed_keys = {mention.upper() for mention, _ in fallback_confirmed}
-                model_resolution = _EntityResolution(
-                    curies=[curie for _, curie in fallback_confirmed],
-                    unresolved_symbols=[
-                        symbol
-                        for symbol in model_resolution.unresolved_symbols
-                        if symbol.upper() not in confirmed_keys
-                    ],
-                    confirmed=tuple(fallback_confirmed),
-                )
-
-    # Card 56 (2026-10-05), the organism anchor. A question whose subject is
-    # an organism and which asks for that organism's SRA records or genome
-    # assemblies resolved nothing before this, so it was either asked for a
-    # gene or answered about a disease cut out of the organism's name. When
-    # the classifier read one of those record kinds, nothing else resolved
-    # (no gene, no disease, no typed identifier, no failed span, no window,
-    # accession or isolate shape) and NCBI Taxonomy files the one organism
-    # the model named under exactly one taxon, that organism is the
-    # question's entity, cited to its Taxonomy record, and Plan searches its
-    # records. A gene question never reaches here, so its plan is unchanged,
-    # and the disease fallback below does not run once this resolves.
-    organism_records: _OrganismRecords | None = None
+    # Card 145 (2026-10-22): the question is about to be asked back
+    # `CLARIFICATION_QUESTION` because this reading found no subject, so it
+    # is read once more first (`_read_question_again`). Each condition below
+    # is one under which that ask-back would not fire, or would fire with
+    # other wording, and each is pinned by its own test in
+    # `test_clarification.py`: a first turn (no session memory), no window,
+    # accession or isolate shape, no organism named, no typed identifier,
+    # nothing resolved, no gene symbol rejected, and `_needs_clarification`
+    # true. A question that resolves anything, or that memory can answer,
+    # never reaches the second call, so no question that answers today pays
+    # for it. When the second reading is not taken, the turn goes on
+    # unchanged and asks back as before.
     if (
-        classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
-        and organism_spans
-        and not model_resolution.curies
-        and not model_resolution.unresolved_symbols
-        and not exact_matches
+        _session_memory(state) is None
         and window is None
         and accession_plan is None
         and isolate_question is None
-    ):
-        organism = await resolve_organism(classification.entities)
-        if organism is not None:
-            organism_records = _OrganismRecords(
-                organism=organism, record_type=classification.record_type
-            )
-            model_resolution = _EntityResolution(
-                curies=[organism.curie],
-                unresolved_symbols=[],
-                confirmed=((organism.mention, organism.curie),),
-                disclosures=tuple(model_resolution.disclosures)
-                + (_organism_records_disclosure(organism_records),),
-            )
-
-    # Decision D3 (2026-09-14), the disease half of the fallback: when
-    # NOTHING resolved, neither a typed identifier, a model span, nor a
-    # gene-shaped token, the same bounded candidates are tried as disease
-    # mentions against MedGen, at most three, each live-confirmed. "MODY"
-    # is the measured case: the model sometimes returns no entity at all,
-    # `resolve_symbol_to_curie("MODY")` is None, and the acronym is in the
-    # titles of the MODY subtype records. An unconfirmed candidate is
-    # dropped silently, exactly as the gene-shaped fallback drops its own.
-    if (
-        not model_resolution.curies
-        and not model_resolution.unresolved_symbols
+        and not reading.organism_spans
         and not exact_matches
-        and accession_plan is None
-        and isolate_question is None
+        and not reading.resolution.curies
+        and not reading.resolution.unresolved_symbols
+        and _needs_clarification(query.text, state, [], [])
     ):
-        disease_fallback: list[tuple[str, str]] = []
-        fallback_disclosures: list[str] = []
-        # Card 56 follow-up (2026-10-06): on a question that asks for SRA
-        # runs or genome assemblies, a token that stands in the question
-        # only as a piece of a hyphen-joined name is never tried as a
-        # disease. Measured live on develop's plan model (findings.md):
-        # 5 of 26 valid runs of "Find SRA runs of SARS-CoV-2 sequenced on
-        # Illumina ..." came back with no entity at all, so #173's organism
-        # exclusion above had no span to protect, the token rule cut "SARS"
-        # out of "SARS-CoV-2", and MedGen bound three records about the
-        # disease SARS. With the piece skipped nothing binds, and the run
-        # goes on as develop's does when nothing resolved (on that question,
-        # `CLARIFICATION_QUESTION` is asked back).
-        # A whole word is still tried ("MODY" in "SRA runs from MODY
-        # patients" binds as before), and every other record type, "none"
-        # included, is untouched, so a paper question keeps develop's
-        # behaviour exactly. No retry, no organism matching, no word list:
-        # the product owner's smallest safe fix after two review rounds.
-        skip_name_pieces = classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
-        for candidate in _gene_shaped_fallback_candidates(
-            query.text, exact_matches, organism_spans
-        )[:_MAX_LIVE_DISEASE_LOOKUPS]:
-            if skip_name_pieces and _only_a_piece_of_a_joined_name(query.text, candidate):
-                continue
-            bound, matched = await resolve_disease_mention_to_curies(candidate)
-            for curie in bound:
-                if curie not in {c for _, c in disease_fallback}:
-                    disease_fallback.append((candidate, curie))
-            if bound:
-                fallback_disclosures.append(
-                    _disease_binding_disclosure(candidate, len(bound), matched)
-                )
-        if disease_fallback:
-            model_resolution = _EntityResolution(
-                curies=[curie for _, curie in disease_fallback],
-                unresolved_symbols=list(model_resolution.unresolved_symbols),
-                confirmed=tuple(disease_fallback),
-                disclosures=tuple(fallback_disclosures),
-            )
+        second_reading = await _read_question_again(
+            harness,
+            trace_id,
+            think_messages,
+            step_deadline,
+            query.text,
+            lambda again: _resolve_reading(
+                query.text,
+                again,
+                exact_matches,
+                window,
+                window_genes,
+                accession_plan,
+                isolate_question,
+            ),
+        )
+        if second_reading is not None:
+            classification, reading = second_reading
+            _run_decisions(harness).records.append(_second_reading_record(reading))
+    model_resolution = reading.resolution
+    organism_spans = list(reading.organism_spans)
+    organism_records = reading.organism_records
 
     # F-4.7-A-04, the trust asymmetry filed alongside F-4.7-A-01. The
     # exact-ID pre-pass is a PATTERN MATCH over text the caller typed: it
@@ -6616,6 +6506,229 @@ def _organism_record_question(organism: str) -> str:
     )
 
 
+
+@dataclass(frozen=True)
+class _Reading:
+    """What one reading of the question resolved (card 145, fix round).
+
+    `resolution` is the entities, `organism_spans` the organism spans NCBI
+    Taxonomy did not reject, `organism_records` card 56's organism anchor
+    when it resolved. Built only by `_resolve_reading`, so Think's first
+    reading and the second one card 145 adds run the same checks.
+    """
+
+    resolution: _EntityResolution
+    organism_spans: tuple[str, ...]
+    organism_records: _OrganismRecords | None
+
+
+async def _resolve_reading(
+    query_text: str,
+    classification: _ThinkClassification,
+    exact_matches: list[EventResolvedEntity],
+    window: coordinate_window.CoordinateWindow | None,
+    window_genes: coordinate_window.WindowGenes | None,
+    accession_plan: _AccessionPlan | None,
+    isolate_question: isolate_search.IsolateQuestion | None,
+) -> _Reading:
+    """Resolve one Think classification against NCBI, with every guard.
+
+    Moved verbatim out of `_think` (card 145 fix round, the owner's
+    2026-10-22 decision: the second reading "runs the same organism checks
+    as the first reading"). The live confirmation of the model's spans, the
+    window and isolate entities, the gene-shaped fallback, card 56's
+    organism anchor and the disease fallback with its joined-name skip all
+    run here, in the order they ran inline, for the first reading and for
+    `_read_question_again` alike.
+    """
+    # T-4.7-05: confirm the model's gene-type spans live, never fabricate.
+    if (
+        (window_genes is not None and window_genes.genes)
+        or accession_plan is not None
+        or isolate_question is not None
+    ):
+        # A window question's entities are the window's genes, so the model's
+        # gene-shaped spans ("ACMG", "dbVar", "ClinVar", "copy number variant")
+        # are not confirmed live. Each confirmation is a Layer 2 call counted
+        # against the per-query ceiling of 20, a window question already
+        # spends fifteen fixed calls (two to resolve the window, two for the
+        # overlap records, eleven for a gene question's fan-out), and on one
+        # of five live passes of the golden coordinate question the model's
+        # spans pushed it past the ceiling: the overlap records were refused
+        # and the answer carried no citations. With the guesses skipped the
+        # count is the same on every pass.
+        model_resolution = _EntityResolution(
+            curies=[], unresolved_symbols=[], confirmed=(), disclosures=()
+        )
+    else:
+        model_resolution = await _confirm_extracted_entities(classification.entities)
+    # Card 56 (2026-10-05): the organism spans Taxonomy did not reject, read
+    # from the lookup `_confirm_extracted_entities` just made (cached, so no
+    # second call). They keep the fallbacks below from cutting a token out
+    # of an organism's name, and let the question asked back name the
+    # organism instead of asking for a gene. Empty on the window, accession
+    # and isolate paths, which confirm no model span at all.
+    organism_spans: list[str] = []
+    if not (
+        (window_genes is not None and window_genes.genes)
+        or accession_plan is not None
+        or isolate_question is not None
+    ):
+        organism_spans = await _organism_spans_not_rejected(classification.entities)
+    if window_genes is not None:
+        # The window's genes come first, ahead of anything the model named,
+        # and their presence is what stops the gene-shaped and disease
+        # fallbacks below from running on a question that already resolved.
+        window_confirmed = [(gene.symbol, gene.curie) for gene in window_genes.genes]
+        model_resolution = _EntityResolution(
+            curies=[curie for _, curie in window_confirmed] + list(model_resolution.curies),
+            unresolved_symbols=list(model_resolution.unresolved_symbols),
+            confirmed=tuple(window_confirmed) + tuple(model_resolution.confirmed),
+            disclosures=tuple(model_resolution.disclosures)
+            + (coordinate_window.window_disclosure(window, window_genes),),
+        )
+    if isolate_question is not None and isolate_question.clarification is None:
+        # The organism is the question's entity, resolved from the table;
+        # the disclosure names the prefixes searched and the ones left out.
+        organism = isolate_question.organism
+        assert organism is not None
+        model_resolution = _EntityResolution(
+            curies=[organism.curie] + list(model_resolution.curies),
+            unresolved_symbols=list(model_resolution.unresolved_symbols),
+            confirmed=((organism.label, organism.curie),) + tuple(model_resolution.confirmed),
+            disclosures=tuple(model_resolution.disclosures)
+            + (isolate_search.disclosure(isolate_question),),
+        )
+
+    # UI fix set 8 (2026-09-13), the GCK fallback. Originally gated on the
+    # model having extracted NO gene span at all, and always on every
+    # candidate confirming live; see `_gene_shaped_fallback_candidates` for
+    # how this differs from the guess build phase 4.7 retired. The organism rule is the model path's
+    # own: an organism that cannot be honoured skips the fallback rather
+    # than resolving against human (F-4.7-A-03).
+    # GCK refusal fix (2026-09-14): the fallback also runs when the model
+    # DID name gene spans and every one of them failed live confirmation,
+    # not only when it named none. The candidates are the same gene-shaped
+    # tokens, live-confirmed and capped at three; a candidate that fails
+    # is dropped, so a lone mistyped symbol (BRCA9) keeps its refusal by
+    # name through `unresolved_symbols`, which this branch never clears.
+    if not model_resolution.curies and accession_plan is None and isolate_question is None:
+        fallback_taxon = await _confirmed_taxon_for_extraction(classification.entities)
+        if fallback_taxon is not None:
+            fallback_confirmed = await _confirm_fallback_candidates(
+                _gene_shaped_fallback_candidates(query_text, exact_matches, organism_spans),
+                fallback_taxon,
+            )
+            if fallback_confirmed:
+                # A symbol the fallback confirmed is no longer unresolved;
+                # any OTHER failed span keeps its place so it is still named.
+                confirmed_keys = {mention.upper() for mention, _ in fallback_confirmed}
+                model_resolution = _EntityResolution(
+                    curies=[curie for _, curie in fallback_confirmed],
+                    unresolved_symbols=[
+                        symbol
+                        for symbol in model_resolution.unresolved_symbols
+                        if symbol.upper() not in confirmed_keys
+                    ],
+                    confirmed=tuple(fallback_confirmed),
+                )
+
+    # Card 56 (2026-10-05), the organism anchor. A question whose subject is
+    # an organism and which asks for that organism's SRA records or genome
+    # assemblies resolved nothing before this, so it was either asked for a
+    # gene or answered about a disease cut out of the organism's name. When
+    # the classifier read one of those record kinds, nothing else resolved
+    # (no gene, no disease, no typed identifier, no failed span, no window,
+    # accession or isolate shape) and NCBI Taxonomy files the one organism
+    # the model named under exactly one taxon, that organism is the
+    # question's entity, cited to its Taxonomy record, and Plan searches its
+    # records. A gene question never reaches here, so its plan is unchanged,
+    # and the disease fallback below does not run once this resolves.
+    organism_records: _OrganismRecords | None = None
+    if (
+        classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
+        and organism_spans
+        and not model_resolution.curies
+        and not model_resolution.unresolved_symbols
+        and not exact_matches
+        and window is None
+        and accession_plan is None
+        and isolate_question is None
+    ):
+        organism = await resolve_organism(classification.entities)
+        if organism is not None:
+            organism_records = _OrganismRecords(
+                organism=organism, record_type=classification.record_type
+            )
+            model_resolution = _EntityResolution(
+                curies=[organism.curie],
+                unresolved_symbols=[],
+                confirmed=((organism.mention, organism.curie),),
+                disclosures=tuple(model_resolution.disclosures)
+                + (_organism_records_disclosure(organism_records),),
+            )
+
+    # Decision D3 (2026-09-14), the disease half of the fallback: when
+    # NOTHING resolved, neither a typed identifier, a model span, nor a
+    # gene-shaped token, the same bounded candidates are tried as disease
+    # mentions against MedGen, at most three, each live-confirmed. "MODY"
+    # is the measured case: the model sometimes returns no entity at all,
+    # `resolve_symbol_to_curie("MODY")` is None, and the acronym is in the
+    # titles of the MODY subtype records. An unconfirmed candidate is
+    # dropped silently, exactly as the gene-shaped fallback drops its own.
+    if (
+        not model_resolution.curies
+        and not model_resolution.unresolved_symbols
+        and not exact_matches
+        and accession_plan is None
+        and isolate_question is None
+    ):
+        disease_fallback: list[tuple[str, str]] = []
+        fallback_disclosures: list[str] = []
+        # Card 56 follow-up (2026-10-06): on a question that asks for SRA
+        # runs or genome assemblies, a token that stands in the question
+        # only as a piece of a hyphen-joined name is never tried as a
+        # disease. Measured live on develop's plan model (findings.md):
+        # 5 of 26 valid runs of "Find SRA runs of SARS-CoV-2 sequenced on
+        # Illumina ..." came back with no entity at all, so #173's organism
+        # exclusion above had no span to protect, the token rule cut "SARS"
+        # out of "SARS-CoV-2", and MedGen bound three records about the
+        # disease SARS. With the piece skipped nothing binds, and the run
+        # goes on as develop's does when nothing resolved (on that question,
+        # `CLARIFICATION_QUESTION` is asked back).
+        # A whole word is still tried ("MODY" in "SRA runs from MODY
+        # patients" binds as before), and every other record type, "none"
+        # included, is untouched, so a paper question keeps develop's
+        # behaviour exactly. No retry, no organism matching, no word list:
+        # the product owner's smallest safe fix after two review rounds.
+        skip_name_pieces = classification.record_type in breadth_plan.ORGANISM_RECORD_DBS
+        for candidate in _gene_shaped_fallback_candidates(
+            query_text, exact_matches, organism_spans
+        )[:_MAX_LIVE_DISEASE_LOOKUPS]:
+            if skip_name_pieces and _only_a_piece_of_a_joined_name(query_text, candidate):
+                continue
+            bound, matched = await resolve_disease_mention_to_curies(candidate)
+            for curie in bound:
+                if curie not in {c for _, c in disease_fallback}:
+                    disease_fallback.append((candidate, curie))
+            if bound:
+                fallback_disclosures.append(
+                    _disease_binding_disclosure(candidate, len(bound), matched)
+                )
+        if disease_fallback:
+            model_resolution = _EntityResolution(
+                curies=[curie for _, curie in disease_fallback],
+                unresolved_symbols=list(model_resolution.unresolved_symbols),
+                confirmed=tuple(disease_fallback),
+                disclosures=tuple(fallback_disclosures),
+            )
+    return _Reading(
+        resolution=model_resolution,
+        organism_spans=tuple(organism_spans),
+        organism_records=organism_records,
+    )
+
+
 def _needs_clarification(
     text: str,
     state: GraphState,
@@ -6644,6 +6757,177 @@ def _needs_clarification(
         return False
     tokens = {token.strip("?.,;:!\"'()") for token in text.lower().split()}
     return bool(tokens & _REFERRING_WORDS)
+
+
+#: Card 145 fix round (J-145-01, the owner's 2026-10-22 decision: "it gets at
+#: most 4 s"). The most a second reading may add to a question that would
+#: otherwise be asked back at once; Think's own deadline cuts it shorter.
+_SECOND_READING_BUDGET_S: Final[float] = 4.0
+
+#: The `done` event's decision name for a second reading that was used.
+_SECOND_READING_POINT: Final = "think.second_reading"
+
+
+def _written_in_question(span: str, query_text: str) -> bool:
+    """True when `span` stands in the question word for word, as a whole
+    phrase, ignoring case and runs of whitespace (card 145 fix round,
+    A-145-01 and A-145-04).
+
+    Whole means the characters on either side are neither a letter or digit
+    nor a hyphen or dash joining the span to one, so "SARS" is not written
+    in "SARS-CoV-2" and "it" is not written in "itself". Code verifying the
+    model's span against the person's own words, nothing else: no word list.
+    """
+    words = span.split()
+    if not words:
+        return False
+    pattern = r"\s+".join(re.escape(word) for word in words)
+    for match in re.finditer(pattern, query_text, flags=re.IGNORECASE):
+        start, end = match.start(), match.end()
+        before = query_text[start - 1] if start > 0 else ""
+        after = query_text[end] if end < len(query_text) else ""
+        joined_before = bool(before) and (
+            before.isalnum()
+            or (_is_name_joiner(before) and start >= 2 and query_text[start - 2].isalnum())
+        )
+        joined_after = bool(after) and (
+            after.isalnum()
+            or (
+                _is_name_joiner(after)
+                and end + 1 < len(query_text)
+                and query_text[end + 1].isalnum()
+            )
+        )
+        if not (joined_before or joined_after):
+            return True
+    return False
+
+
+def _second_reading_usable(reading: _Reading, query_text: str) -> bool:
+    """Whether a second reading may stand in for the ask-back.
+
+    It must have found a subject, a record NCBI confirmed or an organism
+    Taxonomy did not reject, and every subject it names must be written in
+    the question word for word (`_written_in_question`): each span a record
+    was bound from (`_EntityResolution.confirmed` pairs a record with the
+    span it came from), each organism span, and each gene symbol it named
+    that NCBI rejected. One span the person did not write discards the whole
+    reading, since the reading that invented it is not one to trust.
+    """
+    resolution = reading.resolution
+    if not resolution.curies and not reading.organism_spans:
+        return False
+    spans = [mention for mention, _ in resolution.confirmed]
+    spans += list(reading.organism_spans) + list(resolution.unresolved_symbols)
+    return all(_written_in_question(span, query_text) for span in spans)
+
+
+def _second_reading_record(reading: _Reading) -> DecisionRecord:
+    """The `done` event's entry saying a second reading was used, and what
+    it resolved (card 145 fix round, A-145-02).
+
+    Not a classifier decision: the plan-tier model read the question again,
+    so `decided_by` is "plan" (the owner's decision of 2026-10-22 added it
+    to the record contract for this entry). Nothing fell back, so
+    `fallback_reason` stays empty, as on any record that did not fall back.
+    """
+    spans: list[str] = []
+    for mention, _ in reading.resolution.confirmed:
+        if mention not in spans:
+            spans.append(mention)
+    for span in reading.organism_spans:
+        if span not in spans:
+            spans.append(span)
+    chosen = ("resolved: " + ", ".join(spans))[:200]
+    return DecisionRecord(
+        name=_SECOND_READING_POINT,
+        options=["resolved", "asked_back"],
+        chosen=chosen,
+        decided_by="plan",
+    )
+
+
+async def _read_question_again(
+    harness: Harness,
+    trace_id: str,
+    think_messages: list[Message],
+    step_deadline: float,
+    query_text: str,
+    resolve: Callable[[_ThinkClassification], Awaitable[_Reading]],
+) -> tuple[_ThinkClassification, _Reading] | None:
+    """Think's classification and resolution, run one more time.
+
+    Card 145 (2026-10-22), the owner's decision: "when the system is about
+    to ask a first question back because it read no subject, it reads the
+    question a second time and asks back only if that reading also finds
+    nothing; no question that answers today pays for it." Measured before
+    this change on the bronchiolitis question of card 145: the plan-tier
+    model returned no entity at all on 3 of 10 readings, and
+    `_needs_clarification` then read the sentence's own "it" as pointing
+    back at an earlier turn there was none of.
+
+    The fix round's terms, the owner's of the same day: "the second reading
+    counts only if every subject it names is written word for word in the
+    question, it runs the same organism checks as the first reading, it
+    gets at most 4 s, the answer's record says it was used".
+
+    The model reads again with the same messages and the same
+    `_run_think_classification`, and `resolve` is the caller's
+    `_resolve_reading`, the first reading's own confirmation, organism and
+    fallback checks. Code then verifies the reading against the question
+    (`_second_reading_usable`). No prompt change and no word list.
+
+    Returns the second classification and its reading only when it is
+    usable. Anything else is None, and the caller asks back exactly as it
+    did before this change:
+
+    - a reading that finds no subject, names only a rejected gene symbol,
+      or names any subject the question does not carry word for word;
+    - a cost-cap hit, a step error, or any error while confirming it: the
+      question asked back is today's outcome, so this fails closed to it
+      rather than turning a question into a failed one (J-145-04);
+    - a reading still running after `_SECOND_READING_BUDGET_S`, or when
+      Think's own deadline comes first.
+
+    Every failure is logged at info: the run goes on and asks back, so it
+    is not a failed step (J-145-05). The trigger lives with the caller;
+    this function only reads, so card 56 can call it from its own gate.
+    """
+    budget = min(_SECOND_READING_BUDGET_S, step_deadline - time.monotonic())
+    if budget <= 0:
+        logger.info("second reading skipped, no Think budget left (trace %s)", trace_id)
+        return None
+
+    async def _read() -> tuple[_ThinkClassification, _Reading] | None:
+        outcome = await _run_think_classification(
+            harness, trace_id, think_messages, second_reading=True
+        )
+        if isinstance(outcome, dict):
+            logger.info(
+                "second reading ended early (%s); asking back (trace %s)",
+                ", ".join(sorted(outcome)),
+                trace_id,
+            )
+            return None
+        reading = await resolve(outcome)
+        if not _second_reading_usable(reading, query_text):
+            logger.info("second reading found no subject written in the question (trace %s)", trace_id)
+            return None
+        logger.info("second reading resolved the question (trace %s)", trace_id)
+        return outcome, reading
+
+    try:
+        return await asyncio.wait_for(_read(), timeout=budget)
+    except TimeoutError:
+        logger.info(
+            "second reading still running after %.1f s; asking back (trace %s)", budget, trace_id
+        )
+        return None
+    except Exception as exc:  # noqa: BLE001 - fails closed to today's ask-back
+        logger.info(
+            "second reading failed (%s); asking back (trace %s)", type(exc).__name__, trace_id
+        )
+        return None
 
 
 def _memory_suffix(state: GraphState, tier: Tier) -> str:

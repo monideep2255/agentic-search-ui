@@ -1,0 +1,2 @@
+{"run": 1, "readings": [["bronchiolitis:disease"]], "second_reading_fired": false, "resolved": ["bronchiolitis=MedGen:C0001311", "bronchiolitis=MedGen:C0006271", "bronchiolitis=MedGen:C0006274", "bronchiolitis=MedGen:C0264366", "bronchiolitis=MedGen:C0264369", "bronchiolitis=MedGen:C0276154", "bronchiolitis=MedGen:C0276340", "bronchiolitis=MedGen:C0340047"], "asked_back": false, "early_exit": [], "think_s": 4.3}
+{"spend_usd": 0.0054}

@@ -88,6 +88,12 @@ class DecisionRecord(BaseModel):
     - When no model made a usable pick, both picks are None,
       `fallback_reason` starts with "no_usable_pick" and `chosen` is the
       caller's fail-open default.
+    - "think.second_reading" (card 145, DECISIONS.md 2026-10-22) is no
+      classifier decision: the plan-tier model read a first question again
+      before it was asked back, and that reading was used. `decided_by` is
+      "plan", `chosen` names what the reading resolved ("resolved: croup"),
+      and the Jev and guard fields stay empty. Added beside "jev" and
+      "guard", so a record or saved answer without it reads as before.
 
     Outside "guardrail.injection" with a Jev pick, nothing runs a second
     model beside the first on the live path, so `agreed` stays None on every
@@ -106,11 +112,13 @@ class DecisionRecord(BaseModel):
 
     # The decision point's name, e.g. "guardrail.relevancy",
     # "guardrail.injection", "think.ask_back", "think.recent_years",
-    # "think.asks_features", "plan.literature".
+    # "think.asks_features", "plan.literature", "think.second_reading".
     name: Annotated[str, Field(..., max_length=64)]
     options: list[Annotated[str, Field(max_length=200)]] = Field(..., max_length=12)
     chosen: Annotated[str, Field(..., max_length=200)]
-    decided_by: Literal["jev", "guard"]
+    # "plan" only on "think.second_reading" (card 145): the plan-tier model,
+    # not a classifier, made that call.
+    decided_by: Literal["jev", "guard", "plan"]
     jev_choice: Annotated[str | None, Field(default=None, max_length=200)] = None
     jev_confidence: Annotated[float | None, Field(default=None, ge=0.0, le=1.0)] = None
     guard_choice: Annotated[str | None, Field(default=None, max_length=200)] = None

@@ -1,0 +1,4 @@
+{"run": 1, "question": "bronch", "asked_back": false, "clarifying_question": null, "trust_outcome": "answer", "citations": 20, "first_token_s": 3.3, "done_s": 6.7, "think_calls": 1, "second_reading_fired": false, "second_reading_record": [], "cost_usd": 0.010979876999999999}
+{"run": 2, "question": "bronch", "asked_back": false, "clarifying_question": null, "trust_outcome": "answer", "citations": 20, "first_token_s": 5.0, "done_s": 8.4, "think_calls": 1, "second_reading_fired": false, "second_reading_record": [], "cost_usd": 0.010342929}
+{"run": 3, "question": "bronch", "asked_back": false, "clarifying_question": null, "trust_outcome": "answer", "citations": 20, "first_token_s": 3.4, "done_s": 8.3, "think_calls": 1, "second_reading_fired": false, "second_reading_record": [], "cost_usd": 0.007575499000000001}
+{"spend_usd": 0.0173}
