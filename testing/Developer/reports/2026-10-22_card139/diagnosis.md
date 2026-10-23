@@ -14,8 +14,8 @@ Card 139, filed from the 2026-10-18 browser retest, rows 47, 49 and 54 (`testing
 | Note | Cause | State |
 |------|-------|-------|
 | 1, "listed below" | Notes always render after the listing, on every surface | Fixed: the two notes name no direction |
-| 2, "shows 10" | The count is a constant, the summary cap, not a count of what is shown | Open: the true count needs `_paper_link_notes` and its caller, outside this card's file fence |
-| 3, "named in the question" | The list is every record a mention was expanded into, not the mentions | Open: the fix lives in the caller, inside another builder's region tonight; wording options below |
+| 2, "shows 10" | The count is a constant, the summary cap, not a count of what is shown | Fixed: the note counts the answer's own citations of that kind |
+| 3, "named in the question" | The list is every record a mention was expanded into, not the mentions | Open, waits for card 128: the fix lives in the caller, in the region card 128 owns |
 
 ## Note 1: "listed below" under the list
 
@@ -40,7 +40,7 @@ Checked and left as they are:
 
 Tests: `tests/system_03_search_agent/core/test_write_completeness.py` pins the new wording, that neither note contains "below", and that the fallback note comes after the records in the answer.
 
-Left for the frontend owner: `frontend/src/answerNotesHidden.test.tsx` and `AnswerScreen.listingFirst.test.tsx` feed the old wording in as a fixture. They still pass, since they test the screen with their own string, but they no longer match the server word for word.
+Frontend tests: `frontend/src/answerNotesHidden.test.tsx` and `AnswerScreen.listingFirst.test.tsx` now feed the new wording. The second sends the note with no kind, so it also proves `useRunView.ts` still detects it by its unchanged prefix.
 
 ## Note 2: "this answer shows 10" where it shows 5
 
@@ -58,7 +58,12 @@ Smallest true fix: count the records of that kind the answer cites. `_paper_link
 2. `count_note`: make `shown` required, and return None when `shown == 0` or `total <= shown`.
 3. The call at graph.py:15377 passes `citations`.
 
-Why it is not built: steps 1 and 3 are in `core/graph.py` at lines 10073 to 10086 and line 15377, outside this card's file fence (10200 to 10260, 10640 to 10670, 10960 to 10975). Neither region is named as another builder's tonight, so the fence only needs widening by the lead.
+Built, after the lead widened the fence (2026-10-22):
+
+- `paper_links.summary_purpose(target)` names the kind's ESummary call; `count_note` takes `shown` with no default.
+- `core/graph.py` `_paper_link_shown` counts the answer's citations, by page (`source_page_key`), whose page is one of the records that kind's ESummary call returned. `_paper_link_notes(state, citations)` passes that count, and `write_node` passes its final `citations`.
+- The wording is unchanged apart from the number: "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 5."
+- Tests in `tests/system_03_search_agent/core/test_paper_links_wiring.py`: query 104's shape (1533 listed, 10 summarised, 5 cited, "shows 5"); 8 listed with 5 shown gives the note, all 8 shown gives none; and the whole Plan, Act and Write path, where the note's number equals the sequence record pages the answer cites.
 
 A fix inside `paper_links.py` alone would be a second constant (5 in place of 10), still a claim and not a count, and wrong whenever ESummary returns fewer records or grounding drops one. Not built for that reason.
 
@@ -80,9 +85,9 @@ Smallest true fix, in the caller (lines 15075 to 15106):
 3. Fire only when two or more mentions were named and at least one is unaddressed. Name each unaddressed mention as the person typed it, or as Think extracted it.
 4. `_build_partial_answer_note` keeps its sentence, now true: "this answer does not address the following entities named in the question: CFTR".
 
-Why it is not built: steps 1 to 3 sit in lines 15075 to 15106, inside the region another builder owns tonight (14800 to 15200). A wording-only change inside `_build_partial_answer_note` would keep the wrong list.
+Why it is not built: steps 1 to 3 sit in lines 15075 to 15106, the region card 128 owns. The lead's call (2026-10-22): the fix waits until card 128 merges. A wording-only change was built and then reverted, since a reworded note that still names the wrong records is not worth shipping. When the fix is built, the owner's decision of 2026-10-22 lets the lead word the note plain and true: opening "Note:", one sentence, naming only what the question named, blaming no one.
 
-Open, for the owner: the window case. A window question names a region, not genes, so after the fix above a window's genes would never be named back. Three ways to word what the person sees:
+Open, for when the fix is built: the window case. A window question names a region, not genes, so after the fix above a window's genes would never be named back. Three ways to word what the person sees:
 
 | Option | What the person reads | Cost |
 |--------|------------------------|------|
