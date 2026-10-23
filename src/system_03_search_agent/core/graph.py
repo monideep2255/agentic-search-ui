@@ -10961,6 +10961,20 @@ def _build_writer_failed_note() -> str:
     )
 
 
+def _build_restatements_only_note() -> str:
+    """Tell the reader no summary is shown because it only repeated the list.
+
+    Card 128 (owner, 2026-10-22, reworded the same night). Every sentence the
+    writer wrote grounded and was dropped as a restatement of a listed
+    record. Opens "Note:" and has no trailing period, the shape the coverage
+    grader and the app's note handling depend on.
+    """
+    return (
+        "Note: no written summary is shown, because the sentences written "
+        "only repeated the records listed above"
+    )
+
+
 def _build_structured_fallback_note() -> str:
     """Tell the reader this answer is a list of records, not a summary.
 
@@ -14912,6 +14926,22 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         and grounding.claims
     ):
         grounding, restatements_dropped = drop_record_restatements(grounding, synth_findings)
+    # Card 128: every sentence the writer wrote grounded and was then dropped
+    # as a restatement, so no written sentence survives. Three facts must
+    # hold for the note's words to be true: nothing was stripped by the
+    # grounding pass or the sentence check (A-128-01), every dropped
+    # sentence's record is in the listing shown (A-128-02, checked against
+    # the listing's own claims), and the restore below did not put the
+    # sentences back (J-128-01, checked again at the note).
+    all_sentences_were_restatements = (
+        bool(restatements_dropped)
+        and not grounding.claims
+        and prose_before_drop.stripped_count == 0
+        and listing_grounding is not None
+        and bool(listing_grounding.claims)
+        and {c.finding.citation_id for c in prose_before_drop.claims}
+        <= {c.finding.citation_id for c in listing_grounding.claims}
+    )
 
     model_grounding: GroundingResult | None = None if structured_fallback_used else grounding
     tail_sentences: tuple[str, ...] = ()
@@ -15063,6 +15093,18 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
             structured_fallback_note = _build_writer_failed_note()
         else:
             structured_fallback_note = _build_structured_fallback_note()
+    elif (
+        all_sentences_were_restatements
+        and restatements_dropped
+        and not structured_fallback_used
+        # Card 128 (owner, 2026-10-22): another note already says why the
+        # summary is missing, card 105's picked window with no papers. The
+        # fallback, writer-failed and cap-list notes sit in the branch above.
+        and _window_no_papers_note(state, query) is None
+    ):
+        # Card 128 (owner, 2026-10-22): say why there is no written summary.
+        # The trust outcome is left as it is on this path.
+        structured_fallback_note = _build_restatements_only_note()
 
     # F-3.4-A-01: a completeness check, a different question from
     # everything Section 8.3 above just computed. Every claim above may
@@ -15139,12 +15181,13 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # product owner reading a live answer where the two notes contradicted).
     incomplete_answer_note: str | None = None
     repair_cap_note: str | None = None
+    restatements_only_note_shown = structured_fallback_note == _build_restatements_only_note()
     if omitted_findings and trust_outcome != "refuse":
         trust_outcome = aggregate([trust_outcome, "ask"])
         incomplete_answer_note = _build_incomplete_answer_note(
             omitted_findings,
             len(synth_findings) - len(omitted_findings),
-            summary_exists=not structured_fallback_used,
+            summary_exists=not structured_fallback_used and not restatements_only_note_shown,
         )
     # F-4.5-A-04: a cap hit inside the repair is disclosed whether or not an
     # omission remains. Before the findings tail the two always coincided;
