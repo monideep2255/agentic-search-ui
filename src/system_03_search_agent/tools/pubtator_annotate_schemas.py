@@ -252,6 +252,20 @@ itself was filed under; shipped anyway since the fix costs nothing extra
 once `fields_withheld`'s own per-item accounting (design decision 9) is
 already threading an output-position index through this same code path.
 
+Design decision 11, `PubtatorPublication.title` (card 134, 2026-10-22). An
+additive, optional string: the text of the document's own `title` passage,
+the paper's PubMed title, which the response already carries and this tool
+used to discard. Without it a publication row named itself by its number
+alone, and an answer whose background PubMed search did not finish listed
+the paper as "28340353 PMID:28340353". PubTator3 writes PubMed's inline
+formatting into the passage as markup (`<i>BRCA1-</i>`, live 2026-10-22,
+PMID 20301425), so `pubtator_annotate.py` removes only those exact
+formatting tags and collapses whitespace; every other character, angle
+brackets in variant notation included, is kept as written. A title over
+`_MAX_PUBLICATION_TITLE_CHARS` is withheld with a `fields_withheld` note,
+never clipped. The title is untrusted free text: the caller cleans it again
+(`synthesis.article_titles.clean_article_title`) before showing it.
+
 Depends on:
     - Nothing repo-local. `NCBI_PUBTATOR_RECORD_URL_PATTERN` is defined here,
       not imported from `ncbi_efetch_schemas.py` or `ncbi_dbsnp_schemas.py`,
@@ -321,6 +335,9 @@ _MAX_ANNOTATION_IDENTIFIER_CHARS: Final[int] = 60
 _MAX_ANNOTATION_NORMALIZED_ID_CHARS: Final[int] = 60
 _MAX_ANNOTATION_BIOTYPE_CHARS: Final[int] = 20
 _MAX_ANNOTATION_NAME_CHARS: Final[int] = 100
+# Design decision 11 (card 134): a title over this is withheld, never
+# clipped, the cap `synthesis.article_titles` uses for a graph paper's title.
+_MAX_PUBLICATION_TITLE_CHARS: Final[int] = 500
 _MAX_SOURCE_URL_CHARS: Final[int] = 200
 
 _MAX_ERROR_CHARS: Final[int] = 500
@@ -478,6 +495,9 @@ class PubtatorPublication(BaseModel):
         list[PubtatorAnnotation],
         Field(default_factory=list, max_length=_MAX_ANNOTATIONS),
     ] = Field(default_factory=list)
+    title: Annotated[
+        str | None, Field(default=None, max_length=_MAX_PUBLICATION_TITLE_CHARS)
+    ] = None
     total_annotations: Annotated[
         int,
         Field(
