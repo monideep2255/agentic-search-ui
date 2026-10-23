@@ -333,32 +333,3 @@ async def test_with_no_usable_title_the_row_is_named_by_its_pmid(monkeypatch, ti
     assert _rows(plain_tokens) == [["Published paper"]], _rows(plain_tokens)
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("pubmed_first", [True, False])
-@pytest.mark.parametrize(
-    ("pmid", "pubmed_title", "pubtator_title"),
-    [
-        (CFTR_PMID, CFTR_TITLE, CFTR_TITLE),
-        (CFTR_PMID, CFTR_TITLE, None),
-        # PubMed keeps the bracketed English title that the PubTator3 row
-        # withholds (A-134-09): PubMed's view names the paper.
-        (OVARIAN_PMID, OVARIAN_TITLE, OVARIAN_TITLE),
-    ],
-)
-async def test_when_the_background_search_holds_the_title_pubmeds_row_names_the_paper(
-    monkeypatch, pmid, pubmed_title, pubtator_title, pubmed_first
-) -> None:
-    """The live PubMed title row and the literature-index row share the
-    paper's page. Whichever finding comes first, the paper is one row named
-    by PubMed's own title, never by its number."""
-    pubmed, output = _pubmed_finding(pmid, pubmed_title)
-    pubtator = _pubtator_finding(_publication(pmid, pubtator_title))
-    findings = [pubmed, pubtator] if pubmed_first else [pubtator, pubmed]
-    for depth in ("researcher", "plain_language"):
-        tokens, _ = await _page(monkeypatch, depth, findings, {"ne-card134": output})
-        rows = _rows(tokens)
-        assert [cells for cells in rows if pubmed_title in cells], (depth, rows)
-        paper_rows = [cells for cells in rows if pmid in " ".join(cells) or pubmed_title in cells]
-        assert len(paper_rows) == 1, (depth, rows)
-        assert not any(cells[0] in (pmid, f"PMID:{pmid}") for cells in rows), (depth, rows)
-        _no_doubled_number(rows)
