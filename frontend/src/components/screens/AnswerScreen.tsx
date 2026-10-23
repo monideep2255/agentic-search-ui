@@ -1062,7 +1062,9 @@ export { isLinkableCitationUrl };
  */
 export function refusalLinkText(raw: string): string {
   try {
-    const term = (new URL(raw).searchParams.get("term") ?? "").trim();
+    const term = (new URL(raw).searchParams.get("term") ?? "")
+      .replace(/\p{Cf}/gu, "")
+      .trim();
     return term ? `Search NCBI for ${term}` : "Search NCBI";
   } catch {
     return "Search NCBI";

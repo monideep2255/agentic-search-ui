@@ -196,6 +196,14 @@ describe("a refusal reads as a calm labelled block, never as an error", () => {
     );
   });
 
+  it("strips invisible format characters from the link text term", () => {
+    const base = "https://www.ncbi.nlm.nih.gov/search/all/?term=";
+    expect(refusalLinkText(base + encodeURIComponent("GE\u200BRD\u202E"))).toBe(
+      "Search NCBI for GERD",
+    );
+    expect(refusalLinkText(base + encodeURIComponent("\u200B"))).toBe("Search NCBI");
+  });
+
   it("pins the host rule itself, subdomains included", () => {
     // Mutation: dropping either clause of the host check turns one of
     // these red. The `.ncbi.nlm.nih.gov` suffix form is what makes the
