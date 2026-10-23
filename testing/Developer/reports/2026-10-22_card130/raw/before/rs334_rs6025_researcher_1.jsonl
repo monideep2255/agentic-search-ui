@@ -1,0 +1,21 @@
+{"tag": "WRITER_FINDINGS", "data": [[1, "Variant record", "clinical_significance", "not-provided, protective, likely-benign, pathogenic, other"], [2, "Variant record", "functional_consequence", "coding_sequence_variant, missense_variant"], [3, "Literature variant", "name", "c.20A>T"], [4, "Literature variant", "name", "c.1691G>A"]]}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 11.52}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Variant record records found\n\n", "placement": "listing", "cells": null, "t": 11.52}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Variant", "Identifier", "Gene", "Clinical significance or consequence"], "t": 11.52}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Variant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. ", "placement": "listing", "cells": ["rs334", "rs334", "HBB", "significance: not-provided, protective, likely-benign, pathogenic, other"], "t": 11.52}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Variant record functional_consequence: coding_sequence_variant, missense_variant [2]. ", "placement": "listing", "cells": ["rs6025", "rs6025", "F5", "consequence: coding_sequence_variant, missense_variant"], "t": 11.52}}
+{"tag": "CITATION", "data": {"display_index": 1, "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334", "field": "clinical_significance", "claim_text": "Variant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other"}}
+{"tag": "CITATION", "data": {"display_index": 2, "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs6025", "field": "functional_consequence", "claim_text": "Variant record functional_consequence: coding_sequence_variant, missense_variant"}}
+{"tag": "REPAIR_CHECK", "data": {"omitted": 4, "code_lines_cite_all": false}}
+{"tag": "RESTATEMENT_DROP", "data": {"dropped": 0, "claims_after": 2}}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "Found 2 literature variant records for rs334 and rs6025: c.20A>T [3] and c.1691G>A [4]. ", "placement": "summary", "cells": null, "t": 14.18}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "summary", "cells": null, "t": 14.18}}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "The literature variant name c.20A>T [3] and the literature variant name c.1691G>A [4]. ", "placement": "summary", "cells": null, "t": 14.18}}
+{"tag": "CITATION", "data": {"display_index": 3, "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334", "field": "name", "claim_text": "The literature variant name c.20A>T"}}
+{"tag": "CITATION", "data": {"display_index": 4, "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs6025", "field": "name", "claim_text": "the literature variant name c.1691G>A"}}
+{"tag": "TRUST", "data": {"outcome": "ask", "risk_tier": "high", "scope": "claim", "citation_id": "db-72bf508f86ad-1"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "db-7a493a724fd8-2"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "lv-6d613df0deab-3"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "lv-df9c91967998-4"}}
+{"tag": "TRUST", "data": {"outcome": "ask", "risk_tier": "high", "scope": "answer", "citation_id": null}}
+{"tag": "DONE", "data": {"trust_outcome": "ask", "elapsed_ms": 14166, "total_cost_usd": 0.00530373, "message": null, "trust_line": "Based on 2 sources cited, all from dbSNP", "t": 14.2}}

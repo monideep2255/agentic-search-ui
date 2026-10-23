@@ -1,0 +1,18 @@
+{"tag": "WRITER_FINDINGS", "data": [[1, "Variant record", "clinical_significance", "not-provided, protective, likely-benign, pathogenic, other"], [2, "Variant record", "functional_consequence", "coding_sequence_variant, missense_variant"], [3, "Literature variant", "name", "c.20A>T"], [4, "Literature variant", "name", "c.1691G>A"]]}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 7.93}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Where this answer comes from\n\n", "placement": "listing", "cells": null, "t": 7.93}}
+{"tag": "TOKEN", "data": {"kind": "list_item", "text": "Variant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other [1]. ", "placement": "listing", "cells": ["Genetic variant (HBB), clinical significance: not-provided, protective, likely-benign, pathogenic, other"], "t": 7.93}}
+{"tag": "TOKEN", "data": {"kind": "list_item", "text": "Variant record functional_consequence: coding_sequence_variant, missense_variant [2]. ", "placement": "listing", "cells": ["Genetic variant (F5), consequence: coding_sequence_variant, missense_variant"], "t": 7.93}}
+{"tag": "CITATION", "data": {"display_index": 1, "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs334", "field": "clinical_significance", "claim_text": "Variant record clinical_significance: not-provided, protective, likely-benign, pathogenic, other"}}
+{"tag": "CITATION", "data": {"display_index": 2, "source_url": "https://www.ncbi.nlm.nih.gov/snp/rs6025", "field": "functional_consequence", "claim_text": "Variant record functional_consequence: coding_sequence_variant, missense_variant"}}
+{"tag": "REPAIR_CHECK", "data": {"omitted": 4, "code_lines_cite_all": false}}
+{"tag": "FALLBACK_NOTE", "data": "_build_structured_fallback_note"}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "I found 2 genetic variants related to rs334 and rs6025 [1][2]. ", "placement": "summary", "cells": null, "t": 9.06}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 9.06}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: no written summary could be checked against the records, so the records found are listed below with their sources", "placement": "listing", "cells": null, "t": 9.06}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 9.06}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "This is a research summary, not medical advice.", "placement": "listing", "cells": null, "t": 9.06}}
+{"tag": "TRUST", "data": {"outcome": "ask", "risk_tier": "high", "scope": "claim", "citation_id": "db-6268616d664d-1"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "db-34a98bf0aa16-2"}}
+{"tag": "TRUST", "data": {"outcome": "ask", "risk_tier": "high", "scope": "answer", "citation_id": null}}
+{"tag": "DONE", "data": {"trust_outcome": "ask", "elapsed_ms": 9056, "total_cost_usd": 0.002959648, "message": null, "trust_line": "Based on 2 sources cited, all from dbSNP", "t": 9.06}}

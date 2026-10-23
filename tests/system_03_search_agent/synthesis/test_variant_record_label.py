@@ -334,7 +334,10 @@ async def test_researcher_page_names_rs334_and_shows_gene_and_significance(monke
     assert len(rows[0]) == 4
     assert prompts, "populate-check: the writer was never shown the findings"
     assert "clinical_significance" in prompts[0] or SIGNIFICANCE in prompts[0]
-    assert "HBB" not in prompts[0]
+    # Card 130 (owner decision, 2026-10-22) moves this one pin on purpose:
+    # the writer now reads the gene the table shows, as a second finding
+    # cited to the same record. The table rows above are unchanged.
+    assert "genes: HBB" in prompts[0]
 
 
 @pytest.mark.asyncio
