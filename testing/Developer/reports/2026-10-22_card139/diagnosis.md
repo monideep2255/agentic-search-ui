@@ -15,7 +15,7 @@ Card 139, filed from the 2026-10-18 browser retest, rows 47, 49 and 54 (`testing
 |------|-------|-------|
 | 1, "listed below" | Notes always render after the listing, on every surface | Fixed: the two notes name no direction |
 | 2, "shows 10" | The count is a constant, the summary cap, not a count of what is shown | Open: the true count needs `_paper_link_notes` and its caller, outside this card's file fence |
-| 3, "named in the question" | The list is every record a mention was expanded into, not the mentions | Half fixed: the sentence is now one plain sentence; the list still needs the caller, inside another builder's region tonight |
+| 3, "named in the question" | The list is every record a mention was expanded into, not the mentions | Open: the fix lives in the caller, inside another builder's region tonight; wording options below |
 
 ## Note 1: "listed below" under the list
 
@@ -78,18 +78,11 @@ Smallest true fix, in the caller (lines 15075 to 15106):
 1. Group `target_entities` by the mention each came from, using `resolved_entities` (`text` beside `curie`) and Think's own mention for a window or a disease binding.
 2. A mention counts as addressed when any of its records is cited.
 3. Fire only when two or more mentions were named and at least one is unaddressed. Name each unaddressed mention as the person typed it, or as Think extracted it.
-4. `_build_partial_answer_note` then names only those mentions.
+4. `_build_partial_answer_note` keeps its sentence, now true: "this answer does not address the following entities named in the question: CFTR".
 
-Built, the sentence (owner decision, 2026-10-22: plain and true, in the style of the other notes, opening "Note:", naming only what the question named, blaming no one). One sentence with no interior full stop, so the coverage grader never splits it into an uncited claim, and the names last:
+Why it is not built: steps 1 to 3 sit in lines 15075 to 15106, inside the region another builder owns tonight (14800 to 15200). A wording-only change inside `_build_partial_answer_note` would keep the wrong list.
 
-- Before: "Note: this answer does not address the following entities named in the question: {names}. Ask about them individually for a complete answer."
-- After: "Note: this answer does not address the following entities named in the question, so ask about each one on its own for a complete answer: {names}"
-- The opening words stay the prefix `frontend/src/hooks/useRunView.ts` matches for a note with no kind.
-- Pinned by `test_build_partial_answer_note_is_one_plain_sentence` in `tests/system_03_search_agent/core/test_graph.py`.
-
-Why steps 1 to 3 are not built: they sit in lines 15075 to 15106, inside the region another builder owns tonight (14800 to 15200). Until they land, the new sentence still carries the wrong list on a window or a multi-record disease binding.
-
-Open, for the lead once steps 1 to 3 are built: the window case. A window question names a region, not genes, so after the fix above a window's genes would never be named back. Three ways to word what the person sees:
+Open, for the owner: the window case. A window question names a region, not genes, so after the fix above a window's genes would never be named back. Three ways to word what the person sees:
 
 | Option | What the person reads | Cost |
 |--------|------------------------|------|
@@ -97,4 +90,4 @@ Open, for the lead once steps 1 to 3 are built: the window case. A window questi
 | B | "Note: this answer cites no record for these genes in the region you asked about: CFTR-AS1, CFTR-AS2. Ask about one by name for its records." | New wording the owner has not seen; true, and names records, but as records found, not as words typed |
 | C | Keep a one-line count: "Note: 3 of the 7 genes in this region have no record in this answer" | New wording; no names, so no wrong names, but less to act on |
 
-Option A follows "A confident wrong record is worse than a missing one" and needs no new wording. Under the owner's 2026-10-22 decision the lead may word B or C, plain and true, without a further question.
+Option A follows "A confident wrong record is worse than a missing one" and needs no new wording. Options B and C need the owner's yes on the sentence.

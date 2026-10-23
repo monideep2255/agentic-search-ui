@@ -10217,19 +10217,12 @@ def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
     """F-3.4-A-01: state which named entities this answer does NOT cover,
     the same "name the scale, not just that a cut happened" discipline
     `_build_truncated_answer_note` already uses for a row-count cut.
-
-    Card 139 (owner decision, 2026-10-22): one sentence, opening "Note:",
-    with no interior full stop, the shape every other note carries, and the
-    names last so a name never splits it. The opening words stay the prefix
-    `frontend/src/hooks/useRunView.ts` matches. The sentence is true only for
-    names the question itself named: the caller must pass the mentions, never
-    the records a mention was expanded into (see the card 139 diagnosis).
     """
     listed = ", ".join(unaddressed_entities)
     return (
         f"Note: this answer does not address the following entities named "
-        f"in the question, so ask about each one on its own for a complete "
-        f"answer: {listed}"
+        f"in the question: {listed}. Ask about them individually for a "
+        f"complete answer."
     )
 
 
