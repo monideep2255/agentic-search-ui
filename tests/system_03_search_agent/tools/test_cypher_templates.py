@@ -565,6 +565,53 @@ def test_one_gene_beside_several_disease_concepts_takes_the_gene_record() -> Non
     assert template.cypher == "MATCH (a:Gene {id: $e_NCBIGene_7157}) RETURN a"
 
 
+#: Card 129 (2026-10-22): the six disease-typed MedGen records "breast
+#: cancer" binds once Think ranks records by type
+#: (`testing/Developer/reports/2026-10-22_card129/ncbi_check.md`).
+BREAST_CANCER_RECORDS = [
+    "MedGen:C4016951",
+    "MedGen:C0006142",
+    "MedGen:C0268301",
+    "MedGen:C0346153",
+    "MedGen:C0677776",
+    "MedGen:C1708349",
+]
+
+
+@pytest.mark.parametrize("query_class", ["aggregate", "single_hop", "lookup"])
+def test_a_genes_count_over_several_disease_records_takes_the_gene_list(query_class: str) -> None:
+    """Card 129. On the model path the generated count bound one of the
+    anchors and answered "1 record". The gene list cites each gene to its
+    own record and folds the disease records it is linked to. Mutation:
+    drop the `len(param_names) > 1` arm from the Disease genes branch and
+    this is red (None)."""
+    template = _select(
+        "How many genes are associated with breast cancer?", BREAST_CANCER_RECORDS, query_class
+    )
+    assert template is not None and template.name == "disease_genes_many"
+    assert template.fold is not None
+    assert template.fallback is not None and template.fallback.name == "disease_variant_genes_many"
+    assert "count(" not in template.cypher.lower()
+    referenced = set(re.findall(r"\$([A-Za-z_][A-Za-z0-9_]*)", template.cypher))
+    assert referenced == set(entity_param_bindings(BREAST_CANCER_RECORDS))
+
+
+def test_a_genes_count_over_one_disease_record_keeps_the_cited_count() -> None:
+    """One anchor keeps the count form, which cites its number to that
+    record. Mutation: send every genes count to the gene list and this is
+    red (`disease_genes_one`)."""
+    template = _select(
+        "How many genes are associated with breast cancer?", ["MedGen:C0346153"], "aggregate"
+    )
+    assert template is not None and template.name == "disease_genes_one_count"
+
+
+def test_a_count_over_several_gene_records_still_takes_the_model_path() -> None:
+    """The exception is the Disease genes shape only: a count over several
+    Gene anchors still has no one record to cite and no list form here."""
+    assert _select("How many variants do BRCA1 and MLH1 have?", [BRCA1, MLH1], "aggregate") is None
+
+
 def test_a_count_over_several_genes_beside_a_disease_still_takes_the_model_path() -> None:
     assert (
         _select("How many conditions do MLH1 and MSH2 share?", [MLH1, MSH2, "MedGen:C0009402"], "aggregate")

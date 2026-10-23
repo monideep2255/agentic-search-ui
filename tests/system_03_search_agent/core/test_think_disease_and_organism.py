@@ -371,3 +371,172 @@ async def test_a_generic_disease_span_binds_nothing_and_discloses_nothing(monkey
     assert resolution.curies == [] and resolution.disclosures == ()
     assert resolution.unresolved_symbols == []
     assert terms == [], terms
+
+
+# Card 129 (2026-10-22): MedGen's own record type ranks the candidates.
+# The 20 ESummary records MedGen returned live that day for
+# `breast[title] AND cancer[title]`, in its order, each with its
+# `semantictype` in the wrapped shape ESummary sends
+# (`testing/Developer/reports/2026-10-22_card129/ncbi_check.md`), and the
+# same day's shapes for bronchiolitis and MODY, the two controls.
+_F, _N, _D = "Finding", "Neoplastic Process", "Disease or Syndrome"
+BREAST_CANCER_RECORDS = [
+    ("382914", "C2676676", "Breast-ovarian cancer, familial, susceptibility to, 1", _F),
+    ("382625", "C2675520", "Breast-ovarian cancer, familial, susceptibility to, 2", _F),
+    ("87542", "C0346153", "Familial cancer of breast", _N),
+    ("151793", "C0677776", "Hereditary breast ovarian cancer syndrome", _N),
+    ("310839", "C1708349", "Hereditary diffuse gastric adenocarcinoma", _N),
+    ("651", "C0006142", "Malignant tumor of breast", _N),
+    ("82785", "C0268301", "Partial androgen insensitivity syndrome", _D),
+    ("854012", "C3469522", "Breast cancer, susceptibility to", _F),
+    ("865388", "C4016951", "Breast cancer, early-onset", _N),
+    ("729095", "C1320450", "Seen by breast cancer nurse", _F),
+    ("929799", "C4304130", "Breast cancer screening declined", _F),
+    ("865018", "C4016581", "Androgen insensitivity, partial, with breast cancer", _F),
+    ("865196", "C4016759", "BREAST CANCER, PROTECTION AGAINST", _F),
+    ("880162", "CN235586", "bilateral breast cancer", _F),
+    ("879372", "C4047698", "Breast cancer screening not done", _F),
+    ("370568", "C1968974", "BREAST CANCER, INVASIVE, SUSCEPTIBILITY TO", _F),
+    ("436751", "C2676677", "BREAST CANCER, FAMILIAL, SUSCEPTIBILITY TO, 1", _F),
+    ("382626", "C2675521", "BREAST CANCER, FAMILIAL, SUSCEPTIBILITY TO, 2", _F),
+    ("864797", "C4016360", "BREAST CANCER, SUSCEPTIBILITY TO, IN BRCA1 AND BRCA2 CARRIERS", _F),
+    ("350032", "C1861471", "Paraneoplastic SPS is associated with breast cancer and other malignancies", _F),
+]
+BRONCHIOLITIS_RECORDS = [
+    ("759730", "C3532617", "History of bronchiolitis", _F),
+    ("1896790", "C6066561", "Bronchiolitis, acute and chronic", _F),
+    ("1840786", "C5830150", "Postinfectious bronchiolitis obliterans", _F),
+    ("14235", "C0006271", "Unusual bronchiolitis", _D),
+    ("113", "C0001311", "Acute bronchiolitis", _D),
+    ("547277", "C0276340", "Respiratory syncytial virus bronchiolitis", _D),
+    ("1003213", "CN322574", "Toxic bronchiolitis", _D),
+    ("390091", "C2350875", "Bronchiolitis, Constrictive", _D),
+    ("863573", "C4015136", "Recurrent bronchiolitis", _D),
+    ("1621902", "C0850742", "Chronic bronchiolitis", _D),
+    ("547125", "C0276154", "Adenoviral bronchiolitis", _D),
+    ("538515", "C0264366", "Necrotizing bronchiolitis", _D),
+    ("385450", "C2350876", "Bronchiolitis exudativa", _D),
+    ("696309", "C1272766", "Follicular bronchiolitis", _D),
+    ("573503", "C0340047", "Drug-induced bronchiolitis obliterans", _D),
+    ("1808244", "C5574736", "Transplant-related bronchiolitis obliterans", _D),
+    ("666", "C0006274", "Bronchiolitis, Viral", _D),
+    ("186356", "C5925142", "Non-transplant-related bronchiolitis obliterans", _D),
+    ("1", "C2350988", "Bronchiolitis, Proliferative", _D),
+    ("2", "C0264369", "Acute obliterating bronchiolitis", _D),
+]
+ARACHNODACTYLY_RECORDS = [
+    ("1795", "C0003706", "Arachnodactyly", _F),
+    ("2829", "C0220668", "Congenital contractural arachnodactyly", "Congenital Abnormality"),
+]
+
+
+def _install_typed_medgen(
+    monkeypatch: pytest.MonkeyPatch, term: str, records: list[tuple[str, str, str, str]]
+) -> None:
+    """The live ESummary shape: `semantictype` wrapped as `{"value": ...}`."""
+    by_uid = {uid: (cid, title, kind) for uid, cid, title, kind in records}
+
+    async def _search(params):
+        uids = [uid for uid, *_ in records] if params.term == term else []
+        return SimpleNamespace(status="ok" if uids else "empty", records=[_Record({"idlist": uids})])
+
+    async def _summary(params):
+        return SimpleNamespace(
+            status="ok",
+            records=[
+                _Record(
+                    {
+                        "conceptid": by_uid[uid][0],
+                        "title": by_uid[uid][1],
+                        "semantictype": {"value": by_uid[uid][2]},
+                    }
+                )
+                for uid in params.ids
+                if uid in by_uid
+            ],
+        )
+
+    monkeypatch.setattr(ncbi_eutils_actions, "search", _search)
+    monkeypatch.setattr(ncbi_eutils_actions, "summary", _summary)
+    graph_module._DISEASE_CURIE_CACHE.clear()
+
+
+@pytest.mark.asyncio
+async def test_breast_cancer_binds_disease_records_and_never_the_nurse_visit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Card 129. Before the rule, the 8 phrase-in-title records were 7
+    Findings led by C1320450 "Seen by breast cancer nurse", and C0006142
+    was cut. Mutation: delete the `if disease_typed:` narrowing and this is
+    red (C1320450 binds, C0006142 does not)."""
+    _install_typed_medgen(monkeypatch, "breast[title] AND cancer[title]", BREAST_CANCER_RECORDS)
+    curies, matched = await graph_module.resolve_disease_mention_to_curies("breast cancer")
+    assert matched == 20
+    assert curies == [
+        "MedGen:C4016951",
+        "MedGen:C0006142",
+        "MedGen:C0268301",
+        "MedGen:C0346153",
+        "MedGen:C0677776",
+        "MedGen:C1708349",
+    ]
+    findings = {f"MedGen:{cid}" for _, cid, _, kind in BREAST_CANCER_RECORDS if kind == _F}
+    assert not findings & set(curies)
+
+
+@pytest.mark.asyncio
+async def test_findings_still_bind_when_no_disease_record_matched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Rank, never drop: with only Finding records matched, they bind as
+    before. Mutation: narrow to disease-typed records unconditionally and
+    this is red (nothing binds)."""
+    screening = [row for row in BREAST_CANCER_RECORDS if "screening" in row[2]]
+    _install_typed_medgen(
+        monkeypatch, "breast[title] AND cancer[title] AND screening[title]", screening
+    )
+    curies, _ = await graph_module.resolve_disease_mention_to_curies("breast cancer screening")
+    assert curies == ["MedGen:C4047698", "MedGen:C4304130"]
+
+
+@pytest.mark.asyncio
+async def test_an_exact_finding_title_still_binds_over_a_disease_containing_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A phenotype the person named exactly keeps its record, whatever its
+    type. Mutation: apply the type narrowing before the exact rule and this
+    is red (the congenital syndrome binds instead)."""
+    _install_typed_medgen(monkeypatch, "Arachnodactyly[title]", ARACHNODACTYLY_RECORDS)
+    curies, _ = await graph_module.resolve_disease_mention_to_curies("Arachnodactyly")
+    assert curies == ["MedGen:C0003706"]
+
+
+@pytest.mark.asyncio
+async def test_bronchiolitis_binds_the_same_eight_records(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Control: the 8 records bronchiolitis bound before the rule were all
+    disease-typed, so they are unchanged."""
+    _install_typed_medgen(monkeypatch, "bronchiolitis[title]", BRONCHIOLITIS_RECORDS)
+    curies, matched = await graph_module.resolve_disease_mention_to_curies("bronchiolitis")
+    assert matched == 20
+    assert curies == [
+        "MedGen:C0001311",
+        "MedGen:C0006271",
+        "MedGen:C0006274",
+        "MedGen:C0264366",
+        "MedGen:C0264369",
+        "MedGen:C0276154",
+        "MedGen:C0276340",
+        "MedGen:C0340047",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_mody_binds_the_same_eight_records(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Control: all 8 MODY records are "Disease or Syndrome", so the order
+    the earlier test pins is unchanged."""
+    mody = [(uid, *MEDGEN_TITLES[uid], _D) for uid in MODY_HITS]
+    _install_typed_medgen(monkeypatch, "MODY[title]", mody)
+    curies, matched = await graph_module.resolve_disease_mention_to_curies("MODY")
+    assert matched == 8
+    assert curies[0] == "MedGen:C0271653"
+    assert curies[1:] == sorted(f"MedGen:{MEDGEN_TITLES[uid][0]}" for uid in MODY_HITS if uid != "543472")
