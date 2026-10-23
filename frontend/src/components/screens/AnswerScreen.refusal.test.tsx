@@ -30,7 +30,7 @@ import { describe, expect, it } from "vitest";
 import type { AgentEvent } from "../../lib/events";
 import { useRunView } from "../../hooks/useRunView";
 import type { RunView } from "../../hooks/useRunView";
-import { AnswerScreen, isLinkableRefusalLink } from "./AnswerScreen";
+import { AnswerScreen, isLinkableRefusalLink, refusalLinkText } from "./AnswerScreen";
 
 let seq = 0;
 
@@ -183,6 +183,17 @@ describe("a refusal reads as a calm labelled block, never as an error", () => {
     // refusal was trying to hand the reader.
     expect(block).toHaveTextContent(hostile);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("words the link text: no term, plus signs and %20 become spaces", () => {
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/")).toBe("Search NCBI");
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/?term=")).toBe("Search NCBI");
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/?term=cystic+fibrosis")).toBe(
+      "Search NCBI for cystic fibrosis",
+    );
+    expect(refusalLinkText("https://www.ncbi.nlm.nih.gov/search/all/?term=cystic%20fibrosis")).toBe(
+      "Search NCBI for cystic fibrosis",
+    );
   });
 
   it("pins the host rule itself, subdomains included", () => {
