@@ -10649,7 +10649,9 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
     )
     if omission_remains:
         return base + ", so the omission described above was not repaired"
-    return base + ", and the records it would have added are listed below as found"
+    # Card 139: the notes follow the listing on every surface (`_AnswerParts`:
+    # summary, listing, notes), so a note never points "below" at it.
+    return base + ", and the records it would have added are listed in this answer as found"
 
 
 #: Card 63: the NCBI databases a failed-call note can name, as a person
@@ -10964,9 +10966,11 @@ def _build_structured_fallback_note() -> str:
     reason every other note here carries that shape: the coverage grader
     splits on those and counts an unmarked continuation as an uncited claim.
     """
+    # Card 139: this note renders after the listing on screen, in the saved
+    # answer and on the command line, so it names no direction.
     return (
         "Note: no written summary could be checked against the records, "
-        "so the records found are listed below with their sources"
+        "so this answer lists the records found with their sources"
     )
 
 

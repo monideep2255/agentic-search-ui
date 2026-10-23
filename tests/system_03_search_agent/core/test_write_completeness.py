@@ -758,7 +758,7 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     # The other clause: the repair also fires when the model grounded
     # NOTHING (the structured fallback would otherwise floor at `ask`), and
     # when the cap stops it there, the fallback lists every record, so the
-    # note says the records are listed below rather than claiming an
+    # note says the answer lists the records rather than claiming an
     # omission the answer no longer has.
     synth_preflights["count"] = 0
     monkeypatch.setattr(
@@ -768,7 +768,9 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     result = await graph_module.write_node(_write_state())
     events = result["events"]
     narrative = _narrative(events)
-    assert "cost limit" in narrative and "listed below as found" in narrative, narrative
+    assert "cost limit" in narrative and "listed in this answer as found" in narrative, narrative
+    # Card 139: the notes follow the listing, so no note says "below".
+    assert "below" not in graph_module._build_repair_cap_note(omission_remains=False)
     assert "was not repaired" not in narrative, narrative
     assert len([e for e in events if e.type == "citation"]) == len(_ROWS)
 
@@ -1600,9 +1602,14 @@ async def test_the_fallback_note_is_one_plain_line_with_no_blame(synth_pair) -> 
     note = graph_module._build_structured_fallback_note()
     assert note == (
         "Note: no written summary could be checked against the records, "
-        "so the records found are listed below with their sources"
+        "so this answer lists the records found with their sources"
     )
     assert note in _narrative(result["events"])
+    # Card 139: the note renders after the listing on every surface, so it
+    # never calls the records "below"; and it does follow them in the answer.
+    assert "below" not in note
+    narrative = _narrative(result["events"])
+    assert narrative.index(note) > narrative.index("disease name number 1"), narrative
 
 
 @pytest.mark.asyncio
