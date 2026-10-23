@@ -1754,14 +1754,11 @@ def _gap_clause(record_count: int, asked: AskedField) -> str:
 
 
 def _is_paper_finding(finding: SynthFinding) -> bool:
-    """A paper record: its type is a paper type, or it is a projected
-    ("derived") row whose own source page is a PubMed or PMC page."""
-    if _lead_in_nouns(finding.entity_type or "")[0] == "paper":
-        return True
-    url = (finding.source_url or "").lower()
-    return (finding.entity_type or "").lower() == "derived" and (
-        "pubmed.ncbi.nlm.nih.gov" in url or "pmc.ncbi.nlm.nih.gov" in url
-    )
+    """A paper record: its type is a paper type. A projected ("derived")
+    row keeps develop's naming, whatever its source page (card 131's fresh
+    verifier, V-131-01 and V-131-02: a source-page rule split the two
+    depths' counts and could count a gene symbol as a paper)."""
+    return _lead_in_nouns(finding.entity_type or "")[0] == "paper"
 
 
 def summary_label(finding: SynthFinding, row: dict[str, Any] | None) -> str:

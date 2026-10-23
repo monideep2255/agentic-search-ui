@@ -8,7 +8,6 @@ control and once without it.
 
 from __future__ import annotations
 
-from dataclasses import replace
 import re
 
 import pytest
@@ -1440,16 +1439,6 @@ def test_card_131_count_line_counts_papers_and_keeps_other_names() -> None:
     assert "A paper title" not in text
     plain = answer_summary_sentence(mixed, slots, "BRCA1", None, lambda _f: None, audience_depth="plain_language")
     assert plain.index("gene") < plain.index("paper") < plain.index("condition"), plain
-
-
-def test_card_131_a_derived_row_from_a_pubmed_page_counts_as_a_paper() -> None:
-    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
-
-    row = _count_finding(1, "derived", "Projected title.")
-    row = replace(row, source_url="https://pubmed.ncbi.nlm.nih.gov/111/")
-    other = replace(_count_finding(2, "derived", "Other value"), source_url="https://example.org/2/")
-    text = answer_summary_sentence([row, other], {"c-1": 1, "c-2": 2}, "", None, lambda _f: None)
-    assert "Projected title" not in text and "Other value [2]" in text, text
 
 
 def test_card_131_a_type_already_ending_in_record_takes_no_second_record() -> None:
