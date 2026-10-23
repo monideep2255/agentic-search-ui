@@ -78,6 +78,11 @@ async def one(index: int) -> dict[str, object]:
             citations += 1
         elif event.type in ("done", "error"):
             done = {k: payload.get(k) for k in ("trust_outcome", "total_cost_usd", "message")}
+            done["second_reading_record"] = [
+                dict(d).get("chosen")
+                for d in payload.get("decisions") or []
+                if dict(d).get("name") == "think.second_reading"
+            ]
     return {
         "run": index,
         "question": WHICH,
@@ -89,6 +94,7 @@ async def one(index: int) -> dict[str, object]:
         "done_s": round(time.monotonic() - start, 1),
         "think_calls": counts["think"],
         "second_reading_fired": counts["second"] > 0,
+        "second_reading_record": done.get("second_reading_record"),
         "cost_usd": done.get("total_cost_usd"),
     }
 

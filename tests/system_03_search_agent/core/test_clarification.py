@@ -17,9 +17,10 @@ Exercised:
     A question with no referring word and no entity ("Tell me about
     genes"): no clarifying question either.
     Card 145: a first question about to be asked back is read a second time;
-    it answers when that reading resolves, is asked back when it does not,
-    and a question that resolves, or that memory answers, makes one Think
-    call. The second reading fails closed past Think's budget.
+    it answers when that reading resolves a subject written in the question
+    word for word, is asked back otherwise, and each trigger condition is
+    pinned by a question that makes one Think call. The second reading gets
+    at most 4 s, fails closed on any error, and is recorded when used.
 
 NOT exercised: the web UI's rendering of the question (frontend tests own
 that), and the live models.
@@ -29,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 import uuid
 from datetime import UTC, datetime
@@ -228,32 +230,56 @@ async def test_a_question_with_no_referring_word_is_not_questioned() -> None:
 # asked back. The owner's decision: "when the system is about to ask a first
 # question back because it read no subject, it reads the question a second
 # time and asks back only if that reading also finds nothing; no question
-# that answers today pays for it."
+# that answers today pays for it." The fix round's terms, the owner's of the
+# same day: "the second reading counts only if every subject it names is
+# written word for word in the question, it runs the same organism checks as
+# the first reading, it gets at most 4 s, the answer's record says it was
+# used, and each trigger condition gets a test".
 #
 # The gap the diagnosis named: a first question that names its own subject
 # in plain English, carries a referring word ("it"), and whose first reading
-# does not confirm. The condition here is a stand-in, chosen so no test
-# question reaches a prompt; MedGen is stubbed to confirm it.
+# does not confirm. NCBI is stubbed throughout; no test question reaches a
+# prompt.
 
 _OWN_SUBJECT_QUESTION = "What causes croup in children, and how is it usually treated?"
+_BRONCHIOLITIS_QUESTION = "What causes bronchiolitis in babies, and how is it usually treated?"
+_SRA_QUESTION = "Find SRA runs of SARS-CoV-2 sequenced on Illumina, and where was it collected?"
 _CROUP_CURIE = "MedGen:C0010380"
+_MEDGEN: dict[str, list[str]] = {
+    "croup": [_CROUP_CURIE],
+    "bronchiolitis": ["MedGen:C0006271", "MedGen:C0001311"],
+    "cystic fibrosis": ["MedGen:C0010674"],
+    "sars": ["MedGen:C1519126", "MedGen:C4302012", "MedGen:C4302019"],
+}
+_TAXA: dict[str, tuple[str, ...]] = {
+    "mycobacterium tuberculosis": ("1773",),
+    "sars-cov-2": ("2697049",),
+}
+_EMPTY: list[dict[str, str]] = []
 
 
-def _think_reply(entities: list[dict[str, str]]) -> str:
+def _think_reply(entities: list[dict[str, str]], record_type: str = "none") -> str:
     return json.dumps(
         {
             "query_class": "exploratory",
             "narrative": "stand-in classification for tests",
             "entities": entities,
+            "record_type": record_type,
         }
     )
+
+
+def _disease(text: str) -> dict[str, str]:
+    return {"text": text, "entity_type": "disease"}
 
 
 @pytest.fixture
 def think_readings(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Count Think's classification calls and, when `script` is set, answer
-    them in order from it; every other model call keeps the file's stub."""
-    record: dict[str, Any] = {"calls": 0, "script": None}
+    them in order from it (`slow_from` delays every reply from that call on);
+    every other model call keeps the file's stub. MedGen, Gene and Taxonomy
+    are stubbed from the tables above."""
+    record: dict[str, Any] = {"calls": 0, "script": None, "slow_from": None}
     inner = harness_module.litellm.acompletion
 
     async def _dispatch(*args: object, **kwargs: object) -> Any:
@@ -261,6 +287,8 @@ def think_readings(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         joined = "\n".join(str(message.get("content") or "") for message in messages)
         if graph_module._THINK_SYSTEM_INSTRUCTION in joined:
             record["calls"] += 1
+            if record["slow_from"] is not None and record["calls"] >= record["slow_from"]:
+                await asyncio.sleep(5)
             script = record["script"]
             if script is not None:
                 return fake_response(script[min(record["calls"], len(script)) - 1])
@@ -269,10 +297,33 @@ def think_readings(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(harness_module.litellm, "acompletion", _dispatch)
 
     async def _medgen(mention: str) -> tuple[list[str], int]:
-        return ([_CROUP_CURIE], 1) if mention.strip().lower() == "croup" else ([], 0)
+        bound = _MEDGEN.get(mention.strip().lower(), [])
+        return list(bound), len(bound)
 
     monkeypatch.setattr(graph_module, "resolve_disease_mention_to_curies", _medgen)
+
+    async def _gene(symbol: str, *, taxon: str = "human") -> str | None:
+        return {"BRCA1": "NCBIGene:672", "CFTR": "NCBIGene:1080"}.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _gene)
+
+    async def _taxids(name: str, max_chars: int) -> tuple[str, ...] | None:
+        return _TAXA.get(name.strip().lower(), ())
+
+    monkeypatch.setattr(graph_module, "_organism_taxids", _taxids)
     return record
+
+
+def _second_reading_decisions(events: list[Any]) -> list[dict[str, Any]]:
+    done = _payload(events, "done") or {}
+    return [
+        dict(decision)
+        for decision in done.get("decisions") or []
+        if dict(decision).get("name") == graph_module._SECOND_READING_POINT
+    ]
+
+
+# The second reading is taken: the question answers.
 
 
 @pytest.mark.asyncio
@@ -281,10 +332,7 @@ async def test_an_unread_first_question_is_read_again_and_answered(
 ) -> None:
     """MUTATION PROOF: removing the card 145 block in `_think` asks this
     question back (think arm red) and makes one Think call (count arm red)."""
-    think_readings["script"] = [
-        _think_reply([]),
-        _think_reply([{"text": "croup", "entity_type": "disease"}]),
-    ]
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("croup")])]
     events = await _run(_OWN_SUBJECT_QUESTION)
     think = _payload(events, "think")
     assert think is not None
@@ -296,12 +344,59 @@ async def test_an_unread_first_question_is_read_again_and_answered(
 
 
 @pytest.mark.asyncio
+async def test_the_bronchiolitis_question_passes_word_for_word(
+    think_readings: dict[str, Any],
+) -> None:
+    """Card 145's own question: the second reading names "bronchiolitis",
+    written in the question as a whole word, so it is taken."""
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("Bronchiolitis")])]
+    events = await _run(_BRONCHIOLITIS_QUESTION)
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert {entity["curie"] for entity in think["resolved_entities"]} == set(
+        _MEDGEN["bronchiolitis"]
+    )
+    assert think_readings["calls"] == 2
+
+
+@pytest.mark.asyncio
+async def test_a_used_second_reading_is_recorded_in_the_done_decisions(
+    think_readings: dict[str, Any],
+) -> None:
+    """A-145-02: the answer's record says the question was read again and
+    what that reading resolved."""
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("croup")])]
+    events = await _run(_OWN_SUBJECT_QUESTION)
+    recorded = _second_reading_decisions(events)
+    assert len(recorded) == 1
+    assert recorded[0]["chosen"] == "resolved: croup"
+
+
+@pytest.mark.asyncio
+async def test_a_correctly_named_organism_is_handled_as_the_first_reading_would(
+    think_readings: dict[str, Any],
+) -> None:
+    """A-145-05: a second reading naming the organism of an SRA question runs
+    card 56's organism anchor, so the organism is the subject searched."""
+    think_readings["script"] = [
+        _think_reply(_EMPTY, record_type="sra"),
+        _think_reply([{"text": "SARS-CoV-2", "entity_type": "organism"}], record_type="sra"),
+    ]
+    events = await _run(_SRA_QUESTION)
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert [entity["curie"] for entity in think["resolved_entities"]] == ["NCBITaxon:2697049"]
+    assert think_readings["calls"] == 2
+
+
+# The second reading is not taken: the question is asked back as today.
+
+
+@pytest.mark.asyncio
 async def test_two_readings_that_find_nothing_still_ask_back(
     think_readings: dict[str, Any],
 ) -> None:
-    """The other direction: the second reading finds nothing either, so the
-    person is asked back exactly as before card 145."""
-    think_readings["script"] = [_think_reply([]), _think_reply([])]
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply(_EMPTY)]
     events = await _run(_OWN_SUBJECT_QUESTION)
     think = _payload(events, "think")
     assert think is not None
@@ -309,23 +404,237 @@ async def test_two_readings_that_find_nothing_still_ask_back(
     assert think["resolved_entities"] == []
     assert think_readings["calls"] == 2
     assert "tool_start" not in [event.type for event in events]
+    assert _second_reading_decisions(events) == []
 
 
 @pytest.mark.asyncio
 async def test_a_second_reading_naming_an_unknown_condition_still_asks_back(
     think_readings: dict[str, Any],
 ) -> None:
-    """A second reading that names a span NCBI does not confirm resolves
-    nothing, so it is not taken: the ask-back stands."""
-    think_readings["script"] = [
-        _think_reply([]),
-        _think_reply([{"text": "children", "entity_type": "disease"}]),
-    ]
+    """A span NCBI does not confirm resolves nothing, so it is not taken."""
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("children")])]
     events = await _run(_OWN_SUBJECT_QUESTION)
     think = _payload(events, "think")
     assert think is not None
     assert think["clarifying_question"] == graph_module.CLARIFICATION_QUESTION
     assert think_readings["calls"] == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("question", "entity"),
+    [
+        ("Is it dangerous?", _disease("cystic fibrosis")),
+        ("What variants cause it?", _disease("cystic fibrosis")),
+        ("Is it dangerous?", {"text": "CFTR", "entity_type": "gene"}),
+        ("What variants cause it?", {"text": "CFTR", "entity_type": "gene"}),
+    ],
+)
+async def test_a_subject_the_question_never_names_is_asked_back(
+    think_readings: dict[str, Any], question: str, entity: dict[str, str]
+) -> None:
+    """A-145-01, the adversary's inputs: a dangling first question whose
+    second reading invents a subject NCBI confirms is asked back, because
+    the subject is not written in the question."""
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([entity])]
+    events = await _run(question)
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == graph_module.CLARIFICATION_QUESTION
+    assert think["resolved_entities"] == []
+    assert think_readings["calls"] == 2
+
+
+@pytest.mark.asyncio
+async def test_an_invented_subject_never_reaches_session_memory(
+    think_readings: dict[str, Any],
+) -> None:
+    """A-145-06: the run writes memory from the plan event's resolved
+    entities and the citations (`core/run.py`, the memory write). An
+    invented second-reading subject leaves both empty, so nothing is
+    remembered for the next "it" to bind to."""
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("cystic fibrosis")])]
+    events = await _run("Is it dangerous?")
+    plan = _payload(events, "plan")
+    assert plan is not None and not plan.get("resolved_entities")
+    assert "citation" not in [event.type for event in events]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "second",
+    [
+        [_disease("SARS")],
+        [{"text": "SARS-CoV-2", "entity_type": "organism"}, _disease("SARS")],
+    ],
+    ids=["disease_piece", "organism_and_disease_piece"],
+)
+async def test_the_sra_question_never_binds_the_disease_cut_from_the_virus_name(
+    think_readings: dict[str, Any], second: list[dict[str, str]]
+) -> None:
+    """A-145-04, the adversary's input: "SARS" stands in the question only as
+    a piece of "SARS-CoV-2", so it is not written there word for word and
+    the reading that names it is not taken."""
+    think_readings["script"] = [
+        _think_reply(_EMPTY, record_type="sra"),
+        _think_reply(second, record_type="sra"),
+    ]
+    events = await _run(_SRA_QUESTION)
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == graph_module.CLARIFICATION_QUESTION
+    assert not set(_MEDGEN["sars"]) & {e["curie"] for e in think["resolved_entities"]}
+    assert think_readings["calls"] == 2
+
+
+def test_written_in_question_reads_whole_phrases_only() -> None:
+    written = graph_module._written_in_question
+    assert written("bronchiolitis", _BRONCHIOLITIS_QUESTION)
+    assert written("Bronchiolitis  in babies", _BRONCHIOLITIS_QUESTION)
+    assert written("SARS-CoV-2", _SRA_QUESTION)
+    assert not written("SARS", _SRA_QUESTION)
+    assert not written("CoV", _SRA_QUESTION)
+    assert not written("cystic fibrosis", "Is it dangerous?")
+    assert not written("it", "Is this itself dangerous?")
+    assert not written("", _SRA_QUESTION)
+
+
+# One test per trigger condition: each question below answers, or is asked
+# something other than the gene question, after one reading today, and each
+# would pay a second Think call if its condition were removed from the
+# trigger in `_think` (J-145-02, J-145-03).
+
+
+@pytest.mark.asyncio
+async def test_trigger_memory_a_session_with_memory_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    """Session memory that holds no entity: not a first turn."""
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("croup")])]
+    memory = SessionMemorySummary(
+        session_id="clarification-test", last_updated=datetime.now(UTC), resolved_entities=[]
+    )
+    await _run(_OWN_SUBJECT_QUESTION, memory=memory)
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_window_a_coordinate_window_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [_think_reply(_EMPTY)]
+    events = await _run("What genes lie in chr17:43044295-43125483 and what does it do?")
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == graph_module.coordinate_window.ASSEMBLY_QUESTION
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_accession_an_accession_makes_one_call(
+    think_readings: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def _not_held(record: Any) -> Any:
+        return graph_module._AccessionPlan(record=record, uid=None, linked={})
+
+    monkeypatch.setattr(graph_module, "resolve_accession", _not_held)
+    think_readings["script"] = [_think_reply(_EMPTY)]
+    events = await _run("What is BioSample SAMN99999999 and what does it contain?")
+    think = _payload(events, "think")
+    assert think is not None and "Check the accession" in (think["clarifying_question"] or "")
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_isolate_an_isolate_question_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [_think_reply(_EMPTY)]
+    events = await _run("Which E. coli isolates are in Pathogen Detection and where is it found?")
+    think = _payload(events, "think")
+    assert think is not None
+    assert "Escherichia coli" in (think["clarifying_question"] or "")
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_organism_a_named_organism_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [
+        _think_reply([{"text": "Mycobacterium tuberculosis", "entity_type": "organism"}])
+    ]
+    events = await _run("Is Mycobacterium tuberculosis dangerous, and how is it spread?")
+    think = _payload(events, "think")
+    assert think is not None
+    assert "Mycobacterium tuberculosis" in (think["clarifying_question"] or "")
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_exact_id_a_typed_identifier_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [_think_reply(_EMPTY)]
+    events = await _run("What is NCBIGene:672 and why is it studied?")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert [entity["curie"] for entity in think["resolved_entities"]] == ["NCBIGene:672"]
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_resolved_a_question_that_resolves_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    events = await _run("What does the BRCA1 gene do and why is it studied?")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert think["resolved_entities"], "populate-check: BRCA1 resolves in this stub"
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_resolved_a_plain_english_subject_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [_think_reply([_disease("croup")])]
+    events = await _run(_OWN_SUBJECT_QUESTION)
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_unresolved_a_rejected_gene_symbol_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [_think_reply([{"text": "BRCA9", "entity_type": "gene"}])]
+    events = await _run("What does BRCA9 do and why is it studied?")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_referring_word_a_question_without_one_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    think_readings["script"] = [_think_reply(_EMPTY)]
+    events = await _run("Tell me about breast cancer genes")
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert think_readings["calls"] == 1
+
+
+@pytest.mark.asyncio
+async def test_trigger_memory_a_remembered_subject_makes_one_call(
+    think_readings: dict[str, Any],
+) -> None:
+    events = await _run("What variants cause it?", memory=_memory_with_brca1())
+    think = _payload(events, "think")
+    assert think is not None and think["clarifying_question"] is None
+    assert think_readings["calls"] == 1
 
 
 @pytest.mark.asyncio
@@ -341,63 +650,77 @@ async def test_the_dangling_first_message_is_still_asked_back_after_two_readings
     assert think_readings["calls"] == 2
 
 
-@pytest.mark.asyncio
-async def test_a_question_that_resolves_makes_exactly_one_think_call(
-    think_readings: dict[str, Any],
-) -> None:
-    """No question that answers today pays for the second reading."""
-    events = await _run("What does the BRCA1 gene do and why is it studied?")
-    think = _payload(events, "think")
-    assert think is not None and think["clarifying_question"] is None
-    assert think["resolved_entities"], "populate-check: BRCA1 resolves in this stub"
-    assert think_readings["calls"] == 1
+# Time and failure: the second reading fails closed to the ask-back.
+
+
+async def _resolve_nothing(classification: Any) -> Any:
+    raise AssertionError("no classification should reach the resolver here")
+
+
+def test_the_second_reading_budget_is_four_seconds() -> None:
+    assert graph_module._SECOND_READING_BUDGET_S == 4.0
 
 
 @pytest.mark.asyncio
-async def test_a_plain_english_subject_that_resolves_first_time_makes_one_call(
-    think_readings: dict[str, Any],
-) -> None:
-    think_readings["script"] = [_think_reply([{"text": "croup", "entity_type": "disease"}])]
-    events = await _run(_OWN_SUBJECT_QUESTION)
-    think = _payload(events, "think")
-    assert think is not None and think["clarifying_question"] is None
-    assert think_readings["calls"] == 1
-
-
-@pytest.mark.asyncio
-async def test_a_remembered_subject_makes_exactly_one_think_call(
-    think_readings: dict[str, Any],
-) -> None:
-    """Memory answers the reference, so the ask-back never comes near and
-    neither does the second reading."""
-    events = await _run("What variants cause it?", memory=_memory_with_brca1())
-    think = _payload(events, "think")
-    assert think is not None and think["clarifying_question"] is None
-    assert think_readings["calls"] == 1
-
-
-@pytest.mark.asyncio
-async def test_the_second_reading_fails_closed_past_think_budget(
+async def test_a_very_long_think_deadline_still_caps_the_second_reading(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bounded by Think's own step deadline: none left reads nothing, and a
-    reading still running when it ends is dropped. Either way the caller
-    asks back as today."""
-    calls = {"n": 0}
+    """J-145-01: the budget is min(4 s, what is left of Think's deadline), so
+    an hour of Think budget does not lengthen it. The 4 s is shortened here
+    only so the test runs fast; its value is pinned by the test above."""
+    monkeypatch.setattr(graph_module, "_SECOND_READING_BUDGET_S", 0.2)
 
     async def _slow(*args: object, **kwargs: object) -> Any:
-        calls["n"] += 1
         await asyncio.sleep(5)
-        raise AssertionError("the deadline should have stopped this reading")
+        raise AssertionError("the budget should have stopped this reading")
 
     monkeypatch.setattr(graph_module, "_run_think_classification", _slow)
-    harness = harness_module.Harness("t-deadline")
-    spent = await graph_module._read_question_again(harness, "t", [], time.monotonic() - 1)
-    assert spent is None and calls["n"] == 0
     started = time.monotonic()
-    late = await graph_module._read_question_again(harness, "t", [], time.monotonic() + 0.05)
-    assert late is None and calls["n"] == 1
+    result = await graph_module._read_question_again(
+        harness_module.Harness("t-cap"), "t", [], time.monotonic() + 3600, "q", _resolve_nothing
+    )
+    assert result is None
     assert time.monotonic() - started < 1.0
+
+
+@pytest.mark.asyncio
+async def test_no_think_budget_left_reads_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"n": 0}
+
+    async def _count(*args: object, **kwargs: object) -> Any:
+        calls["n"] += 1
+        raise AssertionError("no budget left, so no reading")
+
+    monkeypatch.setattr(graph_module, "_run_think_classification", _count)
+    result = await graph_module._read_question_again(
+        harness_module.Harness("t-spent"), "t", [], time.monotonic() - 1, "q", _resolve_nothing
+    )
+    assert result is None and calls["n"] == 0
+
+
+@pytest.mark.asyncio
+async def test_the_caller_hands_the_second_reading_think_own_deadline(
+    think_readings: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """J-145-06: with Think's deadline half a second away, a slow second
+    reading is cut there and the question is asked back, well inside the
+    4 s budget. Passing any other deadline at the call site turns this red."""
+    real_deadline = graph_module._step_deadline
+
+    def _short_think(step: str, query_class: Any = "lookup") -> float:
+        if step == "think":
+            return time.monotonic() + 0.5
+        return real_deadline(step, query_class)
+
+    monkeypatch.setattr(graph_module, "_step_deadline", _short_think)
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("croup")])]
+    think_readings["slow_from"] = 2
+    started = time.monotonic()
+    events = await _run(_OWN_SUBJECT_QUESTION)
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == graph_module.CLARIFICATION_QUESTION
+    assert time.monotonic() - started < 3.0
 
 
 @pytest.mark.asyncio
@@ -414,6 +737,54 @@ async def test_the_second_reading_fails_closed_on_an_early_exit(
 
     monkeypatch.setattr(graph_module, "_run_think_classification", _exit)
     result = await graph_module._read_question_again(
-        harness_module.Harness("t-exit"), "t", [], time.monotonic() + 30
+        harness_module.Harness("t-exit"), "t", [], time.monotonic() + 30, "q", _resolve_nothing
     )
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_an_ncbi_error_in_the_second_confirmation_asks_back(
+    think_readings: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """J-145-04: a confirmation that raises on the second reading leaves the
+    question asked back, not a failed query."""
+    real_confirm = graph_module._confirm_extracted_entities
+    confirms = {"n": 0}
+
+    async def _second_raises(entities: Any) -> Any:
+        confirms["n"] += 1
+        if confirms["n"] == 2:
+            raise RuntimeError("stand-in NCBI failure")
+        return await real_confirm(entities)
+
+    monkeypatch.setattr(graph_module, "_confirm_extracted_entities", _second_raises)
+    think_readings["script"] = [_think_reply(_EMPTY), _think_reply([_disease("croup")])]
+    events = await _run(_OWN_SUBJECT_QUESTION)
+    types = [event.type for event in events]
+    assert confirms["n"] == 2, "populate-check: the second confirmation ran"
+    assert "error" not in types and "done" in types
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == graph_module.CLARIFICATION_QUESTION
+
+
+@pytest.mark.asyncio
+async def test_a_failed_second_reading_is_not_logged_as_a_failed_step(
+    think_readings: dict[str, Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    """J-145-05: two unusable replies on the second reading leave the run
+    asking back, and nothing logs that Think failed."""
+    think_readings["script"] = [_think_reply(_EMPTY), "not json", "not json"]
+    with caplog.at_level(logging.INFO):
+        events = await _run(_OWN_SUBJECT_QUESTION)
+    think = _payload(events, "think")
+    assert think is not None
+    assert think["clarifying_question"] == graph_module.CLARIFICATION_QUESTION
+    assert think_readings["calls"] == 3
+    assert not [r for r in caplog.records if "step failed" in r.getMessage()]
+    graph_warnings = [
+        r
+        for r in caplog.records
+        if r.name == graph_module.__name__ and r.levelno >= logging.WARNING
+    ]
+    assert graph_warnings == [], [r.getMessage() for r in graph_warnings]
