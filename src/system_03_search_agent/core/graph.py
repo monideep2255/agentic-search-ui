@@ -4557,6 +4557,40 @@ async def _think(
                 disclosures=tuple(fallback_disclosures),
             )
 
+    # Card 145 (2026-10-22): the question is about to be asked back
+    # `CLARIFICATION_QUESTION` because this reading found no subject, so it
+    # is read once more first (`_read_question_again`). The trigger is the
+    # exact set of conditions under which the ask-back below fires with
+    # that wording and no other: a first turn (no session memory), nothing
+    # resolved by any route, no gene symbol rejected, no organism named, no
+    # window, accession or isolate shape, and `_needs_clarification` true.
+    # A question that resolves anything, or that memory can answer, never
+    # reaches the second call, so no question that answers today pays for
+    # it. When the second reading resolves nothing, the turn goes on
+    # unchanged and asks back as before.
+    if (
+        _session_memory(state) is None
+        and window is None
+        and accession_plan is None
+        and isolate_question is None
+        and not organism_spans
+        and not exact_matches
+        and not model_resolution.curies
+        and not model_resolution.confirmed
+        and not model_resolution.unresolved_symbols
+        and _needs_clarification(query.text, state, [], [])
+    ):
+        second_reading = await _read_question_again(
+            harness, trace_id, think_messages, step_deadline
+        )
+        logger.info(
+            "first reading resolved nothing; second reading %s (trace %s)",
+            "resolved the question" if second_reading is not None else "found nothing",
+            trace_id,
+        )
+        if second_reading is not None:
+            classification, model_resolution = second_reading
+
     # F-4.7-A-04, the trust asymmetry filed alongside F-4.7-A-01. The
     # exact-ID pre-pass is a PATTERN MATCH over text the caller typed: it
     # proves the string is CURIE-shaped and nothing more. The model-
@@ -6644,6 +6678,70 @@ def _needs_clarification(
         return False
     tokens = {token.strip("?.,;:!\"'()") for token in text.lower().split()}
     return bool(tokens & _REFERRING_WORDS)
+
+
+async def _read_question_again(
+    harness: Harness,
+    trace_id: str,
+    think_messages: list[Message],
+    step_deadline: float,
+) -> tuple[_ThinkClassification, _EntityResolution] | None:
+    """Think's classification and live confirmation, run one more time.
+
+    Card 145 (2026-10-22), the owner's decision: "when the system is about
+    to ask a first question back because it read no subject, it reads the
+    question a second time and asks back only if that reading also finds
+    nothing; no question that answers today pays for it." Measured before
+    this change on the bronchiolitis question of card 145: the plan-tier
+    model returned no entity at all on 3 of 10 readings, and
+    `_needs_clarification` then read the sentence's own "it" as pointing
+    back at an earlier turn there was none of.
+
+    The model reads again and code verifies, exactly as on the first
+    reading: the same messages, the same `_run_think_classification` (its
+    own schema retry included), and the same `_confirm_extracted_entities`
+    against NCBI. No prompt change, no word list, and nothing read from the
+    question's words by this function.
+
+    Returns the second classification and its resolution only when that
+    reading resolved at least one CURIE. Anything else is None, and the
+    caller asks back exactly as it did before this change:
+
+    - a reading that resolves nothing, or names only a gene symbol NCBI
+      rejects (refusing on it would be a new answer shape, not the owner's
+      "asks back only if that reading also finds nothing");
+    - a cost-cap hit or step error on the second call: the question asked
+      back is today's outcome, so this fails closed to it rather than
+      turning a question into an error;
+    - a reading still running when Think's step budget runs out. The second
+      reading shares the first's per-step timeout, the deadline
+      `think_node` set, so it can never stretch Think past its budget.
+
+    The trigger lives with the caller and is deliberately narrow (`_think`,
+    "Card 145"); this function only reads. Card 56 can call it from its own
+    gate later without a second copy.
+    """
+    remaining = step_deadline - time.monotonic()
+    if remaining <= 0:
+        return None
+
+    async def _read() -> tuple[_ThinkClassification, _EntityResolution] | None:
+        outcome = await _run_think_classification(harness, trace_id, think_messages)
+        if isinstance(outcome, dict):
+            return None
+        resolution = await _confirm_extracted_entities(outcome.entities)
+        if not resolution.curies:
+            return None
+        return outcome, resolution
+
+    try:
+        return await asyncio.wait_for(_read(), timeout=remaining)
+    except TimeoutError:
+        logger.warning(
+            "second reading still running when Think's budget ran out (trace %s); asking back",
+            trace_id,
+        )
+        return None
 
 
 def _memory_suffix(state: GraphState, tier: Tier) -> str:

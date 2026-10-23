@@ -1,0 +1,4 @@
+{"run": 1, "question": "q1", "asked_back": false, "clarifying_question": null, "trust_outcome": "ask", "citations": 27, "first_token_s": 5.9, "done_s": 9.2, "think_calls": 1, "second_reading_fired": false, "cost_usd": 0.009443469}
+{"run": 2, "question": "q1", "asked_back": false, "clarifying_question": null, "trust_outcome": "ask", "citations": 29, "first_token_s": 4.1, "done_s": 6.8, "think_calls": 1, "second_reading_fired": false, "cost_usd": 0.009986577}
+{"run": 3, "question": "q1", "asked_back": false, "clarifying_question": null, "trust_outcome": "ask", "citations": 27, "first_token_s": 3.2, "done_s": 6.0, "think_calls": 1, "second_reading_fired": false, "cost_usd": 0.008486194000000002}
+{"spend_usd": 0.0303}

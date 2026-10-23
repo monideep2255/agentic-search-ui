@@ -1,0 +1,4 @@
+{"run": 1, "question": "brca1", "asked_back": false, "clarifying_question": null, "trust_outcome": "answer", "citations": 19, "first_token_s": 2.4, "done_s": 6.3, "think_calls": 1, "second_reading_fired": false, "cost_usd": 0.013856062}
+{"run": 2, "question": "brca1", "asked_back": false, "clarifying_question": null, "trust_outcome": "flag", "citations": 21, "first_token_s": 2.5, "done_s": 12.0, "think_calls": 1, "second_reading_fired": false, "cost_usd": 0.009284297999999998}
+{"run": 3, "question": "brca1", "asked_back": false, "clarifying_question": null, "trust_outcome": "answer", "citations": 19, "first_token_s": 5.1, "done_s": 9.0, "think_calls": 1, "second_reading_fired": false, "cost_usd": 0.011798386999999997}
+{"spend_usd": 0.0251}
