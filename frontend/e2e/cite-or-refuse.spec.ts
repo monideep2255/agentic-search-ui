@@ -249,15 +249,16 @@ test.describe("cite or refuse", () => {
     const notice = page.getByTestId("answer-refusal");
     await expect(notice).toBeVisible();
     await expect(notice).toContainText(REFUSE_MESSAGE);
-    await expect(notice).toContainText(FALLBACK_LINK);
+    await expect(notice).toContainText("Search NCBI for BRCA9");
 
     // R13, R14 and R44 (2026-09-12). The label a reader scans first, the
     // address as a real link rather than characters on a page, and no red
     // verdict beside either: a refusal is a first-class state, not an
-    // error. The two assertions above still hold unchanged, because the
-    // anchor's visible text IS the address.
+    // error. The anchor's visible text is plain words naming the search
+    // term (card 138), never the raw address; its href is still the NCBI
+    // search address, asserted below.
     await expect(notice).toContainText("No answer found in NCBI records");
-    const fallback = notice.getByRole("link", { name: FALLBACK_LINK });
+    const fallback = notice.getByRole("link", { name: "Search NCBI for BRCA9" });
     await expect(fallback).toHaveAttribute("href", FALLBACK_LINK);
     await expect(fallback).toHaveAttribute("rel", "noopener noreferrer");
     await expect(page.getByTestId("trust-risk")).toHaveCount(0);
@@ -289,13 +290,13 @@ test.describe("cite or refuse", () => {
     const notice = page.getByTestId("answer-refusal");
     await expect(notice).toBeVisible();
     await expect(notice).toContainText(UNRESOLVED_MESSAGE);
-    await expect(notice).toContainText(UNRESOLVED_LINK);
+    await expect(notice).toContainText("Search NCBI for NOTAGENE");
 
     // The two answer-level refusal shapes are not distinguishable on the
     // wire, so they share one label; the sentence above carries the
     // difference. The address is a link here too (R14).
     await expect(notice).toContainText("No answer found in NCBI records");
-    await expect(notice.getByRole("link", { name: UNRESOLVED_LINK })).toHaveAttribute(
+    await expect(notice.getByRole("link", { name: "Search NCBI for NOTAGENE" })).toHaveAttribute(
       "href",
       UNRESOLVED_LINK,
     );
