@@ -580,7 +580,7 @@ def test_12_9_a_plain_opening_with_no_subject_says_on_this_topic() -> None:
         papers, slots, "", None, lambda f: None, audience_depth="plain_language"
     ) == "I found 2 published papers on this topic [1][2]."
     assert answer_summary_sentence(papers, slots, "", None, lambda f: None) == (
-        "Found 2 pubmed records: Paper title 1 [1] and Paper title 2 [2]."
+        "Found 2 papers [1][2]."
     )
 
 
@@ -1406,3 +1406,45 @@ def test_gene_rows_without_an_organism_and_other_row_types_are_unchanged() -> No
         odd_fields = {"name": "tumor protein p53", "organism": odd}
         assert record_status_or_year("Gene", odd_fields) is None
         assert plain_record_label(_ortholog_finding(), odd_fields) == "tumor protein p53"
+
+
+def _count_finding(index: int, entity_type: str, value: str) -> SynthFinding:
+    return SynthFinding(
+        ref_index=index, citation_id=f"c-{index}", layer="layer_1_graph", tool="cypher_query",
+        field="name", field_value=value, source_url=f"https://example.org/{index}/",
+        entity_type=entity_type, name_resolved=True,
+    )
+
+
+def test_card_131_count_line_counts_papers_and_keeps_other_names() -> None:
+    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+
+    papers = [
+        _count_finding(1, "PubMed", "BRCA1: An Endocrine and Metabolic Regulator."),
+        _count_finding(2, "PubMed", "EXO1 protects BRCA1-deficient cells from lesions."),
+    ]
+    text = answer_summary_sentence(papers, {"c-1": 1, "c-2": 2}, "BRCA1", None, lambda _f: None)
+    assert text == "Found 2 papers for BRCA1 [1][2].", text
+
+    mixed = [
+        _count_finding(1, "Gene", "BRCA1"),
+        _count_finding(2, "Article", "A paper title."),
+        _count_finding(3, "Disease", "Breast cancer"),
+    ]
+    slots = {"c-1": 1, "c-2": 2, "c-3": 3}
+    text = answer_summary_sentence(mixed, slots, "BRCA1", None, lambda _f: None)
+    assert text == (
+        "Found 1 gene record, 1 paper and 1 disease record for BRCA1 [2]: BRCA1 [1] and Breast cancer [3]."
+    ), text
+    assert "A paper title" not in text
+    plain = answer_summary_sentence(mixed, slots, "BRCA1", None, lambda _f: None, audience_depth="plain_language")
+    assert plain.index("gene") < plain.index("paper") < plain.index("condition"), plain
+
+
+def test_card_131_a_type_already_ending_in_record_takes_no_second_record() -> None:
+    from system_03_search_agent.synthesis.answer_layout import answer_summary_sentence
+
+    rows = [_count_finding(1, "VariantRecord", "rs334"), _count_finding(2, "VariantRecord", "rs6025")]
+    text = answer_summary_sentence(rows, {"c-1": 1, "c-2": 2}, "rs334 and rs6025", None, lambda _f: None)
+    assert text == "Found 2 variant records for rs334 and rs6025: rs334 [1] and rs6025 [2].", text
+    assert "record records" not in text

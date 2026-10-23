@@ -911,7 +911,7 @@ async def test_a_picked_window_leaves_the_graph_s_undated_papers_out(
     assert "10026184" not in text and "10417300" not in text, text
     assert "38000001" in text, text
     assert "Found 2 article records" not in text and "of 3487" not in text, text
-    assert "Found 1 pubmed record" in text, text
+    assert "Found 1 paper and 1 gene record for BRCA1 [1]: " in text and "[1]: BRCA1 and a recent" not in text, text
     done = _payload(events, "done")
     assert done is not None and done["trust_outcome"] != "refuse", done
 
