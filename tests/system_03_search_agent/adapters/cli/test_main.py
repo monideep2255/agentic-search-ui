@@ -1283,8 +1283,9 @@ class _FakeRenderer:
     def handle(self, event: object) -> None:
         self.handled.append(event)
 
-    def finish(self) -> int:
+    def finish(self, *, interrupted: bool = False) -> int:
         self.finished = True
+        self.finished_interrupted = interrupted
         return self.finish_result
 
 
@@ -1727,6 +1728,185 @@ class TestAskCommand:
         assert "References:" in stdout_value
         assert "[1] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/VCV000123" in stdout_value
 
+    async def _run_scenario(
+        self,
+        main_module,
+        fake_modules,
+        *,
+        events: list[str],
+        after: str,
+        stop,
+        ctrl_c: bool = True,
+        stdout: object | None = None,
+    ):
+        """Drives `async_main` with the real Renderer. `events` are sent
+        first (`token`, `done`), then `after` is `hang` (stream stays open),
+        `end` (stream closes with no terminal event) or `finish` (stream
+        waits for the stop reply, then ends)."""
+        from system_03_search_agent.contracts.events import (
+            DonePayload,
+            Event,
+            TokenPayload,
+        )
+
+        fake_modules.render.Renderer = _RealRenderer
+        fake_modules.credentials.load = lambda: FakeCredentials(
+            base_url="http://test", access_token="a", refresh_token="r"
+        )
+        started = asyncio.Event()
+        stop_called = asyncio.Event()
+
+        def make(kind: str, seq: int) -> Event:
+            payload = (
+                TokenPayload(text="Partial text. ", marker_ids=[])
+                if kind == "token"
+                else DonePayload(
+                    total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="answer"
+                )
+            )
+            return Event(
+                type=kind, version="v1", trace_id="t", seq=seq, ts=datetime.now(UTC),
+                payload=payload.model_dump(),
+            )
+
+        class FakeCliClient:
+            def __init__(self, http: object, c: FakeCredentials) -> None:
+                pass
+
+            async def create_run(self, text, session_id, audience_depth):
+                return "run-1", "persona"
+
+            def stream_events(self, run_id: str, *, last_event_id: str | None = None):
+                async def _gen():
+                    for seq, kind in enumerate(events):
+                        yield make(kind, seq)
+                    started.set()
+                    if after == "hang":
+                        await asyncio.sleep(3600)
+                    elif after == "finish":
+                        await stop_called.wait()
+                        yield make("done", 9)
+
+                return _gen()
+
+            async def stop(self, run_id: str) -> bool:
+                stop_called.set()
+                return await stop()
+
+        fake_modules.client.CliClient = FakeCliClient
+        out, err = stdout if stdout is not None else io.StringIO(), io.StringIO()
+        interrupt_signals: asyncio.Queue[None] = asyncio.Queue()
+        task = asyncio.create_task(
+            main_module.async_main(
+                ["ask", "hi", "--session-id", "s1"],
+                stdin=io.StringIO(""), stdout=out, stderr=err,
+                http_client=object(), interrupt_signals=interrupt_signals,
+            )
+        )
+        await asyncio.wait_for(started.wait(), 5)
+        if ctrl_c:
+            interrupt_signals.put_nowait(None)
+        code = await asyncio.wait_for(task, 5)
+        return code, out, err
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("events", [["token"], []])
+    async def test_ctrl_c_says_stopped_at_your_request_and_prints_no_error(
+        self, main_module, fake_modules, events
+    ) -> None:
+        """Card 142: Ctrl-C is the person's own stop, so stderr carries one
+        plain stop line that says the answer is incomplete, and no "error",
+        with or without an event first (a Ctrl-C before any event)."""
+
+        async def stop() -> bool:
+            return True
+
+        code, out, err = await self._run_scenario(
+            main_module, fake_modules, events=events, after="hang", stop=stop
+        )
+        assert code == 130
+        assert err.getvalue() == (
+            "s3: the run was stopped at your request; the answer above is incomplete.\n"
+        )
+        if events:
+            assert "Partial text." in out.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_ctrl_c_on_a_run_that_already_finished_shows_it_as_completed(
+        self, main_module, fake_modules
+    ) -> None:
+        """A-142-01: the server says `stopped: false`, so the finished
+        answer prints as a normal run: no stop line, exit 0."""
+
+        async def stop() -> bool:
+            return False
+
+        code, out, err = await self._run_scenario(
+            main_module, fake_modules, events=["token"], after="finish", stop=stop
+        )
+        assert code == 0
+        assert err.getvalue() == ""
+        assert "Partial text." in out.getvalue()
+        assert "did not finish" not in out.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_ctrl_c_when_the_stop_call_fails_does_not_claim_a_stop(
+        self, main_module, fake_modules
+    ) -> None:
+        async def stop() -> bool:
+            raise RuntimeError("down")
+
+        code, _out, err = await self._run_scenario(
+            main_module, fake_modules, events=["token"], after="hang", stop=stop
+        )
+        assert code == 130
+        assert "did not confirm the stop" in err.getvalue()
+        assert "was stopped at your request" not in err.getvalue()
+        assert "error" not in err.getvalue().lower()
+
+    @pytest.mark.asyncio
+    async def test_a_dropped_connection_without_ctrl_c_still_prints_the_early_end_error(
+        self, main_module, fake_modules
+    ) -> None:
+        """J-142-05: the early-end error must survive through `_run_ask`
+        when nobody pressed Ctrl-C."""
+
+        async def stop() -> bool:  # pragma: no cover - never called
+            return True
+
+        code, _out, err = await self._run_scenario(
+            main_module, fake_modules, events=["token"], after="end", stop=stop, ctrl_c=False
+        )
+        assert code == 1
+        assert "ended before a final answer" in err.getvalue()
+        assert "stopped at your request" not in err.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_ctrl_c_into_a_closed_pipe_exits_130_without_an_error(
+        self, main_module, fake_modules
+    ) -> None:
+        """A-142-04: `| tee` or `| head` dies with the Ctrl-C, so writes
+        raise BrokenPipeError. No traceback, no "unexpected error", 130."""
+
+        class ClosedPipe(io.StringIO):
+            def write(self, text: str) -> int:
+                # The reader dies with the Ctrl-C: the answer text got out
+                # first, then the unfinished notice finds a dead pipe.
+                if "did not finish" in text:
+                    raise BrokenPipeError(32, "Broken pipe")
+                return super().write(text)
+
+        async def stop() -> bool:
+            return True
+
+        code, _out, err = await self._run_scenario(
+            main_module, fake_modules, events=["token"], after="hang", stop=stop,
+            stdout=ClosedPipe(),
+        )
+        assert code == 130
+        assert "unexpected error" not in err.getvalue()
+        assert "BrokenPipe" not in err.getvalue()
+
     @pytest.mark.asyncio
     async def test_ctrl_c_json_names_the_persons_stop_not_a_connection_fault(
         self, main_module, fake_modules
@@ -1776,7 +1956,7 @@ class TestAskCommand:
         assert document["error"]["error_class"] == "interrupted"
         assert "stopped" in document["error"]["message"]
         assert "connection" not in document["error"]["message"]
-        assert "interrupted" in err.getvalue()
+        assert "stopped" in err.getvalue()
 
     @pytest.mark.asyncio
     async def test_second_ctrl_c_during_a_slow_stop_returns_without_waiting_for_it(

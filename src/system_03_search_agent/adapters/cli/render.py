@@ -1196,7 +1196,10 @@ class Renderer:
     # Exit
     # ------------------------------------------------------------------
 
-    def finish(self) -> int:
+    def finish(self, *, interrupted: bool = False) -> int:
+        """`interrupted` is True when the person pressed Ctrl-C: the run
+        ended because they asked it to, so no "error:" line is written.
+        Records that arrived before the stop are still shown."""
         self._flush_held_listing()
         # A run that never reached a terminal `done`, a terminal fatal
         # `error`, or a guard rejection is not a run that finished
@@ -1220,12 +1223,13 @@ class Renderer:
             # renderer, and never claims a trust outcome this renderer
             # was never told.
             self._exit_code = _EXIT_FAILURE
-            self._err.write(
-                "error: the run ended before a final answer was received; "
-                "any answer text above is incomplete and its citations may "
-                "be partial.\n"
-            )
-            self._err.flush()
+            if not interrupted:
+                self._err.write(
+                    "error: the run ended before a final answer was received; "
+                    "any answer text above is incomplete and its citations may "
+                    "be partial.\n"
+                )
+                self._err.flush()
 
         # F-4.2-D-01 (round 4): this call used to sit ONLY inside the `if`
         # branch above, so it only ever ran on the undetermined-state
@@ -1420,7 +1424,8 @@ class JsonRenderer:
             refused = payload.trust_outcome == "refuse" and not asked_back
             self._exit_code = _EXIT_FAILURE if refused else _EXIT_OK
 
-    def finish(self) -> int:
+    def finish(self, *, interrupted: bool = False) -> int:
+        del interrupted  # the interrupted failure is already recorded by main
         complete = self._exit_code is not None
         if self._exit_code is None:
             if self._error is None:
