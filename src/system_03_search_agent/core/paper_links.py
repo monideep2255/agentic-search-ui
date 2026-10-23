@@ -163,8 +163,13 @@ def count_note(pmid: str, target: str, total: int, shown: int) -> str | None:
     summarised. It used to default to `MAX_LINKED_PER_DB`, so the note said
     "this answer shows 10" over the five rows the write step keeps per kind,
     and said nothing at all when NCBI listed six to ten.
+
+    None when the answer shows no record of the kind (J-139-02, A-139-01): a
+    zero would read as the product choosing to show none, when the kind's
+    summary call failed or no row of it survived, and a failed call has its
+    own note.
     """
-    if total <= shown:
+    if shown == 0 or total <= shown:
         return None
     return (
         f"NCBI lists {total} {noun(target, total)} linked to PMID {pmid}; "

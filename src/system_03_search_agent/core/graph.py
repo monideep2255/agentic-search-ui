@@ -10673,7 +10673,10 @@ def _build_repair_cap_note(omission_remains: bool = True) -> str:
         "because the query reached its cost limit"
     )
     if omission_remains:
-        return base + ", so the omission described above was not repaired"
+        # Card 139 (J-139-01): this clause said "the omission described
+        # above", but the web screen hides the incomplete-answer note that
+        # describes it, so it now names what was not done and points nowhere.
+        return base + ", so it could not add the records it found the answer left out"
     # Card 139: the notes follow the listing on every surface (`_AnswerParts`:
     # summary, listing, notes), so a note never points "below" at it.
     return base + ", and the records it would have added are listed in this answer as found"

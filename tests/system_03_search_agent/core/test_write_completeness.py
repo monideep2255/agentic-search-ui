@@ -751,7 +751,10 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     assert "disease name number 1" in narrative, (
         "the grounded answer already in hand must survive the cap"
     )
-    assert "was not repaired" in narrative, narrative
+    assert "could not add the records it found the answer left out" in narrative, narrative
+    # Card 139 (J-139-01): the screen hides the note this one used to call
+    # "described above", so it points at no other note.
+    assert "above" not in graph_module._build_repair_cap_note(omission_remains=True)
     done = next(event for event in events if event.type == "done")
     assert done.payload["trust_outcome"] == "ask", done.payload
 
@@ -771,7 +774,7 @@ async def test_a_cost_cap_hit_during_the_repair_is_disclosed(
     assert "cost limit" in narrative and "listed in this answer as found" in narrative, narrative
     # Card 139: the notes follow the listing, so no note says "below".
     assert "below" not in graph_module._build_repair_cap_note(omission_remains=False)
-    assert "was not repaired" not in narrative, narrative
+    assert "could not add the records" not in narrative, narrative
     assert len([e for e in events if e.type == "citation"]) == len(_ROWS)
 
 

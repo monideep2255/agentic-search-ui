@@ -324,8 +324,13 @@ def _link_and_summary_state(target: str, linked: int, total: int | None, summari
 
 def _cited(state: dict[str, Any], target: str, count: int) -> list[SimpleNamespace]:
     """`count` citations of the kind's summarised records, one with a trailing slash."""
-    summary_out = list(state["layer2_raw_outputs"].values())[1]
-    urls = [record.source_url for record in summary_out.records][:count]
+    urls = [
+        record.source_url
+        for out in state["layer2_raw_outputs"].values()
+        if out.action == "summary"
+        for record in out.records
+        if record.db == target
+    ][:count]
     return [SimpleNamespace(source_url=url + ("/" if n == 0 else "")) for n, url in enumerate(urls)]
 
 
@@ -341,6 +346,58 @@ def test_more_linked_records_than_are_shown_says_how_many_NCBI_lists() -> None:
     assert graph_module._paper_link_notes(state, _cited(state, "nuccore", 5) + other) == [
         "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 5."
     ]
+
+
+def _two_kinds_state() -> dict[str, Any]:
+    """Query 104's real shape: sequence records and genome assemblies together."""
+    nuccore = _link_and_summary_state("nuccore", linked=20, total=1533, summarised=10)
+    assembly = _link_and_summary_state("assembly", linked=8, total=None, summarised=8)
+    return {
+        "paper_link_plan": graph_module._PaperLinkPlan(pmid="11237011", targets=("nuccore", "assembly")),
+        "tool_calls": [*nuccore["tool_calls"], *assembly["tool_calls"]],
+        "layer2_raw_outputs": {**nuccore["layer2_raw_outputs"], **assembly["layer2_raw_outputs"]},
+    }
+
+
+def test_two_kinds_cited_together_are_counted_apart() -> None:
+    """J-139-03: one kind's citations never raise another kind's number."""
+    state = _two_kinds_state()
+    cited = _cited(state, "nuccore", 5) + _cited(state, "assembly", 3)
+    assert graph_module._paper_link_notes(state, cited) == [
+        "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 5.",
+        "NCBI lists 8 genome assemblies linked to PMID 11237011; this answer shows 3.",
+    ]
+
+
+def test_two_citations_of_one_page_count_as_one_record_shown() -> None:
+    """A-139-02: the number is distinct pages, not citations, so a record
+    cited twice (two ids, one with a trailing slash) counts once."""
+    state = _link_and_summary_state("nuccore", linked=20, total=1533, summarised=10)
+    cited = _cited(state, "nuccore", 4)
+    first = cited[1].source_url
+    cited += [SimpleNamespace(source_url=first), SimpleNamespace(source_url=first + "/")]
+    assert len(cited) == 6
+    assert graph_module._paper_link_notes(state, cited) == [
+        "NCBI lists 1533 sequence records linked to PMID 11237011; this answer shows 4."
+    ]
+
+
+def test_a_kind_the_answer_shows_none_of_gets_no_count() -> None:
+    """J-139-02 and A-139-01: never "this answer shows 0". A kind with no
+    cited record, or whose summary call failed, gets no count note."""
+    state = _two_kinds_state()
+    assert graph_module._paper_link_notes(state, _cited(state, "assembly", 3)) == [
+        "NCBI lists 8 genome assemblies linked to PMID 11237011; this answer shows 3."
+    ]
+    failed = NcbiEfetchOutput(status="error", action="summary", records=[], record_count=0, truncated=False, error="x")
+    summary_id = state["tool_calls"][1].tool_call.call_id
+    state["layer2_raw_outputs"][summary_id] = failed
+    cited = _cited(state, "assembly", 3)
+    assert graph_module._paper_link_notes(state, cited) == [
+        "NCBI lists 8 genome assemblies linked to PMID 11237011; this answer shows 3."
+    ]
+    assert all("shows 0" not in note for note in graph_module._paper_link_notes(state, []))
+    assert paper_links.count_note("11237011", "nuccore", 1533, 0) is None
 
 
 def test_six_to_ten_linked_records_with_fewer_shown_still_get_the_count() -> None:
