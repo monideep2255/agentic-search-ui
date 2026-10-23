@@ -3333,7 +3333,13 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
        renotubular syndrome with MODY, in that order, 8 of the index's 8.
        The umbrella concept C0342276 lists "MODY" as a synonym too but is
        outside the first 20 index hits, so it is not bound; the answer
-       names the records that were, cited to MedGen.
+       names the records that were, cited to MedGen. Before both tiers,
+       the record's own MedGen type ranks it (card 129): when any matched
+       record is disease-typed (`_MEDGEN_DISEASE_SEMANTIC_TYPES`), only
+       those bind, so "breast cancer" binds C0006142 "Malignant tumor of
+       breast" and never the Finding "Seen by breast cancer nurse"; a
+       Finding or Sign or Symptom record binds only when no disease
+       record matched.
     3. A placeholder title (`disease_names.PLACEHOLDER_CONDITION_TITLES`)
        is never bound.
 
@@ -3400,6 +3406,7 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
         if str(uid).strip().isdigit()
     ][:_DISEASE_SEARCH_RETMAX]
     titles: list[tuple[str, str]] = []
+    disease_typed: set[str] = set()
     if uids:
         try:
             summarised = await summary(
@@ -3420,6 +3427,10 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
                 and not is_placeholder_condition_title(title)
             ):
                 titles.append((concept_id, title.strip()))
+                if _is_medgen_disease_record(
+                    {"fields": _unwrap_medgen_fields(dict(record.fields))}
+                ):
+                    disease_typed.add(concept_id)
 
     matched = len({cid for cid, _ in titles})
     exact = sorted({cid for cid, title in titles if title.casefold() == key})
@@ -3430,8 +3441,21 @@ async def resolve_disease_mention_to_curies(mention: str) -> tuple[list[str], in
         phrase = re.compile(
             r"(?<![A-Za-z0-9])" + r"[\s-]+".join(words) + r"(?![A-Za-z0-9])", re.IGNORECASE
         )
-        in_title = sorted({cid for cid, title in titles if phrase.search(title)})
-        by_name = sorted({cid for cid, _ in titles} - set(in_title))
+        # Card 129 (2026-10-22): MedGen's own record type ranks the
+        # candidates before concept id. When any matched record is
+        # disease-typed, only disease-typed records bind; a "Finding" such
+        # as "Seen by breast cancer nurse" (C1320450) binds only when no
+        # disease record matched, so a phenotype MedGen types as a Finding
+        # ("Tall stature") stays bindable, and so does an exact title of
+        # any type, above. Measured live the same day: "breast cancer"
+        # matched 20 records, 6 disease-typed (C0006142 "Malignant tumor
+        # of breast" among them) and 14 Findings, 8 of which filled the
+        # cap before this rule.
+        candidates = titles
+        if disease_typed:
+            candidates = [(cid, title) for cid, title in titles if cid in disease_typed]
+        in_title = sorted({cid for cid, title in candidates if phrase.search(title)})
+        by_name = sorted({cid for cid, _ in candidates} - set(in_title))
         curies = [
             f"MedGen:{cid}" for cid in (in_title + by_name)[:_MAX_DISEASE_CURIES_PER_MENTION]
         ]
