@@ -142,9 +142,10 @@ describe("a refusal reads as a calm labelled block, never as an error", () => {
     expect(block).toHaveTextContent("No answer found in NCBI records");
     expect(block).toHaveTextContent(/I could not find grounded evidence for this/);
 
-    // The visible text of the anchor is the address itself, so a reader can
-    // see where it goes before following it.
-    const link = screen.getByRole("link", { name: FALLBACK_LINK });
+    // The visible text is plain words naming the term, never the raw address;
+    // the href still points at the NCBI search for that term.
+    const link = screen.getByRole("link", { name: "Search NCBI for BRCA9" });
+    expect(link.textContent).not.toMatch(/https?:\/\//);
     expect(link).toHaveAttribute("href", FALLBACK_LINK);
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");

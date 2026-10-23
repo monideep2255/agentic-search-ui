@@ -1073,6 +1073,20 @@ export { isLinkableCitationUrl };
  * still shown, as text, because hiding it would lose the one thing the
  * refusal was trying to hand the reader.
  */
+/**
+ * The words a refusal's search link shows, in place of the raw address.
+ * "Search NCBI for GERD" when the address carries a `term`, else
+ * "Search NCBI". The href is never changed, only the text a reader sees.
+ */
+export function refusalLinkText(raw: string): string {
+  try {
+    const term = (new URL(raw).searchParams.get("term") ?? "").trim();
+    return term ? `Search NCBI for ${term}` : "Search NCBI";
+  } catch {
+    return "Search NCBI";
+  }
+}
+
 export function isLinkableRefusalLink(raw: string): boolean {
   try {
     const parsed = new URL(raw);
@@ -1166,7 +1180,7 @@ function RefusalBlock({
               rel="noopener noreferrer"
               sx={{ color: designTokens.link }}
             >
-              {link}
+              {refusalLinkText(link)}
             </Box>
           ) : (
             /*
