@@ -1573,7 +1573,8 @@ _TITLES = {_MODY: "Maturity-onset diabetes of the young", _NOT_PROVIDED: "not pr
 def _direct_tokens(depth: str, records: list[dict], condition_names=None):
     """Straight through the table builder: one graph call per record, each
     its own citation. A record is `{cid, n, type, curie, url, fields,
-    field, value}`; its sentence is `"<value> [n]."`."""
+    field, value}`; its sentence is `"<value> [n]."`. A live record also
+    sets `tool`, `layer`, `source` and `source_id` (the graph's by default)."""
     from system_03_search_agent.contracts.events import CitationPayload
     from system_03_search_agent.harness.coordinator_worker import Finding
     from system_03_search_agent.synthesis.findings import SynthFinding
@@ -1581,8 +1582,8 @@ def _direct_tokens(depth: str, records: list[dict], condition_names=None):
     findings = [
         Finding(
             call_id=r["cid"],
-            tool="cypher_query",
-            layer="layer_1_graph",
+            tool=r.get("tool", "cypher_query"),
+            layer=r.get("layer", "layer_1_graph"),
             source="structured_pass_through",
             structured_fields={
                 "status": "ok",
@@ -1610,8 +1611,8 @@ def _direct_tokens(depth: str, records: list[dict], condition_names=None):
         SynthFinding(
             ref_index=r["n"],
             citation_id=r["cid"],
-            layer="layer_1_graph",
-            tool="cypher_query",
+            layer=r.get("layer", "layer_1_graph"),
+            tool=r.get("tool", "cypher_query"),
             field=r["field"],
             field_value=r["value"],
             source_url=r["url"],
@@ -1625,10 +1626,10 @@ def _direct_tokens(depth: str, records: list[dict], condition_names=None):
         CitationPayload(
             citation_id=r["cid"],
             display_index=r["n"],
-            source="graph",
-            source_id=r["curie"] or "unknown",
+            source=r.get("source", "graph"),
+            source_id=r.get("source_id", r["curie"] or "unknown"),
             source_url=r["url"],
-            layer="layer_1_graph",
+            layer=r.get("layer", "layer_1_graph"),
             field=r["field"],
             claim_text="claim",
             evidence_kind="database_record",
@@ -2083,6 +2084,221 @@ def test_a_derived_row_and_its_twin_never_merge_on_different_names() -> None:
     ]
     rows = _rows_of(_direct_tokens("plain_language", records), "list_item")
     assert [t.marker_ids for t in rows] == [["d-1"], ["d-2"]]
+
+
+# ---------------------------------------------------------------------------
+# Card 133 fix round (2026-10-22): J-133-01 to J-133-04 and A-133-01.
+# ---------------------------------------------------------------------------
+
+
+def _listed(tokens) -> list:
+    return [t for t in tokens if t.kind in ("table_row", "list_item")]
+
+
+def _gene_record(cid: str, n: int, name: str, **extra) -> dict:
+    """A graph Gene record of BRCA1's page and CURIE."""
+    record = {
+        "cid": cid,
+        "n": n,
+        "type": "Gene",
+        "curie": "NCBIGene:672",
+        "url": "https://www.ncbi.nlm.nih.gov/gene/672",
+        "fields": {"name": name},
+        "field": "name",
+        "value": name,
+    }
+    record.update(extra)
+    return record
+
+
+def _live_gene(cid: str, n: int, symbol: str, gene_id: str, url: str, fields=None) -> dict:
+    """A live NCBI Gene record as `ncbi_efetch` leaves it: no CURIE, the id
+    only on its citation."""
+    return {
+        "cid": cid,
+        "n": n,
+        "type": "gene",
+        "curie": "",
+        "url": url,
+        "fields": fields if fields is not None else {"symbol": symbol},
+        "field": "symbol",
+        "value": symbol,
+        "tool": "ncbi_efetch",
+        "layer": "layer_2_api",
+        "source": "gene",
+        "source_id": gene_id,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+async def test_a_merged_name_a_cell_cannot_hold_keeps_two_rows(monkeypatch, depth: str) -> None:
+    """J-133-03: two names of one record, about 300 characters each. Their
+    merged name would pass the 500 characters a cell holds, so the rows
+    stay two, as on develop, and the answer is still built on the web path.
+    Red before the fix round: `ValidationError` in `_with_placement`."""
+    from system_03_search_agent.contracts.events import TokenPayload
+
+    long_a = "alpha gene name " + "word " * 60
+    long_b = "beta gene name " + "term " * 60
+    rows = [
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672", long_a.strip()),
+        _gene_row("https://www.ncbi.nlm.nih.gov/gene/672/", long_b.strip()),
+    ]
+    tokens = _tokens(await _gene_answer(monkeypatch, depth, rows))
+    listed = [t for t in tokens if t["kind"] in ("table_row", "list_item")]
+    assert len(listed) == 2, [t["cells"] for t in listed]
+    for token in tokens:
+        TokenPayload.model_validate(token)
+    # The same two rows straight through the builder: each cell valid.
+    direct = _listed(
+        _direct_tokens(
+            depth,
+            [_gene_record("g-1", 1, long_a.strip()), _gene_record("g-2", 2, long_b.strip())],
+        )
+    )
+    assert [t.marker_ids for t in direct] == [["g-1"], ["g-2"]]
+    assert all(len(cell) <= 500 for t in direct for cell in t.cells)
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+def test_one_row_shows_at_most_four_names(depth: str) -> None:
+    """J-133-04: five names of one record. The first four share a row, each
+    in its own brackets; the fifth is a row of its own, never dropped.
+    Mutation: drop the four-name cap and the fifth joins the row."""
+    names = ["first", "second", "third", "fourth", "fifth"]
+    rows = _listed(
+        _direct_tokens(depth, [_gene_record(f"g-{i}", i, n) for i, n in enumerate(names, 1)])
+    )
+    assert [t.cells[0] for t in rows] == ["first (second) (third) (fourth)", "fifth"]
+    assert [t.marker_ids for t in rows] == [["g-1", "g-2", "g-3", "g-4"], ["g-5"]]
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+def test_two_genes_sharing_a_page_and_a_taxid_stay_two_rows(depth: str) -> None:
+    """J-133-01: two different genes on one page whose identifier cell is
+    the organism's (`taxid`), never their own. Two rows, whether they are
+    live records or graph records. Red before the fix round: one row
+    "Trp53 (Trp53bp1)" under the mouse taxon."""
+    page = "https://www.ncbi.nlm.nih.gov/gene/7157"
+    live = [
+        _live_gene("o-1", 1, "Trp53", "22059", page + "/", {"symbol": "Trp53", "taxid": 10090}),
+        _live_gene(
+            "o-2", 2, "Trp53bp1", "27223", page + "/", {"symbol": "Trp53bp1", "taxid": 10090}
+        ),
+    ]
+    graph = [
+        {
+            **_gene_record(cid, n, name),
+            "curie": curie,
+            "url": page,
+            "fields": {"name": name, "taxid": 10090},
+        }
+        for cid, n, name, curie in (
+            ("o-1", 1, "Trp53", "NCBIGene:22059"),
+            ("o-2", 2, "Trp53bp1", "NCBIGene:27223"),
+        )
+    ]
+    for records in (live, graph):
+        rows = _listed(_direct_tokens(depth, records))
+        assert [t.marker_ids for t in rows] == [["o-1"], ["o-2"]], [t.cells for t in rows]
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+def test_two_live_rows_on_a_shared_citation_id_stay_two_rows(depth: str) -> None:
+    """J-133-01: two live sequence records whose citations carry one shared
+    id, in a database the graph does not hold. The id is not each record's
+    own, so different titles stay two rows."""
+    page = "https://www.ncbi.nlm.nih.gov/gene/672/"
+    records = [
+        {
+            **_live_gene(f"n-{n}", n, title, "568815597", page, {"title": title}),
+            "type": "nuccore",
+            "source": "nuccore",
+            "field": "title",
+        }
+        for n, title in ((1, "isoform X1 mRNA"), (2, "isoform X2 mRNA"))
+    ]
+    rows = _listed(_direct_tokens(depth, records))
+    assert [t.marker_ids for t in rows] == [["n-1"], ["n-2"]], [t.cells for t in rows]
+
+
+def _condition_edge(cid: str, n: int, name: str, end_id) -> dict:
+    """A `has_phenotype` edge on a ClinVar variant's page, carrying the
+    variant's CURIE and no borrow flag (an edge with an `id` of its own)."""
+    fields = {"name": name}
+    if end_id is not None:
+        fields.update({"_edge_start_id": 1001, "_edge_end_id": end_id})
+    return {
+        "cid": cid,
+        "n": n,
+        "type": "has_phenotype",
+        "curie": "ClinVar:17661",
+        "url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/17661/",
+        "fields": fields,
+        "field": "name",
+        "value": name,
+    }
+
+
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+def test_two_condition_edges_on_one_clinvar_page_stay_two_rows(depth: str) -> None:
+    """J-133-02: two condition edges of one variant, both unflagged on the
+    variant's CURIE. They join the variant to two different conditions, so
+    they are two rows, and so are two edges whose ends are not known. The
+    same edge reached twice (same two ends) is still one row. Red before
+    the fix round: one row naming both conditions."""
+    first, second = "Breast-ovarian cancer, familial 1", "Hereditary cancer-predisposing syndrome"
+    for ends in ((2001, 2002), (None, None)):
+        rows = _listed(
+            _direct_tokens(
+                depth,
+                [
+                    _condition_edge("e-1", 1, first, ends[0]),
+                    _condition_edge("e-2", 2, second, ends[1]),
+                ],
+            )
+        )
+        assert [t.marker_ids for t in rows] == [["e-1"], ["e-2"]], [t.cells for t in rows]
+    same = _listed(
+        _direct_tokens(
+            depth,
+            [_condition_edge("e-1", 1, first, 2001), _condition_edge("e-2", 2, "HBOC", 2001)],
+        )
+    )
+    assert [t.marker_ids for t in same] == [["e-1", "e-2"]], [t.cells for t in same]
+
+
+def test_a_merged_plain_language_gene_name_never_nests_brackets() -> None:
+    """A-133-01: the graph's gene row reads "tumor protein p53 (Homo
+    sapiens)" in Plain language, the live row "TP53". Whichever comes first,
+    the merged row is "tumor protein p53 (Homo sapiens) (TP53)", one bracket
+    per name and none inside another. Red before the fix round: "TP53
+    (tumor protein p53 (Homo sapiens))" with the live row first."""
+    page = "https://www.ncbi.nlm.nih.gov/gene/7157"
+    graph_row = {
+        **_gene_record("cq-1", 1, "tumor protein p53"),
+        "curie": "NCBIGene:7157",
+        "url": page,
+        "fields": {"name": "tumor protein p53", "organism": "Homo sapiens"},
+    }
+    live_row = _live_gene("ne-2", 2, "TP53", "7157", page + "/")
+    for records in ([graph_row, live_row], [{**live_row, "n": 1}, {**graph_row, "n": 2}]):
+        rows = _listed(_direct_tokens("plain_language", records))
+        assert [t.cells for t in rows] == [["tumor protein p53 (Homo sapiens) (TP53)"]], rows
+        assert sorted(rows[0].marker_ids) == ["cq-1", "ne-2"]
+
+
+def test_two_names_that_both_carry_brackets_stay_two_rows() -> None:
+    """A-133-01: when both names carry brackets, any merged name would nest
+    one bracket in another, so the rows stay apart."""
+    rows = _listed(
+        _direct_tokens(
+            "plain_language",
+            [_gene_record("g-1", 1, "BRCA1 (human)"), _gene_record("g-2", 2, "BRCA1 (DNA repair)")],
+        )
+    )
+    assert [t.marker_ids for t in rows] == [["g-1"], ["g-2"]]
 
 
 def test_a_group_of_only_placeholder_rows_gets_no_disease_column() -> None:

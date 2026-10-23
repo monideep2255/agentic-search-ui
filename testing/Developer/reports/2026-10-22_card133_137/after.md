@@ -12,6 +12,7 @@ In short: the gene listed twice is gone in both depths, and on query 24 and `Wha
 - [Query 116 is a different count](#query-116-is-a-different-count)
 - [Speed](#speed)
 - [Spend](#spend)
+- [Fix round](#fix-round)
 
 ## What changed for the reader
 
@@ -74,3 +75,17 @@ The opening lines, the same on every run of a question:
 | Cap | 0.60 |
 
 The usage figure is the whole account's, so it would include any other run on the same account at the same time.
+
+## Fix round
+
+After the judge and adversary round (`judge.md`, `adversary.md`), on develop merged in:
+
+| Finding | Change |
+|---|---|
+| J-133-03 | A merged name longer than a table cell holds (500 characters) is never built; the two rows stay as on develop |
+| J-133-04 | The four-name cap and the cell limit are each pinned by a test |
+| J-133-01 | A graph row merges only on its own CURIE, never on a `taxid` read before it; a live row only on the id its citation gives it in its own database, where that database is the row's kind and the graph holds it |
+| J-133-02 | An edge merges with a differently named repeat only when both join the same two records |
+| A-133-01 | Each later name takes its own brackets, and a name that already carries brackets leads, so none nests: "tumor protein p53 (Homo sapiens) (TP53)" |
+
+One live run each after the fix round, same settings: query 24 Plain language 23 rows, 23 sources, Based on 23, one row "mutL homolog 1 (MLH1)", 16.8 s; `What does BRCA1 do?` 17, 17, 17 in both depths, one row "BRCA1 DNA repair associated (BRCA1)", 10.0 s and 7.8 s. Spent 0.016 dollars.

@@ -13410,30 +13410,84 @@ def _answer_parts(
         # Card 133 and 137 (DECISIONS.md, 2026-10-22): two rows whose page
         # key and the record's OWN identifier both match are one record,
         # even when the graph names it "BRCA1 DNA repair associated" and
-        # the live lookup "BRCA1". Returns the record kind such a repeat
-        # must share, or "" when the identifier cannot vouch for the row:
+        # the live lookup "BRCA1". Returns the identity such a repeat must
+        # share (its record kind, plus an edge's two ends), or "" when the
+        # identifier cannot vouch for the row:
         #   - a blank identifier (the name is then the only thing that
         #     tells two records on one page apart, J-103-06);
         #   - a borrowed one: an edge citing its endpoint's CURIE, or a GO
         #     term cited through its gene (J-103-05), or a row whose fields
         #     were not read, so a borrow could not be ruled out;
+        #   - one that is not the record's primary id for its kind
+        #     (J-133-01): a graph row's identifier must be its own CURIE,
+        #     never a `taxid` or other field read before it; a live row's
+        #     must be the id its citation gives it in its own database,
+        #     only where that database is the row's kind and the graph
+        #     holds it ("NCBIGene:672" for a live gene record), never a
+        #     shared or page-derived id ("nuccore 568815597");
+        #   - an edge whose two ends are not both known (J-133-02): two
+        #     edges on one page are one only when they join the same two
+        #     records;
         #   - a `derived` projection, a second view, not a record kind.
+        from system_03_search_agent.tools.graph_schema_constants import EDGE_LABELS
+
         if not identifier.strip():
             return ""
-        row_fields = _row_fields_for(finding, findings)
-        if not row_fields:
+        row = _row_for(finding, findings)
+        row_fields = row.get("fields") if row is not None else None
+        if not isinstance(row_fields, dict) or not row_fields:
             return ""
         if row_fields.get("_cited_via_endpoint_curie") or row_fields.get("_cited_via_gene_curie"):
             return ""
         kind = entity_type_noun(finding.entity_type or "")
-        return "" if kind in ("", "derived") else kind
+        if kind in ("", "derived"):
+            return ""
+        curie = str((row or {}).get("curie") or "").strip()
+        if curie:
+            if identifier != curie:
+                return ""
+        else:
+            citation = citation_by_id.get(finding.citation_id)
+            source = (citation.source if citation is not None else "").strip()
+            source_id = (citation.source_id if citation is not None else "").strip()
+            own = record_identifier(None, source, source_id) if source_id.isdigit() else ""
+            if (
+                source.lower() != kind
+                or identifier != own
+                or not re.fullmatch(r"[A-Za-z]+:\d+", own)
+            ):
+                return ""
+        is_edge = (
+            "_edge_start_id" in row_fields
+            or "_edge_end_id" in row_fields
+            or (finding.entity_type or "").strip().lower() in EDGE_LABELS
+        )
+        if not is_edge:
+            return kind
+        ends = (row_fields.get("_edge_start_id"), row_fields.get("_edge_end_id"))
+        if any(end in (None, "") for end in ends):
+            return ""
+        return f"{kind}|{ends[0]}|{ends[1]}"
 
-    def shown_name(names: list[str]) -> str:
-        # Never hide a name: the first as the row reads it, every later
-        # one in brackets, "mutL homolog 1 (MLH1)".
+    #: A table cell holds at most this many characters (`TokenPayload.
+    #: cells`, `contracts/events.py`); a merged name past it is never built.
+    merged_name_limit = 500
+
+    def shown_name(names: list[str]) -> str | None:
+        # Never hide a name: the first as the row reads it, each later one
+        # in its own brackets, "mutL homolog 1 (MLH1)". A name that already
+        # carries brackets ("tumor protein p53 (Homo sapiens)") leads, so
+        # no bracket sits inside another (A-133-01); two such names, or a
+        # result a cell cannot hold (J-133-03), build nothing, and the rows
+        # stay apart as on develop.
         if len(names) == 1:
             return names[0]
-        return f"{names[0]} ({', '.join(names[1:])})"
+        bracketed = [name for name in names if "(" in name or ")" in name]
+        if len(bracketed) > 1:
+            return None
+        ordered = bracketed + [name for name in names if name not in bracketed]
+        text = ordered[0] + "".join(f" ({name})" for name in ordered[1:])
+        return text if len(text) <= merged_name_limit else None
 
     def merged_cells(
         row: ListedRow, later: list[str], later_kind: str
@@ -13455,7 +13509,10 @@ def _answer_parts(
             if len(names) >= 4:
                 return None
             names.append(later[0])
-        out: list[str] = [shown_name(names)]
+        name = shown_name(names)
+        if name is None:
+            return None
+        out: list[str] = [name]
         for first, second in zip(shown[1:], later[1:], strict=True):
             if first == second or not second:
                 out.append(first)
@@ -13509,7 +13566,7 @@ def _answer_parts(
                 if marker not in ids:
                     ids.append(marker)
             text = first.token.text + (sentence if sentence.endswith(" ") else sentence + " ")
-            if len(ids) > 20 or len(text) > 1000 or len(merged[0]) > 1000:
+            if len(ids) > 20 or len(text) > 1000:
                 continue
             first.token.marker_ids = in_citation_order(ids)
             first.token.text = text
