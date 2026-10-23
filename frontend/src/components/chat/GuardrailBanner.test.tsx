@@ -69,6 +69,13 @@ describe("GuardrailBanner", () => {
       category: "cost_capped",
       expectedCopy: "The system is at capacity right now. Please try again shortly.",
     },
+    // Card 141: the write_seeking reply keeps its read-only sentence and
+    // adds what to ask instead.
+    {
+      category: "write_seeking",
+      expectedCopy:
+        "This system only reads from NCBI records. It cannot add, change, or remove data. Ask what the graph holds about a gene, variant, or condition and I can assemble cited evidence.",
+    },
     // Added 2026-09-22 with the `compute_request` category. Section 12.6 has
     // no row for it, so this arm pins the copy the component actually ships
     // rather than a line quoted from the locked spec.
