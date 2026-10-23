@@ -1,0 +1,51 @@
+Compare what is known about MLH1 and MSH2 in colorectal cancer risk.
+New search
+
+? Answered8.4s · 13 tool calls · 23 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer.⁠1–7
+
+MLH1 partners with another protein to form a complex that helps correct DNA mismatches, and it was identified as a gene frequently mutated in hereditary nonpolyposis colon cancer.⁠25 Research has used functional assays to test MLH1 and MSH2 variants together to identify patients with Lynch syndrome.⁠13
+
+Published studies have also examined how MLH1 variants affect function using yeast and lab-based mismatch repair tests.⁠9 One trial focuses on identifying men with a genetic predisposition to prostate cancer.⁠12 Recent research also links MLH1 to breast cancer recurrence and to new gene-editing tools.⁠19, 16
+
+WHERE THIS ANSWER COMES FROM
+mutL homolog 1 (MLH1)⁠1, 8
+Muir-Torré syndrome⁠2
+Colorectal cancer, hereditary nonpolyposis, type 2⁠3
+Mismatch repair cancer syndrome 1⁠4
+mutS homolog 2⁠5
+Lynch syndrome 1⁠6
+Mismatch repair cancer syndrome 2⁠7
+Functional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.⁠9
+NM_000249.4(MLH1):c.545+1271_677+737delinsCA⁠10
+DNA MISMATCH REPAIR PROTEIN MLH1; MLH1⁠11
+Showing 1–10 of 23
+‹ Previous
+Page 1 of 3
+Next ›
+NOTES
+Note: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+23
+Based on 23 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 3 other databases; their values could not be compared
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

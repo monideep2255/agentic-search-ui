@@ -1,0 +1,21 @@
+{
+ "name": "q1_plain_control",
+ "q": "Which diseases are associated with BRCA1?",
+ "mode": "Plain language",
+ "width": 1280,
+ "loadedFreshAt": 1280,
+ "events": {
+  "banner_found": 3.714,
+  "first_records": 3.714,
+  "answer_body": 3.714,
+  "done": 6.526
+ },
+ "banner_text": "Mendel, Sanger and Palade found 98 records",
+ "meta": "? Answered5.9s · 13 tool calls · 21 sources cited from 2 layers",
+ "notes": [],
+ "body": [
+  "? Answered5.9s · 13 tool calls · 21 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nChanges in this gene cause about 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠23 I found 4 conditions related to BRCA1.⁠1–4\n\nBRCA1 makes a protein that helps keep genetic information stable and acts as a tumor suppressor.⁠23\n\nWHERE THIS ANSWER COMES FROM\nFamilial cancer of breast\t⁠1\nFamilial breast-ovarian cancer susceptibility 1\t⁠2\nPancreatic cancer susceptibility 4\t⁠3\nFanconi anemia complementation group S\t⁠4\nBRCA1\t⁠5, 9\nEmerging roles of BRCA1 in transcriptional regulation and DNA repair.\t⁠6\nNM_007294.4(BRCA1):c.5243_5277+2788del\t⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\t⁠10\nBRCA1: An Endocrine and Metabolic Regulator.\t⁠11\nShowing 1–10 of 21\n‹ Previous\nPage 1 of 3\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n21\nBased on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim"
+ ],
+ "main": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered5.9s · 13 tool calls · 21 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nChanges in this gene cause about 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠23 I found 4 conditions related to BRCA1.⁠1–4\n\nBRCA1 makes a protein that helps keep genetic information stable and acts as a tumor suppressor.⁠23\n\nWHERE THIS ANSWER COMES FROM\nFamilial cancer of breast\t⁠1\nFamilial breast-ovarian cancer susceptibility 1\t⁠2\nPancreatic cancer susceptibility 4\t⁠3\nFanconi anemia complementation group S\t⁠4\nBRCA1\t⁠5, 9\nEmerging roles of BRCA1 in transcriptional regulation and DNA repair.\t⁠6\nNM_007294.4(BRCA1):c.5243_5277+2788del\t⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1\t⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer\t⁠10\nBRCA1: An Endocrine and Metabolic Regulator.\t⁠11\nShowing 1–10 of 21\n‹ Previous\nPage 1 of 3\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n21\nBased on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

@@ -1,0 +1,23 @@
+{
+ "name": "c131_rs334_rs6025_researcher",
+ "q": "What are rs334 and rs6025?",
+ "mode": "Researcher",
+ "width": 1280,
+ "loadedFreshAt": 1280,
+ "events": {
+  "banner_found": 10.777,
+  "first_records": 10.777,
+  "answer_body": 10.777,
+  "done": 12.82
+ },
+ "banner_text": "Hershey, Crick and Pasteur found 4 records",
+ "meta": "? Answered12.3s · 5 tool calls · 2 sources cited from 1 layer",
+ "notes": [
+  "NOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources"
+ ],
+ "body": [
+  "? Answered12.3s · 5 tool calls · 2 sources cited from 1 layer\n\nPlain language\nResearcher\nShow work ▾\n\nFound 2 variant records for rs334 and rs6025: rs334 and rs6025.⁠1, 2\n\nVARIANT RECORD RECORDS FOUND\nVARIANT\tIDENTIFIER\tGENE\tCLINICAL SIGNIFICANCE OR CONSEQUENCE\t\nrs334\trs334\tHBB\tsignificance: not-provided, protective, likely-benign, pathogenic, other\t⁠1\nrs6025\trs6025\tF5\tconsequence: coding_sequence_variant, missense_variant\t⁠2\nNOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources\n▶\nSOURCES\n2\nBased on 2 sources cited, all from dbSNP\n·\nHigh-risk claim"
+ ],
+ "main": "What are rs334 and rs6025?\nNew search\n\n? Answered12.3s · 5 tool calls · 2 sources cited from 1 layer\n\nPlain language\nResearcher\nShow work ▾\n\nFound 2 variant records for rs334 and rs6025: rs334 and rs6025.⁠1, 2\n\nVARIANT RECORD RECORDS FOUND\nVARIANT\tIDENTIFIER\tGENE\tCLINICAL SIGNIFICANCE OR CONSEQUENCE\t\nrs334\trs334\tHBB\tsignificance: not-provided, protective, likely-benign, pathogenic, other\t⁠1\nrs6025\trs6025\tF5\tconsequence: coding_sequence_variant, missense_variant\t⁠2\nNOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources\n▶\nSOURCES\n2\nBased on 2 sources cited, all from dbSNP\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

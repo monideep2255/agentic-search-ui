@@ -1,0 +1,23 @@
+{
+ "name": "c139_q104_plain",
+ "q": "What sequence data is linked to PMID 11237011?",
+ "mode": "Plain language",
+ "width": 390,
+ "loadedFreshAt": 390,
+ "events": {
+  "banner_found": 6.267,
+  "first_records": 6.267,
+  "answer_body": 6.267,
+  "done": 8.81
+ },
+ "banner_text": "Nightingale found 141 records",
+ "meta": "✓ Answered8.3s · 6 tool calls · 11 sources cited from 1 layer",
+ "notes": [
+  "NOTES\nNCBI lists 1587 sequence records linked to PMID 11237011; this answer shows 5.\nNCBI lists 29 genome assemblies linked to PMID 11237011; this answer shows 5."
+ ],
+ "body": [
+  "✓ Answered8.3s · 6 tool calls · 11 sources cited from 1 layer\n\nPlain language\nResearcher\nShow work ▾\n\nI found 5 records, 1 sequencing dataset and 5 genome assemblies related to PMID 11237011.⁠1–11\n\nWHERE THIS ANSWER COMES FROM\nHomo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6⁠1\nHomo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6⁠2\nHomo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18⁠3\nHomo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5⁠4\nHomo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12⁠5\nSRR9496657⁠6\nGRCh38.p11⁠7\nGRCh38.p14⁠8\nGRCh38.p12⁠9\nGRCh38.p13⁠10\nShowing 1–10 of 11\n‹ Previous\nPage 1 of 2\nNext ›\nNOTES\nNCBI lists 1587 sequence records linked to PMID 11237011; this answer shows 5.\nNCBI lists 29 genome assemblies linked to PMID 11237011; this answer shows 5.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n11\nBased on 11 sources cited from Assembly, Nucleotide and SRA"
+ ],
+ "main": "What sequence data is linked to PMID 11237011?\nNew search\n\n✓ Answered8.3s · 6 tool calls · 11 sources cited from 1 layer\n\nPlain language\nResearcher\nShow work ▾\n\nI found 5 records, 1 sequencing dataset and 5 genome assemblies related to PMID 11237011.⁠1–11\n\nWHERE THIS ANSWER COMES FROM\nHomo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6⁠1\nHomo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6⁠2\nHomo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18⁠3\nHomo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5⁠4\nHomo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12⁠5\nSRR9496657⁠6\nGRCh38.p11⁠7\nGRCh38.p14⁠8\nGRCh38.p12⁠9\nGRCh38.p13⁠10\nShowing 1–10 of 11\n‹ Previous\nPage 1 of 2\nNext ›\nNOTES\nNCBI lists 1587 sequence records linked to PMID 11237011; this answer shows 5.\nNCBI lists 29 genome assemblies linked to PMID 11237011; this answer shows 5.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n11\nBased on 11 sources cited from Assembly, Nucleotide and SRA\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

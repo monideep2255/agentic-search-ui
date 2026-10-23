@@ -1,0 +1,23 @@
+{
+ "name": "q24_plain",
+ "q": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+ "mode": "Plain language",
+ "width": 1280,
+ "loadedFreshAt": 1280,
+ "events": {
+  "banner_found": 5.148,
+  "first_records": 5.148,
+  "answer_body": 5.148,
+  "done": 8.959
+ },
+ "banner_text": "Nirenberg, Koch and Levi-Montalcini found 67 records",
+ "meta": "? Answered8.5s · 13 tool calls · 23 sources cited from 3 layers",
+ "notes": [
+  "NOTES\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer."
+ ],
+ "body": [
+  "? Answered8.5s · 13 tool calls · 23 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer.⁠1–7\n\nMLH1 works by teaming up with a partner protein to form a repair complex that finds and cuts DNA near errors so they can be corrected.⁠25 MLH1 was identified as a gene often mutated in hereditary nonpolyposis colon cancer.⁠25\n\nWHERE THIS ANSWER COMES FROM\nmutL homolog 1 (MLH1)\t⁠1, 8\nMuir-Torré syndrome\t⁠2\nColorectal cancer, hereditary nonpolyposis, type 2\t⁠3\nMismatch repair cancer syndrome 1\t⁠4\nmutS homolog 2\t⁠5\nLynch syndrome 1\t⁠6\nMismatch repair cancer syndrome 2\t⁠7\nFunctional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.\t⁠9\nNM_000249.4(MLH1):c.545+1271_677+737delinsCA\t⁠10\nDNA MISMATCH REPAIR PROTEIN MLH1; MLH1\t⁠11\nShowing 1–10 of 23\n‹ Previous\nPage 1 of 3\nNext ›\nNOTES\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n23\nBased on 23 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 3 other databases; their values could not be compared\n·\nHigh-risk claim"
+ ],
+ "main": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.\nNew search\n\n? Answered8.5s · 13 tool calls · 23 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer.⁠1–7\n\nMLH1 works by teaming up with a partner protein to form a repair complex that finds and cuts DNA near errors so they can be corrected.⁠25 MLH1 was identified as a gene often mutated in hereditary nonpolyposis colon cancer.⁠25\n\nWHERE THIS ANSWER COMES FROM\nmutL homolog 1 (MLH1)\t⁠1, 8\nMuir-Torré syndrome\t⁠2\nColorectal cancer, hereditary nonpolyposis, type 2\t⁠3\nMismatch repair cancer syndrome 1\t⁠4\nmutS homolog 2\t⁠5\nLynch syndrome 1\t⁠6\nMismatch repair cancer syndrome 2\t⁠7\nFunctional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.\t⁠9\nNM_000249.4(MLH1):c.545+1271_677+737delinsCA\t⁠10\nDNA MISMATCH REPAIR PROTEIN MLH1; MLH1\t⁠11\nShowing 1–10 of 23\n‹ Previous\nPage 1 of 3\nNext ›\nNOTES\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n23\nBased on 23 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 3 other databases; their values could not be compared\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

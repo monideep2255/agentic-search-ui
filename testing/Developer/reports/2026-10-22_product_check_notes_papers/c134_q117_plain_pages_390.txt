@@ -1,0 +1,436 @@
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+The Hdj-2/Hsc70 chaperone pair facilitates early steps in CFTR biogenesis.⁠1
+Identification of a D579G homozygote cystic fibrosis patient with pancreatic sufficiency and minor lung involvement. Mutations in brief no. 221. Online.⁠2
+Genetic findings in congenital bilateral aplasia of vas deferens patients and identification of six novel mutatations. Mutations in brief no. 138. Online.⁠3
+Analysis of a DNase I hypersensitive site located -20.9 kb upstream of the CFTR gene.⁠4
+Differential function of the two nucleotide binding domains on cystic fibrosis transmembrane conductance regulator.⁠5
+A novel missense mutation D513G in exon 10 of the cystic fibrosis transmembrane conductance regulator (CFTR) gene identified in a French CBAVD patient. Mutations in brief no. 175. Online.⁠6
+Sodium 4-phenylbutyrate downregulates Hsc70: implications for intracellular trafficking of DeltaF508-CFTR.⁠7
+Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element.⁠8
+Protein kinase A associates with cystic fibrosis transmembrane conductance regulator via an interaction with ezrin.⁠9
+The PDZ-interacting domain of cystic fibrosis transmembrane conductance regulator is required for functional expression in the apical plasma membrane.⁠10
+Showing 1–10 of 71
+‹ Previous
+Page 1 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+Inhibition of cystic fibrosis transmembrane conductance regulator by novel interaction with the metabolic sensor AMP-activated protein kinase.⁠11
+E3KARP mediates the association of ezrin and protein kinase A with the cystic fibrosis transmembrane conductance regulator in airway cells.⁠12
+Post-translational disruption of the delta F508 cystic fibrosis transmembrane conductance regulator (CFTR)-molecular chaperone complex with geldanamycin stabilizes delta F508 CFTR in the rabbit reticulocyte lysate.⁠13
+Mutation in the gene responsible for cystic fibrosis and predisposition to chronic rhinosinusitis in the general population.⁠14
+Accessory protein facilitated CFTR-CFTR interaction, a molecular mechanism to potentiate the chloride channel activity.⁠15
+CF gene and cystic fibrosis transmembrane conductance regulator expression in autosomal dominant polycystic kidney disease.⁠16
+Worldwide genetic analysis of the CFTR region.⁠17
+Published paper⁠18
+Cystic fibrosis transmembrane regulator (CFTR) DeltaF508 mutation and 5T allele in patients with chronic pancreatitis and exocrine pancreatic cancer. PANKRAS II Study Group.⁠19
+Polymorphism of cystic fibrosis gene in Japanese patients with chronic pancreatitis.⁠20
+Showing 11–20 of 71
+‹ Previous
+Page 2 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+Early diagnosis of cystic fibrosis through neonatal screening prevents severe malnutrition and improves long-term growth. Wisconsin Cystic Fibrosis Neonatal Screening Study Group.⁠21
+The Hsc70 co-chaperone CHIP targets immature CFTR for proteasomal degradation.⁠22
+Regulation of cystic fibrosis transmembrane conductance regulator single-channel gating by bivalent PDZ-domain-mediated interaction.⁠23
+Prevalence of CFTR mutations in hypertrypsinaemia detected through neonatal screening for cystic fibrosis.⁠24
+CFTR and asthma in the French EGEA study.⁠25
+Frequency and clinical significance of the S1235R mutation in the cystic fibrosis transmembrane conductance regulator gene: results from a collaborative study.⁠26
+Frequency of cystic fibrosis transmembrane conductance regulator gene mutations and 5T allele in patients with allergic bronchopulmonary aspergillosis.⁠27
+Structural basis of the Na+/H+ exchanger regulatory factor PDZ1 interaction with the carboxyl-terminal region of the cystic fibrosis transmembrane conductance regulator.⁠28
+The mannose binding lectin gene influences the severity of chronic liver disease in cystic fibrosis.⁠29
+CFTR gene mutations--including three novel nucleotide substitutions--and haplotype background in patients with asthma, disseminated bronchiectasis and chronic obstructive pulmonary disease.⁠30
+Showing 21–30 of 71
+‹ Previous
+Page 3 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+Regulated expression of the human CFTR gene in epithelial cells.⁠31
+Complete and rapid scanning of the cystic fibrosis transmembrane conductance regulator (CFTR) gene by denaturing high-performance liquid chromatography (D-HPLC): major implications for genetic counselling.⁠32
+Published paper⁠33
+Early diagnosis of cystic fibrosis.⁠34
+Analysis of the entire coding region of the cystic fibrosis transmembrane regulator gene in idiopathic pancreatitis.⁠35
+Population screening of F508del (DeltaF508), the most frequent mutation in the CFTR gene associated with cystic fibrosis in Argentina.⁠36
+A monomer is the minimum functional unit required for channel and ATPase activity of the cystic fibrosis transmembrane conductance regulator.⁠37
+Influence of neonatal screening and centralized treatment on long-term clinical outcome and survival of CF patients.⁠38
+A spectrum of ABCC6 mutations is responsible for pseudoxanthoma elasticum.⁠39
+Mutations of the cystic fibrosis gene in patients with chronic pancreatitis.⁠40
+Showing 31–40 of 71
+‹ Previous
+Page 4 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+Cystic fibrosis phenotype evaluation and paternity outcome in 50 males with congenital bilateral absence of vas deferens.⁠41
+Skipping of exon 9 of human CFTR in YAC-transgenic mice.⁠42
+Unique presentations and chronic complications in adult cystic fibrosis: do they teach us anything about CFTR?⁠43
+Published paper⁠44
+Published paper⁠45
+Newborn screening for cystic fibrosis.⁠46
+Interdomain but not intermolecular interactions observed in CFTR channels.⁠47
+A Golgi-associated PDZ domain protein modulates cystic fibrosis transmembrane regulator plasma membrane expression.⁠48
+Essential fatty acid deficiency in relation to genotype in patients with cystic fibrosis.⁠49
+Can a place of origin of the main cystic fibrosis mutations be identified?⁠50
+Showing 41–50 of 71
+‹ Previous
+Page 5 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+Genetic counseling after implementation of statewide cystic fibrosis newborn screening: Two years' experience in one medical center.⁠51
+Up-regulation of acid-gated Na(+) channels (ASICs) by cystic fibrosis transmembrane conductance regulator co-expression in Xenopus oocytes.⁠52
+Genetic risk factors in infertile men with severe oligozoospermia and azoospermia.⁠53
+Increased prevalence of mutations in the cystic fibrosis transmembrane conductance regulator in children with chronic rhinosinusitis.⁠54
+CFTR⁠55, 59
+Molecular Structure of the Human CFTR Ion Channel.⁠56
+NM_000492.4(CFTR):c.1209+1988_1392+2067inv⁠57
+CYSTIC FIBROSIS TRANSMEMBRANE CONDUCTANCE REGULATOR; CFTR⁠58
+NPDT Evaluation in Children With CFTR and (PSC)⁠60
+ECFS standards of care on CFTR-related disorders: Diagnostic criteria of CFTR dysfunction.⁠61
+Showing 51–60 of 71
+‹ Previous
+Page 6 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+NM_000492.4(CFTR):c.1392+2072_1392+2074del⁠62
+Study of VX-809 in Cystic Fibrosis Subjects With the ∆F508-CFTR Gene Mutation⁠63
+ECFS standards of care on CFTR-related disorders: Updated diagnostic criteria.⁠64
+NM_000492.4:c.165-291_1585-8528delinsATTTATTCCAAGGGAATAATAAAATAAATAATAATAATA⁠65
+Detection of Cystic Fibrosis Transmembrane Conductance Regulator (CFTR) Activity in Rectal Tissues From Human Subjects⁠66
+Molecular structures reveal synergistic rescue of Δ508 CFTR by Trikafta modulators.⁠67
+NM_000492.4:c.2619+2288_2989-839delinsATTAATAATAATAAAT⁠68
+Effects of Sildenafil on CFTR-dependent Ion Transport Activity⁠69
+In vitro modulator responsiveness of 655 CFTR variants found in people with cystic fibrosis.⁠70
+NM_000492.4:c.(164+1_165-1)_(1584+1_1585-1)del⁠71
+Showing 61–70 of 71
+‹ Previous
+Page 7 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
+
+=== next page ===
+
+Which papers in the graph mention the CFTR gene, and what do they cover?
+New search
+
+✓ Answered19.7s · 13 tool calls · 71 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+I found 54 published papers related to CFTR, out of 1962 available.⁠1–20
+
+Others look at how CFTR reaches its proper location on the cell surface, how two CFTR molecules can interact to boost channel activity, and how a molecule that senses energy levels can inhibit CFTR.⁠10, 15, 11
+
+One identifies a patient with a D579G mutation who has a milder form of cystic fibrosis with less lung damage.⁠2 From the paper "Splicing factors induce cystic fibrosis transmembrane regulator exon 9 skipping through a nonevolutionary conserved intronic element": Another examines how genetic instructions are spliced, where a non-conserved stretch of DNA causes the cell to skip a portion of the CFTR instructions.⁠8
+
+One links CFTR mutations to a predisposition to chronic sinus inflammation in the general population.⁠14 Another examines the most common CFTR mutation, called DeltaF508, along with a variant called the 5T allele, in patients with chronic pancreas inflammation and pancreatic cancer.⁠19 A related study looks at CFTR gene variation in Japanese patients with chronic pancreatitis.⁠20 One paper connects CFTR mutations to asthma, and another examines CFTR mutations alongside three new DNA changes in patients with asthma, widened airways, and chronic obstructive lung disease.⁠25, 30 Another reports on the frequency of a specific S1235R mutation and what it means clinically.⁠26 One study examines CFTR mutations and the 5T allele in patients with a fungal-related lung condition called allergic bronchopulmonary aspergillosis.⁠27
+
+One shows that early detection through newborn screening prevents serious malnutrition and improves long-term growth.⁠21 The other looks at how common CFTR mutations are among babies flagged by a screening test that measures a digestive enzyme level.⁠24
+
+WHERE THIS ANSWER COMES FROM
+Nasal Potential Studies Utilizing Cystic Fibrosis Transmembrane Regulator (CFTR) Modulators⁠72
+Showing 71–71 of 71
+‹ Previous
+Page 8 of 8
+Next ›
+NOTES
+Note: this answer was truncated because only 117 of the 1962 records that matched this question in the graph were retrieved
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+71
+Based on 71 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

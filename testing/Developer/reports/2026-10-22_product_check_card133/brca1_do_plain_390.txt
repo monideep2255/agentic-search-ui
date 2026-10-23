@@ -1,0 +1,47 @@
+What does BRCA1 do?
+New search
+
+✓ Answered8.3s · 13 tool calls · 17 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+BRCA1 is a gene that helps keep our DNA stable and acts as a tumor suppressor, meaning it helps stop cells from turning cancerous.⁠19 I found 1 gene related to BRCA1.⁠1
+
+The protein it makes teams up with other protective proteins, DNA damage sensors, and signaling molecules to form a large complex that watches over the genome.⁠19 This protein is involved in transcription, fixing double-strand breaks in DNA, and genetic recombination.⁠19
+
+The gene itself spans 22 exons across roughly 110 kilobases of DNA.⁠19 Changes in this gene account for about 40% of inherited breast cancers and over 80% of inherited breast and ovarian cancers combined.⁠19
+
+WHERE THIS ANSWER COMES FROM
+BRCA1 DNA repair associated (BRCA1)⁠1, 2
+BRCA1 Haploinsufficiency Is Masked by RNF168-Mediated Chromatin Ubiquitylation.⁠3
+NM_007294.4(BRCA1):c.5243_5277+2788del⁠4
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠5
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠6
+BRCA1: An Endocrine and Metabolic Regulator.⁠7
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG⁠8
+BRCA1 Haploinsufficiency and Gene Expression⁠9
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠10
+NG_005905.2:g.(147057_150288)_(160933_166866)del⁠11
+Showing 1–10 of 17
+‹ Previous
+Page 1 of 2
+Next ›
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+17
+Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

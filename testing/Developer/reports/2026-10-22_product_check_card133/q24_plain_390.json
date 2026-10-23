@@ -1,0 +1,23 @@
+{
+ "name": "q24_plain",
+ "q": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.",
+ "mode": "Plain language",
+ "width": 390,
+ "loadedFreshAt": 390,
+ "events": {
+  "banner_found": 6.527,
+  "first_records": 6.527,
+  "answer_body": 6.527,
+  "done": 9.068
+ },
+ "banner_text": "Koch, Chain and Franklin found 67 records",
+ "meta": "? Answered8.4s · 13 tool calls · 23 sources cited from 3 layers",
+ "notes": [
+  "NOTES\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer."
+ ],
+ "body": [
+  "? Answered8.4s · 13 tool calls · 23 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer.⁠1–7\n\nMLH1 partners with another protein to form a complex that helps correct DNA mismatches, and it was identified as a gene frequently mutated in hereditary nonpolyposis colon cancer.⁠25 Research has used functional assays to test MLH1 and MSH2 variants together to identify patients with Lynch syndrome.⁠13\n\nPublished studies have also examined how MLH1 variants affect function using yeast and lab-based mismatch repair tests.⁠9 One trial focuses on identifying men with a genetic predisposition to prostate cancer.⁠12 Recent research also links MLH1 to breast cancer recurrence and to new gene-editing tools.⁠19, 16\n\nWHERE THIS ANSWER COMES FROM\nmutL homolog 1 (MLH1)⁠1, 8\nMuir-Torré syndrome⁠2\nColorectal cancer, hereditary nonpolyposis, type 2⁠3\nMismatch repair cancer syndrome 1⁠4\nmutS homolog 2⁠5\nLynch syndrome 1⁠6\nMismatch repair cancer syndrome 2⁠7\nFunctional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.⁠9\nNM_000249.4(MLH1):c.545+1271_677+737delinsCA⁠10\nDNA MISMATCH REPAIR PROTEIN MLH1; MLH1⁠11\nShowing 1–10 of 23\n‹ Previous\nPage 1 of 3\nNext ›\nNOTES\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n23\nBased on 23 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 3 other databases; their values could not be compared\n·\nHigh-risk claim"
+ ],
+ "main": "Compare what is known about MLH1 and MSH2 in colorectal cancer risk.\nNew search\n\n? Answered8.4s · 13 tool calls · 23 sources cited from 3 layers\n\nPlain language\nResearcher\nShow work ▾\n\nI found 2 genes and 5 conditions related to MLH1, MSH2 and colorectal cancer.⁠1–7\n\nMLH1 partners with another protein to form a complex that helps correct DNA mismatches, and it was identified as a gene frequently mutated in hereditary nonpolyposis colon cancer.⁠25 Research has used functional assays to test MLH1 and MSH2 variants together to identify patients with Lynch syndrome.⁠13\n\nPublished studies have also examined how MLH1 variants affect function using yeast and lab-based mismatch repair tests.⁠9 One trial focuses on identifying men with a genetic predisposition to prostate cancer.⁠12 Recent research also links MLH1 to breast cancer recurrence and to new gene-editing tools.⁠19, 16\n\nWHERE THIS ANSWER COMES FROM\nmutL homolog 1 (MLH1)⁠1, 8\nMuir-Torré syndrome⁠2\nColorectal cancer, hereditary nonpolyposis, type 2⁠3\nMismatch repair cancer syndrome 1⁠4\nmutS homolog 2⁠5\nLynch syndrome 1⁠6\nMismatch repair cancer syndrome 2⁠7\nFunctional analysis of human MLH1 variants using yeast and in vitro mismatch repair assays.⁠9\nNM_000249.4(MLH1):c.545+1271_677+737delinsCA⁠10\nDNA MISMATCH REPAIR PROTEIN MLH1; MLH1⁠11\nShowing 1–10 of 23\n‹ Previous\nPage 1 of 3\nNext ›\nNOTES\nNote: this answer does not address the following entities named in the question: Colorectal cancer. Ask about them individually for a complete answer.\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n23\nBased on 23 sources cited from ClinicalTrials.gov, ClinVar, MedGen and 3 other databases; their values could not be compared\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

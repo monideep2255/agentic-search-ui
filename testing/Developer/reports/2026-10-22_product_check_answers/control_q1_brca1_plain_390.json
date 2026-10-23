@@ -1,0 +1,21 @@
+{
+ "name": "control_q1_brca1_plain",
+ "q": "Which diseases are associated with BRCA1?",
+ "mode": "Plain language",
+ "width": 390,
+ "loadedFreshAt": 390,
+ "events": {
+  "banner_found": 4.386,
+  "first_records": 4.386,
+  "answer_body": 4.386,
+  "done": 6.681
+ },
+ "banner_text": "Chargaff, Ramon y Cajal and Ehrlich found 98 records",
+ "meta": "? Answered6.1s · 13 tool calls · 21 sources cited from 2 layers",
+ "notes": [],
+ "body": [
+  "? Answered6.1s · 13 tool calls · 21 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nBRCA1 is associated with four diseases: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 I found 4 conditions related to BRCA1.⁠1–4\n\nBRCA1 is a gene that helps keep your DNA stable and stops tumors from forming.⁠23 When this gene is changed, it can lead to inherited forms of breast and ovarian cancer.⁠23 The gene also helps repair damaged DNA.⁠23\n\nWHERE THIS ANSWER COMES FROM\nFamilial cancer of breast⁠1\nFamilial breast-ovarian cancer susceptibility 1⁠2\nPancreatic cancer susceptibility 4⁠3\nFanconi anemia complementation group S⁠4\nBRCA1⁠5, 9\nBRCA1: An Endocrine and Metabolic Regulator.⁠6\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠10\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠11\nShowing 1–10 of 21\n‹ Previous\nPage 1 of 3\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n21\nBased on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim"
+ ],
+ "main": "Which diseases are associated with BRCA1?\nNew search\n\n? Answered6.1s · 13 tool calls · 21 sources cited from 2 layers\n\nPlain language\nResearcher\nShow work ▾\n\nBRCA1 is associated with four diseases: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4 I found 4 conditions related to BRCA1.⁠1–4\n\nBRCA1 is a gene that helps keep your DNA stable and stops tumors from forming.⁠23 When this gene is changed, it can lead to inherited forms of breast and ovarian cancer.⁠23 The gene also helps repair damaged DNA.⁠23\n\nWHERE THIS ANSWER COMES FROM\nFamilial cancer of breast⁠1\nFamilial breast-ovarian cancer susceptibility 1⁠2\nPancreatic cancer susceptibility 4⁠3\nFanconi anemia complementation group S⁠4\nBRCA1⁠5, 9\nBRCA1: An Endocrine and Metabolic Regulator.⁠6\nNM_007294.4(BRCA1):c.5243_5277+2788del⁠7\nBRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1⁠8\nGermline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer⁠10\nPreneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.⁠11\nShowing 1–10 of 21\n‹ Previous\nPage 1 of 3\nNext ›\n\nThis is a research summary, not medical advice.\n\n▶\nSOURCES\n21\nBased on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}

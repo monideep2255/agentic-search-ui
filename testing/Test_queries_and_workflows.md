@@ -2,7 +2,7 @@
 
 This is the one document that lists every feature worth trying in the product. For each one it says what to type and what a person should see when they type it, from the chair of the person asking.
 
-Last updated: 2026-10-18.
+Last updated: 2026-10-23.
 
 Every entry has the same three parts:
 
@@ -692,6 +692,36 @@ What you should see:
 - Titles read exactly as PubMed writes them, variant notation such as "c.3140-26A>G" included.
 - No paper is listed twice.
 - Why it matters: a paper's number tells a person nothing about what it covers; they would have to open every link to learn what the answer found.
+### 118. A gene found by two sources is one row (cards 133 and 137)
+
+Queries to try:
+
+- `What does BRCA1 do?`: ask it once in Plain language and once in Researcher.
+- Query 24, in Plain language, as the second check.
+
+What you should see:
+
+- The gene record the graph calls "BRCA1 DNA repair associated" and the live record called "BRCA1" are one row naming both sources, never two rows for the same gene.
+- The list total, the sources count, the Found line and the Based on line agree with each other.
+- Known, card 133: query 116 still reads "Found 40" over 41 gene rows, a different cause in the opening line.
+- Known, card 137, part 2: query 1 in Researcher can show a heading over one broken fragment.
+- Why it matters: a person counting the rows against the totals should find the same number, and one gene should not look like two findings.
+
+### 119. Two variants asked about together are counted by name (card 131)
+
+Queries to try:
+
+- `What are rs334 and rs6025?` in Researcher.
+- Query 108 in Researcher, for the papers count line.
+
+What you should see:
+
+- The count line reads "Found 2 variant records for rs334 and rs6025: rs334 [1] and rs6025 [2]."
+- For query 108 the count line counts papers ("Found 5 papers for BRCA1.") and does not paste titles with doubled full stops.
+- Known, card 121: the table headings still read "PUBMED RECORDS FOUND" and "VARIANT RECORD RECORDS FOUND".
+- Known, card 131, part 2: a paper's marker can sit after the subject ("for BRCA1 [2]: BRCA1 [1]").
+- Why it matters: the count line is the one number a person checks, so it must say what was found, once, in words they use.
+
 ### 26. A copy number variant window, before the coordinate range feature
 
 Queries to try:
@@ -1109,7 +1139,7 @@ Queries to try:
 What you should see:
 
 - A request to change the data is refused as something the product cannot do, not as an attack.
-- It is refused, with the grey label "Read-only system" and the sentence "This system only reads from NCBI records. It cannot add, change, or remove data."
+- It is refused, with the grey label "Read-only system" and the sentences "This system only reads from NCBI records. It cannot add, change, or remove data. Ask what the graph holds about a gene, variant, or condition and I can assemble cited evidence." (the last sentence since card 141)
 - It is not labelled "Not a research question".
 - No citation chips.
 - Before phase 8.6's re-land, this request got the label "Not a research question", which says nothing about what the product can do (F-8.6-G01). The follow-up's golden run gave the read-only reply in 3 of 3 passes.
@@ -2156,6 +2186,14 @@ Every feature accounted for, in three tables:
 
 | Item | The feature, in plain words | Where to try it |
 |---|---|---|
+| card 133 and card 137, part 1 | A gene found by two sources is one row, and the totals agree | Query 118 |
+| card 134 | Papers from the enrichment layer show their PubMed title | Queries 117 and 1 |
+| card 139, notes 1 and 2 | Notes sit under the records and count what the answer shows | Query 104 |
+| card 128, part | When every written sentence only repeated a record, the answer says why there is no summary | Query 117 |
+| card 131, part 1 | The count line counts papers and names the variants | Queries 108 and 119 |
+| card 138 | Every ask-back's NCBI link reads "Search NCBI for" the term | Queries 68, 84 and 108 |
+| card 143 | The About page's example trust line and its "What you get" step agree with the real line | The About page |
+| card 141 | The reply to a request to change the graph adds what to ask instead | Queries 89 and 111 |
 | card 125 | No paper's title or abstract can pose as the answer writer's instructions, and records read exactly as PubMed writes them; nothing new shows in an ordinary answer | Queries 117 and 1 |
 | card 38, slice C | A gene's papers in the knowledge graph are listed by their PubMed titles, never as bare numbers | Query 117 |
 | card 105 | After picking a "How far back" window, the knowledge graph's undated papers are left out and the windowed PubMed papers lead; a line says when none were found | Query 108 |

@@ -1,0 +1,23 @@
+{
+ "name": "c131_rs334_rs6025_researcher",
+ "q": "What are rs334 and rs6025?",
+ "mode": "Researcher",
+ "width": 390,
+ "loadedFreshAt": 390,
+ "events": {
+  "banner_found": 7.489,
+  "first_records": 7.489,
+  "answer_body": 7.489,
+  "done": 8.759
+ },
+ "banner_text": "Florey, Perutz and Ramon y Cajal found 4 records",
+ "meta": "? Answered8.3s · 5 tool calls · 2 sources cited from 1 layer",
+ "notes": [
+  "NOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources"
+ ],
+ "body": [
+  "? Answered8.3s · 5 tool calls · 2 sources cited from 1 layer\n\nPlain language\nResearcher\nShow work ▾\n\nFound 2 variant records for rs334 and rs6025: rs334 and rs6025.⁠1, 2\n\nVARIANT RECORD RECORDS FOUND\nrs334⁠1\nrs334\nHBB\nsignificance: not-provided, protective, likely-benign, pathogenic, other\nrs6025⁠2\nrs6025\nF5\nconsequence: coding_sequence_variant, missense_variant\nNOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources\n▶\nSOURCES\n2\nBased on 2 sources cited, all from dbSNP\n·\nHigh-risk claim"
+ ],
+ "main": "What are rs334 and rs6025?\nNew search\n\n? Answered8.3s · 5 tool calls · 2 sources cited from 1 layer\n\nPlain language\nResearcher\nShow work ▾\n\nFound 2 variant records for rs334 and rs6025: rs334 and rs6025.⁠1, 2\n\nVARIANT RECORD RECORDS FOUND\nrs334⁠1\nrs334\nHBB\nsignificance: not-provided, protective, likely-benign, pathogenic, other\nrs6025⁠2\nrs6025\nF5\nconsequence: coding_sequence_variant, missense_variant\nNOTES\nNote: no written summary could be checked against the records, so the records found are listed below with their sources\n▶\nSOURCES\n2\nBased on 2 sources cited, all from dbSNP\n·\nHigh-risk claim\n\nCONTINUE THIS CONVERSATION\n\nAsk\nWhat variants cause it?\nWhich trials are recruiting?\nWhat does the literature add?\nA follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.\n\nWas this answer helpful?",
+ "overflow": 0
+}
