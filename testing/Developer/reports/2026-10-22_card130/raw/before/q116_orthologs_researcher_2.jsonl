@@ -1,0 +1,198 @@
+{"tag": "WRITER_FINDINGS", "data": [[1, "Gene", "name", "tumor protein p53"], [2, "Gene", "name", "tumor protein p53"], [3, "Gene", "name", "tumor protein p53"], [4, "Gene", "name", "tumor protein p53"], [5, "Gene", "name", "tumor protein p53"], [6, "Gene", "name", "tumor protein p53"], [7, "Gene", "name", "tumor protein p53"], [8, "Gene", "name", "tumor protein p53"], [9, "Gene", "name", "tumor protein p53"], [10, "Gene", "name", "tumor protein p53"], [11, "Gene", "name", "tumor protein p53"], [12, "Gene", "name", "tumor protein p53"], [13, "Gene", "name", "tumor protein p53"], [14, "Gene", "name", "tumor protein p53"], [15, "Gene", "name", "tumor protein p53"], [16, "Gene", "name", "tumor protein p53"], [17, "Gene", "name", "tumor protein p53"], [18, "Gene", "name", "tumor protein p53"], [19, "Gene", "name", "tumor protein p53"], [20, "Gene", "name", "tumor protein p53"], [21, "Gene", "name", "tumor protein p53"], [22, "Gene", "name", "tumor protein p53"], [23, "Gene", "name", "tumor protein p53"], [24, "Gene", "name", "tumor protein p53"], [25, "Gene", "name", "tumor protein p53"], [26, "Gene", "name", "tumor protein p53"], [27, "Gene", "name", "tumor protein p53"], [28, "Gene", "name", "tumor protein p53"], [29, "Gene", "name", "tumor protein p53"], [30, "Gene", "name", "tumor protein p53"]]}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Gene records found\n\n", "placement": "listing", "cells": null, "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Gene", "Identifier", "Organism"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100009292, name: tumor protein p53 [1]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100009292", "Oryctolagus cuniculus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100049321, name: tumor protein p53 [2]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100049321", "Oryzias latipes"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100062044, name: tumor protein p53 [3]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100062044", "Equus caballus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100092821, name: tumor protein p53 [4]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100092821", "Ornithorhynchus anatinus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100136737, name: tumor protein p53 [5]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100136737", "Oncorhynchus mykiss"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100304476, name: tumor protein p53 [6]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100304476", "Ictalurus punctatus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100379269, name: tumor protein p53 [7]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100379269", "Cavia porcellus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100415710, name: tumor protein p53 [8]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100415710", "Callithrix jacchus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100435218, name: tumor protein p53 [9]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100435218", "Pongo abelii"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100468516, name: tumor protein p53 [10]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100468516", "Ailuropoda melanoleuca"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100583326, name: tumor protein p53 [11]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100583326", "Nomascus leucogenys"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100663725, name: tumor protein p53 [12]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100663725", "Loxodonta africana"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100682525, name: tumor protein p53 [13]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100682525", "Cricetulus griseus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100702587, name: tumor protein p53 [14]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100702587", "Oreochromis niloticus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100922473, name: tumor protein p53 [15]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100922473", "Sarcophilus harrisii"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100963622, name: tumor protein p53 [16]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100963622", "Otolemur garnettii"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:100973941, name: tumor protein p53 [17]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:100973941", "Pan paniscus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101006608, name: tumor protein p53 [18]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101006608", "Papio anubis"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101043647, name: tumor protein p53 [19]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101043647", "Saimiri boliviensis"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101133524, name: tumor protein p53 [20]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101133524", "Gorilla gorilla gorilla"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101285670, name: tumor protein p53 [21]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101285670", "Orcinus orca"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101319146, name: tumor protein p53 [22]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101319146", "Tursiops truncatus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101351852, name: tumor protein p53 [23]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101351852", "Trichechus manatus latirostris"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101362427, name: tumor protein p53 [24]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101362427", "Odobenus rosmarus divergens"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101399576, name: tumor protein p53 [25]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101399576", "Ceratotherium simum simum"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101416069, name: tumor protein p53 [26]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101416069", "Dasypus novemcinctus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101480650, name: tumor protein p53 [27]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101480650", "Maylandia zebra"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101528346, name: tumor protein p53 [28]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101528346", "Ochotona princeps"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101558045, name: tumor protein p53 [29]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101558045", "Sorex araneus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101589830, name: tumor protein p53 [30]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101589830", "Octodon degus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101609339, name: tumor protein p53 [31]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101609339", "Jaculus jaculus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101632504, name: tumor protein p53 [32]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101632504", "Condylura cristata"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101656530, name: tumor protein p53 [33]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101656530", "Echinops telfairi"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101677794, name: tumor protein p53 [34]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101677794", "Mustela putorius furo"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101701769, name: tumor protein p53 [35]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101701769", "Heterocephalus glaber"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101833915, name: tumor protein p53 [36]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101833915", "Mesocricetus auratus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101942845, name: tumor protein p53 [37]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101942845", "Chrysemys picta bellii"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101957738, name: tumor protein p53 [38]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101957738", "Ictidomys tridecemlineatus"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:101978980, name: tumor protein p53 [39]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:101978980", "Microtus ochrogaster"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene NCBIGene:102005455, name: tumor protein p53 [40]. ", "placement": "listing", "cells": ["tumor protein p53", "NCBIGene:102005455", "Chinchilla lanigera"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Gene symbol: TP53 [41]. Gene name: TP53 [45]. ", "placement": "listing", "cells": ["TP53", "NCBIGene:7157", ""], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Pubmed records found\n\n", "placement": "listing", "cells": null, "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Paper", "Identifier"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Pubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data [42]. ", "placement": "listing", "cells": ["TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.", "PMID:27328919"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Pubmed title: Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants [47]. ", "placement": "listing", "cells": ["Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants.", "PMID:33300245"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Pubmed title: Molecular characterization of mutant TP53 acute myeloid leukemia and high-risk myelodysplastic syndrome [50]. ", "placement": "listing", "cells": ["Molecular characterization of mutant TP53 acute myeloid leukemia and high-risk myelodysplastic syndrome.", "PMID:35108372"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Pubmed title: The Role of TP53 in Adaptation and Evolution [53]. ", "placement": "listing", "cells": ["The Role of TP53 in Adaptation and Evolution.", "PMID:36766853"], "t": 15.99}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms [56]. ", "placement": "listing", "cells": ["A clinical guide to TP53 mutations in myeloid neoplasms.", "PMID:40729726"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Clinvar records found\n\n", "placement": "listing", "cells": null, "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Variant", "Identifier"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser) [43]. ", "placement": "listing", "cells": ["NM_000546.6(TP53):c.247G>T (p.Ala83Ser)", "VCV003898631"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinvar title: NC_000017.11:g.7666193C>T [48]. ", "placement": "listing", "cells": ["NC_000017.11:g.7666193C>T", "VCV003905024"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs) [51]. ", "placement": "listing", "cells": ["NM_000546.6(TP53):c.816_864del (p.Arg273fs)", "VCV004055875"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinvar title: NM_000546.6(TP53):c.1101-73G>C [54]. ", "placement": "listing", "cells": ["NM_000546.6(TP53):c.1101-73G>C", "VCV004083530"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinvar title: NM_000546.6(TP53):c.-28-3132T>C [57]. ", "placement": "listing", "cells": ["NM_000546.6(TP53):c.-28-3132T>C", "VCV004083687"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Omim records found\n\n", "placement": "listing", "cells": null, "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Record", "Identifier"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "TUMOR PROTEIN p53 [44]. TP53 [44]. ", "placement": "listing", "cells": ["TUMOR PROTEIN p53; TP53", "omim 191170"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Clinical trial records found\n\n", "placement": "listing", "cells": null, "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Trial", "Identifier", "Status"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinical trial name: Biomarker Monitoring in TP53 Mutation Carriers [46]. ", "placement": "listing", "cells": ["Biomarker Monitoring in TP53 Mutation Carriers", "NCT02289326", "COMPLETED"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinical trial name: Study of SNX-5422 in TP53 Null Cancers [49]. ", "placement": "listing", "cells": ["Study of SNX-5422 in TP53 Null Cancers", "NCT02612285", "TERMINATED"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinical trial name: The p53 Colorectal Cancer Trial [52]. ", "placement": "listing", "cells": ["The p53 Colorectal Cancer Trial", "NCT03149679", "TERMINATED"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations [55]. ", "placement": "listing", "cells": ["The Role of Hypoxia as a Selective Pressure for TP53 Mutations", "NCT03466034", "TERMINATED"], "t": 16.0}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Clinical trial name: Treatment of Carrying TP53 Harmful Mutations [58]. ", "placement": "listing", "cells": ["Treatment of Carrying TP53 Harmful Mutations", "NCT03645200", "UNKNOWN"], "t": 16.0}}
+{"tag": "CITATION", "data": {"display_index": 1, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100009292", "field": "name", "claim_text": "Gene NCBIGene:100009292, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 2, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100049321", "field": "name", "claim_text": "Gene NCBIGene:100049321, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 3, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100062044", "field": "name", "claim_text": "Gene NCBIGene:100062044, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 4, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100092821", "field": "name", "claim_text": "Gene NCBIGene:100092821, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 5, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100136737", "field": "name", "claim_text": "Gene NCBIGene:100136737, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 6, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100304476", "field": "name", "claim_text": "Gene NCBIGene:100304476, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 7, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100379269", "field": "name", "claim_text": "Gene NCBIGene:100379269, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 8, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100415710", "field": "name", "claim_text": "Gene NCBIGene:100415710, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 9, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100435218", "field": "name", "claim_text": "Gene NCBIGene:100435218, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 10, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100468516", "field": "name", "claim_text": "Gene NCBIGene:100468516, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 11, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100583326", "field": "name", "claim_text": "Gene NCBIGene:100583326, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 12, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100663725", "field": "name", "claim_text": "Gene NCBIGene:100663725, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 13, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100682525", "field": "name", "claim_text": "Gene NCBIGene:100682525, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 14, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100702587", "field": "name", "claim_text": "Gene NCBIGene:100702587, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 15, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100922473", "field": "name", "claim_text": "Gene NCBIGene:100922473, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 16, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100963622", "field": "name", "claim_text": "Gene NCBIGene:100963622, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 17, "source_url": "https://www.ncbi.nlm.nih.gov/gene/100973941", "field": "name", "claim_text": "Gene NCBIGene:100973941, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 18, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101006608", "field": "name", "claim_text": "Gene NCBIGene:101006608, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 19, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101043647", "field": "name", "claim_text": "Gene NCBIGene:101043647, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 20, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101133524", "field": "name", "claim_text": "Gene NCBIGene:101133524, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 21, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101285670", "field": "name", "claim_text": "Gene NCBIGene:101285670, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 22, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101319146", "field": "name", "claim_text": "Gene NCBIGene:101319146, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 23, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101351852", "field": "name", "claim_text": "Gene NCBIGene:101351852, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 24, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101362427", "field": "name", "claim_text": "Gene NCBIGene:101362427, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 25, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101399576", "field": "name", "claim_text": "Gene NCBIGene:101399576, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 26, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101416069", "field": "name", "claim_text": "Gene NCBIGene:101416069, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 27, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101480650", "field": "name", "claim_text": "Gene NCBIGene:101480650, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 28, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101528346", "field": "name", "claim_text": "Gene NCBIGene:101528346, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 29, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101558045", "field": "name", "claim_text": "Gene NCBIGene:101558045, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 30, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101589830", "field": "name", "claim_text": "Gene NCBIGene:101589830, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 31, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101609339", "field": "name", "claim_text": "Gene NCBIGene:101609339, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 32, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101632504", "field": "name", "claim_text": "Gene NCBIGene:101632504, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 33, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101656530", "field": "name", "claim_text": "Gene NCBIGene:101656530, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 34, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101677794", "field": "name", "claim_text": "Gene NCBIGene:101677794, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 35, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101701769", "field": "name", "claim_text": "Gene NCBIGene:101701769, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 36, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101833915", "field": "name", "claim_text": "Gene NCBIGene:101833915, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 37, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101942845", "field": "name", "claim_text": "Gene NCBIGene:101942845, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 38, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101957738", "field": "name", "claim_text": "Gene NCBIGene:101957738, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 39, "source_url": "https://www.ncbi.nlm.nih.gov/gene/101978980", "field": "name", "claim_text": "Gene NCBIGene:101978980, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 40, "source_url": "https://www.ncbi.nlm.nih.gov/gene/102005455", "field": "name", "claim_text": "Gene NCBIGene:102005455, name: tumor protein p53"}}
+{"tag": "CITATION", "data": {"display_index": 41, "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157/", "field": "symbol", "claim_text": "gene symbol: TP53"}}
+{"tag": "CITATION", "data": {"display_index": 42, "source_url": "https://pubmed.ncbi.nlm.nih.gov/27328919/", "field": "title", "claim_text": "pubmed title: TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data"}}
+{"tag": "CITATION", "data": {"display_index": 43, "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/", "field": "title", "claim_text": "clinvar title: NM_000546.6(TP53):c.247G>T (p.Ala83Ser)"}}
+{"tag": "CITATION", "data": {"display_index": 44, "source_url": "https://omim.org/entry/191170", "field": "title", "claim_text": "TUMOR PROTEIN p53 TP53"}}
+{"tag": "CITATION", "data": {"display_index": 45, "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157", "field": "name", "claim_text": "gene name: TP53"}}
+{"tag": "CITATION", "data": {"display_index": 46, "source_url": "https://clinicaltrials.gov/study/NCT02289326", "field": "name", "claim_text": "Clinical trial name: Biomarker Monitoring in TP53 Mutation Carriers"}}
+{"tag": "CITATION", "data": {"display_index": 47, "source_url": "https://pubmed.ncbi.nlm.nih.gov/33300245/", "field": "title", "claim_text": "pubmed title: Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants"}}
+{"tag": "CITATION", "data": {"display_index": 48, "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/", "field": "title", "claim_text": "clinvar title: NC_000017.11:g.7666193C>T"}}
+{"tag": "CITATION", "data": {"display_index": 49, "source_url": "https://clinicaltrials.gov/study/NCT02612285", "field": "name", "claim_text": "Clinical trial name: Study of SNX-5422 in TP53 Null Cancers"}}
+{"tag": "CITATION", "data": {"display_index": 50, "source_url": "https://pubmed.ncbi.nlm.nih.gov/35108372/", "field": "title", "claim_text": "pubmed title: Molecular characterization of mutant TP53 acute myeloid leukemia and high-risk myelodysplastic syndrome"}}
+{"tag": "CITATION", "data": {"display_index": 51, "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/", "field": "title", "claim_text": "clinvar title: NM_000546.6(TP53):c.816_864del (p.Arg273fs)"}}
+{"tag": "CITATION", "data": {"display_index": 52, "source_url": "https://clinicaltrials.gov/study/NCT03149679", "field": "name", "claim_text": "Clinical trial name: The p53 Colorectal Cancer Trial"}}
+{"tag": "CITATION", "data": {"display_index": 53, "source_url": "https://pubmed.ncbi.nlm.nih.gov/36766853/", "field": "title", "claim_text": "pubmed title: The Role of TP53 in Adaptation and Evolution"}}
+{"tag": "CITATION", "data": {"display_index": 54, "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/", "field": "title", "claim_text": "clinvar title: NM_000546.6(TP53):c.1101-73G>C"}}
+{"tag": "CITATION", "data": {"display_index": 55, "source_url": "https://clinicaltrials.gov/study/NCT03466034", "field": "name", "claim_text": "Clinical trial name: The Role of Hypoxia as a Selective Pressure for TP53 Mutations"}}
+{"tag": "CITATION", "data": {"display_index": 56, "source_url": "https://pubmed.ncbi.nlm.nih.gov/40729726/", "field": "title", "claim_text": "pubmed title: A clinical guide to TP53 mutations in myeloid neoplasms"}}
+{"tag": "CITATION", "data": {"display_index": 57, "source_url": "https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/", "field": "title", "claim_text": "clinvar title: NM_000546.6(TP53):c.-28-3132T>C"}}
+{"tag": "CITATION", "data": {"display_index": 58, "source_url": "https://clinicaltrials.gov/study/NCT03645200", "field": "name", "claim_text": "Clinical trial name: Treatment of Carrying TP53 Harmful Mutations"}}
+{"tag": "REPAIR_CHECK", "data": {"omitted": 30, "code_lines_cite_all": false}}
+{"tag": "FALLBACK_NOTE", "data": "_build_structured_fallback_note"}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "Found 40 gene records for TP53, of 715 available [1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16][17][18][19][20]. ", "placement": "summary", "cells": null, "t": 24.3}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 24.3}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: this answer was truncated because only 159 of the 715 records that matched this question in the graph were retrieved", "placement": "listing", "cells": null, "t": 24.3}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 24.3}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: no written summary could be checked against the records, so the records found are listed below with their sources", "placement": "listing", "cells": null, "t": 24.3}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-1"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-2"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-3"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-4"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-5"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-6"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-7"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-8"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-9"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-10"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-11"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-12"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-13"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-14"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-15"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-16"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-17"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-18"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-19"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-20"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-21"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-22"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-23"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-24"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-25"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-26"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-27"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-28"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-29"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-30"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-31"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-32"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-33"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-34"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-35"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-36"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-37"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-38"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-39"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "cq-20809fba18de-40"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-023593ad5e1d-41"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2616e1c20d76-42"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-a6e12e06cfbb-43"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-1c3ea7fd8e22-44"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-3702487aa92f-45"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ct-70b9b749b66d-46"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2616e1c20d76-49"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-a6e12e06cfbb-50"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ct-70b9b749b66d-52"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2616e1c20d76-55"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-a6e12e06cfbb-56"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ct-70b9b749b66d-57"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2616e1c20d76-60"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-a6e12e06cfbb-61"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ct-70b9b749b66d-62"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2616e1c20d76-65"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-a6e12e06cfbb-66"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ct-70b9b749b66d-67"}}
+{"tag": "TRUST", "data": {"outcome": "ask", "risk_tier": "low", "scope": "answer", "citation_id": null}}
+{"tag": "DONE", "data": {"trust_outcome": "ask", "elapsed_ms": 24285, "total_cost_usd": 0.007798906999999999, "message": null, "trust_line": "Based on 57 sources cited from NCBI Gene, ClinicalTrials.gov, ClinVar and 2 other databases", "t": 24.3}}

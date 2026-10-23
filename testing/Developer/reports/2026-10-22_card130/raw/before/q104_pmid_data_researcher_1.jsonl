@@ -1,0 +1,54 @@
+{"tag": "WRITER_FINDINGS", "data": [[1, "nuccore", "title", "Homo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6"], [2, "nuccore", "title", "Homo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6"], [3, "nuccore", "title", "Homo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18"], [4, "nuccore", "title", "Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5"], [5, "nuccore", "title", "Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12"], [6, "sra", "runs", "SRR9496657"], [7, "assembly", "assemblyname", "GRCh38.p11"], [8, "assembly", "assemblyname", "GRCh38.p14"], [9, "assembly", "assemblyname", "GRCh38.p12"], [10, "assembly", "assemblyname", "GRCh38.p13"], [11, "assembly", "assemblyname", "GRCh37.p12"]]}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Nuccore records found\n\n", "placement": "listing", "cells": null, "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Record", "Identifier"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Nuccore title: Homo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6 [1]. ", "placement": "listing", "cells": ["Homo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6", "nuccore 1317049034"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Nuccore title: Homo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6 [2]. ", "placement": "listing", "cells": ["Homo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6", "nuccore 1317049037"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Nuccore title: Homo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18 [3]. ", "placement": "listing", "cells": ["Homo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18", "nuccore 1519474710"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Nuccore title: Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5 [4]. ", "placement": "listing", "cells": ["Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5", "nuccore 1519499590"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Nuccore title: Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12 [5]. ", "placement": "listing", "cells": ["Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12", "nuccore 1519499605"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Sra records found\n\n", "placement": "listing", "cells": null, "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Record", "Identifier", "Created"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Sra runs: SRR9496657 [6]. ", "placement": "listing", "cells": ["SRR9496657", "sra 8317276", "2020"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "heading", "text": "Assembly records found\n\n", "placement": "listing", "cells": null, "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_header", "text": "", "placement": "listing", "cells": ["Record", "Identifier", "Status"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Assembly assemblyname: GRCh38.p11 [7]. ", "placement": "listing", "cells": ["GRCh38.p11", "GCF_000001405.37", "Chromosome"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Assembly assemblyname: GRCh38.p14 [8]. ", "placement": "listing", "cells": ["GRCh38.p14", "GCF_000001405.40", "Chromosome"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Assembly assemblyname: GRCh38.p12 [9]. ", "placement": "listing", "cells": ["GRCh38.p12", "GCF_000001405.38", "Chromosome"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Assembly assemblyname: GRCh38.p13 [10]. ", "placement": "listing", "cells": ["GRCh38.p13", "GCF_000001405.39", "Chromosome"], "t": 6.97}}
+{"tag": "TOKEN", "data": {"kind": "table_row", "text": "Assembly assemblyname: GRCh37.p12 [11]. ", "placement": "listing", "cells": ["GRCh37.p12", "GCF_000001405.24", "Chromosome"], "t": 6.97}}
+{"tag": "CITATION", "data": {"display_index": 1, "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/1317049034", "field": "title", "claim_text": "nuccore title: Homo sapiens major histocompatibility complex, class II, DR beta 7 (pseudogene) (HLA-DRB7) on chromosome 6"}}
+{"tag": "CITATION", "data": {"display_index": 2, "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/1317049037", "field": "title", "claim_text": "nuccore title: Homo sapiens major histocompatibility complex, class II, DR beta 8 (pseudogene) (HLA-DRB8) on chromosome 6"}}
+{"tag": "CITATION", "data": {"display_index": 3, "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/1519474710", "field": "title", "claim_text": "nuccore title: Homo sapiens ribose 5-phosphate isomerase A pseudogene 1 (RPIAP1) on chromosome 18"}}
+{"tag": "CITATION", "data": {"display_index": 4, "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/1519499590", "field": "title", "claim_text": "nuccore title: Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene 11 (HSPD1P11) on chromosome 5"}}
+{"tag": "CITATION", "data": {"display_index": 5, "source_url": "https://www.ncbi.nlm.nih.gov/nuccore/1519499605", "field": "title", "claim_text": "nuccore title: Homo sapiens heat shock protein family D (Hsp60) member 1 pseudogene (LOC100462988) on chromosome 12"}}
+{"tag": "CITATION", "data": {"display_index": 6, "source_url": "https://www.ncbi.nlm.nih.gov/sra/8317276", "field": "runs", "claim_text": "sra runs: SRR9496657"}}
+{"tag": "CITATION", "data": {"display_index": 7, "source_url": "https://www.ncbi.nlm.nih.gov/assembly/1132361", "field": "assemblyname", "claim_text": "assembly assemblyname: GRCh38.p11"}}
+{"tag": "CITATION", "data": {"display_index": 8, "source_url": "https://www.ncbi.nlm.nih.gov/assembly/11968211", "field": "assemblyname", "claim_text": "assembly assemblyname: GRCh38.p14"}}
+{"tag": "CITATION", "data": {"display_index": 9, "source_url": "https://www.ncbi.nlm.nih.gov/assembly/1493941", "field": "assemblyname", "claim_text": "assembly assemblyname: GRCh38.p12"}}
+{"tag": "CITATION", "data": {"display_index": 10, "source_url": "https://www.ncbi.nlm.nih.gov/assembly/2334371", "field": "assemblyname", "claim_text": "assembly assemblyname: GRCh38.p13"}}
+{"tag": "CITATION", "data": {"display_index": 11, "source_url": "https://www.ncbi.nlm.nih.gov/assembly/561668", "field": "assemblyname", "claim_text": "assembly assemblyname: GRCh37.p12"}}
+{"tag": "REPAIR_CHECK", "data": {"omitted": 11, "code_lines_cite_all": false}}
+{"tag": "FALLBACK_NOTE", "data": "_build_structured_fallback_note"}
+{"tag": "TOKEN", "data": {"kind": "claim", "text": "Found 5 nuccore records, 1 sra record and 5 assembly records for PMID 11237011 [1][2][3][4][5][6][7][8][9][10][11]. ", "placement": "summary", "cells": null, "t": 10.33}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 10.33}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "NCBI lists 1587 sequence records linked to PMID 11237011; this answer shows 10.", "placement": "listing", "cells": null, "t": 10.33}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 10.33}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "NCBI lists 29 genome assemblies linked to PMID 11237011; this answer shows 10.", "placement": "listing", "cells": null, "t": 10.33}}
+{"tag": "TOKEN", "data": {"kind": "paragraph_break", "text": "\n\n", "placement": "listing", "cells": null, "t": 10.33}}
+{"tag": "TOKEN", "data": {"kind": "note", "text": "Note: no written summary could be checked against the records, so the records found are listed below with their sources", "placement": "listing", "cells": null, "t": 10.33}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-f632bcaff747-1"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-f632bcaff747-2"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-f632bcaff747-3"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-f632bcaff747-4"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-f632bcaff747-5"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-1d41dcd6198f-6"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2fc9d4b927fd-7"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2fc9d4b927fd-8"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2fc9d4b927fd-9"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2fc9d4b927fd-10"}}
+{"tag": "TRUST", "data": {"outcome": "answer", "risk_tier": "low", "scope": "claim", "citation_id": "ne-2fc9d4b927fd-11"}}
+{"tag": "TRUST", "data": {"outcome": "ask", "risk_tier": "low", "scope": "answer", "citation_id": null}}
+{"tag": "DONE", "data": {"trust_outcome": "ask", "elapsed_ms": 10316, "total_cost_usd": 0.0049785129999999995, "message": null, "trust_line": "Based on 11 sources cited from Assembly, Nucleotide and SRA", "t": 10.33}}

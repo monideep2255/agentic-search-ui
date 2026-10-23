@@ -132,6 +132,38 @@ _EXPLANATORY_FIELDS: tuple[str, ...] = ("summary",)
 # a second finding with a row for a few words duplicates the first one.
 _MIN_EXPLANATORY_CHARS = 80
 
+# Card 130 (2026-10-22), the root fix: the column the table shows beside a
+# list row reaches the writer as a second finding, cited to the same record.
+#
+# For a list answer the writer was handed each record's name and nothing
+# else, so a sentence could only repeat a name, which the restatement drop
+# removes because the list below already shows it, or say more than any
+# record backed, which the grounding pass strips. The reader's table showed
+# more than the writer saw: an ortholog's organism (card 38 slice B), a
+# dbSNP record's gene (card 37 slice A1), an isolate's resistance genes
+# (G-035). This is the 2026-09-21 lesson above applied to list rows: change
+# the INPUT, never the gate.
+#
+# A closed table of (exact row type, row field), the same keys
+# `answer_layout.TABLE_COLUMNS` and `_ROW_TYPE_COLUMNS` show the reader. It
+# reads the row's own field and never a word of the question. Not here: a
+# variant's condition. The row carries only the condition's MedGen CURIEs
+# (`clinvar_condition_ids`), and their titles are resolved in
+# `core.graph.write_node` after this module runs, so that column needs a
+# change there.
+#
+# A column finding is a DETAIL of its record (`SynthFinding.row_detail`),
+# like a clinical feature: it takes no display slot, is never a listing
+# entry, never makes two records on one page read as one record's views,
+# and is never reported missing on its own, since the table already shows
+# its value beside its record. See `build_synth_findings`,
+# `one_finding_per_record` and `unreported_findings`.
+ROW_COLUMN_FIELDS: dict[str, str] = {
+    "Gene": "organism",
+    "Variant record": "genes",
+    "Pathogen Detection isolate": "amr_genotypes",
+}
+
 # The hard ceiling on how many findings reach one Synth prompt. Section 7 of
 # system-design-patterns ("never inline large result sets into the agent's
 # context - it causes hallucination of the remaining data") is the reason
@@ -212,6 +244,13 @@ class SynthFinding:
     # carrying it as a field beats re-parsing a string that contains
     # hyphens of its own.
     call_id: str = ""
+    # Card 130 (2026-10-22). True for the second finding a list row carries
+    # for the column its table shows (`ROW_COLUMN_FIELDS`). Not on Section
+    # 8.1's wire schema and never rendered differently: the writer reads it
+    # like any finding. It marks the finding as a detail of its record, so
+    # the code-built listing and the completeness check treat the record,
+    # not the detail, as what the reader sees.
+    row_detail: bool = False
 
     def as_schema_dict(self) -> dict[str, Any]:
         """The seven Section 8.1 fields, in schema order, and nothing else."""
@@ -495,6 +534,41 @@ def explanatory_value_for_row(
     return None
 
 
+def column_value_for_row(
+    row: dict[str, Any], picked_field_name: str
+) -> tuple[str, str] | None:
+    """The column a list row's table shows beside its name, when the row
+    has one worth citing: `(field_name, field_value)`, or None.
+
+    Card 130 (2026-10-22). See `ROW_COLUMN_FIELDS`. Keyed on the row's exact
+    type, so a Layer 2 `gene` record, a `SequenceVariant` or a LitVar2 row
+    never matches. None when the row's field is not a non-blank string (a
+    null, a bool, a container or a number never ships, findings J-10 and
+    F-2.2-R-06), when it is an ETL sentinel or a URL (the same degenerate
+    shapes `_citable_value_for_row` refuses), or when the picker already
+    chose that field, which would be the same claim twice. Depth-independent
+    for the reason `explanatory_value_for_row` gives.
+    """
+    name = ROW_COLUMN_FIELDS.get(str(row.get("node_or_edge_type") or ""))
+    if name is None or name == picked_field_name:
+        return None
+    fields = row.get("fields") or {}
+    if not isinstance(fields, dict):
+        return None
+    value = fields.get(name)
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if (
+        not text
+        or text.lower() in _STRING_SENTINELS
+        or _SLASHED_NA_SENTINEL.match(text) is not None
+        or _URL_VALUE.match(text) is not None
+    ):
+        return None
+    return name, text
+
+
 def build_synth_findings(
     findings: list[Finding],
     pick_representative_field: Any,
@@ -567,7 +641,22 @@ def build_synth_findings(
     keeps its relative order behind them. The admitted SET is identical
     either way, so a question still has one source set.
     """
-    collected: list[tuple[str, dict[str, Any], tuple[str, str, bool, bool], Finding]] = []
+    # Each entry's last element is card 130's column finding for that row,
+    # `(field_name, field_value)` or None. It rides INSIDE its row's entry
+    # rather than as an entry of its own, so it takes no display slot and no
+    # lead quota slot, `_allot_with_lead_quota` cannot split it from its row,
+    # and it is emitted directly behind its row once admission and order are
+    # decided. It is not counted in `total_citable` either, so `capped` still
+    # means "a record or a summary was left out", never "a column was".
+    collected: list[
+        tuple[
+            str,
+            dict[str, Any],
+            tuple[str, str, bool, bool],
+            Finding,
+            tuple[str, str] | None,
+        ]
+    ] = []
     seen: set[tuple[str, str, str]] = set()
     total_citable = 0
 
@@ -612,8 +701,18 @@ def build_synth_findings(
         total_citable += 1
         if (lead_quota is None or not lead_call_ids) and len(collected) >= max_findings:
             continue
+        # Card 130: the column the row's table shows, as a detail of the
+        # entry admitted here. Through the same `seen` dedup as every other
+        # finding, so one record returned twice carries its column once.
+        column = column_value_for_row(row, field_name)
+        if column is not None:
+            column_identity = (source_url, column[0], column[1])
+            if column_identity in seen:
+                column = None
+            else:
+                seen.add(column_identity)
         collected.append(
-            (source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding)
+            (source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding, column)
         )
 
         # Item 11.31: the row's explanatory prose, as a SECOND finding
@@ -642,6 +741,7 @@ def build_synth_findings(
                             row,
                             (explanatory_name, explanatory_value, False, False),
                             finding,
+                            None,
                         )
                     )
 
@@ -654,26 +754,39 @@ def build_synth_findings(
         collected.sort(key=lambda entry: entry[3].call_id not in lead_call_ids)
 
     synth_findings: list[SynthFinding] = []
-    for source_url, row, (field_name, field_value, is_suspect, curie_fallback), finding in collected:
-        ref_index = len(synth_findings) + 1
-        synth_findings.append(
-            SynthFinding(
-                ref_index=ref_index,
-                citation_id=_clip(f"{finding.call_id}-{ref_index}", MAX_CITATION_ID_CHARS),
-                layer=finding.layer,
-                tool=finding.tool,
-                field=_clip(field_name, MAX_FIELD_NAME_CHARS),
-                field_value=_clip(field_value, MAX_FIELD_VALUE_CHARS),
-                source_url=_clip(source_url, MAX_SOURCE_URL_CHARS),
-                value_is_suspect=is_suspect,
-                curie_fallback=curie_fallback,
-                entity_type=_clip(str(row.get("node_or_edge_type") or ""), 64),
-                curie=_clip(str(row.get("curie") or ""), 128),
-                call_id=finding.call_id,
+    records_and_summaries = 0
+    for source_url, row, picked, finding, column in collected:
+        field_name, field_value, is_suspect, curie_fallback = picked
+        records_and_summaries += 1
+        emitted: list[tuple[str, str, bool, bool, bool]] = [
+            (field_name, field_value, is_suspect, curie_fallback, False)
+        ]
+        if column is not None:
+            # Card 130: numbered right behind its row, so the writer reads
+            # the two together; cited to the same record, so a sentence that
+            # states it opens the record the table row opens.
+            emitted.append((column[0], column[1], False, False, True))
+        for name, value, suspect, fallback, detail in emitted:
+            ref_index = len(synth_findings) + 1
+            synth_findings.append(
+                SynthFinding(
+                    ref_index=ref_index,
+                    citation_id=_clip(f"{finding.call_id}-{ref_index}", MAX_CITATION_ID_CHARS),
+                    layer=finding.layer,
+                    tool=finding.tool,
+                    field=_clip(name, MAX_FIELD_NAME_CHARS),
+                    field_value=_clip(value, MAX_FIELD_VALUE_CHARS),
+                    source_url=_clip(source_url, MAX_SOURCE_URL_CHARS),
+                    value_is_suspect=suspect,
+                    curie_fallback=fallback,
+                    entity_type=_clip(str(row.get("node_or_edge_type") or ""), 64),
+                    curie=_clip(str(row.get("curie") or ""), 128),
+                    call_id=finding.call_id,
+                    row_detail=detail,
+                )
             )
-        )
 
-    return synth_findings, total_citable > len(synth_findings)
+    return synth_findings, total_citable > records_and_summaries
 
 
 def _allot_with_lead_quota(
@@ -1320,10 +1433,15 @@ def one_finding_per_record(synth_findings: list[SynthFinding]) -> list[SynthFind
     question). `build_structured_fallback_narrative` lists them beneath
     their record's entry instead.
     """
+    # Card 130 (2026-10-22): a row's column finding (`row_detail`) is left
+    # out the same way. The table already shows its value beside its record
+    # from the row's own field, so it is never an entry; and grouping it
+    # with its row would make two records that share one page read as one
+    # record's views, deleting one of them from the listing.
     groups: dict[str, list[SynthFinding]] = {}
     for finding in synth_findings:
         key = (finding.source_url or "").strip()
-        if not key or finding.field == CLINICAL_FEATURES_FIELD:
+        if not key or finding.field == CLINICAL_FEATURES_FIELD or finding.row_detail:
             continue
         groups.setdefault(key, []).append(finding)
     # The one finding each multi-view group keeps, by citation_id so the
@@ -1335,7 +1453,7 @@ def one_finding_per_record(synth_findings: list[SynthFinding]) -> list[SynthFind
         keep[key] = min(group, key=_listing_rank).citation_id
     kept: list[SynthFinding] = []
     for finding in synth_findings:
-        if finding.field == CLINICAL_FEATURES_FIELD:
+        if finding.field == CLINICAL_FEATURES_FIELD or finding.row_detail:
             continue
         key = (finding.source_url or "").strip()
         chosen = keep.get(key)
@@ -1743,7 +1861,18 @@ def unreported_findings(
             return False
         return stands_for in reported_citation_ids
 
-    return [finding for finding in synth_findings if not is_reported(finding)]
+    # Card 130 (2026-10-22): a row's column finding is never reported
+    # missing on its own. Its record's own finding answers for it: when the
+    # record is left out, that finding is in this list and the listing or
+    # the repair shows the record, with the column's value in its table row
+    # from the row's own field. Counting the column as well would ask for a
+    # second writing call on nearly every list answer for a value the reader
+    # already sees.
+    return [
+        finding
+        for finding in synth_findings
+        if not finding.row_detail and not is_reported(finding)
+    ]
 
 
 def _directive_block_lines(listed_findings: list[SynthFinding]) -> tuple[str, ...]:
