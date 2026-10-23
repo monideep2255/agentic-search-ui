@@ -277,6 +277,7 @@ _MAX_ANNOTATION_IDENTIFIER_CHARS: Final[int] = 60
 _MAX_ANNOTATION_NORMALIZED_ID_CHARS: Final[int] = 60
 _MAX_ANNOTATION_BIOTYPE_CHARS: Final[int] = 20
 _MAX_ANNOTATION_NAME_CHARS: Final[int] = 100
+_MAX_PUBLICATION_TITLE_CHARS: Final[int] = 500
 _MAX_SOURCE_URL_CHARS: Final[int] = 200
 
 _MAX_ERROR_CHARS: Final[int] = 500
@@ -684,6 +685,38 @@ def _parse_annotation(
     return annotation, notes
 
 
+# Card 134: the inline formatting PubTator3 keeps from PubMed's title markup,
+# as exact tags only ("<i>BRCA1-</i>", live 2026-10-22). Anything else shaped
+# like an angle bracket, "c.3140-26A>G" or "<5 years", is never touched.
+_FORMATTING_TAG: Final[re.Pattern[str]] = re.compile(
+    r"</?(?:i|b|u|em|strong|sup|sub)>", re.IGNORECASE
+)
+
+
+def _publication_title(passages: Any) -> str | None:
+    """The text of the document's first `title` passage, or None.
+
+    Schema design decision 11 (card 134). Only a passage whose
+    `infons.type` is exactly "title" counts, so an abstract or a full-text
+    section heading is never read as the paper's name. The exact inline
+    formatting tags are removed and whitespace collapses to one line; a
+    blank result is None. Never raises.
+    """
+    if not isinstance(passages, list):
+        return None
+    for passage in passages:
+        if not isinstance(passage, dict):
+            continue
+        infons = passage.get("infons")
+        if not isinstance(infons, dict) or infons.get("type") != "title":
+            continue
+        text = passage.get("text")
+        if not isinstance(text, str):
+            return None
+        return " ".join(_FORMATTING_TAG.sub("", text).split()) or None
+    return None
+
+
 def _parse_publication(doc: Any, pub_index: int) -> tuple[PubtatorPublication | None, list[str]]:
     """Unwrap one `.PubTator3[i]` document into a `PubtatorPublication`.
 
@@ -750,8 +783,16 @@ def _parse_publication(doc: Any, pub_index: int) -> tuple[PubtatorPublication | 
         if capped_pmid is not None
         else None
     )
+    title, title_note = _withhold_if_over(
+        _publication_title(passages),
+        _MAX_PUBLICATION_TITLE_CHARS,
+        f"publications[{pub_index}].title",
+    )
+    if title_note is not None:
+        notes.append(title_note)
     publication = PubtatorPublication(
         pmid=capped_pmid,
+        title=title,
         annotations=annotations,
         total_annotations=total_annotations,
         source_url=source_url,

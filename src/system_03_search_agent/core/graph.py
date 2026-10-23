@@ -582,6 +582,7 @@ from system_03_search_agent.synthesis.answer_layout import (
 from system_03_search_agent.synthesis.article_titles import (
     apply_resolved_article_titles,
     article_curies_to_name,
+    clean_article_title,
     resolve_article_titles,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
@@ -5089,6 +5090,15 @@ def _layer_tool_output_to_structured_fields(
                     {
                         "pmid": publication.pmid,
                         "annotation_count": publication.total_annotations,
+                        # Card 134: the paper's PubMed title, from the same
+                        # response, so the list row names the paper even when
+                        # the background PubMed search did not finish. It
+                        # stays AFTER `pmid`: the row's cited fact, its
+                        # finding and the per-page fold are exactly as before,
+                        # and only the row's label (`answer_layout.
+                        # record_label`) reads it. Cleaned as a graph paper's
+                        # title is, and absent when that withholds it.
+                        "title": clean_article_title(publication.title),
                     },
                     publication.source_url,
                 )

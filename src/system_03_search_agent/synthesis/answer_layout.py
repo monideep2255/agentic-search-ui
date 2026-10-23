@@ -937,6 +937,23 @@ _LABEL_FIELDS = ("name", "title", "symbol", "preferred_name")
 LABEL_FIELDS = _LABEL_FIELDS
 _URL_PREFIX = re.compile(r"^\s*https?://", re.IGNORECASE)
 
+#: Card 134 (2026-10-22): a literature-index paper (a PubTator3 `Publication`
+#: row) whose row holds no usable title is named by its PubMed number with its
+#: system, "PMID:42477928", as a graph paper with only a placeholder title is
+#: (card 38 slice C), never the bare number beside that same identifier
+#: ("42477928 PMID:42477928") and never a sentence about the title.
+_TITLED_BY_ROW_TYPES: frozenset[str] = frozenset({"Publication"})
+
+
+def _is_untitled_paper_row(finding: SynthFinding, row_fields: dict[str, Any] | None) -> bool:
+    """Card 134: a `Publication` row whose finding and row name nothing."""
+    if finding.entity_type not in _TITLED_BY_ROW_TYPES or finding.field in _LABEL_FIELDS:
+        return False
+    return not any(
+        isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value)
+        for value in ((row_fields or {}).get(key) for key in _LABEL_FIELDS)
+    )
+
 
 def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> str:
     """The label a code-built list row shows for one record. Never a URL.
@@ -971,6 +988,12 @@ def record_label(finding: SynthFinding, row_fields: dict[str, Any] | None) -> st
         value = (row_fields or {}).get(key)
         if isinstance(value, str) and value.strip() and not _URL_PREFIX.match(value):
             return value.strip()[:500]
+    if _is_untitled_paper_row(finding, row_fields):
+        # Card 134: no title on the row, so the paper's PMID, once, in the
+        # form its Identifier cell and its source card use.
+        identifier = record_identifier({"fields": row_fields or {}})
+        if identifier:
+            return identifier
     for candidate in (
         finding.field_value if finding.field in _LABEL_FIELDS else "",
         finding.curie,
@@ -1000,6 +1023,11 @@ def plain_record_label(
     where the code lives for anyone who wants it.
     """
     label = record_label(finding, row_fields)
+    if _is_untitled_paper_row(finding, row_fields):
+        # Card 134: Plain language keeps its everyday noun for a paper with
+        # no title, "Published paper", as before.
+        noun = plain_noun(finding.entity_type)
+        return noun[:1].upper() + noun[1:]
     if _row_type_label(finding, row_fields) is not None:
         # The label is the record's own code (an rs id), so a reader sees its
         # everyday noun and, where the row gives one, its gene.
