@@ -370,6 +370,8 @@ async def test_a_used_second_reading_is_recorded_in_the_done_decisions(
     recorded = _second_reading_decisions(events)
     assert len(recorded) == 1
     assert recorded[0]["chosen"] == "resolved: croup"
+    assert recorded[0]["decided_by"] == "plan"
+    assert recorded[0].get("fallback_reason") is None
 
 
 @pytest.mark.asyncio

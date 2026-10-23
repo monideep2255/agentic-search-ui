@@ -6826,9 +6826,10 @@ def _second_reading_record(reading: _Reading) -> DecisionRecord:
     """The `done` event's entry saying a second reading was used, and what
     it resolved (card 145 fix round, A-145-02).
 
-    Not a classifier decision: the plan tier read the question again. The
-    record contract names only "jev" and "guard" as deciders, so "guard" is
-    set and `fallback_reason` says what made the call instead.
+    Not a classifier decision: the plan-tier model read the question again,
+    so `decided_by` is "plan" (the owner's decision of 2026-10-22 added it
+    to the record contract for this entry). Nothing fell back, so
+    `fallback_reason` stays empty, as on any record that did not fall back.
     """
     spans: list[str] = []
     for mention, _ in reading.resolution.confirmed:
@@ -6842,8 +6843,7 @@ def _second_reading_record(reading: _Reading) -> DecisionRecord:
         name=_SECOND_READING_POINT,
         options=["resolved", "asked_back"],
         chosen=chosen,
-        decided_by="guard",
-        fallback_reason="not a classifier decision: the plan tier read the question again",
+        decided_by="plan",
     )
 
 
