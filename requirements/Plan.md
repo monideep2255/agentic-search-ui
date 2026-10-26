@@ -1050,6 +1050,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-25, THE UI FIX LOOP: THE OWNER'S DECISIONS ON THE HELD-BACK WORK, NOTHING BUILT, NO RELEASE. The decisions: `DECISIONS.md`, rows dated 2026-10-25. The session table: `testing/UI_fixes_done.md`, Session history. What awaits the owner and the next action: `HANDOFF.md`.
+
+- Pull requests closed with a note each: #293 (card 145, folded into card 56's redesign), #294 (card 130, root fix closed), #295 (card 129, folded into card 56's redesign), #296 (card 131 part 2, the count line stays) and #298 (card 142, to be redesigned). #301 (card 139 note 3) stays open as a draft for rework. #303, a documents-only pull request, merged earlier in the day.
+- Decided for the team to build: card 137 part 2 (the whole sentence is dropped when its uncited ending is stripped), card 139 (a kind showing none gets one true line, and note 3 names only what the question named), card 146 (a "Retracted" tag read from PubMed's own publication type), card 147 (diagnose next, first of the team-buildable cards) and card 84 (the lead reads the last week's guard lag lines and brings one recommendation). Card 128's note stays beside the failed-search note.
+- Approved and not built: the frontend lockfile bump (fast-uri 3.1.9, undici 7.30.1); the frontend audit gate is red on every pull request until it lands.
+- No production release for the overnight merges of 2026-10-22; they stay on develop only. Develop has no tracing, by design. Git history is not rewritten.
+
 2026-10-22, OVERNIGHT. THE UI FIX LOOP: EIGHT CARDS MERGED, ONE DEPENDENCY UPDATE MERGED, SIX BUILT AND PARKED AS DRAFT PULL REQUESTS, TWO CARDS FILED. What awaits the owner and the next action: `HANDOFF.md`. The session table: `testing/UI_fixes_done.md`, Session history. Decisions: `DECISIONS.md`, rows dated 2026-10-22 (and the one dated 2026-10-21).
 
 - What merged: card 141 (#287), card 143 (#288), card 138 (#289), card 128 part (#291), card 131 part 1 (#292), card 139 notes 1 and 2 (#297), card 134 (#299), cards 133 and 137 part 1 (#300), and #290, the dependency update (graphql-core 3.2.12, vite 8.1.6, vitest 4.1.12) that cleared advisories turning the audit gates red on every pull request. Each card merged on green CI and a fresh verifier finding nothing worse than develop.
