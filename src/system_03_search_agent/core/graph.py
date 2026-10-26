@@ -10248,16 +10248,60 @@ def _isolate_disclosure_note(state: GraphState) -> str | None:
     return text[0].upper() + text[1:].rstrip(".") + "."
 
 
+def _unaddressed_mentions(
+    target_entities: Sequence[str],
+    unaddressed: Sequence[str],
+    mention_by_curie: Mapping[str, str],
+    not_named: frozenset[str] = frozenset(),
+) -> list[tuple[str, list[str]]]:
+    """Card 139, note 3: the question's own mentions this answer leaves out.
+
+    `target_entities` holds every record a mention was expanded into: a
+    disease mention binds several MedGen records, a window binds every gene
+    in it. Naming those records back as "named in the question" told the
+    person they had typed CFTR-AS1 or a LOC number. So the records are
+    grouped by the mention Think extracted for each (`mention_by_curie`, the
+    `text` beside each `resolved_entities` CURIE), and a mention counts as
+    addressed when any one of its records is cited. A record with no mention
+    on file is its own mention, named by its id.
+
+    `not_named` holds records the question reached without naming them, a
+    window's genes: they are neither counted nor named (diagnosis option A).
+
+    Returns `(mention, records)` for each mention none of whose records is
+    cited, in the order named, and `[]` unless two or more mentions were
+    named: a one-mention question has nothing to be partial about.
+    """
+    groups: dict[str, tuple[str, list[str]]] = {}
+    for curie in target_entities:
+        if curie in not_named:
+            continue
+        mention = (mention_by_curie.get(curie) or "").strip() or curie
+        groups.setdefault(mention.casefold(), (mention, []))[1].append(curie)
+    if len(groups) < 2:
+        return []
+    left_out = set(unaddressed)
+    return [
+        (mention, curies)
+        for mention, curies in groups.values()
+        if all(curie in left_out for curie in curies)
+    ]
+
+
 def _build_partial_answer_note(unaddressed_entities: list[str]) -> str:
     """F-3.4-A-01: state which named entities this answer does NOT cover,
     the same "name the scale, not just that a cut happened" discipline
     `_build_truncated_answer_note` already uses for a row-count cut.
+
+    Card 139, note 3 (owner, 2026-10-22): one sentence opening "Note:", no
+    interior full stop, naming only what the question named (see
+    `_unaddressed_mentions`) and saying what to type next. The opening words
+    are the prefix `frontend/src/hooks/useRunView.ts` detects.
     """
-    listed = ", ".join(unaddressed_entities)
+    listed = ", ".join(name.strip().rstrip(".") for name in unaddressed_entities)
     return (
-        f"Note: this answer does not address the following entities named "
-        f"in the question: {listed}. Ask about them individually for a "
-        f"complete answer."
+        "Note: this answer does not address the following entities named "
+        f"in the question, which you can ask about by name: {listed}"
     )
 
 
@@ -15277,29 +15321,42 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         target_entities = _target_entities_from_tool_calls(state.get("tool_calls", []))
         if len(target_entities) >= 2:
             unaddressed = _unaddressed_target_entities(target_entities, citations)
-            if unaddressed:
+            # Card 139, note 3: name the question's mentions, never the
+            # records one was expanded into (`_unaddressed_mentions`). On a
+            # window question every record but a typed identifier is a gene
+            # of the window, which the question did not name.
+            mention_by_curie = {
+                getattr(entity, "curie", ""): (getattr(entity, "text", "") or "")
+                for entity in (state.get("resolved_entities") or [])
+            }
+            not_named: frozenset[str] = frozenset()
+            if state.get("coordinate_window") is not None:
+                typed = {entity.curie for entity in resolve_exact_identifiers(query.text)}
+                not_named = frozenset(c for c in target_entities if c not in typed)
+            missing = _unaddressed_mentions(
+                target_entities, unaddressed, mention_by_curie, not_named
+            )
+            if missing:
                 trust_outcome = aggregate([trust_outcome, "ask"])
                 # Variant-to-disease detail (2026-09-14): measured live on
                 # "What genes are associated with MODY?", this note read
                 # "does not address ... MedGen:C0271653", a raw code in
-                # answer words. A MedGen id is named by its resolved title
-                # (one cached Layer 2 call), and any entity still unnamed
-                # by the question's own mention, never by its code.
-                medgen_ids = [e for e in unaddressed if e.startswith("MedGen:")]
+                # answer words. A mention that is only a record's id (a
+                # typed CURIE, or a record with no mention on file) is named
+                # by the record's resolved title where there is one (one
+                # cached Layer 2 call for MedGen), never by its code alone.
+                bare_ids = [curies[0] for mention, curies in missing if mention == curies[0]]
+                medgen_ids = [e for e in bare_ids if e.startswith("MedGen:")]
                 unaddressed_names = dict(condition_names)
                 if medgen_ids:
                     unaddressed_names.update(await resolve_concept_ids(medgen_ids))
-                mention_by_curie = {
-                    getattr(entity, "curie", ""): (getattr(entity, "text", "") or "")
-                    for entity in (state.get("resolved_entities") or [])
-                }
                 named: list[str] = []
-                for entity in unaddressed:
-                    title = unaddressed_names.get(entity)
+                for mention, curies in missing:
+                    title = unaddressed_names.get(mention) if mention == curies[0] else None
                     label = (
                         readable_disease_name(title)
                         if isinstance(title, str) and title.strip()
-                        else mention_by_curie.get(entity) or entity
+                        else mention
                     )
                     if label not in named:
                         named.append(label)
