@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-23.
+Last updated: 2026-10-25.
 
 ## Table of contents
 
@@ -13,24 +13,21 @@ Last updated: 2026-10-23.
 
 ## What is live
 
-- Production: release `v0.3.2`'s code (merge `0e277d61`), redeployed from source on 2026-10-22 at the owner's request so it runs on the keys rotated on 2026-10-21; a guest question answered with citations. Nothing else reached production overnight.
-- Develop: the overnight run of 2026-10-22 merged the dependency bumps (#290) and cards 141, 143, 138, 131 part 1, 128, 139 notes 1 and 2, 134, and 133 with 137 part 1 (#287 to #300). Deployed, healthy, CI green. Develop now leads production by code, not only by documents.
-- Parked as draft pull requests, each with its findings and options written on it: 145 (#293), 130 (#294), 129 (#295), 131 part 2 (#296), 142 (#298), 139 note 3 (#301). Their branches stay on GitHub and locally, with worktrees under `~/s3-worktrees`, until the owner decides.
-- No card is being built; the board's one Build in progress row is the owner's harness reviews of 2026-09-25. Overnight spend was about $1.20 of the owner's $8.
+- Production: release `v0.3.2`'s code (merge `0e277d61`) on the keys rotated on 2026-10-21. By the owner's call of 2026-10-25 there is no release of the overnight work: it stays on develop only.
+- Develop: the overnight merges of 2026-10-22 (#287 to #300) and the documents since. Deployed and healthy. Develop has no tracing, by design.
+- CI: the frontend audit gate is red on every pull request, from new advisories for `fast-uri` and `undici`. The owner approved a lockfile bump (fast-uri 3.1.9, undici 7.30.1) on 2026-10-25; it is not built yet, and its supply-chain checks already passed.
+- Pull requests: card 139's note 3 (#301, draft) stays open for rework. The five other overnight drafts were closed on 2026-10-25 and their branches removed; each is restorable from its closed pull request.
+- Locally only `develop` and #301's branch, with its worktree in `~/s3-worktrees/card139b`. On GitHub `develop`, `production` and #301's branch.
+- Nothing is being built.
 
 ## What awaits the product owner
 
-- Retests: the newest rows of `testing/Retest_product_owner.md`, one per card merged overnight, each saying what the team saw on deployed develop.
-- The six parked pull requests above: a choice on each, from the options on the pull request.
-- Calls named in `DECISIONS.md` rows of 2026-10-22: card 137 part 2 (it changes the accepted rule that keeps a sentence whose uncited ending was stripped), card 128's stacked notes (V-128-07), card 139's silent zero count (V-139-01), and new cards 146 (a mark for retracted papers) and 147 (summaries that open mid-thought).
-- A release to production, when wanted, to carry the overnight merges.
-- Develop's API has tracing switched on but no tracing key; production has both. Intended or a gap?
-- Today, 23 October: card 84's row, a week of the server's lag lines decides the freeze fix.
-- Still open from before: the order of the remaining cards; the privacy call on rewriting git history (`DECISIONS.md`, 2026-10-17).
+- Retests: the newest rows of `testing/Retest_product_owner.md`, one per card merged on 2026-10-22.
+- Nothing else is waiting on a decision: the owner's calls of 2026-10-25 are rows in `DECISIONS.md`, and the board's To do column carries each card's next move.
 
 ## The one next action
 
-Retest the overnight rows and decide the six parked pull requests, starting with 145 and 129, which belong with card 56's redesign.
+Build the approved lockfile bump first, since CI stays red until it lands. Then diagnose card 147 (summaries that open mid-thought) and read card 84's guard lag lines, both by the owner's calls of 2026-10-25, then the board's To do column in order.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
