@@ -15,7 +15,7 @@ Last updated: 2026-10-25.
 
 - Production: release `v0.3.2`'s code (merge `0e277d61`) on the keys rotated on 2026-10-21. By the owner's call of 2026-10-25 there is no release of the overnight work: it stays on develop only.
 - Develop: the overnight merges of 2026-10-22 (#287 to #300) and the documents since. Deployed and healthy. Develop has no tracing, by design.
-- CI: the frontend audit gate is red on every pull request, from new advisories for `fast-uri` and `undici`. The owner approved a lockfile bump (fast-uri 3.1.9, undici 7.30.1) on 2026-10-25; it is not built yet, and its supply-chain checks already passed.
+- CI: the frontend and Python audit gates are red on every pull request, from new advisories for `fast-uri`, `undici` and `filelock`. The owner approved one dependency pull request on 2026-10-25 (fast-uri 3.1.9 and undici 7.30.1 in the frontend lockfile, filelock 4.2.1 pinned after a check that huggingface_hub accepts it); it is not built yet.
 - Pull requests: card 139's note 3 (#301, draft) stays open for rework. The five other overnight drafts were closed on 2026-10-25 and their branches removed; each is restorable from its closed pull request.
 - Locally only `develop` and #301's branch, with its worktree in `~/s3-worktrees/card139b`. On GitHub `develop`, `production` and #301's branch.
 - Nothing is being built.
@@ -27,7 +27,7 @@ Last updated: 2026-10-25.
 
 ## The one next action
 
-Build the approved lockfile bump first, since CI stays red until it lands. Then diagnose card 147 (summaries that open mid-thought) and read card 84's guard lag lines, both by the owner's calls of 2026-10-25, then the board's To do column in order.
+Build the approved dependency pull request first, since CI stays red until it lands. Then diagnose card 147 (summaries that open mid-thought) and read card 84's guard lag lines, both by the owner's calls of 2026-10-25, then the board's To do column in order.
 
 How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
