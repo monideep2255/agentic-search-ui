@@ -105,6 +105,10 @@ const ALLOWED_CITATION_HOSTS = [
   "pmc.ncbi.nlm.nih.gov",
   "clinicaltrials.gov",
   "www.clinicaltrials.gov",
+  // Card 135.1: the server has admitted these two exact hosts since the
+  // 2026-09-20 OMIM decision (`NCBI_SOURCE_URL_PATTERN`). Never a wildcard.
+  "omim.org",
+  "www.omim.org",
 ];
 
 /** A citation URL is linkable only if it is https and on an allowed host. */
