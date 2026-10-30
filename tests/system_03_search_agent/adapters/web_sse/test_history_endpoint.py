@@ -1,7 +1,7 @@
 """Tests for `GET /v1/history` (T-4.13-02, `tracker/phase_4.13.md`).
 
-`system_03_search_agent.feedback.history.list_history` is monkeypatched to
-a fake, in-memory store for every test here, keyed by `owner_id`, so this
+`system_03_search_agent.feedback.history.list_history_page` is monkeypatched
+to a fake, in-memory store for every test here, keyed by `owner_id`, so this
 file only exercises what T-4.13-02 itself owns: caller derivation (via
 `get_caller`, admitting both a guest and an account principal, and 401 for
 neither), the `limit` query parameter's Pydantic validation (`ge=1,
@@ -19,6 +19,16 @@ and nothing tested that the invocation was true. F-4.13-A-02's fix added
 the endpoint-level tests for the graceful-degradation path (one
 non-conforming row omitted and counted, never a 500 for the whole
 response). F-4.13-A-08's fix added the duplicate-`limit` refusal.
+
+Card 136.1 added the `before` cursor and `has_more`: the endpoint passes the
+caller's own `owner_id` with the cursor, refuses a duplicate, empty,
+over-long or control-character cursor with a 422 before or instead of any
+query, and carries `has_more` from the read function even when the page's
+last row is withheld. "A stranger's cursor and a cursor that never existed
+answer identically" is only meaningful against the real owner filter, so
+that clause runs through this endpoint and the REAL `list_history_page`
+against a real database in `tests/system_03_search_agent/feedback/
+test_history.py`, not here.
 
 The real owner-scoping SQL, the NULL-owner exclusion, the real `LIMIT`
 clause and the total order are `feedback/history.py`'s own contract,
@@ -42,9 +52,14 @@ from httpx import ASGITransport, AsyncClient
 
 from system_03_search_agent.adapters.web_sse.app import HistoryItem, HistoryResponse, app
 from system_03_search_agent.auth.dependencies import Principal, get_caller
-from system_03_search_agent.feedback.history import DEFAULT_LIMIT, MAX_LIMIT, HistoryEntry
+from system_03_search_agent.feedback.history import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    HistoryEntry,
+    HistoryPage,
+)
 
-_LIST_HISTORY_TARGET = "system_03_search_agent.adapters.web_sse.app.list_history"
+_LIST_HISTORY_TARGET = "system_03_search_agent.adapters.web_sse.app.list_history_page"
 _HISTORY_PATH = "/v1/history"
 
 
@@ -53,9 +68,11 @@ def _client() -> AsyncClient:
 
 
 class _FakeHistoryStore:
-    """Stand-in for `feedback.history.list_history`, keyed by `owner_id`.
+    """Stand-in for `feedback.history.list_history_page`, keyed by `owner_id`.
 
-    `calls` records every invocation (`owner_id`, `limit`) so a test can
+    `calls` records every invocation (`owner_id`, `limit`, and `before` only
+    when one was sent, so the clauses written before card 136.1 still read
+    exactly what they always asserted) so a test can
     assert exactly what the endpoint passed through, the strongest
     available proof that it derived the caller's OWN `owner_id` rather than
     something else, per `.claude/rules/goal-contracts.md`'s "assert on the
@@ -69,9 +86,25 @@ class _FakeHistoryStore:
     def seed(self, owner_id: str, entries: list[HistoryEntry]) -> None:
         self.rows[owner_id] = entries
 
-    def __call__(self, *, owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry]:
-        self.calls.append({"owner_id": owner_id, "limit": limit})
-        return self.rows.get(owner_id, [])[:limit]
+    def __call__(
+        self, *, owner_id: str, limit: int = DEFAULT_LIMIT, before: str | None = None
+    ) -> HistoryPage:
+        call: dict[str, object] = {"owner_id": owner_id, "limit": limit}
+        if before is not None:
+            call["before"] = before
+        self.calls.append(call)
+        rows = self.rows.get(owner_id, [])
+        if before is not None:
+            # The real function's owner-scoped cursor lookup, in miniature:
+            # a cursor not among THIS owner's rows is an empty page.
+            positions = [n for n, row in enumerate(rows) if row.trace_id == before]
+            if not positions:
+                return HistoryPage(entries=[], next_before=None)
+            rows = rows[positions[0] + 1 :]
+        return HistoryPage(
+            entries=rows[:limit],
+            next_before=rows[limit - 1].trace_id if len(rows) > limit else None,
+        )
 
 
 @pytest.fixture
@@ -600,3 +633,249 @@ class TestResponseModelBoundsAreEnforced:
     def test_an_unknown_field_on_history_response_is_refused(self) -> None:
         with pytest.raises(pydantic.ValidationError):
             HistoryResponse(items=[], count=0, answer="not part of the contract")
+
+
+# ---------------------------------------------------------------------------
+# Card 136.1: the `before` cursor and `has_more`.
+# ---------------------------------------------------------------------------
+
+
+def _entries(count: int, prefix: str = "t") -> list[HistoryEntry]:
+    return [_entry(f"Question {n}", trace_id=f"{prefix}-{n}") for n in range(count)]
+
+
+class TestOlderPages:
+    @pytest.mark.asyncio
+    async def test_has_more_is_true_when_an_older_row_exists(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, _entries(DEFAULT_LIMIT + 1))
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH)
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["count"] == DEFAULT_LIMIT
+        assert body["has_more"] is True
+        # J-136S4-01: the server names the cursor, the oldest row it read.
+        assert body["next_before"] == f"t-{DEFAULT_LIMIT - 1}"
+
+    @pytest.mark.asyncio
+    async def test_has_more_is_false_at_exactly_one_page(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, _entries(DEFAULT_LIMIT))
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH)
+
+        assert response.status_code == 200, response.text
+        assert response.json()["has_more"] is False
+        assert response.json()["next_before"] is None
+
+    @pytest.mark.asyncio
+    async def test_before_reaches_the_read_function_with_the_callers_own_owner_id(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        account = _account_principal()
+        fake_history.seed(account.owner_id, _entries(25))
+        _set_caller(account)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"before": "t-19"})
+
+        assert response.status_code == 200, response.text
+        assert fake_history.calls == [
+            {"owner_id": account.owner_id, "limit": DEFAULT_LIMIT, "before": "t-19"}
+        ]
+        body = response.json()
+        assert [item["trace_id"] for item in body["items"]] == [f"t-{n}" for n in range(20, 25)]
+        assert body["has_more"] is False
+        assert body["next_before"] is None
+
+    @pytest.mark.asyncio
+    async def test_has_more_survives_a_withheld_last_row(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """`has_more` comes from the rows the database returned, not from
+        the rows that survived the per-row guard, so a withheld row at the
+        foot of a page never hides the page after it."""
+        guest = _guest_principal()
+        rows = _entries(DEFAULT_LIMIT + 1)
+        rows[DEFAULT_LIMIT - 1] = HistoryEntry(
+            trace_id="t-unreadable",
+            question="Unreadable row",
+            asked_at=datetime.now(UTC),
+            trust_signal="answer",
+            citation_count=None,
+        )
+        fake_history.seed(guest.owner_id, rows)
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH)
+
+        body = response.json()
+        assert body["omitted_count"] == 1
+        assert body["count"] == DEFAULT_LIMIT - 1
+        assert body["has_more"] is True
+        # The cursor is the withheld row itself, so the next page starts
+        # below it and never reads, or counts, it again (J-136S4-03's cause).
+        assert body["next_before"] == "t-unreadable"
+
+    @pytest.mark.asyncio
+    async def test_a_page_of_only_withheld_rows_still_names_the_next_cursor(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """A-136S4-01: every row of the page fails the per-row guard. The
+        response must still say where the next page starts, or paging
+        stops for good at an empty page that claims more."""
+        guest = _guest_principal()
+        rows = [
+            HistoryEntry(
+                trace_id=f"w-{n}",
+                question="Unreadable row",
+                asked_at=datetime.now(UTC),
+                trust_signal="answer",
+                citation_count=None,
+            )
+            for n in range(DEFAULT_LIMIT)
+        ] + _entries(5, prefix="old")
+        fake_history.seed(guest.owner_id, rows)
+        _set_caller(guest)
+
+        async with _client() as client:
+            first = (await client.get(_HISTORY_PATH)).json()
+            second = (
+                await client.get(_HISTORY_PATH, params={"before": first["next_before"]})
+            ).json()
+
+        assert (first["count"], first["omitted_count"], first["has_more"]) == (0, 20, True)
+        assert first["next_before"] == f"w-{DEFAULT_LIMIT - 1}"
+        assert [item["trace_id"] for item in second["items"]] == [f"old-{n}" for n in range(5)]
+        assert (second["has_more"], second["next_before"]) == (False, None)
+
+    @pytest.mark.asyncio
+    async def test_the_history_response_is_never_stored_by_a_cache(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """A-136S4-03: the same `no-store` `/auth/login` sends, on the first
+        page and on an older one."""
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, _entries(25))
+        _set_caller(guest)
+
+        async with _client() as client:
+            first = await client.get(_HISTORY_PATH)
+            older = await client.get(_HISTORY_PATH, params={"before": "t-19"})
+
+        assert first.headers.get("cache-control") == "no-store"
+        assert older.headers.get("cache-control") == "no-store"
+
+    @pytest.mark.asyncio
+    async def test_a_cursor_from_another_owner_returns_an_empty_page(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """At this layer: the endpoint passes the CALLER's owner with the
+        cursor, so the read function scopes the lookup to them. The real
+        owner filter is proven against a database in `test_history.py`."""
+        owner = _guest_principal()
+        stranger = _guest_principal()
+        fake_history.seed(owner.owner_id, _entries(5, prefix="mine"))
+        fake_history.seed(stranger.owner_id, _entries(5, prefix="theirs"))
+        _set_caller(owner)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"before": "theirs-0"})
+
+        assert response.status_code == 200, response.text
+        assert response.json() == {
+            "items": [],
+            "count": 0,
+            "omitted_count": 0,
+            "has_more": False,
+            "next_before": None,
+        }
+        assert fake_history.calls == [
+            {"owner_id": owner.owner_id, "limit": DEFAULT_LIMIT, "before": "theirs-0"}
+        ]
+
+
+class TestTheCursorIsValidated:
+    @pytest.mark.asyncio
+    async def test_a_duplicate_before_is_refused(self, fake_history: _FakeHistoryStore) -> None:
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, _entries(30))
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(
+                _HISTORY_PATH, params=[("before", "t-1"), ("before", "t-5")]
+            )
+
+        assert response.status_code == 422, response.text
+        assert "before" in response.text
+        assert fake_history.calls == []
+
+    @pytest.mark.asyncio
+    async def test_an_over_long_before_is_refused_before_any_query(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        _set_caller(_guest_principal())
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"before": "t" * 65})
+
+        assert response.status_code == 422, response.text
+        assert "64" in response.text, "the refusal must name the bound"
+        assert fake_history.calls == []
+
+    @pytest.mark.asyncio
+    async def test_a_before_at_the_bound_is_accepted(self, fake_history: _FakeHistoryStore) -> None:
+        guest = _guest_principal()
+        _set_caller(guest)
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"before": "t" * 64})
+
+        assert response.status_code == 200, response.text
+        assert fake_history.calls == [
+            {"owner_id": guest.owner_id, "limit": DEFAULT_LIMIT, "before": "t" * 64}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_an_empty_before_is_refused(self, fake_history: _FakeHistoryStore) -> None:
+        _set_caller(_guest_principal())
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"before": ""})
+
+        assert response.status_code == 422, response.text
+        assert fake_history.calls == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("cursor", ["abc\x00def", "\x00", "line\nbreak", "tab\there", "del\x7f"])
+    async def test_a_control_character_in_before_is_a_422_never_a_500(self, cursor: str) -> None:
+        """Through the REAL `list_history_page`, no fake: its cursor check
+        refuses before any session opens, so no database is needed. A NUL
+        byte reaching the driver raises inside psycopg2, which would be a
+        500; this pins that it never gets that far."""
+        _set_caller(_guest_principal())
+
+        async with _client() as client:
+            response = await client.get(_HISTORY_PATH, params={"before": cursor})
+
+        assert response.status_code == 422, response.text
+        # J-136S4-04: pinned whole, so internal text or anything about
+        # whether a row exists can never be added to it unnoticed.
+        assert response.json() == {
+            "detail": (
+                "`before` must be the `trace_id` of one of your own searches, "
+                "as returned in `next_before`"
+            )
+        }
