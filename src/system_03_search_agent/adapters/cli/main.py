@@ -1335,10 +1335,12 @@ class _CtrlC:
         self.outcome: str | None = None
 
 
-# A `stop` call that failed in transport or came back unusable: the stop is
-# then not confirmed. Typed client errors are added at the call site.
-# KeyError and TypeError are a 200 reply with no usable `stopped` field.
-_STOP_REPLY_FAILURES: tuple[type[Exception], ...] = (httpx.HTTPError, KeyError, TypeError)
+# A `stop` call that failed in transport: the stop is then not confirmed.
+# Typed client errors are added at the call site; `CliClient.stop` raises
+# one for any reply without a JSON `true` or `false` `stopped` field. A
+# programming fault (TypeError, KeyError and the like) is never caught here,
+# so it is reported as one (J-142B-14, A-142B-05).
+_STOP_REPLY_FAILURES: tuple[type[Exception], ...] = (httpx.HTTPError,)
 
 
 def _is_terminal(event: object) -> bool:
@@ -1389,15 +1391,19 @@ async def _consume_stream_with_interrupt(
     3. The server confirms: `_STOPPED_LINE`, exit 130, held events dropped.
     4. The stop call fails, or `_STOP_CONFIRM_BOUND_S` passes first:
        `_STOP_UNCONFIRMED_LINE`, exit 130. The stop call is left running,
-       never awaited past the bound.
+       never awaited past the bound. When a `done` or a fatal error other
+       than `cancelled` is already held, the run ended: the held events
+       are shown instead, after `_ALREADY_FINISHED_LINE` for a `done`, and
+       as any fatal error is for an error (J-142B-02, A-142B-01).
     5. The server says the run had already finished (`stopped: false`):
        `_ALREADY_FINISHED_LINE`, then the held events and the rest of the
-       stream are shown as a normal run, until its terminal event or the
-       stream's end. If neither comes by the same bound, the program exits
-       130 with `_REST_DID_NOT_ARRIVE_LINE` rather than wait on an open
-       stream (V-142-05).
+       stream are shown as a normal run, until its terminal event. If the
+       stream ends without one, or none comes by the same bound, the
+       program exits 130 with `_REST_DID_NOT_ARRIVE_LINE` rather than wait
+       on an open stream (V-142-05, A-142B-06).
     6. A second press at any point after the first exits 130 at once,
        saying the answer above is incomplete (V-142-04).
+    7. After a press the stream is closed before returning (J-142B-05).
 
     F-4.2-A-16/F-4.2-A-15/F-4.2-A-28: three genuinely different things can
     go wrong on the way to a normal-looking stream end, and this function
@@ -1533,6 +1539,39 @@ async def _consume_stream_with_interrupt(
         ctrl_c.outcome = outcome
         return EXIT_INTERRUPTED
 
+    def ended(result: object) -> int | None:
+        """The stream ended or failed after the server said the run had
+        already finished. With no terminal event, the person's own stop
+        still ends it with 130, never an "error:" line (A-142B-06)."""
+        if result is None and not terminal_seen:
+            return exit_interrupted(_REST_DID_NOT_ARRIVE_LINE, "cut_off")
+        return cast("int | None", result)
+
+    def show_held() -> object:
+        """Shows the held events in order; stops at the terminal event."""
+        for task in held:
+            result = take(task)
+            if result is not more or terminal_seen:
+                return result
+        held.clear()
+        return more
+
+    def unconfirmed() -> int | None:
+        """The stop was not confirmed. A `done` or a fatal error other than
+        the stop's own `cancelled` already held means the run ended, so it
+        is shown, not thrown away (J-142B-02, A-142B-01)."""
+        for task in held:
+            event = task.result() if task.exception() is None else None
+            if not _is_terminal(event):
+                continue
+            if getattr(event, "type", None) == "done":
+                say(_ALREADY_FINISHED_LINE)
+            elif getattr(event, "payload", {}).get("error_class") == "cancelled":
+                break
+            result = show_held()
+            return None if result is more else cast("int | None", result)
+        return exit_interrupted(_STOP_UNCONFIRMED_LINE, "unconfirmed")
+
     try:
         while True:
             if pending_next is None and not stream_over:
@@ -1565,7 +1604,7 @@ async def _consume_stream_with_interrupt(
                 else:
                     result = take(task)
                     if result is not more:
-                        return cast("int | None", result)
+                        return ended(result) if ctrl_c.pressed else cast("int | None", result)
                     if ctrl_c.pressed and terminal_seen:
                         # The run had already finished (point 5): done.
                         return None
@@ -1592,24 +1631,22 @@ async def _consume_stream_with_interrupt(
                 try:
                     stopped = bool(stop_task.result())
                 except (*_client_typed_errors(), *_STOP_REPLY_FAILURES):
-                    return exit_interrupted(_STOP_UNCONFIRMED_LINE, "unconfirmed")
+                    return unconfirmed()
                 if stopped:
                     return exit_interrupted(_STOPPED_LINE, "stopped")
                 # Point 5: the server says the run had already finished.
                 say(_ALREADY_FINISHED_LINE)
-                for task in held:
-                    result = take(task)
-                    if result is not more:
-                        return cast("int | None", result)
-                    if terminal_seen:
-                        return None
-                held.clear()
+                result = show_held()
+                if result is not more:
+                    return ended(result)
+                if terminal_seen:
+                    return None
                 continue
 
             if deadline is not None and loop.time() >= deadline:
                 if stop_answered:
                     return exit_interrupted(_REST_DID_NOT_ARRIVE_LINE, "cut_off")
-                return exit_interrupted(_STOP_UNCONFIRMED_LINE, "unconfirmed")
+                return unconfirmed()
     finally:
         if pending_next is not None:
             if not pending_next.done():
@@ -1618,6 +1655,19 @@ async def _consume_stream_with_interrupt(
                 pending_next.exception()  # retrieved, so asyncio prints no warning
         if pending_interrupt is not None and not pending_interrupt.done():
             pending_interrupt.cancel()
+        if ctrl_c.pressed:
+            # J-142B-05: after a press the stream is closed here, not left
+            # suspended for the interpreter to finalize at exit, where a
+            # second press turned it into a RuntimeError traceback. The
+            # cancelled read is awaited first, so the close does not find
+            # the stream still running.
+            if pending_next is not None and not pending_next.done():
+                await asyncio.wait({pending_next})
+                if not pending_next.cancelled():
+                    pending_next.exception()
+            aclose = getattr(stream_iter, "aclose", None)
+            if aclose is not None:
+                await aclose()
 
 
 # ---------------------------------------------------------------------------

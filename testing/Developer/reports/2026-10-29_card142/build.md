@@ -12,6 +12,8 @@ Second attempt at card 142, after pull request #298 was closed. It follows the o
 - [Break it](#break-it)
 - [Real signal probes](#real-signal-probes)
 - [Left as they are](#left-as-they-are)
+- [Fix round](#fix-round)
+- [Fix round, left](#fix-round-left)
 
 ## What the person sees
 
@@ -149,3 +151,119 @@ These were filed on #298 as pre-existing, and they are unchanged:
 - A-142-09 and V-142-08: presses during interpreter shutdown.
 - J-142-03: references dropped after a mid-stream transport error.
 - J-142-04: a press outside the stream window prints "s3: interrupted".
+
+## Fix round
+
+The one fix round after the judge (`judge.md`, FAIL on J-142B-05) and the adversary (`adversary.md`). Each fix is the smallest change that answers its finding. Files: `main.py` (`_consume_stream_with_interrupt` and `_STOP_REPLY_FAILURES`), `client.py` (`CliClient.stop` only), and the two CLI test files.
+
+What the person sees now, real SIGINTs against the stub. One press, the server confirms. Exit 130, 0.4 s after the marker:
+
+```
+s3: interrupted, stopping the run...
+s3: the run was stopped at your request; the answer above is incomplete.
+```
+
+Two presses, the second while 2,500 references are still being written into a slow pipe (the J-142B-05 probe). Exit 130, no traceback, 4 of 4:
+
+```
+s3: interrupted, stopping the run...
+s3: the run was stopped at your request; the answer above is incomplete.
+s3: interrupted
+```
+
+Two presses 0.5 s apart while the stop call is slow. Exit 130, 0.1 s after the second press:
+
+```
+s3: interrupted, stopping the run...
+s3: interrupted again, exiting immediately; the stop was not confirmed, and the answer above is incomplete.
+```
+
+### How each finding is answered
+
+| Finding | Fix | Test |
+|---|---|---|
+| J-142B-05, a second press prints a RuntimeError traceback | After a press, the `finally` of `_consume_stream_with_interrupt` awaits the cancelled stream read, then calls `stream_iter.aclose()`, so no stream is left suspended for the interpreter to finalize at exit | `test_the_stream_is_closed_after_a_press` (confirm, slow, finished; one and two presses) |
+| A-142B-02, `"false"` read as stopped | `CliClient.stop` returns the field only when it is a JSON `true` or `false`; any other reply raises `CliApiError`, which the loop already reads as "not confirmed" | `test_a_reply_without_a_json_true_or_false_raises` (nine bodies), `test_an_unusable_stop_reply_is_called_unconfirmed` |
+| A-142B-03, null, 0 or "" read as already finished | The same strict read | the same tests |
+| J-142B-02, a held `done` thrown away | When the stop call fails or passes the bound, a held `done` is shown: `_ALREADY_FINISHED_LINE`, the rest of the answer, the run's own exit code | `test_a_done_held_while_the_stop_is_unconfirmed_is_shown_as_finished` (slow, late failure) |
+| A-142B-01, a held fatal error thrown away | A held fatal error other than `cancelled` is shown as any fatal error is, exit 1. The stop's own `cancelled` event still prints no error line | `test_a_fatal_error_held_while_the_stop_is_unconfirmed_is_reported`, `test_a_held_cancelled_event_is_never_shown_as_an_error` |
+| A-142B-06, stream closes with no final event after a press | After "already finished", a stream end with no terminal event exits 130 with `_REST_DID_NOT_ARRIVE_LINE`, never "error: the run ended..." | `test_a_stream_that_ends_with_no_final_event_after_finished_exits_130` (live and held) |
+| J-142B-14, A-142B-05, `TypeError` caught | `_STOP_REPLY_FAILURES` is `httpx.HTTPError` only. A code fault in the stop call is reported as "s3: unexpected error (TypeError)", exit 1 | `test_a_fault_in_the_stop_call_is_reported_not_called_unconfirmed` (TypeError, KeyError, AttributeError, RuntimeError) |
+| J-142B-11, exit at `done` after "already finished" unpinned | Test added; the fake's stream now stays open after `done` | `test_already_finished_exits_at_done_while_the_stream_stays_open` (live and held) |
+| J-142B-12, narrow catch unpinned | Tests added | the fault test and the unusable reply test |
+| J-142B-13, `stream_over` unpinned | Test added; the fake counts reads after the stream's end | `test_a_stream_that_ends_while_the_stop_is_pending_is_not_read_again` |
+
+One side effect, named: `s3 stop` reads the reply through the same `CliClient.stop`, so a reply of `{"stopped": "false"}` now ends in the client error message instead of "run stopped". A JSON `true` or `false` behaves as before.
+
+A held `done` is shown when the stop call fails or at the 3 s bound, not the moment it arrives, so on a slow stop call the finished answer appears 3 s after the press.
+
+### Runs
+
+- CLI suite: `504 passed` (473 before the round, 31 new test cases).
+- `ruff check .`: `All checks passed!`. gate02's isort command: `Skipped 2 files`, exit 0.
+
+### Break it
+
+Each fix was broken in place, the CLI suite run, and the file restored from a copy held in memory.
+
+| Break | Result |
+|---|---|
+| No `aclose` after a press | red, 6 cases of the closed-stream test |
+| Client reads any truthy `stopped` again | red, 8 client cases |
+| Client returns `bool(body["stopped"])` after the strict check | green, equivalent: the value is already a bool |
+| Held terminal events ignored when unconfirmed | red, 4 |
+| A held `cancelled` shown as an error | red, 1 |
+| No already-finished line before a held `done` | red, 2 |
+| A stream end after "already finished" treated as a normal end | red, 2 |
+| `KeyError` and `TypeError` caught again | red, 2 |
+| Every `Exception` caught | red, 4 |
+| `httpx.HTTPError` not caught | red, 4, including the failed stop test |
+| No exit at `done` in the live loop after "already finished" | red, 1 |
+| No exit at a held `done` after "already finished" | red, 1 |
+| `stream_over` never set | red, 1 |
+
+### Real signal probes
+
+The judge's and the adversary's probes, unchanged, run with a real SIGINT to the process group. "Develop" is the judge's archive of develop. The J-142B-05 probe is the judge's own: its stub log (`create, sent, stop, closed`) shows the stream scenario was `mid` with 2,500 citations, so that is what was rerun.
+
+| Case | Branch now | Develop |
+|---|---|---|
+| J-142B-05, two presses during the references into a slow pipe | 130, 4 of 4 with no traceback: the two stop lines, then `s3: interrupted` | 130, 4 of 4, with the `error:` line (the judge's runs) |
+| A-142B-02, `stopped: "false"` | 130 at 0.42 s, "did not confirm the stop" | 130, `error:` line |
+| A-142B-03, `stopped: null` | 130 at 0.42 s, "did not confirm the stop" | 130, `error:` line |
+| `{"nope": 1}`, body `[]` | 130 at 0.41 s, "did not confirm the stop" | not rerun |
+| J-142B-02, `done` held, stop slow | 0 at 3.37 s, the already-finished line, stdout ends with `[answer]` and the references; `--json` `complete: true`, `error: null` | 130 at 15.39 s, `error:` line |
+| A-142B-01, fatal error held, stop slow | 1 at 3.39 s, `error [agent]: this query failed unexpectedly before finishing.` | 130 at 15.37 s, `error:` line |
+| A-142B-01, fatal error held, stop fails at 1 s | 1 at 1.36 s, the same error line | 130, `error:` line |
+| A-142B-06, stream closes, no final event | 130 at 0.67 s, already finished, then the rest did not arrive; `--json` the `cut_off` message | 130, `error:` line |
+| A-142B-05, a temporary TypeError fault in `CliClient.stop`, server cancels | 1 at 0.42 s, `s3: unexpected error (TypeError)` (edit restored) | not applicable |
+| One press, confirmed | 130 at 0.41 s, stopping then stopped | |
+| One press, stop fails (500) | 130 at 0.41 s, "did not confirm" | |
+| One press, stop slow | 130 at 3.36 s, "did not confirm" | |
+| Already finished, stream open | 130 at 3.39 s, already finished, then the rest did not arrive | |
+| Already finished, then `done` (closed, and left open) | 0 at 0.56 s and 0.60 s, already-finished line only; `--json` `complete: true` | |
+| Two presses: slow stop, confirmed, already finished | 130 at 0.91 s, 0.81 s (exited before press 2), 1.31 s | |
+| Press before the first event: one press, two with a slow stop | 130 at 0.62 s, stopped line; 130 at 1.11 s, second press line | |
+| Press during the final answer: confirmed, slow | 130 at 1.11 s; 130 at 4.06 s | |
+| `\| tee`, `\| head -n 500`, `\| tee --json`, `\| tee` slow, `\| tee` two presses | 130 at 0.41, 0.41, 0.41, 3.37, 0.92 s, stop lines only | |
+| Reader closed before the press | 130 at 0.52 s, stop lines only | |
+| `--json` confirmed, slow | 130, "you stopped this search."; 130, "did not confirm" | |
+| Press while a finished answer's references go into a slow pipe | 0, stderr empty, no stop sent | |
+| No Ctrl-C, human and `--json` | 0, stdout and stderr byte-identical to develop (`cmp` silent) | 0 |
+
+No stderr in any branch run carries `Traceback`, `never retrieved`, `Exception ignored` or `RuntimeError`.
+
+## Fix round, left
+
+Named, not fixed, as the fix brief says:
+
+- J-142B-04: "the answer above is incomplete" with nothing above it.
+- J-142B-07: a large backlog after "already finished" is cut at the 3 s bound.
+- J-142B-09: with `2>&1 | tee` and the reader gone, no stop is sent.
+- A-142B-04: a stop call stuck in a name lookup delays exit about 20 s, the same as develop.
+- A-142B-07: stop lines glued into the answer's last word on a terminal.
+- A-142B-08: three or more quick presses under `--json` can leave stdout empty, as on develop.
+- A-142B-10: a second press in the same instant as the stop's answer says "not confirmed".
+- A-142B-11: "had already finished" above a failed run's error line.
+- A-142B-12: confirmed, unconfirmed and cut off differ only in `error.message`.
+- A-142B-13: a rare "Task exception was never retrieved" on two presses 40 ms apart. The fix for J-142B-05 now awaits the cancelled read after a press, which is the mechanism the adversary named; not re-measured, so not claimed.

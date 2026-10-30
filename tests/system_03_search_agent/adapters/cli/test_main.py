@@ -2276,6 +2276,18 @@ def _card142_event(kind: str, seq: int, *, text: str = "TP53 has three ClinVar r
             population_ancestry_context=None,
             license="public-domain",
         )
+    elif kind in ("unexpected", "cancelled"):
+        from system_03_search_agent.contracts.events import ErrorPayload
+
+        payload = ErrorPayload(
+            fatal=True,
+            scope="run",
+            source="agent" if kind == "unexpected" else "run_registry",
+            error_class=kind,
+            message="the run ended",
+            retry_after_s=0,
+        )
+        kind = "error"
     else:
         payload = DonePayload(
             total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="answer"
@@ -2297,6 +2309,8 @@ class _Card142Run(NamedTuple):
     stop_calls: list[str]
     elapsed: float
     err_right_after_press: str
+    closed: bool = False
+    reads_after_end: int = 0
 
 
 class TestCtrlCIsThePersonsOwnStop:
@@ -2310,9 +2324,14 @@ class TestCtrlCIsThePersonsOwnStop:
     - `after`: what the stream does once its first events are out. "open"
       stays open, "done_then_open" sends `done` and stays open, "done_on_stop"
       sends `done` and ends once `stop` has been called, "end" ends with no
-      terminal event.
+      terminal event. Once `stop` has been called: "done_on_stop_open" sends
+      `done` and stays open, "end_on_stop" ends with no terminal event,
+      "unexpected_on_stop" and "cancelled_on_stop" send that fatal error, each
+      0.05 s after the stop call.
     - `stop`: "confirm" answers `stopped: true`, "finished" answers `stopped:
       false`, "fail" raises a transport error, "slow" answers after 30 s.
+      "finished_late" and "fail_late" do the same after 0.15 s, so the stream's
+      next events are held first. Any exception class raises that class.
     """
 
     STOPPING = "s3: interrupted, stopping the run...\n"
@@ -2324,7 +2343,7 @@ class TestCtrlCIsThePersonsOwnStop:
         monkeypatch: pytest.MonkeyPatch,
         *,
         after: str = "open",
-        stop: str = "confirm",
+        stop: str | type[Exception] = "confirm",
         presses: int = 1,
         bound: float = 0.3,
         as_json: bool = False,
@@ -2372,20 +2391,68 @@ class TestCtrlCIsThePersonsOwnStop:
                         await stop_called.wait()
                         yield _card142_event("done", 2)
                         return
+                    if after.endswith("_on_stop") or after == "done_on_stop_open":
+                        await stop_called.wait()
+                        # After an immediate stop answer, before a late one.
+                        await asyncio.sleep(0.05)
+                        if after == "end_on_stop":
+                            return
+                        yield _card142_event(after.split("_on_stop")[0], 2)
+                        if after != "done_on_stop_open":
+                            return
                     await asyncio.sleep(30)
 
-                return _gen()
+                return _Stream(_gen())
 
             async def stop(self, run_id: str) -> bool:
                 stop_calls.append(run_id)
                 stop_called.set()
-                if stop == "fail":
+                if isinstance(stop, type):
+                    raise stop("a fault in the stop call")
+                if stop.endswith("_late"):
+                    await asyncio.sleep(0.15)
+                if stop.startswith("fail"):
                     raise httpx.ConnectError(
                         "refused", request=httpx.Request("POST", "http://test/stop")
                     )
                 if stop == "slow":
                     await asyncio.sleep(30)
                 return stop == "confirm"
+
+        class _Stream:
+            """The stream as `_run_ask` holds it, counting reads after its end
+            (J-142B-13) and whether it was closed (J-142B-05)."""
+
+            def __init__(self, gen) -> None:
+                self.gen = gen
+                self.over = False
+                self.reads_after_end = 0
+                self.closed = False
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if self.over:
+                    self.reads_after_end += 1
+                try:
+                    return await self.gen.__anext__()
+                except StopAsyncIteration:
+                    self.over = True
+                    raise
+
+            async def aclose(self) -> None:
+                self.closed = True
+                await self.gen.aclose()
+
+        streams: list[_Stream] = []
+        real_stream = FakeCliClient.stream_events
+
+        def stream_events(self, run_id: str, *, last_event_id: str | None = None):
+            streams.append(real_stream(self, run_id, last_event_id=last_event_id))
+            return streams[-1]
+
+        FakeCliClient.stream_events = stream_events  # type: ignore[method-assign]
 
         fake_modules.client.CliClient = FakeCliClient
         out = stdout if stdout is not None else io.StringIO()
@@ -2413,7 +2480,16 @@ class TestCtrlCIsThePersonsOwnStop:
         code = await asyncio.wait_for(task, 10)
         elapsed = time.monotonic() - start
         value = out.getvalue() if hasattr(out, "getvalue") else ""
-        return _Card142Run(code, value, err.getvalue(), stop_calls, elapsed, right_after)
+        return _Card142Run(
+            code,
+            value,
+            err.getvalue(),
+            stop_calls,
+            elapsed,
+            right_after,
+            closed=streams[0].closed,
+            reads_after_end=streams[0].reads_after_end,
+        )
 
     # Acceptance 1, 2 and 6 --------------------------------------------------
 
@@ -2581,6 +2657,157 @@ class TestCtrlCIsThePersonsOwnStop:
         assert document["error"]["message"] == (
             "s3: you stopped this search. Start a new search if you still need an answer."
         )
+
+    # Fix round: J-142B and A-142B findings ----------------------------------
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("stop", ["finished", "finished_late"])
+    async def test_already_finished_exits_at_done_while_the_stream_stays_open(
+        self, main_module, fake_modules, monkeypatch, stop
+    ) -> None:
+        """J-142B-11: `stopped: false`, then `done`, and the stream stays open.
+        The program exits at `done`, with the run's own code, long before the
+        bound. "finished" reads `done` live, "finished_late" from the held
+        events."""
+        run = await self._run(
+            main_module,
+            fake_modules,
+            monkeypatch,
+            after="done_on_stop_open",
+            stop=stop,
+            bound=30.0,
+        )
+        assert run.code == 0
+        assert run.elapsed < 1.0
+        assert run.err == self.STOPPING + main_module._ALREADY_FINISHED_LINE
+        assert "the run did not finish" not in run.out
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("stop", ["slow", "fail_late"])
+    async def test_a_done_held_while_the_stop_is_unconfirmed_is_shown_as_finished(
+        self, main_module, fake_modules, monkeypatch, stop
+    ) -> None:
+        """J-142B-02: `done` arrives while the stop call is pending, and the
+        stop then fails or passes the bound. The run finished: no "may still
+        be going", no "incomplete", the run's own code."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, after="done_on_stop", stop=stop, bound=0.3
+        )
+        assert run.code == 0
+        assert run.err == self.STOPPING + main_module._ALREADY_FINISHED_LINE
+        assert "the run did not finish" not in run.out
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("stop", ["slow", "fail_late"])
+    async def test_a_fatal_error_held_while_the_stop_is_unconfirmed_is_reported(
+        self, main_module, fake_modules, monkeypatch, stop
+    ) -> None:
+        """A-142B-01: the run fails while the stop call is pending. Its error
+        is reported as any fatal error is, never "may still be going"."""
+        run = await self._run(
+            main_module,
+            fake_modules,
+            monkeypatch,
+            after="unexpected_on_stop",
+            stop=stop,
+            bound=0.3,
+        )
+        assert run.code == 1
+        assert run.err.startswith(self.STOPPING)
+        assert "this query failed unexpectedly before finishing" in run.err
+        assert "may still be going" not in run.err
+
+    @pytest.mark.asyncio
+    async def test_a_held_cancelled_event_is_never_shown_as_an_error(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """The stop's own `cancelled` event, held while the stop is
+        unconfirmed, still prints no error line."""
+        run = await self._run(
+            main_module,
+            fake_modules,
+            monkeypatch,
+            after="cancelled_on_stop",
+            stop="slow",
+            bound=0.3,
+        )
+        assert run.code == 130
+        assert run.err == self.STOPPING + main_module._STOP_UNCONFIRMED_LINE
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("stop", ["finished", "finished_late"])
+    async def test_a_stream_that_ends_with_no_final_event_after_finished_exits_130(
+        self, main_module, fake_modules, monkeypatch, stop
+    ) -> None:
+        """A-142B-06: after the person's press, the stream closes with no
+        final event. Exit 130, as develop, and never the "error:" line."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, after="end_on_stop", stop=stop, bound=30.0
+        )
+        assert run.code == 130
+        assert run.elapsed < 1.0
+        assert run.err == (
+            self.STOPPING
+            + main_module._ALREADY_FINISHED_LINE
+            + main_module._REST_DID_NOT_ARRIVE_LINE
+        )
+        assert "error" not in run.err.lower()
+
+    @pytest.mark.asyncio
+    async def test_a_stream_that_ends_while_the_stop_is_pending_is_not_read_again(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """J-142B-13: once the stream has ended, it is not read again while
+        the stop call is pending (a busy loop until the bound)."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, after="end_on_stop", stop="slow", bound=0.3
+        )
+        assert run.code == 130
+        assert run.err == self.STOPPING + main_module._STOP_UNCONFIRMED_LINE
+        assert run.reads_after_end == 0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("stop", ["confirm", "slow", "finished"])
+    @pytest.mark.parametrize("presses", [1, 2])
+    async def test_the_stream_is_closed_after_a_press(
+        self, main_module, fake_modules, monkeypatch, stop, presses
+    ) -> None:
+        """J-142B-05: a stream left suspended is finalized at interpreter exit,
+        where a second press turned it into a RuntimeError traceback."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, stop=stop, presses=presses, bound=0.3
+        )
+        assert run.code == 130
+        assert run.closed
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("fault", [TypeError, KeyError, AttributeError, RuntimeError])
+    async def test_a_fault_in_the_stop_call_is_reported_not_called_unconfirmed(
+        self, main_module, fake_modules, monkeypatch, fault
+    ) -> None:
+        """J-142B-12, J-142B-14, A-142B-05: only a network failure or an
+        unusable reply means "the server did not confirm the stop". A code
+        fault is reported as one, so catching every Exception goes red."""
+        run = await self._run(main_module, fake_modules, monkeypatch, stop=fault)
+        assert run.code == 1
+        assert f"unexpected error ({fault.__name__})" in run.err
+        assert "did not confirm" not in run.err
+
+    @pytest.mark.asyncio
+    async def test_an_unusable_stop_reply_is_called_unconfirmed(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """J-142B-12: `CliClient.stop` raises `CliApiError` for a reply with no
+        JSON `true` or `false`; that is "not confirmed", exit 130."""
+        from system_03_search_agent.adapters.cli.client import CliApiError
+
+        class Unusable(CliApiError):
+            def __init__(self, message: str) -> None:
+                super().__init__(200, None, message)
+
+        run = await self._run(main_module, fake_modules, monkeypatch, stop=Unusable)
+        assert run.code == 130
+        assert run.err == self.STOPPING + main_module._STOP_UNCONFIRMED_LINE
 
     # Acceptance 7, J-142-05 and V-142-06 -------------------------------------
 
