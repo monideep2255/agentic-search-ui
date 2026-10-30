@@ -1750,6 +1750,7 @@ Queries to try:
 What you should see:
 
 - `recent papers on statins` asks "How far back should I search?" with the last 12 months, the last 5 years and the last 10 years. Picking 5 years returns only papers from those years.
+- A picked window lists up to 10 papers from it, each with its title, and the count line counts them. The written summary draws on the best-matching papers that have an abstract (card 119). `recent papers on cystic fibrosis` with the last 5 years has a written summary, about the disease.
 - `papers on statins since 2022` is not asked back.
 - `recent-onset diabetes treatment` is not asked back: "recent" there describes the disease, not the papers.
 - Known: after develop restarts or redeploys, a choice clicked on an earlier question searches without the year limit.
