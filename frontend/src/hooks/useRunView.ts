@@ -28,6 +28,7 @@ import { useMemo } from "react";
 import type { AgentEvent, CitationPayload, GuardPayload } from "../lib/events";
 import { layerNumber } from "../lib/events";
 import { riskTagLabel } from "../lib/riskTag";
+import { databaseNameForPrefix, databaseNameForUrl } from "../lib/sourceDatabase";
 import { deriveStopEnabled } from "../components/chat/StopButton";
 import { CATEGORY_COPY } from "../components/chat/GuardrailBanner";
 import { isCapShapedError, CAP_MESSAGE_COPY } from "../components/chat/CapMessage";
@@ -176,6 +177,61 @@ export function sourceDisplayName(source: string, sourceId: string): string {
     ? sourceId.slice(prefix.length)
     : sourceId;
   return `${source} ${deduped}`.trim();
+}
+
+/**
+ * A `source` that is a tool's internal string, never a reader's name for a
+ * database: a snake_case tool name (`ncbi_efetch`, `pathogen_detection`) or
+ * a bare host (`clinicaltrials.gov`). Every database name the producers send
+ * (`gene`, `snp`, `dbsnp`, `litvar2`, and the graph's CURIE prefixes
+ * `NCBIGene`, `MedGen`, `ClinVar`) has neither an underscore nor a dot.
+ */
+const TOOL_NAME = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/;
+const BARE_HOST = /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i;
+
+/**
+ * The placeholder `core/graph.py`'s fallback citation sets as `source_id`
+ * when the finding has no CURIE. It is not a record id, so a relabelled
+ * source does not print it.
+ */
+const NO_RECORD_ID = "unknown";
+
+/**
+ * How a source is named on the live Sources list, the marker card and a
+ * reopened saved answer's Sources list: one helper for all three (card 135).
+ *
+ * FROM THE PERSON'S CHAIR: every source names its database and keeps its
+ * record id, "Pathogen Detection SAMN00715300", "ClinicalTrials.gov
+ * NCT01234567", never "pathogen_detection SAMN00715300" or "ncbi_efetch".
+ *
+ * - When `source` is a tool's internal string (see `TOOL_NAME`, `BARE_HOST`)
+ *   and the record page names a database the trust line's table knows
+ *   (`lib/sourceDatabase.ts`, ported from `trust.py`), the database's name
+ *   leads, then the record id. A CURIE prefix on the id that names the same
+ *   database is dropped ("NCBIGene:672" under "NCBI Gene" reads "672");
+ *   any other prefix stays, because it says which vocabulary the id is from.
+ * - Otherwise the label is exactly `sourceDisplayName`'s, today's label.
+ *   A `source` that already names a database ("NCBIGene", "MedGen",
+ *   "gene") is never rewritten, so a gene answer reads as it always did,
+ *   and a page on a host the table does not know is never guessed at.
+ */
+export function sourceLabel(source: string, sourceId: string, sourceUrl: string | null | undefined): string {
+  const trimmed = source.trim();
+  if (!TOOL_NAME.test(trimmed) && !BARE_HOST.test(trimmed)) {
+    return sourceDisplayName(source, sourceId);
+  }
+  const database = databaseNameForUrl(sourceUrl);
+  if (database === null) return sourceDisplayName(source, sourceId);
+  let id = sourceId.trim();
+  if (id.toLowerCase() === NO_RECORD_ID) id = "";
+  const colon = id.indexOf(":");
+  if (colon > 0) {
+    const prefix = id.slice(0, colon);
+    if (prefix.toLowerCase() === trimmed.toLowerCase() || databaseNameForPrefix(prefix) === database) {
+      id = id.slice(colon + 1);
+    }
+  }
+  return `${database} ${id}`.trim();
 }
 
 /**
@@ -610,7 +666,7 @@ export function useRunView(events: AgentEvent[]): RunView {
       sources.push({
         n: index,
         layer: layerNumber(payload.layer),
-        name: sourceDisplayName(payload.source, payload.source_id),
+        name: sourceLabel(payload.source, payload.source_id, payload.source_url),
         tool: payload.field || payload.source,
         evidence: payload.evidence_kind,
         confidence: payload.assertion_confidence,

@@ -54,6 +54,7 @@ import { Box, Typography } from "@mui/material";
 import { designTokens, layerColour } from "../../theme";
 import { LAYER_WORD, isLinkableCitationUrl } from "../answer/CitationMarkers";
 import { sourcePageKey } from "./AnswerScreen";
+import { sourceLabel } from "../../hooks/useRunView";
 import { SavedAnswerMarkdown } from "./savedAnswerMarkdown";
 import type { HistoryAnswerCitation, HistoryAnswerResponse } from "../../lib/api";
 import { riskTagLabel, savedTrustFallback } from "../../lib/riskTag";
@@ -138,7 +139,11 @@ function CitationRow({ row }: { row: SavedSourceRow }) {
   // An unrecognised layer draws `layerColour(null)`, the neutral gap colour.
   const colour = layerColour(citation.layer ?? row.layers[0] ?? null);
   const linkable = isLinkableCitationUrl(citation.source_url);
-  const label = citation.entity_name ?? citation.source;
+  // Card 135: named exactly as the live Sources list names the same
+  // citation, database then record id. This used to print `entity_name`, or
+  // failing that the raw `source`, so a reopened answer read "ncbi_efetch"
+  // or twenty rows of "pathogen_detection" and dropped every record id.
+  const label = sourceLabel(citation.source, citation.source_id ?? "", citation.source_url);
   return (
     <Box
       component="li"
@@ -313,7 +318,12 @@ export function SavedAnswerScreen({
           </Typography>
         ) : (
           <Box sx={{ mt: 2.5 }}>
-            <SavedAnswerMarkdown markdown={answer.answer_markdown} />
+            {/*
+              Card 135: the citations go in with the markdown, so each stored
+              `[n]` that names one of them renders as the live answer's own
+              marker and card, not as bracketed text.
+            */}
+            <SavedAnswerMarkdown markdown={answer.answer_markdown} citations={answer.citations} />
 
             {/*
               `trust_line` first, matching the live answer screen's own

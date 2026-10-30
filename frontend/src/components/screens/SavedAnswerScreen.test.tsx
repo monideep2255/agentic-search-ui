@@ -63,7 +63,10 @@ describe("SavedAnswerScreen", () => {
     expect(
       screen.getByText("BRCA1 is a gene associated with hereditary breast cancer."),
     ).toBeInTheDocument();
-    expect(within(screen.getByRole("list")).getByText(/1\.\s*BRCA1/)).toBeInTheDocument();
+    // Card 135: the row names its source as the live Sources list does,
+    // `sourceLabel(source, source_id, url)`, never the stored `entity_name`,
+    // which the live screen does not show.
+    expect(within(screen.getByRole("list")).getByText(/1\.\s*Gene/)).toBeInTheDocument();
     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(NO_CHECK);
   });
 

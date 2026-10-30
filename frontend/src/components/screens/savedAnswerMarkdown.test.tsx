@@ -13,8 +13,11 @@
  */
 
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import type { HistoryAnswerCitation } from "../../lib/api";
+import { markerLabel } from "../answer/CitationMarkers";
 import { SavedAnswerMarkdown, parseSavedAnswerMarkdown } from "./savedAnswerMarkdown";
 
 /**
@@ -177,5 +180,91 @@ describe("SavedAnswerMarkdown", () => {
     ).toBeInTheDocument();
     expect(container.querySelector("script")).toBeNull();
     expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
+  });
+});
+
+/** G-035's stored citations: twenty isolates and one taxonomy record. */
+function isolateCitations(count: number): HistoryAnswerCitation[] {
+  return Array.from({ length: count }, (_, i) => ({
+    display_index: i + 1,
+    source: "pathogen_detection",
+    source_id: `SAMN0071530${i}`,
+    source_url: `https://www.ncbi.nlm.nih.gov/pathogens/isolates/#SAMN0071530${i}`,
+    layer: 2 as const,
+  }));
+}
+
+describe("SavedAnswerMarkdown citation markers, card 135", () => {
+  const CITATIONS = isolateCitations(21);
+
+  it("renders the summary's run of twenty as one range marker, with no bracket left in the text", () => {
+    // Mutation: printing `block.text` raw again leaves "[1][2]...[20]" in
+    // the paragraph and finds no marker, red.
+    render(<SavedAnswerMarkdown markdown={G_035_MARKDOWN} citations={CITATIONS} />);
+    const paragraph = screen.getByTestId("saved-answer-paragraph-0");
+    expect(paragraph.textContent).not.toMatch(/\[\d/);
+    const twenty = Array.from({ length: 20 }, (_, i) => i + 1);
+    const markers = within(paragraph).getAllByRole("button");
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toHaveAttribute("data-testid", "saved-answer-0-citation-group-1");
+    expect(within(markers[0]).getByText(markerLabel(twenty))).toBeInTheDocument();
+    // The sentence's full stop moves in front of the marker, as live.
+    expect(paragraph.textContent).toMatch(/^Found 20 pathogen detection isolate records for Escherichia coli\.\u2060/);
+  });
+
+  it("renders a table row's and a list item's markers, and keeps the other cells as data", () => {
+    // Mutation: dropping the first-cell or list-item rendering leaves
+    // "C236-11 [1]" or "Escherichia coli[21]" as text, red.
+    render(<SavedAnswerMarkdown markdown={G_035_MARKDOWN} citations={CITATIONS} />);
+    const table = screen.getByRole("table");
+    const firstRow = table.querySelectorAll("tbody tr")[0];
+    const cells = firstRow.querySelectorAll("td");
+    expect(cells[0].textContent).toMatch(/^C236-11\u2060/);
+    expect(cells[0].textContent).not.toContain("[1]");
+    expect(within(cells[0] as HTMLElement).getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
+    expect(within(cells[1] as HTMLElement).queryByRole("button")).toBeNull();
+    const list = screen.getByRole("list");
+    expect(list.textContent).not.toContain("[21]");
+    expect(within(list).getByRole("button", { name: "Source 21, layer 2" })).toBeInTheDocument();
+  });
+
+  it("keeps a bracketed number that names no stored citation as text, the live R-05 rule", () => {
+    // Mutation: replacing every `[n]` by pattern turns "[12]" and "[99]"
+    // into markers with no source behind them, red.
+    render(
+      <SavedAnswerMarkdown
+        markdown={"A study [12] found it. Another [1][99]. One more [2][3][4]."}
+        citations={isolateCitations(4)}
+      />,
+    );
+    const paragraph = screen.getByTestId("saved-answer-paragraph-0");
+    expect(paragraph.textContent).toContain("A study [12] found it.");
+    expect(paragraph.textContent).toContain("Another [99].");
+    expect(within(paragraph).getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
+    // Three markers stay a comma list of three, the live collapse rule.
+    const group = screen.getByTestId("saved-answer-0-citation-markers-1");
+    expect(within(group).getAllByRole("button")).toHaveLength(3);
+    expect(screen.queryByTestId("saved-answer-0-citation-12")).toBeNull();
+  });
+
+  it("leaves every marker as text when no citations are passed", () => {
+    render(<SavedAnswerMarkdown markdown={"Isolate [1]."} />);
+    expect(screen.getByText("Isolate [1].")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("opens the live card from a saved marker, named by its database with its record link", async () => {
+    // Mutation: building the card from the raw `source` reads
+    // "pathogen_detection SAMN00715300", red.
+    const user = userEvent.setup();
+    render(<SavedAnswerMarkdown markdown={"One isolate [1]."} citations={isolateCitations(1)} />);
+    await user.tab();
+    const card = screen.getByTestId("saved-answer-0-cite-popover-1");
+    expect(card).toHaveTextContent("Pathogen Detection SAMN00715300");
+    expect(card).not.toHaveTextContent("pathogen_detection");
+    expect(within(card).getByRole("link")).toHaveAttribute(
+      "href",
+      "https://www.ncbi.nlm.nih.gov/pathogens/isolates/#SAMN00715300",
+    );
   });
 });
