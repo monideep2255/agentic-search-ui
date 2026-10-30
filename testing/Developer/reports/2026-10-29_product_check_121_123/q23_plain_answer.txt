@@ -1,0 +1,34 @@
+What is rs334 and what condition is it associated with?
+New search
+
+? Answered6.9s · 3 tool calls · 1 source cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+I found 1 genetic variant related to rs334.⁠1
+
+WHERE THIS ANSWER COMES FROM
+Genetic variant (HBB), clinical significance: not-provided, protective, likely-benign, pathogenic, other	⁠1
+NOTES
+Note: no written summary could be checked against the records, so this answer lists the records found with their sources
+
+This is a research summary, not medical advice.
+
+▶
+SOURCES
+1
+Based on 1 source cited, from dbSNP
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

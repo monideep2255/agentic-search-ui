@@ -1,0 +1,99 @@
+{
+  "question": "Which diseases are associated with BRCA1?",
+  "mode": "Plain language",
+  "tag": "q5_plain",
+  "firstWidth": 390,
+  "info": [
+    {
+      "width": "390_landing",
+      "name": "About Answer modes",
+      "box": {
+        "x": 16,
+        "y": 413.265625,
+        "width": 358,
+        "height": 185.640625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": "390_while_running",
+      "name": "About Florey",
+      "box": {
+        "x": 16,
+        "y": 556.09375,
+        "width": 358,
+        "height": 140.34375
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 390,
+      "name": "About Trust signals",
+      "box": {
+        "x": 16,
+        "y": 440.09375,
+        "width": 358,
+        "height": 267.453125
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 1280,
+      "name": "About Florey",
+      "box": {
+        "x": 907,
+        "y": 56.796875,
+        "width": 280,
+        "height": 159.90625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 1280,
+      "name": "About Trust signals",
+      "box": {
+        "x": 341.40625,
+        "y": 507.84375,
+        "width": 280,
+        "height": 326.140625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    }
+  ],
+  "shots": [],
+  "landingOverflow": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  },
+  "modePressed": "true",
+  "seconds": 10.738,
+  "headings": [],
+  "overflow_390": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  },
+  "overflow_1280": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  }
+}

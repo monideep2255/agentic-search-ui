@@ -225,6 +225,8 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 139, part: notes 1 and 2 | Notes sit under the records on every surface and never say "listed below"; "this answer shows N" counts what the answer shows, and never "shows 0" | Live, awaiting your retest | 104 |
 | card 134 | Papers from the enrichment layer show their PubMed title instead of "28340353 PMID:28340353"; a paper with no usable title shows "PMID:n" | Live, awaiting your retest | 117, 1 |
 | card 133 and card 137, part 1 | A gene two sources both found is one row naming both, so no gene shows twice and the list total, sources count, Found and Based on lines agree | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-22_product_check_card133/report.md`) | 24, 118 |
+| card 121 | The variant table's heading reads "Variant records found", with "record" once | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-29_product_check_121_123/report.md`) | 119, 23 |
+| card 123 | On a phone, an info card beside the line under an answer, the persona card and the answer-mode card stay fully on screen, and the page never scrolls sideways | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-29_product_check_121_123/report.md`) | 5 |
 | card 148 | A Vespa search index for FIND and DISCOVER | Not pursued for now, your call of 2026-10-29; closed unbuilt, its notes local in `docs/retrieval-engine-discussion/` |  |
 
 ## What is done, in summary

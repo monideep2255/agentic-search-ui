@@ -1,0 +1,36 @@
+What is rs334 and what condition is it associated with?
+New search
+
+? Answered14.1s · 3 tool calls · 1 source cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 1 literature variant record for rs334: c.20A>T.⁠2
+
+SUMMARY
+
+The variant rs334 corresponds to the literature variant name c.20A>T.⁠2
+
+The variant rs334 is identified in the literature by the name c.20A>T.⁠2
+
+VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	GENE	CLINICAL SIGNIFICANCE	
+rs334	rs334	HBB	not-provided, protective, likely-benign, pathogenic, other	⁠1
+▶
+SOURCES
+1
+Based on 1 source cited, from dbSNP
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
