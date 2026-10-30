@@ -60,3 +60,10 @@ Fix round, left:
 
 - Every A-149 finding (all on other paths, filed as cards 155 and 156) is left untouched.
 - Show work still prints `${tool} — ${result_count} results` (`frontend/src/hooks/useRunView.ts`), so the trace line itself reads "0 results"; the honest wording is in the tool_result summary only. The frontend is outside this round's file fence.
+
+## Fix round, reverted
+
+- The J-149-03 clause ("N record(s) set aside: not the gene asked about", from a `set_aside` count in the shaper appended by Act) was reverted, with its two tests.
+- Why: the fresh verifier found it is added whenever any entity is dropped, so it changed the status line for genes whose record was already right (TP53, BRCA1).
+- Kept: the id hop tests for J-149-01 and J-149-02 (M1, M2, M7). The source equals round one (`3997dede`) exactly.
+- J-149-03 stays open: Show work and the step still read "0 results" when every entity was set aside.

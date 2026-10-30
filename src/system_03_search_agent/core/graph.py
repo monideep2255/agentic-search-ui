@@ -5097,7 +5097,6 @@ def _layer_tool_output_to_structured_fields(
             if entity.name and entity.name.strip().casefold() == queried
         ]
         kept_entities = exact or citeable
-        set_aside = 0
         if expected_gene_id:
             kept_entities = [
                 entity
@@ -5105,7 +5104,6 @@ def _layer_tool_output_to_structured_fields(
                 if entity.db == "ncbi_gene"
                 and str(entity.db_id or "").strip() == expected_gene_id
             ]
-            set_aside = len(citeable) - len(kept_entities)
         for entity in kept_entities:
             rows.append(
                 _pseudo_row(
@@ -5142,13 +5140,7 @@ def _layer_tool_output_to_structured_fields(
                 )
             )
         rows.sort(key=lambda row: str(row["source_url"]))
-        shaped_annotation = _shaped(annotated.status, rows[:_LAYER_TOOL_ROW_CAP], annotated.error)
-        if set_aside:
-            # Card 149, J-149-03: say how many entities were set aside as
-            # not the gene asked about, so the step never reads as if
-            # PubTator3 found nothing. None of them is cited.
-            shaped_annotation["set_aside"] = set_aside
-        return shaped_annotation
+        return _shaped(annotated.status, rows[:_LAYER_TOOL_ROW_CAP], annotated.error)
 
     if tool == "ncbi_dbsnp":
         snp: NcbiDbsnpOutput = output
@@ -8756,14 +8748,7 @@ async def _execute_planned_call(
         )
         return _CallOutcome(
             status=str(shaped["status"]),
-            summary=(
-                f"{shaped['status']}: {shaped['row_count']} record(s)"
-                + (
-                    f"; {shaped['set_aside']} record(s) set aside: not the gene asked about"
-                    if shaped.get("set_aside")
-                    else ""
-                )
-            ),
+            summary=f"{shaped['status']}: {shaped['row_count']} record(s)",
             result_count=int(shaped["row_count"]),
             truncated=False,
             # Card 94: the tool's own "timeout" is shaped as an error, and

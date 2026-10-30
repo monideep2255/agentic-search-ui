@@ -478,24 +478,6 @@ async def test_card149_a_non_numeric_resolved_id_behaves_as_before(
     assert not any("set aside" in text for text in _pubtator_summaries(events))
 
 
-@pytest.mark.asyncio
-async def test_card149_set_aside_entities_are_said_not_reported_as_nothing_found(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    events = await _gck_run(monkeypatch, "NCBIGene:2645")
-    assert "empty: 0 record(s); 1 record(s) set aside: not the gene asked about" in (
-        _pubtator_summaries(events)
-    )
-
-
-def test_card149_no_set_aside_note_when_nothing_was_set_aside() -> None:
-    assert "set_aside" not in _shape_pubtator([], "GCK", "2645")
-    human = _gene_entity("GCK", "2645", "@GENE_GCK")
-    assert "set_aside" not in _shape_pubtator([human], "GCK", "2645")
-    shaped = _shape_pubtator([_gene_entity("Gck", "24385", "@GENE_GCK"), human], "GCK", "2645")
-    assert shaped["set_aside"] == 1
-
-
 # ---------------------------------------------------------------------------
 # Concurrency and graceful degradation, driven through act_node directly.
 # ---------------------------------------------------------------------------
