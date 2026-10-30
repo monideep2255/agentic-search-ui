@@ -8,7 +8,7 @@ A plain-language update, covering:
 
 No jargon. If you have never seen the code, start here.
 
-Last updated: 2026-10-25.
+Last updated: 2026-10-29.
 
 ## Table of contents
 
@@ -367,6 +367,17 @@ All six live-government-API connections the plan called for are now built. That 
 - Give it a stretch of chromosome coordinates with the genome build, and it names the genes under that stretch without being told them, then lists the structural and clinical variants recorded there, each with a link. Leave the build out and it asks which one, rather than guessing. On the practice site since the night of 22 September, waiting for the product owner to try it.
 
 ## What does not work yet
+
+### 29 October
+
+THE HONEST HEADLINE AS OF 29 OCTOBER, in one sentence:
+
+- nothing new works for a person using the product today: the day mended the automatic safety checks and set aside an idea for a new search engine.
+
+What happened:
+
+- The automatic safety checks that run on every proposed change pass again. Two website packages were updated. One older file-locking package can't be updated yet, because another package we rely on doesn't accept the new version. Its known problems only matter when a second person shares the same computer, which our server never does, so the product owner accepted them until the update is possible.
+- An idea to add a separate search engine (Vespa) was planned and then set aside by the product owner. Nothing was built or bought. The questions it would have helped with, such as the coronavirus and breast cancer questions, stay on the list as their own fixes.
 
 ### 25 October
 
@@ -793,6 +804,7 @@ Each of these is a completed, reviewed, merged piece of work.
 
 | Sprint | In plain terms | Done |
 |--------|----------------|------|
+| A day of mending the automatic checks, and a search engine idea set aside | The safety checks that run on every proposed change pass again: two website packages were updated, and one file-locking package that cannot be updated yet was accepted by the product owner because its problems need a second person on the same computer. A plan for a separate search engine was written, then set aside; nothing was built or bought | 29 October |
 | A night of small wording fixes in and six larger fixes held back | Eight changes went live: one row for a gene two sources both found, real paper titles, notes that no longer point the wrong way, a clearer reason when no summary is shown, an opening count that counts papers, a readable search link, a corrected About page example and a better reply when asked to change the database. Three software packages were updated to clear new security notices. Six larger fixes were built and held back as drafts because each made something else worse or would have broken a way of using the product | 22 October |
 | Release day for the poster, every waiting change tried by hand, and the disclaimer fixed for phones | The public site was brought up to date with the practice site, with the same settings and raised daily limits for the event crowd. Before that, all 61 changes waiting for the product owner were tried by hand in a browser and the findings written down as seventeen new pieces of work | 18 October 2026 |
 | A day of designing with the owner, one protection in and two pieces taken back | The answer writer can no longer be steered by text inside a paper, and records read exactly as the paper writes them; it took three tries. A disagreement warning and the first part of the coronavirus fix were built and taken back before anyone saw them, each for a reason the reviewers found. The coronavirus fix was designed with the product owner in nine decisions | 17 October |
@@ -1316,18 +1328,17 @@ THE ORDER BELOW IS DECIDED BY WHAT THE PRODUCT OWNER FINDS WHEN THEY TEST, not b
 1. The product owner retests what went live, newest first: the eight changes of the night of 22 October are at the top, with the team's own check beside each (the gene found by two sources still awaits its check).
 2. Find out why some written summaries open in the middle of a thought, such as "Another finds ..." (the product owner said this comes next).
 3. Read the past week of the server freeze counts, which the lead does and reports back with one recommendation on whether the gatekeeper's freeze fix is worth building.
-4. Update two software packages the website depends on, which the product owner approved: until then every proposed change shows a red warning from the automatic security check. Nothing a person sees changes.
-5. Redesign how a question names its own subject, together with the coronavirus question. This one redesign also carries the fix for the bronchiolitis question being asked back and the fix for "How many genes are associated with breast cancer?", both of which were closed on 25 October rather than fixed separately.
-6. Smaller fixes decided on 25 October: mark a retracted paper as retracted beside its title; drop a whole sentence when its unchecked ending is removed; say plainly when linked records exist but none are shown; let the terminal stop key confirm the stop in the background without calling it an error; rework the note about very large numbers of items so it names only what the question named.
-7. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
-8. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
-9. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
-10. Finish the coronavirus question: designed with the product owner on 17 October and built in three parts; the first part was taken back, and the next design decides when a single database match can be trusted for a short name.
-11. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
-12. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
-13. Build the step where the system checks its own results and tries once more when they do not answer the question.
-14. Tell the reader when the system wrote its own search rather than using a checked one.
-15. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph.
+4. Redesign how a question names its own subject, together with the coronavirus question. This one redesign also carries the fix for the bronchiolitis question being asked back and the fix for "How many genes are associated with breast cancer?", both of which were closed on 25 October rather than fixed separately.
+5. Smaller fixes decided on 25 October: mark a retracted paper as retracted beside its title; drop a whole sentence when its unchecked ending is removed; say plainly when linked records exist but none are shown; let the terminal stop key confirm the stop in the background without calling it an error; rework the note about very large numbers of items so it names only what the question named.
+6. New designs for the changes taken back: reading a year and a place for isolate questions in a way that matches how the records write places; looking up one named isolate; the checked database searches; where a quoted record sentence ends; the answer's first sentence; the one-sentence paper quotes; asking which aspect a broad subject means; keeping every sentence of a long abstract for programs that read our answers; showing each variant's classification without making long answers too big; and keeping a variant tied to its gene in the source check.
+7. Factory, the second building agent, works again on four small screen fixes, including the two small marks on the new mode switch and a top bar that runs off the screen with a long email address.
+8. Fix the six small problems found overnight on 17 October, listed in the table below: more than five papers after picking a date window, the condition for rs334, a repeated word in an opening sentence, unrelated papers for the RS1 gene, the explainer card running off a phone, and a stray old paper in a date window.
+9. Finish the coronavirus question: designed with the product owner on 17 October and built in three parts; the first part was taken back, and the next design decides when a single database match can be trusted for a short name.
+10. Before the next release, fix the rare case where a release could drop an older release's notes from the changelog file.
+11. The building crew checks the product itself before the product owner sees it: it drives the running site at desktop and phone width, compares each screen with a written description of what the owner wants, and fixes what fails. A proposal is waiting.
+12. Build the step where the system checks its own results and tries once more when they do not answer the question.
+13. Tell the reader when the system wrote its own search rather than using a checked one.
+14. Build the connections between facts the product owner chose on 25 September: facts cited as paths through the graph.
 
 Done since this list was last written, overnight on 23 September, while nobody was watching:
 

@@ -267,14 +267,13 @@ What the Waiting on column means:
 The cutoff. It is updated at the end of every working session, so the next
 session starts here rather than reconstructing state.
 
-LAST UPDATED 2026-10-25, AT THE CHECKPOINT AFTER YOUR DECISIONS OF THE DAY. THE ONE THING TO KNOW:
+LAST UPDATED 2026-10-29, AT THE CHECKPOINT OF THE DAY. THE ONE THING TO KNOW:
 
-- Nothing was built or merged into the product on 2026-10-25. You made decisions, each a `DECISIONS.md` row dated 2026-10-25. One documents-only pull request merged (#303, the row keeping the parked pull requests, later superseded by the closures below)
-- Five draft pull requests were closed on GitHub with a note each: #293, #294, #295, #296 and #298. #301 stays open as a draft for rework. Nothing is parked as a draft any more except card 139's note 3. Under "What is parked, and why"
-- The frontend lockfile bump (fast-uri 3.1.9, undici 7.30.1) is approved and not built: the frontend audit gate is red on every pull request until it lands
-- No production release for the overnight merges of 2026-10-22: they stay on develop only
-- Develop has no tracing, by design; no setting changes
-- Git history is not rewritten
+- Nothing changed in the product on 2026-10-29. Two pull requests merged into develop: #308, the dependency fix, and #307, which closes card 148
+- CI passes every gate again (#308): fast-uri 3.1.9 and undici 7.30.1 in the frontend lockfile; gate 6 accepts the 13 filelock advisories by ID, by your yes, until litellm accepts filelock 4
+- Vespa is not pursued for now (#307): card 148 closed unbuilt; the seven cards it was to fold stay their own cards; its notes and the parked plan stay local in `docs/retrieval-engine-discussion/`, gitignored
+- The unpushed replan branch that folded those cards was deleted, by your yes
+- Still true from 2026-10-25: no production release for the overnight merges of 2026-10-22; develop has no tracing; git history is not rewritten
 
 `HANDOFF.md` says what to do next.
 
@@ -325,7 +324,7 @@ This section is also the shared plan.
 ### What is waiting on the product owner
 
 - `testing/Retest_product_owner.md`, newest first; each names its queries in `testing/Test_queries_and_workflows.md`, and the lead's browser verdict on every row is in `testing/Developer/reports/2026-10-18_browser_retest/report.md`.
-- Your calls of 2026-10-25 are made and recorded; what waits now is the build, not you: the frontend lockfile bump (approved, not built), card 139's rework, card 137 part 2, card 146's tag, card 147's diagnosis and card 142's redesign.
+- Your calls of 2026-10-25 and 2026-10-29 are made and recorded; what waits now is the build, not you: card 139's rework, card 137 part 2, card 146's tag, card 147's diagnosis and card 142's redesign.
 - Card 84: by your call of 2026-10-25 the lead reads the last week's guard lag lines from develop and production logs, read only, and brings the numbers and one recommendation.
 - The order of cards 129 to 145 after the poster event stands, with the parked ones above.
 - Card 72 evidence: two of slice B's product check runs stopped at the safety check; develop's log shows the guard model's classify call timing out twice each, provider "unknown". Card 84's lag lines are read by the lead, per your call of 2026-10-25.
@@ -540,7 +539,7 @@ board on 2026-09-24.
 ### How to start the next session
 
 1. Read `HANDOFF.md`, "The one next action" (the lead rewrites it at each checkpoint, so read the current one), then "Where we stopped" above, then the session tables under "Session history" below, newest first.
-2. Run `git status` and `git worktree list`. Local carries only `develop`; GitHub carries only `develop` and `production` (`git ls-remote --heads origin`). Anything else is new since 2026-10-25 and `HANDOFF.md` names it. The one exception is #301, card 139's note 3, open as a draft for rework.
+2. Run `git status` and `git worktree list`. Local carries `develop` and #301's branch; GitHub carries `develop`, `production` and #301's branch (`git ls-remote --heads origin`). Anything else is new since 2026-10-29 and `HANDOFF.md` names it. The one exception is #301, card 139's note 3, open as a draft for rework.
 3. Read "What is parked, and why" before picking anything up. OMIM is live WITH its title filter; the two ship together and neither is re-enabled or removed without the other.
 4. Retests: `testing/Retest_product_owner.md`.
    - Rows 1 to 8 are the cards merged overnight on 2026-10-22: 133 with 137 part 1 (#300), 134, 139 notes 1 and 2, 128, 131 part 1, 138, 143 and 141. The team checked all but the first on deployed develop at 1280 and 390, in the reports each row names under `testing/Developer/reports/2026-10-22_product_check_*`.
@@ -613,6 +612,9 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 |---|---|---|
 | Card 148, a Vespa search index for FIND and DISCOVER | Not pursued for now, by your call of the day; nothing was built, bought or pushed | Closed unbuilt. The review notes and the parked plan stay local in `docs/retrieval-engine-discussion/` (gitignored) |
 | Cards 56, 129, 145, 116, 48, 122, 37 | The fold into card 148 was only on an unpushed branch, now dropped | Each stays its own card in To do, as before |
+| The replan branch `chore/replan-vespa-first` | Force deleted by your yes; it held only the fold | Gone; recoverable from the reflog for about 90 days |
+| Dependency fix, #308 | fast-uri 3.1.9 and undici 7.30.1 in the frontend lockfile; gate 6 accepts the 13 filelock advisories by ID, by your yes, until litellm accepts filelock 4 | Merged; every CI gate passes again |
+| Pull request #307 | Records that Vespa is not pursued and closes card 148 | Merged |
 
 ### 2026-10-25, in one table
 

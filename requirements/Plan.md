@@ -1050,6 +1050,13 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 
 ## Revision history
 
+2026-10-29, THE UI FIX LOOP: CI REPAIRED AND VESPA SET ASIDE, NOTHING CHANGED IN THE PRODUCT, NO RELEASE. The decisions: `DECISIONS.md`, rows dated 2026-10-29. The session table: `testing/UI_fixes_done.md`, Session history. What awaits the owner and the next action: `HANDOFF.md`.
+
+- Merged #308: fast-uri 3.1.9 and undici 7.30.1 in the frontend lockfile. Gate 6 accepts the 13 filelock 3.32.7 advisories by ID, by the owner's yes, because every fix is in filelock 4.x and litellm requires filelock<4.0. Every CI gate passes again.
+- Merged #307: Vespa is not pursued for now. Card 148 closed unbuilt, and the seven cards it was to fold stay their own cards. A plan for it (phases 9.0 to 9.6) was written on 2026-10-26 and parked unapproved; it stays local with the review notes in `docs/retrieval-engine-discussion/`, gitignored.
+- The unpushed replan branch was force deleted by the owner's yes.
+- Next: card 147's diagnosis, then card 84's lag lines, then the board's To do column in order.
+
 2026-10-25, THE UI FIX LOOP: THE OWNER'S DECISIONS ON THE HELD-BACK WORK, NOTHING BUILT, NO RELEASE. The decisions: `DECISIONS.md`, rows dated 2026-10-25. The session table: `testing/UI_fixes_done.md`, Session history. What awaits the owner and the next action: `HANDOFF.md`.
 
 - Pull requests closed with a note each: #293 (card 145, folded into card 56's redesign), #294 (card 130, root fix closed), #295 (card 129, folded into card 56's redesign), #296 (card 131 part 2, the count line stays) and #298 (card 142, to be redesigned). #301 (card 139 note 3) stays open as a draft for rework. #303, a documents-only pull request, merged earlier in the day.
