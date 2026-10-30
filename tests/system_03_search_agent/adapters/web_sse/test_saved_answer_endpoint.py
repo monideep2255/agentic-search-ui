@@ -3,7 +3,7 @@
 Fix-plan item 10.2. What a person gets: they click a past search and the
 answer they already got is there, with no second search charged to them.
 
-`feedback.history.get_saved_answer` and `list_history` are monkeypatched to
+`feedback.history.get_saved_answer` and `list_history_page` are monkeypatched to
 in-memory fakes here, the same choice `test_history_endpoint.py` makes and
 for the same reason: this file owns what the ENDPOINT owns, which is caller
 derivation, the status codes, the wire shape, the depth mapping, and that
@@ -54,10 +54,15 @@ from httpx import ASGITransport, AsyncClient
 
 from system_03_search_agent.adapters.web_sse.app import SavedAnswerResponse, app
 from system_03_search_agent.auth.dependencies import Principal, get_caller
-from system_03_search_agent.feedback.history import DEFAULT_LIMIT, HistoryEntry, SavedAnswer
+from system_03_search_agent.feedback.history import (
+    DEFAULT_LIMIT,
+    HistoryEntry,
+    HistoryPage,
+    SavedAnswer,
+)
 
 _GET_SAVED_TARGET = "system_03_search_agent.adapters.web_sse.app.get_saved_answer"
-_LIST_HISTORY_TARGET = "system_03_search_agent.adapters.web_sse.app.list_history"
+_LIST_HISTORY_TARGET = "system_03_search_agent.adapters.web_sse.app.list_history_page"
 
 _ANSWER = "TP53 is a tumour suppressor [1].\n\n| Gene | Role |\n| --- | --- |\n| TP53 [1] | x |"
 
@@ -421,8 +426,14 @@ class _FakeHistoryStore:
     def seed(self, owner_id: str, entries: list[HistoryEntry]) -> None:
         self.rows[owner_id] = entries
 
-    def __call__(self, *, owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry]:
-        return self.rows.get(owner_id, [])[:limit]
+    def __call__(
+        self, *, owner_id: str, limit: int = DEFAULT_LIMIT, before: str | None = None
+    ) -> HistoryPage:
+        rows = self.rows.get(owner_id, [])
+        return HistoryPage(
+            entries=rows[:limit],
+            next_before=rows[limit - 1].trace_id if len(rows) > limit else None,
+        )
 
 
 @pytest.mark.asyncio

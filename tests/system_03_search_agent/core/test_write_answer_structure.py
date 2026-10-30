@@ -2509,3 +2509,53 @@ async def test_card30_answer_parts_skips_its_line_beside_card_23s_table(monkeypa
         everything = [t.model_dump() for t in (*parts.summary, *parts.listing, *parts.notes)]
         assert len(_source_notes(everything)) == 1
         assert _classification_notes(everything) == []
+
+
+def _dbsnp_rows(count: int) -> list[dict]:
+    return [
+        {
+            "node_or_edge_type": "Variant record",
+            "curie": f"rs{334 + index}",
+            "fields": {"rsid": f"rs{334 + index}", "clinical_significance": "pathogenic"},
+            "source_url": f"https://www.ncbi.nlm.nih.gov/snp/rs{334 + index}",
+            "graph_snapshot_version": "v1",
+        }
+        for index in range(count)
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("depth", ["researcher", "plain_language"])
+@pytest.mark.parametrize(
+    ("count", "opening", "heading"),
+    [
+        (1, "Found 1 variant record", "Variant records found"),
+        (2, "Found 2 variant records", "Variant records found"),
+    ],
+)
+async def test_card121_a_variant_record_is_named_once_in_the_count_line_and_heading(
+    monkeypatch, depth, count, opening, heading
+) -> None:
+    """Card 121 (PR-37-02): "Found 1 variant record record" and "Variant
+    record records found" on every rs id answer. Red before the fix: the
+    heading took a second "record"."""
+    _install(monkeypatch, lambda lines: "Nothing here matches any record at all.")
+    result = await graph_module.write_node(_state(depth, rows=_dbsnp_rows(count)))
+    tokens = _tokens(result)
+    headings = [t["text"].strip() for t in tokens if t["kind"] == "heading"]
+    assert not any("record record" in h.lower() for h in headings), headings
+    if depth == "researcher":
+        assert headings[-1] == heading, headings
+    first = _opening(result)
+    assert "record record" not in first.lower(), first
+    if depth == "researcher":
+        assert re.match(rf"{opening}(?! record)\b", first), first
+
+
+@pytest.mark.asyncio
+async def test_card121_a_kind_not_ending_in_record_keeps_its_heading(monkeypatch) -> None:
+    _install(monkeypatch, lambda lines: "Nothing here matches any record at all.")
+    result = await graph_module.write_node(_state("researcher"))
+    headings = [t["text"].strip() for t in _tokens(result) if t["kind"] == "heading"]
+    assert headings[-1] == "Disease records found", headings
+    assert _opening(result).startswith("Found 3 disease records"), _opening(result)

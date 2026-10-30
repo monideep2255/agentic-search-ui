@@ -40,12 +40,30 @@
  * block that matches none of heading, table or list renders as its own
  * literal text. A person must never lose a word because a future producer
  * change emits a shape this file was not updated for.
+ *
+ * CITATION MARKERS (card 135). The producer writes each citation into the
+ * markdown as `[n]` text: claim sentences keep their own inline markers,
+ * and `_markers_for` appends a run to a table's first cell and to a list
+ * item. Printed raw, a reopened answer read "Escherichia coli
+ * [1][2][3]...[20]." where the live answer showed one small range marker.
+ * `withCitationMarkers` now renders each run through the live answer's own
+ * `CitationMarkers`, so the numbers, the collapse of four or more into one
+ * range, and the card a marker opens are the live screen's, not a copy.
+ *
+ * The live screen's R-05 rule holds here too: a bracketed number is a
+ * marker only when it is one of this answer's stored citation numbers.
+ * Anything else ("study [12]" with no citation 12) stays as the text it is.
+ * Sentence punctuation after a run moves in front of the marker, so
+ * "cavity [13]." reads "cavity." then the marker, as on the live answer.
  */
 
-import { Fragment, useState, type ReactElement } from "react";
+import { Fragment, useState, type ReactElement, type ReactNode } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
 
 import { designTokens } from "../../theme";
+import { sourceLabel } from "../../hooks/useRunView";
+import type { HistoryAnswerCitation } from "../../lib/api";
+import { CitationMarkers, type CitationSource } from "../answer/CitationMarkers";
 import { RECORDS_PAGE_SIZE, RecordsPaginationBar } from "../answer/RecordsPaginationBar";
 import { PHONE_LAYOUT_QUERY } from "./AnswerScreen";
 
@@ -160,6 +178,91 @@ export function parseSavedAnswerMarkdown(markdown: string): Block[] {
   return groupConsecutiveLists(rawBlocks.map(parseRawBlock));
 }
 
+/** What a saved answer's markers can point at: its stored citations. */
+export interface SavedCitations {
+  /** Every stored citation number. Only these become markers. */
+  known: ReadonlySet<number>;
+  /**
+   * The card behind each number, named by `sourceLabel` exactly as the live
+   * Sources list names it. A citation whose stored layer was not recognised
+   * (card 102) has no entry: its marker's card then says the source is
+   * listed under Sources below, which it is, rather than guessing a layer.
+   */
+  sources: Map<number, CitationSource>;
+}
+
+const NO_CITATIONS: SavedCitations = { known: new Set(), sources: new Map() };
+
+export function savedCitations(citations: readonly HistoryAnswerCitation[]): SavedCitations {
+  const known = new Set<number>();
+  const sources = new Map<number, CitationSource>();
+  for (const citation of citations) {
+    known.add(citation.display_index);
+    if (citation.layer === null || sources.has(citation.display_index)) continue;
+    sources.set(citation.display_index, {
+      n: citation.display_index,
+      layer: citation.layer,
+      name: sourceLabel(citation.source, citation.source_id ?? "", citation.source_url),
+      // The live card's mono row shows the citation's `field`, which the
+      // saved-answer parser does not keep; left empty rather than filled
+      // with the tool's internal name.
+      tool: "",
+      url: citation.source_url,
+    });
+  }
+  return { known, sources };
+}
+
+/** One or more `[n]` markers in a row, with any spaces before or between them. */
+const MARKER_RUN = /(?:\s*\[\d{1,3}\])+/g;
+const ONE_MARKER = /\s*\[(\d{1,3})\]/g;
+const SENTENCE_PUNCTUATION = /^[.,;:!?]+/;
+
+/**
+ * `text` with each run of known `[n]` markers rendered as the live answer's
+ * `CitationMarkers`. Returns the string itself, untouched, when no run names
+ * a stored citation. Within a run, a number that is not a stored citation
+ * stays as text where it was; the known ones become one marker group after
+ * it, which `CitationMarkers` collapses to a range at four or more.
+ */
+export function withCitationMarkers(text: string, cited: SavedCitations, testIdPrefix: string): ReactNode {
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let claimIndex = 0;
+  for (const run of text.matchAll(MARKER_RUN)) {
+    const start = run.index ?? 0;
+    const numbers: number[] = [];
+    let leftover = "";
+    for (const marker of run[0].matchAll(ONE_MARKER)) {
+      const n = Number(marker[1]);
+      if (cited.known.has(n)) numbers.push(n);
+      else leftover += marker[0];
+    }
+    if (numbers.length === 0) continue;
+    const end = start + run[0].length;
+    const punctuation = SENTENCE_PUNCTUATION.exec(text.slice(end))?.[0] ?? "";
+    // A number left as text keeps the space the run opened with, so
+    // "Another [1][99]." reads "Another [99]." and not "Another[99].".
+    const kept = leftover ? (/^\s*/.exec(run[0])?.[0] ?? "") + leftover.trimStart() : "";
+    nodes.push(text.slice(cursor, start) + kept + punctuation);
+    nodes.push(
+      <CitationMarkers
+        key={`marker-${claimIndex}`}
+        citations={numbers}
+        sources={cited.sources}
+        claimLayer={null}
+        claimIndex={claimIndex}
+        testIdPrefix={testIdPrefix}
+      />,
+    );
+    claimIndex += 1;
+    cursor = end + punctuation.length;
+  }
+  if (nodes.length === 0) return text;
+  nodes.push(text.slice(cursor));
+  return nodes.map((node, i) => (typeof node === "string" ? <Fragment key={`text-${i}`}>{node}</Fragment> : node));
+}
+
 const SAM_HEADING_SX = {
   fontSize: 11,
   letterSpacing: "0.12em",
@@ -220,7 +323,17 @@ const SAM_LIST_ITEM_SX = {
  * One saved table. Pages ten rows at a time with the live answer's bar, and
  * on a phone stacks each row the way the live phone view does (card 71).
  */
-function SavedTable({ index, header, rows }: { index: number; header: string[]; rows: string[][] }): ReactElement {
+function SavedTable({
+  index,
+  header,
+  rows,
+  cited,
+}: {
+  index: number;
+  header: string[];
+  rows: string[][];
+  cited: SavedCitations;
+}): ReactElement {
   const phone = useMediaQuery(PHONE_LAYOUT_QUERY, { noSsr: true });
   const [page, setPage] = useState(0);
   const totalRows = rows.length;
@@ -230,6 +343,11 @@ function SavedTable({ index, header, rows }: { index: number; header: string[]; 
   const visibleRows = isPaginated
     ? rows.slice(currentPage * RECORDS_PAGE_SIZE, currentPage * RECORDS_PAGE_SIZE + RECORDS_PAGE_SIZE)
     : rows;
+  const rowOffset = isPaginated ? currentPage * RECORDS_PAGE_SIZE : 0;
+  // The first cell carries the row's markers (`capture.py` puts them there,
+  // where the live table puts the row's citation); other cells are data.
+  const firstCell = (cell: string, r: number) =>
+    withCitationMarkers(cell, cited, `saved-answer-${index}-${rowOffset + r}-`);
   const bar = isPaginated ? (
     <RecordsPaginationBar
       testIdBase={`saved-answer-table-${index}`}
@@ -264,7 +382,7 @@ function SavedTable({ index, header, rows }: { index: number; header: string[]; 
                 component="span"
                 sx={{ fontSize: 15, lineHeight: 1.45, color: designTokens.ink, overflowWrap: "anywhere" }}
               >
-                {row[0] ?? ""}
+                {firstCell(row[0] ?? "", r)}
               </Box>
               {row.slice(1).map((cell, c) => {
                 const label = header[c + 1];
@@ -307,7 +425,7 @@ function SavedTable({ index, header, rows }: { index: number; header: string[]; 
                 <Box component="tr">
                   {row.map((cell, c) => (
                     <Box component="td" key={c} sx={SAM_TABLE_CELL_SX}>
-                      {cell}
+                      {c === 0 ? firstCell(cell, r) : cell}
                     </Box>
                   ))}
                 </Box>
@@ -327,8 +445,16 @@ function SavedTable({ index, header, rows }: { index: number; header: string[]; 
  * so JSX's own escaping is the XSS control, exactly as
  * `production-standards.md` requires.
  */
-export function SavedAnswerMarkdown({ markdown }: { markdown: string }): ReactElement {
+export function SavedAnswerMarkdown({
+  markdown,
+  citations,
+}: {
+  markdown: string;
+  /** The answer's stored citations; without them every `[n]` stays text. */
+  citations?: readonly HistoryAnswerCitation[];
+}): ReactElement {
   const blocks = parseSavedAnswerMarkdown(markdown);
+  const cited = citations ? savedCitations(citations) : NO_CITATIONS;
   return (
     <Box data-testid="saved-answer-body">
       {blocks.map((block, index) => {
@@ -342,14 +468,14 @@ export function SavedAnswerMarkdown({ markdown }: { markdown: string }): ReactEl
         if (block.kind === "table") {
           // Keyed by content so a different table or answer opens on page 1.
           const contentKey = `${index}:${block.header.join("\u241f")}:${block.rows.map((r) => r.join("\u241f")).join("\u241e")}`;
-          return <SavedTable key={contentKey} index={index} header={block.header} rows={block.rows} />;
+          return <SavedTable key={contentKey} index={index} header={block.header} rows={block.rows} cited={cited} />;
         }
         if (block.kind === "list") {
           return (
             <Box component="ul" key={index} data-testid={`saved-answer-list-${index}`} sx={SAM_LIST_SX}>
               {block.items.map((item, i) => (
                 <Box component="li" key={i} sx={SAM_LIST_ITEM_SX}>
-                  {item}
+                  {withCitationMarkers(item, cited, `saved-answer-${index}-${i}-`)}
                 </Box>
               ))}
             </Box>
@@ -357,7 +483,7 @@ export function SavedAnswerMarkdown({ markdown }: { markdown: string }): ReactEl
         }
         return (
           <Typography key={index} component="p" data-testid={`saved-answer-paragraph-${index}`} sx={SAM_PARAGRAPH_SX}>
-            {block.text}
+            {withCitationMarkers(block.text, cited, `saved-answer-${index}-`)}
           </Typography>
         );
       })}

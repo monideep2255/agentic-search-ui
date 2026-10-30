@@ -362,6 +362,18 @@ export interface HistoryRailProps {
    * claimed" line while the fetch is in flight or if it fails.
    */
   searchLimitLabel?: string;
+  /**
+   * Card 136.1: the server holds searches older than the last row shown.
+   * With `onShowOlder`, a "Show older searches" control sits at the foot of
+   * the list; without either, nothing is shown.
+   */
+  hasOlder?: boolean;
+  /** Load the next older page. `App.tsx` owns the fetch and the merge. */
+  onShowOlder?: () => void;
+  /** An older page is being fetched: the control says so and waits. */
+  olderLoading?: boolean;
+  /** The last older-page fetch failed: say so, and let the person retry. */
+  olderFailed?: boolean;
 }
 
 /** The prototype's `.rmin` chevron, pointing left, toward the collapse. */
@@ -517,6 +529,10 @@ export function HistoryRail({
   onNewSearch,
   accountEmail,
   searchLimitLabel,
+  hasOlder = false,
+  onShowOlder,
+  olderLoading = false,
+  olderFailed = false,
 }: HistoryRailProps) {
   const theme = useTheme();
   // Fix set 4 (R46, decision U9, 2026-09-13): history reachable on a phone.
@@ -531,6 +547,12 @@ export function HistoryRail({
   // (U9) was a panel that slides in and closes, which is what a MUI
   // `Drawer` gives the same rail content without restyling it.
   const isNarrow = useMediaQuery(theme.breakpoints.down("md"));
+  // Card 136.3: at phone width the rail is a temporary drawer, so picking a
+  // search or "+ New search" also closes it through the same `onCollapse` the
+  // backdrop and Escape use. On a computer the rail stays as it is.
+  const closeAfterPick = () => {
+    if (isNarrow) onCollapse?.();
+  };
 
   const rail = (
     <Box
@@ -589,7 +611,10 @@ export function HistoryRail({
         <Box
           component="button"
           type="button"
-          onClick={onNewSearch}
+          onClick={() => {
+            onNewSearch?.();
+            closeAfterPick();
+          }}
           sx={{
             display: "flex",
             alignItems: "center",
@@ -688,7 +713,10 @@ export function HistoryRail({
             key={item.id}
             component="button"
             type="button"
-            onClick={() => onOpen?.(item.id)}
+            onClick={() => {
+              onOpen?.(item.id);
+              closeAfterPick();
+            }}
             sx={{
               display: "block",
               width: "100%",
@@ -761,6 +789,54 @@ export function HistoryRail({
           </Box>
         ))
       )}
+
+      {/*
+        Card 136.1: "Show older searches", at the foot of the list. The same
+        shape, size and weight as "+ New search" so no new control is
+        invented, but drawn in the secondary colours the collapse control
+        beside it already uses: one filled blue action per rail. Picking it
+        does NOT close the phone drawer, since the person is still choosing.
+      */}
+      {hasOlder && onShowOlder && items.length > 0 ? (
+        <Box sx={{ p: "8px 0 4px" }}>
+          <Box
+            component="button"
+            type="button"
+            onClick={onShowOlder}
+            disabled={olderLoading}
+            aria-busy={olderLoading || undefined}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              bgcolor: "transparent",
+              color: designTokens.blue,
+              border: `1px solid ${designTokens.line}`,
+              borderRadius: 0.5,
+              p: "9px 12px",
+              font: "inherit",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: olderLoading ? "default" : "pointer",
+              "&:hover": olderLoading
+                ? {}
+                : { borderColor: designTokens.lineStrong, bgcolor: designTokens.surfaceSunk },
+            }}
+          >
+            {olderLoading ? "Loading older searches…" : "Show older searches"}
+          </Box>
+          {olderFailed && !olderLoading ? (
+            <Typography
+              component="p"
+              role="status"
+              sx={{ p: "6px 2px 0", m: 0, fontSize: 12, color: designTokens.inkMuted }}
+            >
+              Older searches did not load. Try again.
+            </Typography>
+          ) : null}
+        </Box>
+      ) : null}
 
       {/*
         `.rfoot`. `margin-top:auto` pins it to the bottom of the rail. The email

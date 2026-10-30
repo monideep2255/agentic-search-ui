@@ -1087,7 +1087,20 @@ class CliClient:
         )
         _raise_for_status(response)
         body = _parse_json_body(response, endpoint="stop", expected_statuses=frozenset({200}))
-        return bool(body["stopped"])
+        # Card 142, A-142B-02 and A-142B-03: only a JSON `true` or `false`
+        # answers the question. `bool("false")` is True, and a null, 0, ""
+        # or missing field is not "already finished", so any other reply is
+        # an unusable one, raised like every other reply shape above.
+        stopped = body.get("stopped") if isinstance(body, dict) else None
+        if not isinstance(stopped, bool):
+            raise CliApiError(
+                response.status_code,
+                None,
+                "stop returned no true or false `stopped` field; this indicates a "
+                "server or proxy misconfiguration, not a normal failure. Retry "
+                "later, or report this to the operator if it recurs.",
+            )
+        return stopped
 
     async def fetch_citations(self, run_id: str) -> list[CitationPayload]:
         """`GET /v1/query/{run_id}/citations`. Raises `ConflictError`

@@ -366,6 +366,118 @@ def test_shaping_sorts_by_a_stable_key_and_caps_and_drops_uncitable_rows() -> No
     )["status"] == "empty"
 
 
+def _gene_entity(name: str, db_id: str, tag: str) -> PubtatorEntity:
+    return PubtatorEntity(
+        pubtator_id=tag, biotype="gene", db="ncbi_gene", db_id=db_id, name=name,
+        source_url=f"https://www.ncbi.nlm.nih.gov/gene/{db_id}",
+    )
+
+
+def _shape_pubtator(entities: list[PubtatorEntity], symbol: str, expected: str = "") -> dict[str, Any]:
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
+
+    tool_input = PubtatorAnnotateInput.model_validate(
+        {"mode": "entity_lookup", "query": symbol, "limit": 5}
+    )
+    output = PubtatorAnnotateOutput(status="ok", mode="entity_lookup", entities=entities)
+    return graph_module._layer_tool_output_to_structured_fields(
+        "pubtator_annotate", output, tool_input, expected
+    )
+
+
+def test_card149_rat_gene_record_dropped_for_resolved_human_gene() -> None:
+    rat = _gene_entity("Gck", "24385", "@GENE_GCK")
+    shaped = _shape_pubtator([rat], "GCK", "2645")
+    assert shaped["rows"] == []
+    assert shaped["status"] == "empty"
+    # With no resolved gene the rat row is kept, exactly as before.
+    assert len(_shape_pubtator([rat], "GCK")["rows"]) == 1
+
+
+def test_card149_human_record_kept_and_other_gene_dropped() -> None:
+    human = _gene_entity("TP53", "7157", "@GENE_TP53")
+    shaped = _shape_pubtator([human], "TP53", "7157")
+    assert [r["fields"]["pubtator_id"] for r in shaped["rows"]] == ["@GENE_TP53"]
+    assert shaped["rows"][0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/7157"
+    gckr = _gene_entity("GCKR", "2646", "@GENE_GCKR")
+    assert _shape_pubtator([gckr], "GCK", "2645")["rows"] == []
+    # A name-less or non-gene entity never matches an id.
+    mesh = PubtatorEntity(
+        pubtator_id="@DISEASE_x", db="ncbi_mesh", db_id="2645", name="GCK",
+        source_url="https://www.ncbi.nlm.nih.gov/mesh/2645",
+    )
+    assert _shape_pubtator([mesh], "GCK", "2645")["rows"] == []
+
+
+def test_card149_plan_carries_expected_gene_id_only_for_a_gene() -> None:
+    gene_calls = graph_module._build_layer_tool_calls(_GENE_QUESTION, "GCK", [], None, "2645")
+    pubtator = [c for c in gene_calls if c.tool_call.tool == "pubtator_annotate"]
+    assert [c.expected_gene_id for c in pubtator] == ["2645"]
+    disease_calls = graph_module._build_layer_tool_calls("Any trials for GERD?", None, [], "gerd")
+    assert all(c.expected_gene_id == "" for c in disease_calls)
+    # A gene id with no symbol (disease-text search) is never carried.
+    stray = graph_module._build_layer_tool_calls("q", None, [], "gerd", "2645")
+    assert all(c.expected_gene_id == "" for c in stray)
+
+
+async def _gck_run(monkeypatch: pytest.MonkeyPatch, resolved: str) -> list[Any]:
+    """The compiled graph for a GCK question, PubTator3 answering only with
+    the rat record (24385), the gene resolving to `resolved`."""
+    _ModelSpy(monkeypatch, [{"text": "GCK", "entity_type": "gene"}])
+    asked = _install_lookup(monkeypatch)
+    _KNOWN_OVERRIDE = {"GCK": resolved}
+
+    async def _resolve(symbol: str, **kwargs: Any) -> str | None:
+        asked.append(symbol.strip().upper())
+        return _KNOWN_OVERRIDE.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _resolve)
+    rat = PubtatorAnnotateOutput(
+        status="ok", mode="entity_lookup", entities=[_gene_entity("Gck", "24385", "@GENE_GCK")]
+    )
+    _install_tools(monkeypatch, pubtator=rat)
+    events = await _events(_GCK_QUESTION)
+    assert any(e.type == "plan" for e in events), "populate-check: the run planned nothing"
+    return events
+
+
+_RAT_URL = "https://www.ncbi.nlm.nih.gov/gene/24385"
+
+
+def _cited_urls(events: list[Any]) -> list[str]:
+    return [e.payload["source_url"] for e in events if e.type == "citation"]
+
+
+def _pubtator_summaries(events: list[Any]) -> list[str]:
+    summaries = [
+        e.payload["summary"] for e in events
+        if e.type == "tool_result" and e.payload["tool"] == "pubtator_annotate"
+    ]
+    assert summaries, "populate-check: PubTator3 was not called"
+    return summaries
+
+
+@pytest.mark.asyncio
+async def test_card149_end_to_end_the_rat_record_is_not_cited_for_a_resolved_gene(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guards the plan_node hop (id read from the resolved CURIE) and the Act
+    hop (the planned id handed to the shaper): cutting either brings 24385 back."""
+    events = await _gck_run(monkeypatch, "NCBIGene:2645")
+    assert _RAT_URL not in _cited_urls(events)
+
+
+@pytest.mark.asyncio
+async def test_card149_a_non_numeric_resolved_id_behaves_as_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no numeric id to compare, the old name rule runs and the rat
+    record is kept, exactly as on develop (populate-check for the test above)."""
+    events = await _gck_run(monkeypatch, "NCBIGene:abc")
+    assert _RAT_URL in _cited_urls(events)
+    assert not any("set aside" in text for text in _pubtator_summaries(events))
+
+
 # ---------------------------------------------------------------------------
 # Concurrency and graceful degradation, driven through act_node directly.
 # ---------------------------------------------------------------------------

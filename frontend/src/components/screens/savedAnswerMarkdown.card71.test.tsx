@@ -3,13 +3,22 @@
  * ten rows at a time with the live bar, and on a phone it stacks each row.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { HistoryAnswerCitation } from "../../lib/api";
 import { SavedAnswerMarkdown } from "./savedAnswerMarkdown";
 
 const ROWS = Array.from({ length: 20 }, (_, i) => `| Isolate-${i + 1} [${i + 1}] | gene${i + 1} |`);
 const MARKDOWN = ["## Isolates", "| Isolate | Genes |\n| --- | --- |\n" + ROWS.join("\n")].join("\n\n");
+/** The stored citations behind the rows' markers (card 135). */
+const CITATIONS: HistoryAnswerCitation[] = Array.from({ length: 20 }, (_, i) => ({
+  display_index: i + 1,
+  source: "pathogen_detection",
+  source_id: `SAMN${i + 1}`,
+  source_url: `https://www.ncbi.nlm.nih.gov/pathogens/isolates/#SAMN${i + 1}`,
+  layer: 2 as const,
+}));
 
 function mockMatchMedia(matches: boolean) {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -52,12 +61,16 @@ describe("a saved table of 20 rows", () => {
   it("stacks each row on a phone, ten at a time, with no table", () => {
     // Catches: the saved table staying an overflow-scroll table on a phone.
     mockMatchMedia(true);
-    render(<SavedAnswerMarkdown markdown={MARKDOWN} />);
+    render(<SavedAnswerMarkdown markdown={MARKDOWN} citations={CITATIONS} />);
     const list = screen.getByTestId("saved-answer-table-1");
     expect(list.tagName).toBe("UL");
     expect(list.querySelector("table")).toBeNull();
     expect(list.querySelectorAll("li")).toHaveLength(10);
-    expect(list.querySelector("li")?.textContent).toContain("Isolate-1 [1]");
+    // Card 135: the row's "[1]" is the live marker now, not text.
+    const first = list.querySelector("li") as HTMLElement;
+    expect(first.textContent).toMatch(/^Isolate-1\u2060/);
+    expect(first.textContent).not.toContain("[1]");
+    expect(within(first).getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
     expect(screen.getByTestId("saved-answer-table-1-status").textContent).toBe("Showing 1–10 of 20");
   });
 
@@ -86,10 +99,17 @@ describe("a saved table of 20 rows", () => {
     // Catches: the phone row dropping column names or skipping empty cells.
     mockMatchMedia(true);
     const md = "| Isolate | AMR genes | Country |\n| --- | --- | --- |\n| Iso-1 [1] |  | USA |\n| Iso-2 [2] | blaKPC |  |";
-    render(<SavedAnswerMarkdown markdown={md} />);
+    render(<SavedAnswerMarkdown markdown={md} citations={CITATIONS} />);
     const items = screen.getByTestId("saved-answer-table-0").querySelectorAll("li");
-    expect(items[0].textContent).toBe("Iso-1 [1]AMR genes: \u2013Country: USA");
-    expect(items[1].textContent).toBe("Iso-2 [2]AMR genes: blaKPCCountry: \u2013");
+    // Card 135: "Iso-1 [1]" was pinned here as text; the first cell now
+    // carries the live marker, so each row's cells are read one by one.
+    const cells = (item: Element) => Array.from(item.children).map((cell) => cell as HTMLElement);
+    expect(cells(items[0])[0].textContent).toMatch(/^Iso-1\u2060/);
+    expect(within(cells(items[0])[0]).getByRole("button", { name: "Source 1, layer 2" })).toBeInTheDocument();
+    expect(cells(items[0]).slice(1).map((cell) => cell.textContent)).toEqual(["AMR genes: \u2013", "Country: USA"]);
+    expect(cells(items[1])[0].textContent).toMatch(/^Iso-2\u2060/);
+    expect(within(cells(items[1])[0]).getByRole("button", { name: "Source 2, layer 2" })).toBeInTheDocument();
+    expect(cells(items[1]).slice(1).map((cell) => cell.textContent)).toEqual(["AMR genes: blaKPC", "Country: \u2013"]);
   });
 
   it("opens on page 1 when given a different table or answer, without unmounting", () => {

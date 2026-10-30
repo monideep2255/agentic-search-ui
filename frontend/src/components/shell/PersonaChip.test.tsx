@@ -17,7 +17,7 @@
 
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PersonaCaption, isPinnedWikipediaUrl, PersonaChip } from "./PersonaChip";
 
@@ -163,5 +163,44 @@ describe("PersonaCaption on the run screen", () => {
     render(<PersonaCaption name="Mendel" step="Guard" />);
     expect(screen.queryByRole("button", { name: "About Mendel" })).toBeNull();
     expect(screen.getByTestId("persona-caption")).toHaveTextContent("Mendel");
+  });
+});
+
+describe("PersonaInfo card stays on screen on a phone (card 123)", () => {
+  const realWidth = window.innerWidth;
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "innerWidth", { value: realWidth, configurable: true });
+  });
+
+  async function openCardAt(viewport: number, left: number) {
+    Object.defineProperty(window, "innerWidth", { value: viewport, configurable: true });
+    vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(viewport);
+    // The card is the viewport less 32px wide on a phone and hangs from the icon.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const width = this.getAttribute("role") === "dialog" ? viewport - 32 : 18;
+      return { left, right: left + width, width, top: 0, bottom: 0, height: 0, x: left, y: 0 } as DOMRect;
+    });
+    render(<PersonaChip name="Mendel" about="Founded genetics." wikipedia={null} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: /about mendel/i }));
+    return screen.getByRole("dialog");
+  }
+
+  it("slides a card that runs past the right edge back inside the 16px gutter", async () => {
+    const card = await openCardAt(390, 100);
+    // Its right edge would be 100 + 358 = 458; it moves left 84 to end at 390 - 16.
+    expect(card.style.transform).toBe("translateX(-84px)");
+  });
+
+  it("leaves a card that already fits untouched", async () => {
+    const card = await openCardAt(390, 16);
+    expect(card.style.transform).toBe("");
+  });
+
+  it("changes nothing at desktop width", async () => {
+    const card = await openCardAt(1280, 1200);
+    expect(card.style.transform).toBe("");
   });
 });

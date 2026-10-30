@@ -119,6 +119,20 @@ from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnot
 # 1,000 to 1,300 characters each); ten ClinVar and ten OMIM records match
 # the audit's own probe sizes.
 PUBMED_RESULT_CAP: Final[int] = 5
+
+#: Card 119 (2026-10-29): what a PubMed search asks for ONLY when the person
+#: picked a "How far back" window. Ten papers are listed, each with its
+#: title; the writer still reads five abstracts, the best-ranked five that
+#: have one (`core/graph.py`, `_pubmed_abstract_rows`). A question with no
+#: window keeps `PUBMED_RESULT_CAP`.
+PUBMED_WINDOW_RESULT_CAP: Final[int] = 10
+
+#: Card 119, fix round (J-119-07): the most PMIDs a literature follow-up
+#: carries, whatever cap its caller passes. PubTator3's `pmids` takes at
+#: most 20 (`pubtator_annotate_schemas._MAX_PMIDS`) and an ncbi_efetch
+#: fetch at most 50 ids, so 20 keeps both calls valid: a larger cap is
+#: trimmed here rather than failing validation at Act.
+LITERATURE_FOLLOW_UP_MAX_IDS: Final[int] = 20
 CLINVAR_RESULT_CAP: Final[int] = 10
 OMIM_RESULT_CAP: Final[int] = 10
 GDS_RESULT_CAP: Final[int] = 5
@@ -700,7 +714,8 @@ def plan_topic_search(
         return ()
     if window is not None:
         term = f"{term} AND {window.clause()}"
-    return (_search_call("pubmed_search", "pubmed", term, TOPIC_RESULT_CAP),)
+    retmax = TOPIC_RESULT_CAP if window is None else PUBMED_WINDOW_RESULT_CAP
+    return (_search_call("pubmed_search", "pubmed", term, retmax),)
 
 
 def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
@@ -750,7 +765,8 @@ def plan_first_stage(
     if term:
         if window is not None:
             term = f"{term} AND {window.clause()}"
-        calls.append(_search_call("pubmed_search", "pubmed", term, PUBMED_RESULT_CAP))
+        retmax = PUBMED_RESULT_CAP if window is None else PUBMED_WINDOW_RESULT_CAP
+        calls.append(_search_call("pubmed_search", "pubmed", term, retmax))
     if symbol:
         calls.append(
             _search_call("clinvar_search", "clinvar", f"{symbol}[gene]", CLINVAR_RESULT_CAP)
@@ -819,31 +835,62 @@ def select_ids(ids: Iterable[Any], cap: int) -> list[str]:
     """
     valid: set[str] = set()
     for value in ids:
-        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
-            value = str(value)
-        if not isinstance(value, str):
-            continue
-        candidate = value.strip()
-        if _UID_PATTERN.match(candidate) is None:
-            continue
-        # Review F-06: a uid is a POSITIVE integer. `"0"` and `"000"` are
-        # digit strings and not ids; PMID 0 does not exist.
-        normalised = candidate.lstrip("0")
-        if not normalised:
-            continue
-        valid.add(normalised)
+        normalised = normalise_uid(value)
+        if normalised is not None:
+            valid.add(normalised)
     ordered = sorted(valid, key=int, reverse=True)
     return ordered[:cap]
 
 
-def plan_literature_follow_up(pmids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+def normalise_uid(value: Any) -> str | None:
+    """One uid as `select_ids` keeps it (digits, no leading zeros), or None
+    when `value` is not a uid."""
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        value = str(value)
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if _UID_PATTERN.match(candidate) is None:
+        return None
+    # Review F-06: a uid is a POSITIVE integer. `"0"` and `"000"` are
+    # digit strings and not ids; PMID 0 does not exist.
+    normalised = candidate.lstrip("0")
+    return normalised or None
+
+
+def search_rank(ids: Iterable[Any]) -> tuple[str, ...]:
+    """Card 119, fix round: the valid uids in the order the search returned
+    them, first occurrence kept, normalised as `select_ids` does.
+
+    `select_ids` sorts by uid, so a fetch planned from it no longer says
+    which paper the search ranked first. This keeps that order for the one
+    reader that needs it, the choice of which abstracts the writer reads.
+    """
+    ranked: list[str] = []
+    seen: set[str] = set()
+    for value in ids:
+        normalised = normalise_uid(value)
+        if normalised is None or normalised in seen:
+            continue
+        seen.add(normalised)
+        ranked.append(normalised)
+    return tuple(ranked)
+
+
+def plan_literature_follow_up(
+    pmids: Iterable[Any], cap: int = PUBMED_RESULT_CAP
+) -> tuple[PlannedCall, ...]:
     """Abstract fetch plus PubTator3 annotation on the same sorted, capped PMIDs.
+
+    `cap` is the source search's own `retmax` (card 119): five by default,
+    ten for a search limited to a picked window. It is trimmed to
+    `LITERATURE_FOLLOW_UP_MAX_IDS`, the bound both calls' schemas accept.
 
     Both calls carry the identical id list, so the relations PubTator3
     returns are for exactly the papers that were fetched. An empty tuple
     when no valid PMID was given.
     """
-    selected = select_ids(pmids, PUBMED_RESULT_CAP)
+    selected = select_ids(pmids, min(cap, LITERATURE_FOLLOW_UP_MAX_IDS))
     if not selected:
         return ()
     fetch = PlannedCall(

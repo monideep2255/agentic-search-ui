@@ -311,6 +311,40 @@ class TestStop:
         assert await client.stop("run-1") is True
 
     @pytest.mark.asyncio
+    async def test_a_false_stopped_field_returns_false(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"stopped": False})
+
+        client = _client_with_handler(handler)
+        assert await client.stop("run-1") is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {"stopped": "false"},
+            {"stopped": "true"},
+            {"stopped": None},
+            {"stopped": 0},
+            {"stopped": 1},
+            {"stopped": ""},
+            {"nope": 1},
+            [],
+            None,
+        ],
+    )
+    async def test_a_reply_without_a_json_true_or_false_raises(self, body: object) -> None:
+        """Card 142, A-142B-02 and A-142B-03: `bool("false")` is True, so a
+        string read as a boolean claimed a stop that never happened."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=body)
+
+        client = _client_with_handler(handler)
+        with pytest.raises(CliApiError):
+            await client.stop("run-1")
+
+    @pytest.mark.asyncio
     async def test_stopping_someone_elses_run_raises_forbidden(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(403, json={"detail": "you do not own this run"})
