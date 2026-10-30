@@ -1,0 +1,756 @@
+{
+ "W": 390,
+ "steps": [
+  {
+   "tag": "01_first_page",
+   "rows": [
+    {
+     "q": "What does SOX2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does DMD do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HTT do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does AR do?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does ESR1 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does VEGFA do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does IL6 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TNF do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does INS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HBB do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does PTEN do?",
+     "meta": "No answer saved · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does KRAS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does MYC do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does APOE do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does BRCA2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does CFTR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does EGFR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TP53 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with BRCA1?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    }
+   ],
+   "olderVisible": true,
+   "overflow": 0,
+   "geom": {
+    "rail": {
+     "x": 1,
+     "w": 248,
+     "h": 1359,
+     "scrollH": 1359,
+     "clientH": 1359
+    },
+    "newSearch": {
+     "x": 13,
+     "y": 15,
+     "w": 181,
+     "h": 39,
+     "font": "13px 600",
+     "color": "rgb(255, 255, 255)",
+     "bg": "rgb(17, 47, 78)",
+     "border": "0px solid rgb(255, 255, 255)",
+     "radius": "4px"
+    },
+    "older": {
+     "x": 13,
+     "y": 1244,
+     "w": 223,
+     "h": 41,
+     "font": "13px 600",
+     "color": "rgb(32, 84, 147)",
+     "bg": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgb(214, 215, 217)",
+     "radius": "4px"
+    }
+   },
+   "count": 20
+  },
+  {
+   "tag": "02_after_press_1",
+   "rows": [
+    {
+     "q": "What does SOX2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does DMD do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HTT do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does AR do?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does ESR1 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does VEGFA do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does IL6 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TNF do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does INS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HBB do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does PTEN do?",
+     "meta": "No answer saved · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does KRAS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does MYC do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does APOE do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does BRCA2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does CFTR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does EGFR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TP53 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with BRCA1?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does GCK do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 29",
+     "aria": null
+    }
+   ],
+   "olderVisible": false,
+   "overflow": 0,
+   "geom": {
+    "rail": {
+     "x": 1,
+     "w": 248,
+     "h": 1584,
+     "scrollH": 1584,
+     "clientH": 1584
+    },
+    "newSearch": {
+     "x": 13,
+     "y": -502,
+     "w": 181,
+     "h": 39,
+     "font": "13px 600",
+     "color": "rgb(255, 255, 255)",
+     "bg": "rgb(32, 84, 147)",
+     "border": "0px solid rgb(255, 255, 255)",
+     "radius": "4px"
+    },
+    "older": null
+   },
+   "pressMs": 1112,
+   "drawerStillOpen": true,
+   "count": 24
+  },
+  {
+   "tag": "03_after_new_question",
+   "rows": [
+    {
+     "q": "What does PAX6 do?",
+     "meta": "13 tool calls · 14 sources cited from 3 layers",
+     "aria": null
+    },
+    {
+     "q": "What does SOX2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does DMD do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HTT do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does AR do?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does ESR1 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does VEGFA do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does IL6 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TNF do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does INS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HBB do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does PTEN do?",
+     "meta": "No answer saved · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does KRAS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does MYC do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does APOE do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does BRCA2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does CFTR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does EGFR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TP53 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with BRCA1?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does GCK do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 29",
+     "aria": null
+    }
+   ],
+   "olderVisible": false,
+   "overflow": 0,
+   "geom": {
+    "rail": {
+     "x": 1,
+     "w": 248,
+     "h": 1656,
+     "scrollH": 1656,
+     "clientH": 1656
+    },
+    "newSearch": {
+     "x": 13,
+     "y": 122,
+     "w": 181,
+     "h": 39,
+     "font": "13px 600",
+     "color": "rgb(255, 255, 255)",
+     "bg": "rgb(17, 47, 78)",
+     "border": "0px solid rgb(255, 255, 255)",
+     "radius": "4px"
+    },
+    "older": null
+   },
+   "count": 25
+  },
+  {
+   "tag": "04_after_reload",
+   "rows": [
+    {
+     "q": "What does PAX6 do?",
+     "meta": "14 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does SOX2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does DMD do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HTT do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does AR do?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does ESR1 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does VEGFA do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does IL6 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TNF do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does INS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HBB do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does PTEN do?",
+     "meta": "No answer saved · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does KRAS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does MYC do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does APOE do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does BRCA2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does CFTR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does EGFR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TP53 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with BRCA1?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    }
+   ],
+   "olderVisible": true,
+   "overflow": 0,
+   "geom": {
+    "rail": {
+     "x": 1,
+     "w": 248,
+     "h": 1340,
+     "scrollH": 1340,
+     "clientH": 1340
+    },
+    "newSearch": {
+     "x": 13,
+     "y": 55,
+     "w": 181,
+     "h": 39,
+     "font": "13px 600",
+     "color": "rgb(255, 255, 255)",
+     "bg": "rgb(17, 47, 78)",
+     "border": "0px solid rgb(255, 255, 255)",
+     "radius": "4px"
+    },
+    "older": {
+     "x": 13,
+     "y": 1265,
+     "w": 223,
+     "h": 41,
+     "font": "13px 600",
+     "color": "rgb(32, 84, 147)",
+     "bg": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgb(214, 215, 217)",
+     "radius": "4px"
+    }
+   },
+   "count": 20
+  },
+  {
+   "tag": "05_reload_all_loaded",
+   "rows": [
+    {
+     "q": "What does PAX6 do?",
+     "meta": "14 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does SOX2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does DMD do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HTT do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does AR do?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does ESR1 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does VEGFA do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does IL6 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TNF do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does INS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does HBB do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does PTEN do?",
+     "meta": "No answer saved · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does KRAS do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does MYC do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does APOE do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does BRCA2 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does CFTR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does EGFR do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does TP53 do?",
+     "meta": "17 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with BRCA1?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+     "meta": "21 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "What does GCK do?",
+     "meta": "18 sources cited · Oct 30",
+     "aria": null
+    },
+    {
+     "q": "Which diseases are associated with GCK?",
+     "meta": "22 sources cited · Oct 29",
+     "aria": null
+    }
+   ],
+   "olderVisible": false,
+   "overflow": 0,
+   "geom": {
+    "rail": {
+     "x": 1,
+     "w": 248,
+     "h": 1639,
+     "scrollH": 1639,
+     "clientH": 1639
+    },
+    "newSearch": {
+     "x": 13,
+     "y": -443,
+     "w": 181,
+     "h": 39,
+     "font": "13px 600",
+     "color": "rgb(255, 255, 255)",
+     "bg": "rgb(32, 84, 147)",
+     "border": "0px solid rgb(255, 255, 255)",
+     "radius": "4px"
+    },
+    "older": null
+   },
+   "count": 25
+  }
+ ],
+ "presses": 1,
+ "askSeconds": 10.382,
+ "newOnTop": true,
+ "droppedAfterAsk": [],
+ "dupCountsAfter": [
+  [
+   "Which diseases are associated with GCK?",
+   3
+  ]
+ ],
+ "openIndex": 23,
+ "openedText": "SAVED ANSWER · ASKED OCT 30, 2026, 12:01 AM\nWhat does GCK do?\nRun again\n\nThe enzyme operates in a tissue-specific manner, playing a role in glucose-stimulated insulin secretion in the pancreas and in glucose uptake and conversion to glycogen in the liver.⁠20 Found 1 gene record for GCK: glucokinase.⁠1\n\nThe gene summary notes that, unlike other hexokinases, this enzyme is not inhibited by its produ",
+ "openedOverflow": 0,
+ "drawerClosedAfterOpen": true
+}
