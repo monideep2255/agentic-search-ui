@@ -90,13 +90,13 @@ Q7 = "What positive and negative genes do ashkenazi jewish people have?"
 
 MEASURED_TERMS: dict[str, str] = {
     # 1,356 hits
-    Q4: "effects AND caffeine AND exercise AND performance",
+    Q4: "effects caffeine exercise performance",
     # 532 hits
-    Q5: "coffee AND exercise AND effective",
+    Q5: "coffee exercise effective",
     # 17 hits
-    Q6: "variants AND people AND mediterranean AND descent",
+    Q6: "variants people mediterranean descent",
     # 27 hits
-    Q7: "positive AND negative AND genes AND ashkenazi AND jewish AND people",
+    Q7: "positive negative genes ashkenazi jewish people",
 }
 
 _PMID = "33388079"
@@ -124,7 +124,7 @@ def test_the_words_describing_the_search_are_dropped() -> None:
     and collapsed the caffeine search from 1,356 hits to 35."""
     assert "paper" not in (breadth_plan.build_topic_term(Q4) or "")
     assert breadth_plan.build_topic_term("find me studies about vitamin d") == (
-        "vitamin AND d"
+        "vitamin d"
     )
     # Populate check: the same function keeps an ordinary content word, so
     # the absences above are this category being dropped rather than the
@@ -134,7 +134,7 @@ def test_the_words_describing_the_search_are_dropped() -> None:
 
 def test_the_light_verbs_are_dropped_and_this_is_what_makes_q5_find_anything() -> None:
     """Measured live: `coffee AND help AND make AND exercise AND effective`
-    returned ZERO hits, and `coffee AND exercise AND effective` returned
+    returned ZERO hits, and `coffee exercise effective` returned
     532. This category is load-bearing, not tidiness."""
     term = breadth_plan.build_topic_term(Q5)
     assert term is not None
@@ -167,27 +167,27 @@ def test_no_pubmed_operator_can_ride_in_on_the_question_text() -> None:
     a bracket, a quote, a colon or an asterisk is never copied into the
     term. An injected field tag becomes two ordinary words."""
     term = breadth_plan.build_topic_term('caffeine[Title] OR "cancer"[MeSH] AND *')
-    assert term == "caffeine AND title AND cancer AND mesh", term
+    assert term == "caffeine title cancer mesh", term
     assert "[" not in term and '"' not in term and "*" not in term
 
 
 def test_words_are_deduplicated_in_question_order() -> None:
     assert breadth_plan.build_topic_term("caffeine and caffeine and exercise") == (
-        "caffeine AND exercise"
+        "caffeine exercise"
     )
 
 
 def test_the_word_count_is_capped_so_a_long_chain_cannot_zero_the_search() -> None:
-    """Every word in an AND chain is REQUIRED, so a long chain fails
+    """Every word in the term is REQUIRED, so a long chain fails
     catastrophically: one word the literature does not use zeroes the whole
     search."""
     question = " ".join(f"word{index}" for index in range(30))
     term = breadth_plan.build_topic_term(question)
     assert term is not None
-    assert len(term.split(" AND ")) == breadth_plan.TOPIC_MAX_WORDS, term
+    assert len(term.split(" ")) == breadth_plan.TOPIC_MAX_WORDS, term
     # Populate check: a short question is not padded or truncated, so the
     # cap above is a ceiling rather than a fixed length.
-    assert len((breadth_plan.build_topic_term(Q5) or "").split(" AND ")) == 3
+    assert len((breadth_plan.build_topic_term(Q5) or "").split(" ")) == 3
 
 
 @pytest.mark.parametrize(
@@ -348,7 +348,7 @@ def test_a_topic_question_spends_three_layer_2_and_3_calls() -> None:
 
 def test_the_topic_refusal_names_the_words_it_searched_as_words() -> None:
     message = refuse_module.topic_not_found_message(MEASURED_TERMS[Q5])
-    assert "coffee, exercise, effective" in message, message
+    assert "coffee exercise effective" in message, message
     # The machinery is not shown to the reader.
     assert " AND " not in message, message
     assert "name" not in message.lower(), message
@@ -384,7 +384,7 @@ def test_a_failed_search_outranks_the_topic_wording() -> None:
 
 
 def test_a_topic_term_of_only_separators_falls_back_rather_than_naming_nothing() -> None:
-    assert refuse_module.topic_not_found_message(" AND  AND ") == refuse_module.REFUSE_MESSAGE
+    assert refuse_module.topic_not_found_message("   ") == refuse_module.REFUSE_MESSAGE
 
 
 # ---------------------------------------------------------------------------
@@ -916,7 +916,7 @@ async def test_a_one_word_continuation_still_binds_the_remembered_entity(
         trace_id="trace-one-word-2", user_id=None, audience_depth="researcher",
     )
     result2 = await graph_module.plan_node(state)  # type: ignore[arg-type]
-    assert result2["topic_search_term"] == "caffeine AND exercise", result2
+    assert result2["topic_search_term"] == "caffeine exercise", result2
 
 
 @pytest.mark.asyncio
@@ -953,6 +953,9 @@ async def test_a_question_asking_for_papers_reaches_the_papers_whatever_resolved
     narrative = next(e for e in events if e.type == "plan").payload["narrative"]
     assert "you asked for published papers" in narrative, narrative
     assert "no gene, variant or disease was named" not in narrative, narrative
+    # Card 152: the plan line shows the words as typed, not comma split.
+    assert narrative.startswith("you asked for published papers, so searching the literature for: "), narrative
+    assert f"for: {MEASURED_TERMS[Q4]}" in narrative, narrative
 
 
 @pytest.mark.asyncio
@@ -1103,7 +1106,7 @@ async def test_a_topic_search_that_finds_nothing_says_what_it_searched(
     assert done.payload["trust_outcome"] == "refuse", done.payload
     text = _text(events)
     assert "I searched the published literature for" in text, text
-    assert "variants, people, mediterranean, descent" in text, text
+    assert "variants people mediterranean descent" in text, text
     assert "Name one and I will search" not in text, text
 
 
@@ -1174,3 +1177,33 @@ async def test_three_runs_of_one_topic_question_plan_and_cite_the_same_set(
     # Populate check: the runs actually cited something, so three identical
     # empty sets cannot pass this.
     assert _PMID_URL in citations[0], citations[0]
+
+
+# ---------------------------------------------------------------------------
+# Card 152: a topic's words are searched as one term, as the person typed.
+# ---------------------------------------------------------------------------
+
+
+def test_a_disease_name_is_one_term_not_two_anded_words() -> None:
+    """`cystic AND fibrosis` made PubMed map each word alone (choledochal
+    cysts, bacterial overgrowth, kidney disease in the top 10). A space lets
+    it see the concept."""
+    term = breadth_plan.build_topic_term("recent papers on cystic fibrosis")
+    assert term == "cystic fibrosis", term
+    assert " AND " not in term
+    window = breadth_plan.recent_publication_window(60, "the last 5 years")
+    (call,) = breadth_plan.plan_topic_search("recent papers on cystic fibrosis", window=window)
+    assert call.tool_input.root.term == f"cystic fibrosis AND {window.clause()}"
+
+
+def test_lowercase_or_and_not_never_reach_the_term() -> None:
+    """PubMed reads bare lowercase `or` and `not` as operators, so the
+    extraction must keep them out of a space-joined term."""
+    term = breadth_plan.build_topic_term("papers on aspirin or ibuprofen not caffeine")
+    assert term == "aspirin ibuprofen caffeine", term
+    assert not {"or", "not", "and"} & set(term.split())
+
+
+def test_the_topic_refusal_names_the_words_as_typed() -> None:
+    message = refuse_module.topic_not_found_message("cystic fibrosis")
+    assert "cystic fibrosis" in message and "," not in message.split("cystic fibrosis")[0][-3:], message

@@ -32,7 +32,8 @@ not hold until PubMed answers:
 - `plan_topic_search(question)`: the ONE call a question that names no
   gene and no disease earns (fix-plan item 12.7, 2026-09-23). Its term is
   `build_topic_term(question)`, the question's own content words joined
-  with ` AND `, untagged so PubMed's automatic term mapping expands them.
+  with a space, untagged so PubMed's automatic term mapping expands them
+  and can see a multiword concept such as "cystic fibrosis".
   It is planned with the purpose `pubmed_search`, so the abstract fetch and
   the PubTator3 annotation below follow it exactly as they follow a gene's.
 - `recent_publication_window(months, label)` builds the publication-date
@@ -658,8 +659,14 @@ def topic_search_words(question: str | None) -> list[str]:
 def build_topic_term(question: str | None) -> str | None:
     """The PubMed ESearch term for a question with nothing to resolve.
 
-    The content words joined with ` AND `, UNTAGGED, so PubMed's own
-    automatic term mapping expands each one against its translation table.
+    The content words joined with a single space, UNTAGGED, so PubMed's own
+    automatic term mapping first looks the whole string up as a concept
+    ("cystic fibrosis" maps to its MeSH heading) and then expands each word.
+    A space already means "every word" to PubMed; an explicit ` AND ` is what
+    stopped it seeing `cystic AND fibrosis` as one subject (card 152,
+    2026-10-30: 4 of the top 10 were off topic). The words and their order
+    are the person's. The extraction keeps lowercase `or` and `not` out of
+    the term (they are stopwords), because PubMed reads them as operators.
     None when no content word survives, which is this module's signal to
     plan nothing rather than an error.
 
@@ -691,7 +698,7 @@ def build_topic_term(question: str | None) -> str | None:
     words = topic_search_words(question)
     if not words:
         return None
-    return " AND ".join(words)
+    return " ".join(words)
 
 
 def plan_topic_search(

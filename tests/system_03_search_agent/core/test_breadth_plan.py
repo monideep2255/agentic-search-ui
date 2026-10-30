@@ -486,7 +486,7 @@ def test_the_range_and_the_word_recent_never_become_search_words() -> None:
     REQUIRED in every abstract."""
     assert bp.topic_search_words("Recent papers on statins from the last 5 years?") == ["statins"]
     assert bp.topic_search_words("papers on statins since 2022") == ["statins"]
-    assert bp.build_topic_term("latest research on long covid") == "long AND covid"
+    assert bp.build_topic_term("latest research on long covid") == "long covid"
 
 
 def test_a_topic_search_with_a_window_carries_the_date_limit() -> None:
