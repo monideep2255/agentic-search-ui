@@ -230,6 +230,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 135, part 1 | An OMIM source links to its omim.org page on the live answer and on a reopened saved answer | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-30_product_check_135_136/report.md`) | 21 |
 | card 136, part 3 | On a phone, picking a past search or "+ New search" closes the searches drawer | Live, awaiting your retest; product check passed at 390 and 1280 (`testing/Developer/reports/2026-10-30_product_check_135_136/report.md`) | 51 |
 | card 135, parts 2 and 3 | A reopened answer names sources by their own name or their database, never an internal tool name, and shows citation markers as the live answer does | Live, awaiting your retest; product check: tool names gone and markers work, ranges not grouped as on live (`testing/Developer/reports/2026-10-30_product_check_135_parts_2_3/report.md`) | 21, 1 |
+| card 119 | After picking a "How far back" window, an answer lists up to 10 papers from it, each with its title, and the summary reads the best-matching five that have an abstract | Live, awaiting your retest; product check: the card's lines passed at 1280 and 390 (`testing/Developer/reports/2026-10-30_product_check_119/report.md`) | 84 |
 | card 148 | A Vespa search index for FIND and DISCOVER | Not pursued for now, your call of 2026-10-29; closed unbuilt, its notes local in `docs/retrieval-engine-discussion/` |  |
 
 ## What is done, in summary

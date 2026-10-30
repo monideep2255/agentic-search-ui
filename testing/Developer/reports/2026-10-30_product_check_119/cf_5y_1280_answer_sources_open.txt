@@ -1,0 +1,84 @@
+▶
+recent papers on cystic fibrosis
+0 tool calls · 0 sources cited
+Researcher
+Show answer
+Recent papers on cystic fibrosis from the last 5 years?
+New search
+
+✓ Answered12.5s · 3 tool calls · 10 sources cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+Found 10 papers for cystic fibrosis.⁠1–10
+[1] L2 · live
+pubmed 35015036
+title
+Open the record
+[2] L2 · live
+pubmed 35773269
+title
+Open the record
+[3] L2 · live
+pubmed 36257874
+title
+Open the record
+[4] L2 · live
+pubmed 37389240
+title
+Open the record
+[5] L2 · live
+pubmed 37558605
+title
+Open the record
+[6] L2 · live
+pubmed 37913507
+title
+Open the record
+[7] L2 · live
+pubmed 37934656
+title
+Open the record
+[8] L2 · live
+pubmed 38097335
+title
+Open the record
+[9] L2 · live
+pubmed 39034207
+title
+Open the record
+[10] L2 · live
+pubmed 40778614
+title
+Open the record
+
+CFTR modulators have shifted the treatment paradigm by improving production of defective CFTR protein and increasing its cell-surface expression, thereby improving ion exchange, fluidizing respiratory secretions, and reducing airflow obstruction.⁠11 Ongoing research is also directed at correcting the underlying genetic defect.⁠11
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+What Is Cystic Fibrosis?	PMID:35015036	⁠1
+Targeting fibrosis, mechanisms and cilinical trials.	PMID:35773269	⁠2
+Diagnosis and management of choledochal cysts.	PMID:36257874	⁠3
+Epidemiology of small intestinal bacterial overgrowth.	PMID:37389240	⁠4
+Cystic fibrosis: Epidemiology, clinical manifestations, diagnosis and treatment.	PMID:37558605	⁠5
+Cystic Fibrosis.	PMID:37913507	⁠6
+Cystic fibrosis screening, evaluation, and management of hepatobiliary disease consensus recommendations.	PMID:37934656	⁠7
+Autosomal Recessive Polycystic Kidney Disease: Diagnosis, Prognosis, and Management.	PMID:38097335	⁠8
+Cystic fibrosis transmembrane conductance regulator (CFTR) variants and CFTR function in patients with pancreatitis.	PMID:39034207	⁠9
+Cystic Fibrosis Year in Review 2024.	PMID:40778614	⁠10
+▶
+SOURCES
+10
+Based on 10 sources cited, all from PubMed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

@@ -1,0 +1,97 @@
+▶
+recent papers on cystic fibrosis
+0 tool calls · 0 sources cited
+Researcher
+Show answer
+Recent papers on cystic fibrosis from the last 5 years?
+New search
+
+✓ Answered13.0s · 3 tool calls · 10 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 10 papers for cystic fibrosis.⁠1–10
+[1] L2 · live
+pubmed 35015036
+title
+Open the record
+[2] L2 · live
+pubmed 35551858
+title
+Open the record
+[3] L2 · live
+pubmed 35773269
+title
+Open the record
+[4] L2 · live
+pubmed 36257874
+title
+Open the record
+[5] L2 · live
+pubmed 37389240
+title
+Open the record
+[6] L2 · live
+pubmed 37558605
+title
+Open the record
+[7] L2 · live
+pubmed 37913507
+title
+Open the record
+[8] L2 · live
+pubmed 37934656
+title
+Open the record
+[9] L2 · live
+pubmed 39034207
+title
+Open the record
+[10] L2 · live
+pubmed 40778614
+title
+Open the record
+
+DISEASE OVERVIEW AND CFTR MODULATORS
+
+Cystic fibrosis is described as a genetic and multisystemic disease whose main adult comorbidity is respiratory involvement with bronchiectasis, chronic bronchial infection, and airflow obstruction.⁠11 The treatment paradigm has shifted with the advent of CFTR modulators, which improve production of defective CFTR protein and increase its cell-surface expression, achieving better ion exchange, fluidising respiratory secretions, and reducing airflow obstruction.⁠11
+
+Publication PMID 35015036, Publication PMID 35551858, Publication PMID 35773269, Publication PMID 36257874, and Publication PMID 37389240.⁠12–16
+
+PUBMED RECORDS FOUND
+What Is Cystic Fibrosis?⁠1
+PMID:35015036
+CFTR dysfunction and targeted therapies: A vision from non-cystic fibrosis bronchiectasis and COPD.⁠2
+PMID:35551858
+Targeting fibrosis, mechanisms and cilinical trials.⁠3
+PMID:35773269
+Diagnosis and management of choledochal cysts.⁠4
+PMID:36257874
+Epidemiology of small intestinal bacterial overgrowth.⁠5
+PMID:37389240
+Cystic fibrosis: Epidemiology, clinical manifestations, diagnosis and treatment.⁠6
+PMID:37558605
+Cystic Fibrosis.⁠7
+PMID:37913507
+Cystic fibrosis screening, evaluation, and management of hepatobiliary disease consensus recommendations.⁠8
+PMID:37934656
+Cystic fibrosis transmembrane conductance regulator (CFTR) variants and CFTR function in patients with pancreatitis.⁠9
+PMID:39034207
+Cystic Fibrosis Year in Review 2024.⁠10
+PMID:40778614
+▶
+SOURCES
+10
+Based on 10 sources cited, all from PubMed
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
