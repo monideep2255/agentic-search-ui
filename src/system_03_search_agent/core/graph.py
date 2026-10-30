@@ -13878,8 +13878,13 @@ def _answer_parts(
             if extra_label is not None:
                 columns.append(extra_label)
             as_table = len(columns) > 1
+            # A kind that already ends in "record" ("variant record") must not
+            # take a second one ("Variant record records found", card 121).
+            heading_noun = noun.removesuffix(" record") if noun != "record" else ""
             records_heading = (
-                f"{noun[:1].upper()}{noun[1:]} records found" if noun else "Records found"
+                f"{heading_noun[:1].upper()}{heading_noun[1:]} records found"
+                if heading_noun
+                else "Records found"
             )
             if as_table:
                 heading(
