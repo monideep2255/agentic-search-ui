@@ -1283,8 +1283,9 @@ class _FakeRenderer:
     def handle(self, event: object) -> None:
         self.handled.append(event)
 
-    def finish(self) -> int:
+    def finish(self, *, stopped_by_person: bool = False) -> int:
         self.finished = True
+        self.finished_stopped_by_person = stopped_by_person
         return self.finish_result
 
 
@@ -2242,3 +2243,482 @@ class TestMainEntryPoint:
         captured = capsys.readouterr()
         assert exit_code == main_module.EXIT_INTERRUPTED
         assert "interrupted" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# Card 142: Ctrl-C is the person's own stop, never an error
+# ---------------------------------------------------------------------------
+
+
+def _card142_event(kind: str, seq: int, *, text: str = "TP53 has three ClinVar records [1]. "):
+    """A real contract `Event`, so the real `Renderer` draws it."""
+    from system_03_search_agent.contracts.events import (
+        CitationPayload,
+        DonePayload,
+        Event,
+        TokenPayload,
+    )
+
+    if kind == "token":
+        payload = TokenPayload(text=text, marker_ids=["1"])
+    elif kind == "citation":
+        payload = CitationPayload(
+            citation_id="1",
+            display_index=1,
+            source="clinvar",
+            source_id="VCV000123",
+            source_url="https://www.ncbi.nlm.nih.gov/clinvar/VCV000123",
+            layer="layer_1_graph",
+            field="clinical_significance",
+            claim_text="pathogenic",
+            evidence_kind="direct",
+            assertion_confidence="high",
+            population_ancestry_context=None,
+            license="public-domain",
+        )
+    else:
+        payload = DonePayload(
+            total_cost_usd=0.0, total_tool_calls=0, elapsed_ms=1, trust_outcome="answer"
+        )
+    return Event(
+        type=kind,  # type: ignore[arg-type]
+        version="v1",
+        trace_id="trace-1",
+        seq=seq,
+        ts=datetime.now(UTC),
+        payload=payload.model_dump(),
+    )
+
+
+class _Card142Run(NamedTuple):
+    code: int
+    out: str
+    err: str
+    stop_calls: list[str]
+    elapsed: float
+    err_right_after_press: str
+
+
+class TestCtrlCIsThePersonsOwnStop:
+    """Card 142, the owner's redesign of 2026-10-25: the stop line prints at
+    once, the stop is confirmed with the server in the background under a
+    short bound, and a second Ctrl-C stays the hard exit.
+
+    Every test drives the real `async_main` with the real `Renderer` and a
+    fake `CliClient` whose stream and `stop` call are scripted:
+
+    - `after`: what the stream does once its first events are out. "open"
+      stays open, "done_then_open" sends `done` and stays open, "done_on_stop"
+      sends `done` and ends once `stop` has been called, "end" ends with no
+      terminal event.
+    - `stop`: "confirm" answers `stopped: true`, "finished" answers `stopped:
+      false`, "fail" raises a transport error, "slow" answers after 30 s.
+    """
+
+    STOPPING = "s3: interrupted, stopping the run...\n"
+
+    async def _run(
+        self,
+        main_module,
+        fake_modules,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        after: str = "open",
+        stop: str = "confirm",
+        presses: int = 1,
+        bound: float = 0.3,
+        as_json: bool = False,
+        stdout: object | None = None,
+        press_inside_done: bool = False,
+    ) -> _Card142Run:
+        import time
+
+        monkeypatch.setattr(main_module, "_STOP_CONFIRM_BOUND_S", bound)
+        fake_modules.render.Renderer = _RealRenderer
+        fake_modules.render.JsonRenderer = _RealJsonRenderer
+        fake_modules.credentials.load = lambda: FakeCredentials(
+            base_url="http://test", access_token="a", refresh_token="r"
+        )
+        started = asyncio.Event()
+        stop_called = asyncio.Event()
+        stop_calls: list[str] = []
+        interrupt_signals: asyncio.Queue[None] = asyncio.Queue()
+
+        class FakeCliClient:
+            def __init__(self, http: object, c: FakeCredentials) -> None:
+                pass
+
+            async def create_run(self, text, session_id, audience_depth):
+                return "run-1", "persona"
+
+            def stream_events(self, run_id: str, *, last_event_id: str | None = None):
+                async def _gen():
+                    yield _card142_event("token", 0)
+                    yield _card142_event("citation", 1)
+                    if press_inside_done:
+                        # The press lands while `done` is on its way: both
+                        # are ready in the same instant (A-142-01's tie).
+                        started.set()
+                        interrupt_signals.put_nowait(None)
+                        yield _card142_event("done", 2)
+                        await asyncio.sleep(30)
+                        return
+                    if after == "done_then_open":
+                        yield _card142_event("done", 2)
+                    started.set()
+                    if after == "end":
+                        return
+                    if after == "done_on_stop":
+                        await stop_called.wait()
+                        yield _card142_event("done", 2)
+                        return
+                    await asyncio.sleep(30)
+
+                return _gen()
+
+            async def stop(self, run_id: str) -> bool:
+                stop_calls.append(run_id)
+                stop_called.set()
+                if stop == "fail":
+                    raise httpx.ConnectError(
+                        "refused", request=httpx.Request("POST", "http://test/stop")
+                    )
+                if stop == "slow":
+                    await asyncio.sleep(30)
+                return stop == "confirm"
+
+        fake_modules.client.CliClient = FakeCliClient
+        out = stdout if stdout is not None else io.StringIO()
+        err = io.StringIO()
+        argv = ["ask", "--json", "q"] if as_json else ["ask", "q", "--session-id", "s1"]
+        task = asyncio.create_task(
+            main_module.async_main(
+                argv,
+                stdin=io.StringIO(""),
+                stdout=out,
+                stderr=err,
+                http_client=object(),
+                interrupt_signals=interrupt_signals,
+            )
+        )
+        await asyncio.wait_for(started.wait(), 5)
+        start = time.monotonic()
+        right_after = ""
+        if not press_inside_done:
+            for press in range(presses):
+                interrupt_signals.put_nowait(None)
+                await asyncio.sleep(0.05)
+                if press == 0:
+                    right_after = err.getvalue()
+        code = await asyncio.wait_for(task, 10)
+        elapsed = time.monotonic() - start
+        value = out.getvalue() if hasattr(out, "getvalue") else ""
+        return _Card142Run(code, value, err.getvalue(), stop_calls, elapsed, right_after)
+
+    # Acceptance 1, 2 and 6 --------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_a_confirmed_stop_says_stopping_then_stopped_and_never_error(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        run = await self._run(main_module, fake_modules, monkeypatch, stop="confirm")
+        assert run.code == 130
+        assert run.err == self.STOPPING + main_module._STOPPED_LINE
+        assert "error" not in run.err.lower()
+        assert run.stop_calls == ["run-1"]
+        # Records that arrived are kept, with their sources.
+        assert "TP53 has three ClinVar records [1]." in run.out
+        assert "the run did not finish" in run.out
+        assert "[1] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/VCV000123" in run.out
+
+    @pytest.mark.asyncio
+    async def test_the_stopping_line_appears_at_once_while_a_slow_stop_waits(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """Acceptance 1 and V-142-03: the line is on screen before the stop
+        call has answered, not after it."""
+        run = await self._run(main_module, fake_modules, monkeypatch, stop="slow", bound=1.0)
+        assert run.err_right_after_press == self.STOPPING
+
+    @pytest.mark.asyncio
+    async def test_a_failed_stop_exits_promptly_and_claims_no_stop(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """Acceptance 2: the stop call fails."""
+        run = await self._run(main_module, fake_modules, monkeypatch, stop="fail", bound=5.0)
+        assert run.code == 130
+        assert run.elapsed < 1.0
+        assert run.err == self.STOPPING + main_module._STOP_UNCONFIRMED_LINE
+        assert "was stopped" not in run.err
+        assert "answer above is incomplete" in run.err
+        assert "error" not in run.err.lower()
+
+    @pytest.mark.asyncio
+    async def test_a_slow_stop_exits_at_the_bound_and_claims_no_stop(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """Acceptance 2 and V-142-03: the stop answers after 30 s; the
+        program leaves at the bound, not at the call's own 15 s timeout."""
+        run = await self._run(main_module, fake_modules, monkeypatch, stop="slow", bound=0.3)
+        assert run.code == 130
+        assert run.elapsed < 1.5
+        assert run.err == self.STOPPING + main_module._STOP_UNCONFIRMED_LINE
+        assert "was stopped" not in run.err
+
+    def test_the_confirmation_bound_is_a_few_seconds(self, main_module) -> None:
+        """Acceptance 2: short, and well under the stop call's own 15 s."""
+        assert 0 < main_module._STOP_CONFIRM_BOUND_S <= 5
+
+    # Acceptance 3, V-142-04 and V-142-05 -------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_a_second_press_during_a_slow_stop_exits_at_once_and_says_incomplete(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, stop="slow", presses=2, bound=30.0
+        )
+        assert run.code == 130
+        assert run.elapsed < 1.0
+        assert run.err == self.STOPPING + main_module._SECOND_PRESS_UNCONFIRMED_LINE
+        assert "answer above is incomplete" in run.err
+        assert "was stopped" not in run.err
+
+    @pytest.mark.asyncio
+    async def test_a_second_press_exits_at_once_when_the_server_says_finished_and_the_stream_stays_open(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """V-142-05 with the second press: the stream stays open after
+        `stopped: false`, and the bound is long. The press still exits."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, stop="finished", presses=2, bound=30.0
+        )
+        assert run.code == 130
+        assert run.elapsed < 1.0
+        assert run.err == (
+            self.STOPPING + main_module._ALREADY_FINISHED_LINE + main_module._SECOND_PRESS_LINE
+        )
+
+    @pytest.mark.asyncio
+    async def test_one_press_exits_by_the_bound_when_the_server_says_finished_and_the_stream_stays_open(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """V-142-05: develop exits on the first press; the first attempt sat
+        44 s and then called it an error."""
+        run = await self._run(main_module, fake_modules, monkeypatch, stop="finished", bound=0.3)
+        assert run.code == 130
+        assert run.elapsed < 1.5
+        assert run.err == (
+            self.STOPPING
+            + main_module._ALREADY_FINISHED_LINE
+            + main_module._REST_DID_NOT_ARRIVE_LINE
+        )
+        assert "ReadTimeout" not in run.err
+        assert "[1] clinvar - https://www.ncbi.nlm.nih.gov/clinvar/VCV000123" in run.out
+
+    # Acceptance 4 and A-142-01 ----------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_a_press_after_done_reports_no_stop_and_exits_at_once(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """The stream sent `done` and stays open. The run finished, so no
+        stop is sent or claimed, the answer stands, and the exit is 0."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, after="done_then_open", bound=30.0
+        )
+        assert run.code == 0
+        assert run.elapsed < 1.0
+        assert run.err == ""
+        assert run.stop_calls == []
+        assert "the run did not finish" not in run.out
+        assert "References:" in run.out
+
+    @pytest.mark.asyncio
+    async def test_a_press_in_the_same_instant_as_done_reports_no_stop(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """A-142-01's tie: `done` and the press are ready together, as when
+        the SIGINT lands while the answer is still being written."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, press_inside_done=True, bound=30.0
+        )
+        assert run.code == 0
+        assert run.err == ""
+        assert run.stop_calls == []
+
+    @pytest.mark.asyncio
+    async def test_a_server_that_says_already_finished_gets_the_whole_answer_and_no_stop_claim(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """`stopped: false`, then the stream delivers `done`: a normal run."""
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, after="done_on_stop", stop="finished"
+        )
+        assert run.code == 0
+        assert run.err == self.STOPPING + main_module._ALREADY_FINISHED_LINE
+        assert "was stopped" not in run.err
+        assert "the run did not finish" not in run.out
+
+    # --json -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_json_says_the_stop_was_not_confirmed_when_it_was_not(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        run = await self._run(main_module, fake_modules, monkeypatch, stop="fail", as_json=True)
+        assert run.code == 130
+        document = json.loads(run.out)
+        assert document["error"]["error_class"] == "interrupted"
+        assert "did not confirm the stop" in document["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_json_keeps_its_message_for_a_confirmed_stop(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        run = await self._run(main_module, fake_modules, monkeypatch, as_json=True)
+        document = json.loads(run.out)
+        assert document["error"]["message"] == (
+            "s3: you stopped this search. Start a new search if you still need an answer."
+        )
+
+    # Acceptance 7, J-142-05 and V-142-06 -------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_a_dropped_connection_without_ctrl_c_still_prints_the_early_end_error(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        run = await self._run(main_module, fake_modules, monkeypatch, after="end", presses=0)
+        assert run.code == 1
+        assert "error: the run ended before a final answer was received" in run.err
+        assert run.stop_calls == []
+
+    @pytest.mark.asyncio
+    async def test_an_encoding_error_after_ctrl_c_is_still_reported(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """V-142-06: a stdout that cannot write the notice's middle dot is a
+        real fault, reported as on develop, never hidden as a quiet 130."""
+        raw = io.BytesIO()
+        ascii_out = io.TextIOWrapper(raw, encoding="ascii", write_through=True)
+        run = await self._run(main_module, fake_modules, monkeypatch, stdout=ascii_out)
+        assert run.code == 1
+        assert "unexpected error (UnicodeEncodeError)" in run.err
+
+    @pytest.mark.asyncio
+    async def test_a_broken_pipe_without_ctrl_c_is_still_reported(
+        self, main_module, fake_modules, monkeypatch
+    ) -> None:
+        """Only a broken pipe after the person pressed Ctrl-C is quiet."""
+
+        class DeadPipe(io.StringIO):
+            def write(self, text: str) -> int:
+                if "References" in text or "did not finish" in text:
+                    raise BrokenPipeError(32, "Broken pipe")
+                return super().write(text)
+
+        run = await self._run(
+            main_module, fake_modules, monkeypatch, after="end", presses=0, stdout=DeadPipe()
+        )
+        assert run.code == 1
+        assert "unexpected error (BrokenPipeError)" in run.err
+
+
+# Acceptance 5 and A-142-04, V-142-09: a real pipe whose reader is gone and a
+# real SIGINT, in a child process, so the interpreter's own exit-time flush
+# runs. The child replaces only `CliClient` and the credential load.
+_CARD142_CHILD = r"""
+import asyncio, sys
+from system_03_search_agent.adapters.cli import client as client_module
+from system_03_search_agent.adapters.cli import credentials as credentials_module
+from system_03_search_agent.adapters.cli import main as main_module
+from system_03_search_agent.contracts.events import CitationPayload, Event, TokenPayload
+from datetime import UTC, datetime
+
+
+class Creds:
+    base_url = "http://127.0.0.1:9"
+    access_token = "a"
+    refresh_token = "r"
+
+
+def event(kind, seq, payload):
+    return Event(type=kind, version="v1", trace_id="t", seq=seq, ts=datetime.now(UTC),
+                 payload=payload.model_dump())
+
+
+class FakeCliClient:
+    def __init__(self, http, creds):
+        pass
+
+    async def create_run(self, text, session_id, audience_depth):
+        return "run-1", "persona"
+
+    def stream_events(self, run_id, *, last_event_id=None):
+        async def gen():
+            yield event("token", 0, TokenPayload(text="TP53 has three records [1]. " * 20,
+                                                 marker_ids=["1"]))
+            yield event("citation", 1, CitationPayload(
+                citation_id="1", display_index=1, source="clinvar", source_id="VCV1",
+                source_url="https://www.ncbi.nlm.nih.gov/clinvar/VCV1", layer="layer_1_graph",
+                field="clinical_significance", claim_text="pathogenic", evidence_kind="direct",
+                assertion_confidence="high",
+                population_ancestry_context=None, license="public-domain"))
+            sys.stdout.flush()
+            sys.stderr.write("READY\n")
+            sys.stderr.flush()
+            await asyncio.sleep(30)
+        return gen()
+
+    async def stop(self, run_id):
+        return True
+
+
+credentials_module.load = lambda: Creds()
+client_module.CliClient = FakeCliClient
+sys.exit(main_module.main(sys.argv[1:]))
+"""
+
+
+@pytest.mark.parametrize("as_json", [False, True])
+def test_ctrl_c_into_a_pipe_whose_reader_is_gone_exits_130_with_no_traceback(
+    as_json: bool, tmp_path
+) -> None:
+    """`s3 ask ... | head` or `| tee`: Ctrl-C ends the reader too, then the
+    command line writes the rest of its output into a dead pipe."""
+    import os
+    import signal
+    import subprocess
+    import time
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[4] / "src"
+    read_end, write_end = os.pipe()
+    argv = ["ask", "q", "--session-id", "s1"] + (["--json"] if as_json else [])
+    child = subprocess.Popen(
+        [sys.executable, "-c", _CARD142_CHILD, *argv],
+        stdout=write_end,
+        stderr=subprocess.PIPE,
+        env={**os.environ, "PYTHONPATH": str(src), "HOME": str(tmp_path)},
+    )
+    os.close(write_end)
+    try:
+        assert child.stderr is not None
+        line = child.stderr.readline()
+        assert line == b"READY\n", line
+        if not as_json:
+            assert os.read(read_end, 65536)  # the answer reached the reader
+        os.close(read_end)  # the reader ends with the Ctrl-C
+        time.sleep(0.1)
+        child.send_signal(signal.SIGINT)
+        rest = child.stderr.read().decode()
+        code = child.wait(timeout=10)
+    finally:
+        if child.poll() is None:
+            child.kill()
+    assert code == 130, rest
+    assert "Traceback" not in rest
+    assert "Exception ignored" not in rest
+    assert "BrokenPipe" not in rest
+    assert "unexpected error" not in rest
+    assert "error" not in rest.lower()

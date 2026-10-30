@@ -1196,7 +1196,14 @@ class Renderer:
     # Exit
     # ------------------------------------------------------------------
 
-    def finish(self) -> int:
+    def finish(self, *, stopped_by_person: bool = False) -> int:
+        """Ends the run's output and returns its exit code.
+
+        `stopped_by_person` is True only when the person pressed Ctrl-C
+        (card 142): the run ended because they asked it to, so no "error:"
+        line is written. The command line's own stop line already says the
+        answer above is incomplete. Records that arrived are still shown.
+        """
         self._flush_held_listing()
         # A run that never reached a terminal `done`, a terminal fatal
         # `error`, or a guard rejection is not a run that finished
@@ -1220,12 +1227,13 @@ class Renderer:
             # renderer, and never claims a trust outcome this renderer
             # was never told.
             self._exit_code = _EXIT_FAILURE
-            self._err.write(
-                "error: the run ended before a final answer was received; "
-                "any answer text above is incomplete and its citations may "
-                "be partial.\n"
-            )
-            self._err.flush()
+            if not stopped_by_person:
+                self._err.write(
+                    "error: the run ended before a final answer was received; "
+                    "any answer text above is incomplete and its citations may "
+                    "be partial.\n"
+                )
+                self._err.flush()
 
         # F-4.2-D-01 (round 4): this call used to sit ONLY inside the `if`
         # branch above, so it only ever ran on the undetermined-state
@@ -1420,7 +1428,10 @@ class JsonRenderer:
             refused = payload.trust_outcome == "refuse" and not asked_back
             self._exit_code = _EXIT_FAILURE if refused else _EXIT_OK
 
-    def finish(self) -> int:
+    def finish(self, *, stopped_by_person: bool = False) -> int:
+        # Card 142: `main` records the person's stop with `record_failure`
+        # first, so the one object already says why the run ended.
+        del stopped_by_person
         complete = self._exit_code is not None
         if self._exit_code is None:
             if self._error is None:
