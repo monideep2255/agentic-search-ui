@@ -1,0 +1,40 @@
+{
+  "question": "Which diseases are associated with GCK?",
+  "mode": "Researcher",
+  "seconds_to_answer": 12.276,
+  "refused": false,
+  "meta": "? Answered11.7s · 13 tool calls · 22 sources cited from 2 layers",
+  "live_1280": {
+    "omimLinks": [
+      {
+        "href": "https://omim.org/entry/138079",
+        "text": "https://omim.org/entry/138079",
+        "visible": true
+      }
+    ],
+    "omimTexts": [
+      "Omim records found",
+      "omim 138079",
+      "omim 138079",
+      "https://omim.org/entry/138079"
+    ],
+    "notLinked": []
+  },
+  "live_390_overflow": 0,
+  "live_390": {
+    "omimLinks": [
+      {
+        "href": "https://omim.org/entry/138079",
+        "text": "https://omim.org/entry/138079",
+        "visible": true
+      }
+    ],
+    "omimTexts": [
+      "Omim records found",
+      "omim 138079",
+      "omim 138079",
+      "https://omim.org/entry/138079"
+    ],
+    "notLinked": []
+  }
+}

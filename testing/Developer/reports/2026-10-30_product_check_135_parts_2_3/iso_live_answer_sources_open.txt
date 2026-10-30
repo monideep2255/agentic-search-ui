@@ -1,0 +1,504 @@
++ New search
+
+YOUR SEARCHES
+
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+2 tool calls · 21 sources cited from 1 layer
+Which diseases are associated with GCK?
+22 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 30
+What does GCK do?
+18 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 29
+<throwaway account>
+No search limit in effect yet
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+New search
+
+? Answered15.5s · 2 tool calls · 21 sources cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli.⁠1–20
+[1] L2 · live
+Pathogen Detection SAMN00715300
+name
+Open the record
+[2] L2 · live
+Pathogen Detection SAMN00715303
+name
+Open the record
+[3] L2 · live
+Pathogen Detection SAMN00715305
+name
+Open the record
+[4] L2 · live
+Pathogen Detection SAMN00715306
+name
+Open the record
+[5] L2 · live
+Pathogen Detection SAMN00715307
+name
+Open the record
+[6] L2 · live
+Pathogen Detection SAMN00715308
+name
+Open the record
+[7] L2 · live
+Pathogen Detection SAMN00715309
+name
+Open the record
+[8] L2 · live
+Pathogen Detection SAMN00715310
+name
+Open the record
+[9] L2 · live
+Pathogen Detection SAMN00715311
+name
+Open the record
+[10] L2 · live
+Pathogen Detection SAMN00715312
+name
+Open the record
+[11] L2 · live
+Pathogen Detection SAMN00715316
+name
+Open the record
+[12] L2 · live
+Pathogen Detection SAMN00778958
+name
+Open the record
+[13] L2 · live
+Pathogen Detection SAMN00778959
+name
+Open the record
+[14] L2 · live
+Pathogen Detection SAMN00778960
+name
+Open the record
+[15] L2 · live
+Pathogen Detection SAMN01141737
+name
+Open the record
+[16] L2 · live
+Pathogen Detection SAMN01141738
+name
+Open the record
+[17] L2 · live
+Pathogen Detection SAMN01141739
+name
+Open the record
+[18] L2 · live
+Pathogen Detection SAMN01141740
+name
+Open the record
+[19] L2 · live
+Pathogen Detection SAMN01831188
+name
+Open the record
+[20] L2 · live
+Pathogen Detection SAMN02603711
+name
+Open the record
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED	
+C236-11	SAMN00715300	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠1
+11-3677	SAMN00715303	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠2
+11-4404	SAMN00715305	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠3
+11-4522	SAMN00715306	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠4
+11-4623	SAMN00715307	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠5
+11-4632 C1	SAMN00715308	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠6
+11-4632 C2	SAMN00715309	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠7
+11-4632 C3	SAMN00715310	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠8
+11-4632 C4	SAMN00715311	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠9
+11-4632 C5	SAMN00715312	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠10
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+TAXONOMY RECORDS FOUND
+RECORD	IDENTIFIER	
+Escherichia coli	NCBITaxon:562	⁠21
+NOTES
+Pathogen Detection lists 142,255 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+Searching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not searched: most are not ESBLs and the name alone cannot tell an ESBL allele from a narrow-spectrum one, so listing them would show isolates that do not carry an ESBL.
+Note: no written summary could be checked against the records, so this answer lists the records found with their sources
+▶
+SOURCES
+21
+▶
+LIVE NCBI APIS
+21
+▶
+[1]
+
+Pathogen Detection SAMN00715300
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715300
+▶
+[2]
+
+Pathogen Detection SAMN00715303
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715303
+▶
+[3]
+
+Pathogen Detection SAMN00715305
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715305
+▶
+[4]
+
+Pathogen Detection SAMN00715306
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715306
+▶
+[5]
+
+Pathogen Detection SAMN00715307
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715307
+▶
+[6]
+
+Pathogen Detection SAMN00715308
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715308
+▶
+[7]
+
+Pathogen Detection SAMN00715309
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715309
+▶
+[8]
+
+Pathogen Detection SAMN00715310
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715310
+▶
+[9]
+
+Pathogen Detection SAMN00715311
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715311
+▶
+[10]
+
+Pathogen Detection SAMN00715312
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715312
+▶
+[11]
+
+Pathogen Detection SAMN00715316
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715316
+▶
+[12]
+
+Pathogen Detection SAMN00778958
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778958
+▶
+[13]
+
+Pathogen Detection SAMN00778959
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778959
+▶
+[14]
+
+Pathogen Detection SAMN00778960
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778960
+▶
+[15]
+
+Pathogen Detection SAMN01141737
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141737
+▶
+[16]
+
+Pathogen Detection SAMN01141738
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141738
+▶
+[17]
+
+Pathogen Detection SAMN01141739
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141739
+▶
+[18]
+
+Pathogen Detection SAMN01141740
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141740
+▶
+[19]
+
+Pathogen Detection SAMN01831188
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01831188
+▶
+[20]
+
+Pathogen Detection SAMN02603711
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02603711
+▶
+[21]
+
+taxonomy 562
+
+L2 · live
+Flag: does not support
+TOOL
+scientificname
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/taxonomy/562
+Based on 21 sources cited from Pathogen Detection and Taxonomy
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

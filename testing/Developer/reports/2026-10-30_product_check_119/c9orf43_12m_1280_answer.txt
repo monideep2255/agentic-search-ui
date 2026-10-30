@@ -1,0 +1,50 @@
+QUESTION: recent papers on C9orf43
+MODE: Researcher
+CHOICE: last 12 months
+
+▶
+recent papers on C9orf43
+0 tool calls · 0 sources cited
+Researcher
+Show answer
+Recent papers on C9orf43 from the last 12 months?
+New search
+
+✓ Answered19.9s · 13 tool calls · 6 sources cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+Found 1 gene record and 5 clinvar records for C9orf43: C9orf43, NM_001278629.2(C9orf43):c.293C>T (p.Pro98Leu), NM_001278629.2(C9orf43):c.556G>A (p.Val186Met), NM_001278629.2(C9orf43):c.476C>T (p.Ser159Leu), NM_001278629.2(C9orf43):c.-49-1G>T and NM_001278629.2(C9orf43):c.48G>T (p.Leu16Phe).⁠1 +5
+
+ANSWER
+
+The gene symbol is C9orf43, and the gene name is C9orf43.⁠1, 3
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+C9orf43	NCBIGene:257169	⁠1, 3
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_001278629.2(C9orf43):c.293C>T (p.Pro98Leu)	VCV002252033	⁠2
+NM_001278629.2(C9orf43):c.556G>A (p.Val186Met)	VCV002259052	⁠4
+NM_001278629.2(C9orf43):c.476C>T (p.Ser159Leu)	VCV002376280	⁠5
+NM_001278629.2(C9orf43):c.-49-1G>T	VCV004350815	⁠6
+NM_001278629.2(C9orf43):c.48G>T (p.Leu16Phe)	VCV004350816	⁠7
+NOTES
+No PubMed papers from the last 12 months were found for C9orf43. Papers in the knowledge graph carry no publication date, so they are not listed here.
+▶
+SOURCES
+6
+Based on 6 sources cited from ClinVar and NCBI Gene
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

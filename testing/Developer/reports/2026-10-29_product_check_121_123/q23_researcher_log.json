@@ -1,0 +1,70 @@
+{
+  "question": "What is rs334 and what condition is it associated with?",
+  "mode": "Researcher",
+  "tag": "q23_researcher",
+  "firstWidth": 1280,
+  "info": [
+    {
+      "width": 1280,
+      "name": "About Nightingale",
+      "box": {
+        "x": 907,
+        "y": 56.796875,
+        "width": 280,
+        "height": 159.90625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 1280,
+      "name": "About Trust signals",
+      "box": {
+        "x": 574.765625,
+        "y": 708.96875,
+        "width": 280,
+        "height": 326.140625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 390,
+      "name": "About Trust signals",
+      "box": {
+        "x": 16,
+        "y": 439.75,
+        "width": 358,
+        "height": 267.453125
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    }
+  ],
+  "shots": [],
+  "modePressed": "true",
+  "seconds": 14.908,
+  "headings": [
+    {
+      "text": "Variant records found",
+      "shown": "uppercase"
+    }
+  ],
+  "overflow_1280": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  },
+  "overflow_390": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  }
+}

@@ -7,6 +7,8 @@ Builder report, 2026-10-30, branch `fix/card149-human-gene-record-only`. Built f
 - [What changed](#what-changed)
 - [Tests and results](#tests-and-results)
 - [Notes](#notes)
+- [Fix round](#fix-round)
+- [Fix round, reverted](#fix-round-reverted)
 
 ## What changed
 

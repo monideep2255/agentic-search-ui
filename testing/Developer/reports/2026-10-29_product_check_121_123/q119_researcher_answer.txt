@@ -1,0 +1,33 @@
+What are rs334 and rs6025?
+New search
+
+? Answered9.8s · 5 tool calls · 2 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+The literature name c.20A>T corresponds to rs334.⁠3 Found 2 literature variant records for rs334 and rs6025: c.20A>T and c.1691G>A.⁠3, 4
+
+The literature name c.1691G>A corresponds to rs6025.⁠4
+
+VARIANT RECORDS FOUND
+VARIANT	IDENTIFIER	GENE	CLINICAL SIGNIFICANCE OR CONSEQUENCE	
+rs334	rs334	HBB	significance: not-provided, protective, likely-benign, pathogenic, other	⁠1
+rs6025	rs6025	F5	consequence: coding_sequence_variant, missense_variant	⁠2
+▶
+SOURCES
+2
+Based on 2 sources cited, all from dbSNP
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

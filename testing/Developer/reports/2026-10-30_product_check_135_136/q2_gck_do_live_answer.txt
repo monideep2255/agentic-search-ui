@@ -1,0 +1,71 @@
++ New search
+
+YOUR SEARCHES
+
+What does GCK do?
+13 tool calls · 18 sources cited from 3 layers
+Which diseases are associated with GCK?
+22 sources cited · Oct 29
+a throwaway develop account
+No search limit in effect yet
+What does GCK do?
+New search
+
+✓ Answered9.8s · 13 tool calls · 18 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+The enzyme operates in a tissue-specific manner, playing a role in glucose-stimulated insulin secretion in the pancreas and in glucose uptake and conversion to glycogen in the liver.⁠20 Found 1 gene record for GCK: glucokinase.⁠1
+
+The gene summary notes that, unlike other hexokinases, this enzyme is not inhibited by its product glucose-6-phosphate and remains active while glucose is abundant.⁠20 Multiple promoters and alternative splicing produce distinct protein isoforms with tissue-specific expression.⁠20
+
+DISEASE ASSOCIATIONS
+
+Mutations in GCK that alter enzyme activity have been associated with multiple types of diabetes and hyperinsulinemic hypoglycemia.⁠20
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+glucokinase (GCK)	NCBIGene:2645	⁠1, 2
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Update on mutations in glucokinase (GCK), which cause maturity-onset diabetes of the young, permanent neonatal diabetes, and hyperinsulinemic hypoglycemia.	PMID:19790256	⁠3
+Genotype and phenotype correlations in 417 children with congenital hyperinsulinism.	PMID:23275527	⁠8
+Reduced penetrance of MODY-associated HNF1A/HNF4A variants but not GCK variants in clinically unselected cohorts.	PMID:36257325	⁠11
+Inhibition of Hmbox1 Promotes Cardiomyocyte Survival and Glucose Metabolism Through Gck Activation in Ischemia/Reperfusion Injury.	PMID:38708602	⁠14
+Glucokinase (GCK) in diabetes: from molecular mechanisms to disease pathogenesis.	PMID:39245718	⁠17
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000162.5(GCK):c.700T>G (p.Tyr234Asp)	VCV004881360	⁠4
+NM_000162.5(GCK):c.1020-339G>C	VCV004884999	⁠9
+NM_000162.5(GCK):c.460G>T (p.Val154Leu)	VCV004885023	⁠12
+NM_000162.5(GCK):c.1135_1150delinsCTCAT (p.Ala379fs)	VCV004886373	⁠15
+NM_000162.5(GCK):c.510C>T (p.Gly170=)	VCV004887379	⁠18
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+GLUCOKINASE; GCK	omim 138079	⁠5
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER	
+Gck	@GENE_GCK	⁠6
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus	NCT01029795	TERMINATED	⁠7
+Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes	NCT01238380	COMPLETED	⁠10
+A Study of LY2608204 in Patients With Type 2 Diabetes	NCT01247363	COMPLETED	⁠13
+A Clinical Study to Evaluate Safety, Tolerability and Pharmacokinetics of Oral ZYGK1 in Healthy Volunteers	NCT01472809	SUSPENDED	⁠16
+The Effect of ß-cell Specific Glucokinase Mutation on Glucose Homeostasis and Insulin Secretion in a MODY-2 Family	NCT01960231	UNKNOWN	⁠19
+▶
+SOURCES
+18
+Sources disagree on at least one claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

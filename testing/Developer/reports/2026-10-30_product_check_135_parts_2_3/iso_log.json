@@ -1,0 +1,436 @@
+{
+  "question": "What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?",
+  "tag": "iso",
+  "reopen_only": false,
+  "researcher_pressed": "true",
+  "seconds_to_answer": 15.961,
+  "refused": false,
+  "meta": "? Answered15.5s · 2 tool calls · 21 sources cited from 1 layer",
+  "live_markers": [
+    {
+      "id": "citation-group-1",
+      "label": "1–20",
+      "cites": "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+      "aria": "Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2",
+      "inTable": false,
+      "cellText": "1–20"
+    },
+    {
+      "id": "citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": true,
+      "cellText": "1"
+    },
+    {
+      "id": "citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": true,
+      "cellText": "2"
+    },
+    {
+      "id": "citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": true,
+      "cellText": "3"
+    },
+    {
+      "id": "citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": true,
+      "cellText": "4"
+    },
+    {
+      "id": "citation-5",
+      "label": "5",
+      "cites": "5",
+      "aria": "Source 5, layer 2",
+      "inTable": true,
+      "cellText": "5"
+    },
+    {
+      "id": "citation-6",
+      "label": "6",
+      "cites": "6",
+      "aria": "Source 6, layer 2",
+      "inTable": true,
+      "cellText": "6"
+    },
+    {
+      "id": "citation-7",
+      "label": "7",
+      "cites": "7",
+      "aria": "Source 7, layer 2",
+      "inTable": true,
+      "cellText": "7"
+    },
+    {
+      "id": "citation-8",
+      "label": "8",
+      "cites": "8",
+      "aria": "Source 8, layer 2",
+      "inTable": true,
+      "cellText": "8"
+    },
+    {
+      "id": "citation-9",
+      "label": "9",
+      "cites": "9",
+      "aria": "Source 9, layer 2",
+      "inTable": true,
+      "cellText": "9"
+    },
+    {
+      "id": "citation-10",
+      "label": "10",
+      "cites": "10",
+      "aria": "Source 10, layer 2",
+      "inTable": true,
+      "cellText": "10"
+    },
+    {
+      "id": "citation-21",
+      "label": "21",
+      "cites": "21",
+      "aria": "Source 21, layer 2",
+      "inTable": true,
+      "cellText": "21"
+    }
+  ],
+  "live_1280_marker": {
+    "marker": "citation-group-1",
+    "label": "1–20",
+    "opened": true,
+    "card_text": "[1] L2 · live\nPathogen Detection SAMN00715300\nname\nOpen the record\n[2] L2 · live\nPathogen Detection SAMN00715303\nname\nOpen the record\n[3] L2 · live\nPathogen Detection SAMN00715305\nname\nOpen the record\n[4] L2 · live\nPathogen Detection SAMN00715306\nname\nOpen the record\n[5] L2 · live\nPathogen Detection SAMN00715307\nname\nOpen the record\n[6] L2 · live\nPathogen Detection SAMN00715308\nname\nOpen the record\n[7] L2 · live\nPathogen Detection SAMN00715309\nname\nOpen the record\n[8] L2 · live\nPathogen Detection SAMN00715310\nname\nOpen the record\n[9] L2 · live\nPathogen Detection SAMN00715311\nname\nOpen the record\n[10] L2 · live\nPathogen Detection SAMN00715312\nname\nOpen the record\n[11] L2 · live\nPathogen Detection SAMN00715316\nname\nOpen the record\n[12] L2 · live\nPathogen Detection SAMN00778958\nname\nOpen the record\n[13] L2 · live\nPathogen Detection SAMN00778959\nname\nOpen the record\n[14] L2 · live\nPathogen Detection SAMN00778960\nname\nOpen the record\n[15] L2 · live\nPathogen Detection SAMN01141737\nname\nOpen the record\n[16] L2 · live\nPathogen Detection SAMN01141738\nname\nOpen the record\n[17] L2 · live\nPathogen Detection SAMN01141739\nname\nOpen the record\n[18] L2 · live\nPathogen Detection SAMN01141740\nname\nOpen the record\n[19] L2 · live\nPathogen Detection SAMN01831188\nname\nOpen the record\n[20] L2 · live\nPathogen Detection SAMN02603711\nname\nOpen the record",
+    "box": {
+      "x": 499.546875,
+      "y": 339.1875,
+      "width": 280,
+      "height": 320
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "overflow": 0
+  },
+  "live_sources": [],
+  "live_tool_names": [],
+  "live_390_drawer_still_open": false,
+  "live_390_overflow": 0,
+  "rail_visible": true,
+  "saved_literal_brackets": [],
+  "saved_markers": [
+    {
+      "id": "saved-answer-0-citation-group-1",
+      "label": "1–20",
+      "cites": "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+      "aria": "Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2",
+      "inTable": false,
+      "cellText": "1–20"
+    },
+    {
+      "id": "saved-answer-2-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": true,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-2-1-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": true,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-2-2-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": true,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-2-3-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": true,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-2-4-citation-5",
+      "label": "5",
+      "cites": "5",
+      "aria": "Source 5, layer 2",
+      "inTable": true,
+      "cellText": "5"
+    },
+    {
+      "id": "saved-answer-2-5-citation-6",
+      "label": "6",
+      "cites": "6",
+      "aria": "Source 6, layer 2",
+      "inTable": true,
+      "cellText": "6"
+    },
+    {
+      "id": "saved-answer-2-6-citation-7",
+      "label": "7",
+      "cites": "7",
+      "aria": "Source 7, layer 2",
+      "inTable": true,
+      "cellText": "7"
+    },
+    {
+      "id": "saved-answer-2-7-citation-8",
+      "label": "8",
+      "cites": "8",
+      "aria": "Source 8, layer 2",
+      "inTable": true,
+      "cellText": "8"
+    },
+    {
+      "id": "saved-answer-2-8-citation-9",
+      "label": "9",
+      "cites": "9",
+      "aria": "Source 9, layer 2",
+      "inTable": true,
+      "cellText": "9"
+    },
+    {
+      "id": "saved-answer-2-9-citation-10",
+      "label": "10",
+      "cites": "10",
+      "aria": "Source 10, layer 2",
+      "inTable": true,
+      "cellText": "10"
+    },
+    {
+      "id": "saved-answer-4-0-citation-21",
+      "label": "21",
+      "cites": "21",
+      "aria": "Source 21, layer 2",
+      "inTable": true,
+      "cellText": "21"
+    }
+  ],
+  "saved_1280_marker_first": {
+    "marker": "saved-answer-0-citation-group-1",
+    "label": "1–20",
+    "opened": true,
+    "card_text": "[1] L2 · live\nPathogen Detection SAMN00715300\nOpen the record\n[2] L2 · live\nPathogen Detection SAMN00715303\nOpen the record\n[3] L2 · live\nPathogen Detection SAMN00715305\nOpen the record\n[4] L2 · live\nPathogen Detection SAMN00715306\nOpen the record\n[5] L2 · live\nPathogen Detection SAMN00715307\nOpen the record\n[6] L2 · live\nPathogen Detection SAMN00715308\nOpen the record\n[7] L2 · live\nPathogen Detection SAMN00715309\nOpen the record\n[8] L2 · live\nPathogen Detection SAMN00715310\nOpen the record\n[9] L2 · live\nPathogen Detection SAMN00715311\nOpen the record\n[10] L2 · live\nPathogen Detection SAMN00715312\nOpen the record\n[11] L2 · live\nPathogen Detection SAMN00715316\nOpen the record\n[12] L2 · live\nPathogen Detection SAMN00778958\nOpen the record\n[13] L2 · live\nPathogen Detection SAMN00778959\nOpen the record\n[14] L2 · live\nPathogen Detection SAMN00778960\nOpen the record\n[15] L2 · live\nPathogen Detection SAMN01141737\nOpen the record\n[16] L2 · live\nPathogen Detection SAMN01141738\nOpen the record\n[17] L2 · live\nPathogen Detection SAMN01141739\nOpen the record\n[18] L2 · live\nPathogen Detection SAMN01141740\nOpen the record\n[19] L2 · live\nPathogen Detection SAMN01831188\nOpen the record\n[20] L2 · live\nPathogen Detection SAMN02603711\nOpen the record",
+    "box": {
+      "x": 959.03125,
+      "y": 257.671875,
+      "width": 280,
+      "height": 320
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "overflow": 0
+  },
+  "saved_1280_marker_table": {
+    "marker": "saved-answer-2-0-citation-1",
+    "label": "1",
+    "opened": true,
+    "card_text": "[1] L2 · live\nPathogen Detection SAMN00715300\nOpen the record",
+    "box": {
+      "x": 432.25,
+      "y": 365.8125,
+      "width": 280,
+      "height": 91.625
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "overflow": 0
+  },
+  "saved_1280_marker_range": {
+    "marker": "saved-answer-0-citation-group-1",
+    "label": "1–20",
+    "opened": true,
+    "card_text": "[1] L2 · live\nPathogen Detection SAMN00715300\nOpen the record\n[2] L2 · live\nPathogen Detection SAMN00715303\nOpen the record\n[3] L2 · live\nPathogen Detection SAMN00715305\nOpen the record\n[4] L2 · live\nPathogen Detection SAMN00715306\nOpen the record\n[5] L2 · live\nPathogen Detection SAMN00715307\nOpen the record\n[6] L2 · live\nPathogen Detection SAMN00715308\nOpen the record\n[7] L2 · live\nPathogen Detection SAMN00715309\nOpen the record\n[8] L2 · live\nPathogen Detection SAMN00715310\nOpen the record\n[9] L2 · live\nPathogen Detection SAMN00715311\nOpen the record\n[10] L2 · live\nPathogen Detection SAMN00715312\nOpen the record\n[11] L2 · live\nPathogen Detection SAMN00715316\nOpen the record\n[12] L2 · live\nPathogen Detection SAMN00778958\nOpen the record\n[13] L2 · live\nPathogen Detection SAMN00778959\nOpen the record\n[14] L2 · live\nPathogen Detection SAMN00778960\nOpen the record\n[15] L2 · live\nPathogen Detection SAMN01141737\nOpen the record\n[16] L2 · live\nPathogen Detection SAMN01141738\nOpen the record\n[17] L2 · live\nPathogen Detection SAMN01141739\nOpen the record\n[18] L2 · live\nPathogen Detection SAMN01141740\nOpen the record\n[19] L2 · live\nPathogen Detection SAMN01831188\nOpen the record\n[20] L2 · live\nPathogen Detection SAMN02603711\nOpen the record",
+    "box": {
+      "x": 959.03125,
+      "y": 257.671875,
+      "width": 280,
+      "height": 320
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "overflow": 0
+  },
+  "saved_sources": [
+    "1. Pathogen Detection SAMN00715300LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715300",
+    "2. Pathogen Detection SAMN00715303LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715303",
+    "3. Pathogen Detection SAMN00715305LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715305",
+    "4. Pathogen Detection SAMN00715306LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715306",
+    "5. Pathogen Detection SAMN00715307LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715307",
+    "6. Pathogen Detection SAMN00715308LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715308",
+    "7. Pathogen Detection SAMN00715309LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715309",
+    "8. Pathogen Detection SAMN00715310LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715310",
+    "9. Pathogen Detection SAMN00715311LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715311",
+    "10. Pathogen Detection SAMN00715312LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715312",
+    "11. Pathogen Detection SAMN00715316LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715316",
+    "12. Pathogen Detection SAMN00778958LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778958",
+    "13. Pathogen Detection SAMN00778959LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778959",
+    "14. Pathogen Detection SAMN00778960LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778960",
+    "15. Pathogen Detection SAMN01141737LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141737",
+    "16. Pathogen Detection SAMN01141738LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141738",
+    "17. Pathogen Detection SAMN01141739LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141739",
+    "18. Pathogen Detection SAMN01141740LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141740",
+    "19. Pathogen Detection SAMN01831188LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01831188",
+    "20. Pathogen Detection SAMN02603711LIVE https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02603711",
+    "21. taxonomy 562LIVE https://www.ncbi.nlm.nih.gov/taxonomy/562"
+  ],
+  "saved_tool_names": [],
+  "saved_390_url_kept": "https://search-agent-web-develop-2aeb.up.railway.app/",
+  "saved_390_screen": true,
+  "saved_390_drawer_still_open": false,
+  "saved_390_overflow": 0,
+  "saved_390_markers": [
+    {
+      "id": "saved-answer-0-citation-group-1",
+      "label": "1–20",
+      "cites": "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+      "aria": "Sources 1 to 20: Source 1, layer 2; Source 2, layer 2; Source 3, layer 2; Source 4, layer 2; Source 5, layer 2; Source 6, layer 2; Source 7, layer 2; Source 8, layer 2; Source 9, layer 2; Source 10, layer 2; Source 11, layer 2; Source 12, layer 2; Source 13, layer 2; Source 14, layer 2; Source 15, layer 2; Source 16, layer 2; Source 17, layer 2; Source 18, layer 2; Source 19, layer 2; Source 20, layer 2",
+      "inTable": false,
+      "cellText": "1–20\n[1] L2 · live\nPathogen Detection SAMN00715300\nOpen the record\n[2] L2 · live\nPathogen Detection SAMN00715303\nOpen th"
+    },
+    {
+      "id": "saved-answer-2-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": true,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-2-1-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": true,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-2-2-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": true,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-2-3-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": true,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-2-4-citation-5",
+      "label": "5",
+      "cites": "5",
+      "aria": "Source 5, layer 2",
+      "inTable": true,
+      "cellText": "5"
+    },
+    {
+      "id": "saved-answer-2-5-citation-6",
+      "label": "6",
+      "cites": "6",
+      "aria": "Source 6, layer 2",
+      "inTable": true,
+      "cellText": "6"
+    },
+    {
+      "id": "saved-answer-2-6-citation-7",
+      "label": "7",
+      "cites": "7",
+      "aria": "Source 7, layer 2",
+      "inTable": true,
+      "cellText": "7"
+    },
+    {
+      "id": "saved-answer-2-7-citation-8",
+      "label": "8",
+      "cites": "8",
+      "aria": "Source 8, layer 2",
+      "inTable": true,
+      "cellText": "8"
+    },
+    {
+      "id": "saved-answer-2-8-citation-9",
+      "label": "9",
+      "cites": "9",
+      "aria": "Source 9, layer 2",
+      "inTable": true,
+      "cellText": "9"
+    },
+    {
+      "id": "saved-answer-2-9-citation-10",
+      "label": "10",
+      "cites": "10",
+      "aria": "Source 10, layer 2",
+      "inTable": true,
+      "cellText": "10"
+    },
+    {
+      "id": "saved-answer-4-0-citation-21",
+      "label": "21",
+      "cites": "21",
+      "aria": "Source 21, layer 2",
+      "inTable": true,
+      "cellText": "21"
+    }
+  ],
+  "saved_390_marker_ids": [
+    "saved-answer-0-citation-group-1",
+    "saved-answer-2-0-citation-1",
+    "saved-answer-2-1-citation-2",
+    "saved-answer-2-2-citation-3",
+    "saved-answer-2-3-citation-4",
+    "saved-answer-2-4-citation-5",
+    "saved-answer-2-5-citation-6",
+    "saved-answer-2-6-citation-7",
+    "saved-answer-2-7-citation-8",
+    "saved-answer-2-8-citation-9",
+    "saved-answer-2-9-citation-10",
+    "saved-answer-4-0-citation-21"
+  ],
+  "saved_390_marker_row": {
+    "marker": "saved-answer-2-0-citation-1",
+    "label": "1",
+    "opened": true,
+    "card_text": "[1] L2 · live\nPathogen Detection SAMN00715300\nOpen the record",
+    "box": {
+      "x": 93.109375,
+      "y": 431.5,
+      "width": 280,
+      "height": 91.625
+    },
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  }
+}

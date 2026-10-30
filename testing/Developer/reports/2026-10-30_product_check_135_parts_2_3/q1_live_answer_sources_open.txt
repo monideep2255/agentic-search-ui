@@ -1,0 +1,464 @@
++ New search
+
+YOUR SEARCHES
+
+Which diseases are associated with BRCA1?
+13 tool calls · 21 sources cited from 2 layers
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+21 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 30
+What does GCK do?
+18 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 29
+<throwaway account>
+No search limit in effect yet
+Which diseases are associated with BRCA1?
+New search
+
+? Answered10.1s · 13 tool calls · 21 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+BRCA1 is associated with four diseases retrieved from the knowledge graph: familial cancer of breast, familial breast-ovarian cancer susceptibility 1, pancreatic cancer susceptibility 4, and Fanconi anemia complementation group S.⁠1–4
+[1] L2 · live
+MedGen C0346153
+name
+Open the record
+[2] L2 · live
+MedGen C2676676
+name
+Open the record
+[3] L2 · live
+MedGen C3280442
+name
+Open the record
+[4] L2 · live
+MedGen C4554406
+name
+Open the record
+ Found 4 disease records for BRCA1: Familial cancer of breast, Familial breast-ovarian cancer susceptibility 1, Pancreatic cancer susceptibility 4 and Fanconi anemia complementation group S.⁠1–4
+
+The gene symbol for BRCA1 is BRCA1, corresponding to the gene name BRCA1.⁠5, 9
+
+DISEASE ASSOCIATIONS AND GENE FUNCTION
+
+BRCA1 encodes a nuclear phosphoprotein that maintains genomic stability and acts as a tumor suppressor.⁠23 Its protein product participates in transcription, double-strand break repair, and recombination.⁠23 Mutations in BRCA1 account for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠23
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Familial cancer of breast	MedGen:C0346153	⁠1
+Familial breast-ovarian cancer susceptibility 1	MedGen:C2676676	⁠2
+Pancreatic cancer susceptibility 4	MedGen:C3280442	⁠3
+Fanconi anemia complementation group S	MedGen:C4554406	⁠4
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1	NCBIGene:672	⁠5, 9
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+The role of BRCA1 in transcriptional regulation and cell cycle control.	PMID:16998500	⁠6
+BRCA1: An Endocrine and Metabolic Regulator.	PMID:35432218	⁠11
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.	PMID:36914836	⁠14
+Mechanism of BRCA1-BARD1 function in DNA end resection and DNA protection.	PMID:39261728	⁠17
+Targeting GPX4-mediated ferroptosis protection sensitizes BRCA1-deficient cancer cells to PARP inhibitors.	PMID:39265497	⁠20
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.5243_5277+2788del	VCV000267740	⁠7
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	VCV000267741	⁠12
+NG_005905.2:g.(147057_150288)_(160933_166866)del	VCV000373892	⁠15
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)	VCV004848411	⁠18
+NM_007294.4(BRCA1):c.2130del (p.Lys711fs)	VCV004851359	⁠21
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠8
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	NCT00590109	COMPLETED	⁠10
+BRCA1 Haploinsufficiency and Gene Expression	NCT00597987	COMPLETED	⁠13
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	NCT00617656	TERMINATED	⁠16
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	NCT00673335	COMPLETED	⁠19
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	NCT00700778	TERMINATED	⁠22
+▶
+SOURCES
+21
+▶
+LIVE NCBI APIS
+16
+▶
+[1]
+
+MedGen C0346153
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C0346153
+▶
+[2]
+
+MedGen C2676676
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C2676676
+▶
+[3]
+
+MedGen C3280442
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C3280442
+▶
+[4]
+
+MedGen C4554406
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C4554406
+▶
+[5][9][23]
+
+gene 672
+
+L2 · live
+Flag: does not support
+TOOL
+symbol, name, summary
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/672/
+▶
+[6]
+
+pubmed 16998500
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/16998500/
+▶
+[7]
+
+clinvar 267740
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267740/
+▶
+[8]
+
+omim 113705
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/113705
+▶
+[11]
+
+pubmed 35432218
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/35432218/
+▶
+[12]
+
+clinvar 267741
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/267741/
+▶
+[14]
+
+pubmed 36914836
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36914836/
+▶
+[15]
+
+clinvar 373892
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/373892/
+▶
+[17]
+
+pubmed 39261728
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39261728/
+▶
+[18]
+
+clinvar 4848411
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4848411/
+▶
+[20]
+
+pubmed 39265497
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39265497/
+▶
+[21]
+
+clinvar 4851359
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4851359/
+▶
+ENRICHMENT
+5
+▶
+[10]
+
+ClinicalTrials.gov NCT00590109
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00590109
+▶
+[13]
+
+ClinicalTrials.gov NCT00597987
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00597987
+▶
+[16]
+
+ClinicalTrials.gov NCT00617656
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00617656
+▶
+[19]
+
+ClinicalTrials.gov NCT00673335
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00673335
+▶
+[22]
+
+ClinicalTrials.gov NCT00700778
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00700778
+Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

@@ -1,0 +1,657 @@
+{
+  "question": "Which diseases are associated with GCK?",
+  "tag": "q21",
+  "reopen_only": true,
+  "rail_visible": true,
+  "saved_literal_brackets": [],
+  "saved_markers": [
+    {
+      "id": "saved-answer-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": false,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-0-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": false,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-0-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": false,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-0-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": false,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": false,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-0-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": false,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-0-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": false,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-0-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": false,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-1-citation-24",
+      "label": "24",
+      "cites": "24",
+      "aria": "Source 24, layer 2",
+      "inTable": false,
+      "cellText": "24"
+    },
+    {
+      "id": "saved-answer-3-citation-24",
+      "label": "24",
+      "cites": "24",
+      "aria": "Source 24, layer 2",
+      "inTable": false,
+      "cellText": "24"
+    },
+    {
+      "id": "saved-answer-5-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": true,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-5-1-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": true,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-5-2-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": true,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-5-3-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": true,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-7-0-citation-5",
+      "label": "5",
+      "cites": "5",
+      "aria": "Source 5, layer 2",
+      "inTable": true,
+      "cellText": "5"
+    },
+    {
+      "id": "saved-answer-7-0-citation-9",
+      "label": "9",
+      "cites": "9",
+      "aria": "Source 9, layer 2",
+      "inTable": true,
+      "cellText": "9"
+    },
+    {
+      "id": "saved-answer-9-0-citation-6",
+      "label": "6",
+      "cites": "6",
+      "aria": "Source 6, layer 2",
+      "inTable": true,
+      "cellText": "6"
+    },
+    {
+      "id": "saved-answer-9-1-citation-12",
+      "label": "12",
+      "cites": "12",
+      "aria": "Source 12, layer 2",
+      "inTable": true,
+      "cellText": "12"
+    },
+    {
+      "id": "saved-answer-9-2-citation-15",
+      "label": "15",
+      "cites": "15",
+      "aria": "Source 15, layer 2",
+      "inTable": true,
+      "cellText": "15"
+    },
+    {
+      "id": "saved-answer-9-3-citation-18",
+      "label": "18",
+      "cites": "18",
+      "aria": "Source 18, layer 2",
+      "inTable": true,
+      "cellText": "18"
+    },
+    {
+      "id": "saved-answer-9-4-citation-21",
+      "label": "21",
+      "cites": "21",
+      "aria": "Source 21, layer 2",
+      "inTable": true,
+      "cellText": "21"
+    },
+    {
+      "id": "saved-answer-11-0-citation-7",
+      "label": "7",
+      "cites": "7",
+      "aria": "Source 7, layer 2",
+      "inTable": true,
+      "cellText": "7"
+    },
+    {
+      "id": "saved-answer-11-1-citation-13",
+      "label": "13",
+      "cites": "13",
+      "aria": "Source 13, layer 2",
+      "inTable": true,
+      "cellText": "13"
+    },
+    {
+      "id": "saved-answer-11-2-citation-16",
+      "label": "16",
+      "cites": "16",
+      "aria": "Source 16, layer 2",
+      "inTable": true,
+      "cellText": "16"
+    },
+    {
+      "id": "saved-answer-11-3-citation-19",
+      "label": "19",
+      "cites": "19",
+      "aria": "Source 19, layer 2",
+      "inTable": true,
+      "cellText": "19"
+    },
+    {
+      "id": "saved-answer-11-4-citation-22",
+      "label": "22",
+      "cites": "22",
+      "aria": "Source 22, layer 2",
+      "inTable": true,
+      "cellText": "22"
+    },
+    {
+      "id": "saved-answer-13-0-citation-8",
+      "label": "8",
+      "cites": "8",
+      "aria": "Source 8, layer 2",
+      "inTable": true,
+      "cellText": "8"
+    },
+    {
+      "id": "saved-answer-15-0-citation-10",
+      "label": "10",
+      "cites": "10",
+      "aria": "Source 10, layer 3",
+      "inTable": true,
+      "cellText": "10"
+    },
+    {
+      "id": "saved-answer-17-0-citation-11",
+      "label": "11",
+      "cites": "11",
+      "aria": "Source 11, layer 3",
+      "inTable": true,
+      "cellText": "11"
+    },
+    {
+      "id": "saved-answer-17-1-citation-14",
+      "label": "14",
+      "cites": "14",
+      "aria": "Source 14, layer 3",
+      "inTable": true,
+      "cellText": "14"
+    },
+    {
+      "id": "saved-answer-17-2-citation-17",
+      "label": "17",
+      "cites": "17",
+      "aria": "Source 17, layer 3",
+      "inTable": true,
+      "cellText": "17"
+    },
+    {
+      "id": "saved-answer-17-3-citation-20",
+      "label": "20",
+      "cites": "20",
+      "aria": "Source 20, layer 3",
+      "inTable": true,
+      "cellText": "20"
+    },
+    {
+      "id": "saved-answer-17-4-citation-23",
+      "label": "23",
+      "cites": "23",
+      "aria": "Source 23, layer 3",
+      "inTable": true,
+      "cellText": "23"
+    }
+  ],
+  "saved_1280_marker_first": {
+    "marker": "saved-answer-0-citation-1",
+    "label": "1",
+    "opened": true,
+    "card_text": "[1] L2 · live\nMedGen C0011860\nOpen the record",
+    "box": {
+      "x": 789.65625,
+      "y": 245.546875,
+      "width": 280,
+      "height": 91.625
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "overflow": 0
+  },
+  "saved_1280_marker_table": {
+    "marker": "saved-answer-5-0-citation-1",
+    "label": "1",
+    "opened": true,
+    "card_text": "[1] L2 · live\nMedGen C0011860\nOpen the record",
+    "box": {
+      "x": 528.109375,
+      "y": 587.140625,
+      "width": 280,
+      "height": 91.625
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "overflow": 0
+  },
+  "saved_sources": [
+    "1. MedGen C0011860LIVE https://www.ncbi.nlm.nih.gov/medgen/C0011860",
+    "2. MedGen C0342277LIVE https://www.ncbi.nlm.nih.gov/medgen/C0342277",
+    "3. MedGen C1865290LIVE https://www.ncbi.nlm.nih.gov/medgen/C1865290",
+    "4. MedGen C5393570LIVE https://www.ncbi.nlm.nih.gov/medgen/C5393570",
+    "5, 9, 24. gene 2645LIVE https://www.ncbi.nlm.nih.gov/gene/2645/",
+    "6. pubmed 19790256LIVE https://pubmed.ncbi.nlm.nih.gov/19790256/",
+    "7. clinvar 4881360LIVE https://www.ncbi.nlm.nih.gov/clinvar/variation/4881360/",
+    "8. omim 138079LIVE https://omim.org/entry/138079",
+    "10. NCBI Gene @GENE_GCKLITERATURE https://www.ncbi.nlm.nih.gov/gene/24385",
+    "11. ClinicalTrials.gov NCT01029795LITERATURE https://clinicaltrials.gov/study/NCT01029795",
+    "12. pubmed 23275527LIVE https://pubmed.ncbi.nlm.nih.gov/23275527/",
+    "13. clinvar 4884999LIVE https://www.ncbi.nlm.nih.gov/clinvar/variation/4884999/",
+    "14. ClinicalTrials.gov NCT01238380LITERATURE https://clinicaltrials.gov/study/NCT01238380",
+    "15. pubmed 36257325LIVE https://pubmed.ncbi.nlm.nih.gov/36257325/",
+    "16. clinvar 4885023LIVE https://www.ncbi.nlm.nih.gov/clinvar/variation/4885023/",
+    "17. ClinicalTrials.gov NCT01247363LITERATURE https://clinicaltrials.gov/study/NCT01247363",
+    "18. pubmed 38708602LIVE https://pubmed.ncbi.nlm.nih.gov/38708602/",
+    "19. clinvar 4886373LIVE https://www.ncbi.nlm.nih.gov/clinvar/variation/4886373/",
+    "20. ClinicalTrials.gov NCT01472809LITERATURE https://clinicaltrials.gov/study/NCT01472809",
+    "21. pubmed 39245718LIVE https://pubmed.ncbi.nlm.nih.gov/39245718/",
+    "22. clinvar 4887379LIVE https://www.ncbi.nlm.nih.gov/clinvar/variation/4887379/",
+    "23. ClinicalTrials.gov NCT01960231LITERATURE https://clinicaltrials.gov/study/NCT01960231"
+  ],
+  "saved_tool_names": [
+    "ClinicalTrials.gov",
+    "clinicaltrials.gov"
+  ],
+  "saved_390_url_kept": "https://search-agent-web-develop-2aeb.up.railway.app/",
+  "saved_390_screen": true,
+  "saved_390_drawer_still_open": false,
+  "saved_390_overflow": 0,
+  "saved_390_markers": [
+    {
+      "id": "saved-answer-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": false,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-0-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": false,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-0-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": false,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-0-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": false,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": false,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-0-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": false,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-0-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": false,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-0-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": false,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-1-citation-24",
+      "label": "24",
+      "cites": "24",
+      "aria": "Source 24, layer 2",
+      "inTable": false,
+      "cellText": "24"
+    },
+    {
+      "id": "saved-answer-3-citation-24",
+      "label": "24",
+      "cites": "24",
+      "aria": "Source 24, layer 2",
+      "inTable": false,
+      "cellText": "24"
+    },
+    {
+      "id": "saved-answer-5-0-citation-1",
+      "label": "1",
+      "cites": "1",
+      "aria": "Source 1, layer 2",
+      "inTable": true,
+      "cellText": "1"
+    },
+    {
+      "id": "saved-answer-5-1-citation-2",
+      "label": "2",
+      "cites": "2",
+      "aria": "Source 2, layer 2",
+      "inTable": true,
+      "cellText": "2"
+    },
+    {
+      "id": "saved-answer-5-2-citation-3",
+      "label": "3",
+      "cites": "3",
+      "aria": "Source 3, layer 2",
+      "inTable": true,
+      "cellText": "3"
+    },
+    {
+      "id": "saved-answer-5-3-citation-4",
+      "label": "4",
+      "cites": "4",
+      "aria": "Source 4, layer 2",
+      "inTable": true,
+      "cellText": "4"
+    },
+    {
+      "id": "saved-answer-7-0-citation-5",
+      "label": "5",
+      "cites": "5",
+      "aria": "Source 5, layer 2",
+      "inTable": true,
+      "cellText": "5"
+    },
+    {
+      "id": "saved-answer-7-0-citation-9",
+      "label": "9",
+      "cites": "9",
+      "aria": "Source 9, layer 2",
+      "inTable": true,
+      "cellText": "9"
+    },
+    {
+      "id": "saved-answer-9-0-citation-6",
+      "label": "6",
+      "cites": "6",
+      "aria": "Source 6, layer 2",
+      "inTable": true,
+      "cellText": "6"
+    },
+    {
+      "id": "saved-answer-9-1-citation-12",
+      "label": "12",
+      "cites": "12",
+      "aria": "Source 12, layer 2",
+      "inTable": true,
+      "cellText": "12"
+    },
+    {
+      "id": "saved-answer-9-2-citation-15",
+      "label": "15",
+      "cites": "15",
+      "aria": "Source 15, layer 2",
+      "inTable": true,
+      "cellText": "15"
+    },
+    {
+      "id": "saved-answer-9-3-citation-18",
+      "label": "18",
+      "cites": "18",
+      "aria": "Source 18, layer 2",
+      "inTable": true,
+      "cellText": "18"
+    },
+    {
+      "id": "saved-answer-9-4-citation-21",
+      "label": "21",
+      "cites": "21",
+      "aria": "Source 21, layer 2",
+      "inTable": true,
+      "cellText": "21"
+    },
+    {
+      "id": "saved-answer-11-0-citation-7",
+      "label": "7",
+      "cites": "7",
+      "aria": "Source 7, layer 2",
+      "inTable": true,
+      "cellText": "7"
+    },
+    {
+      "id": "saved-answer-11-1-citation-13",
+      "label": "13",
+      "cites": "13",
+      "aria": "Source 13, layer 2",
+      "inTable": true,
+      "cellText": "13"
+    },
+    {
+      "id": "saved-answer-11-2-citation-16",
+      "label": "16",
+      "cites": "16",
+      "aria": "Source 16, layer 2",
+      "inTable": true,
+      "cellText": "16"
+    },
+    {
+      "id": "saved-answer-11-3-citation-19",
+      "label": "19",
+      "cites": "19",
+      "aria": "Source 19, layer 2",
+      "inTable": true,
+      "cellText": "19"
+    },
+    {
+      "id": "saved-answer-11-4-citation-22",
+      "label": "22",
+      "cites": "22",
+      "aria": "Source 22, layer 2",
+      "inTable": true,
+      "cellText": "22"
+    },
+    {
+      "id": "saved-answer-13-0-citation-8",
+      "label": "8",
+      "cites": "8",
+      "aria": "Source 8, layer 2",
+      "inTable": true,
+      "cellText": "8"
+    },
+    {
+      "id": "saved-answer-15-0-citation-10",
+      "label": "10",
+      "cites": "10",
+      "aria": "Source 10, layer 3",
+      "inTable": true,
+      "cellText": "10"
+    },
+    {
+      "id": "saved-answer-17-0-citation-11",
+      "label": "11",
+      "cites": "11",
+      "aria": "Source 11, layer 3",
+      "inTable": true,
+      "cellText": "11"
+    },
+    {
+      "id": "saved-answer-17-1-citation-14",
+      "label": "14",
+      "cites": "14",
+      "aria": "Source 14, layer 3",
+      "inTable": true,
+      "cellText": "14"
+    },
+    {
+      "id": "saved-answer-17-2-citation-17",
+      "label": "17",
+      "cites": "17",
+      "aria": "Source 17, layer 3",
+      "inTable": true,
+      "cellText": "17"
+    },
+    {
+      "id": "saved-answer-17-3-citation-20",
+      "label": "20",
+      "cites": "20",
+      "aria": "Source 20, layer 3",
+      "inTable": true,
+      "cellText": "20"
+    },
+    {
+      "id": "saved-answer-17-4-citation-23",
+      "label": "23",
+      "cites": "23",
+      "aria": "Source 23, layer 3",
+      "inTable": true,
+      "cellText": "23"
+    }
+  ],
+  "saved_390_marker_ids": [
+    "saved-answer-0-citation-1",
+    "saved-answer-0-citation-2",
+    "saved-answer-0-citation-3",
+    "saved-answer-0-citation-4",
+    "saved-answer-0-citation-1",
+    "saved-answer-0-citation-2",
+    "saved-answer-0-citation-3",
+    "saved-answer-0-citation-4",
+    "saved-answer-1-citation-24",
+    "saved-answer-3-citation-24",
+    "saved-answer-5-0-citation-1",
+    "saved-answer-5-1-citation-2",
+    "saved-answer-5-2-citation-3",
+    "saved-answer-5-3-citation-4",
+    "saved-answer-7-0-citation-5",
+    "saved-answer-7-0-citation-9",
+    "saved-answer-9-0-citation-6",
+    "saved-answer-9-1-citation-12",
+    "saved-answer-9-2-citation-15",
+    "saved-answer-9-3-citation-18",
+    "saved-answer-9-4-citation-21",
+    "saved-answer-11-0-citation-7",
+    "saved-answer-11-1-citation-13",
+    "saved-answer-11-2-citation-16",
+    "saved-answer-11-3-citation-19",
+    "saved-answer-11-4-citation-22",
+    "saved-answer-13-0-citation-8",
+    "saved-answer-15-0-citation-10",
+    "saved-answer-17-0-citation-11",
+    "saved-answer-17-1-citation-14",
+    "saved-answer-17-2-citation-17",
+    "saved-answer-17-3-citation-20",
+    "saved-answer-17-4-citation-23"
+  ],
+  "saved_390_marker_row": {
+    "marker": "saved-answer-5-0-citation-1",
+    "label": "1",
+    "opened": true,
+    "card_text": "[1] L2 · live\nMedGen C0011860\nOpen the record",
+    "box": {
+      "x": 94,
+      "y": 760.75,
+      "width": 280,
+      "height": 91.625
+    },
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "overflow": 0
+  }
+}

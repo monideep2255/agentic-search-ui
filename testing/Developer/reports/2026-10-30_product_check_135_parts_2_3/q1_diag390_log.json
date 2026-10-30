@@ -1,0 +1,344 @@
+[
+ {
+  "id": "saved-answer-0-citation-1",
+  "at": {
+   "x": 148,
+   "y": 290
+  },
+  "expanded": "true",
+  "card": {
+   "y": 307,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-0-citation-2",
+  "at": {
+   "x": 186,
+   "y": 313
+  },
+  "expanded": "true",
+  "card": {
+   "y": 330,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-0-citation-3",
+  "at": {
+   "x": 140,
+   "y": 336
+  },
+  "expanded": "true",
+  "card": {
+   "y": 353,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-0-citation-4",
+  "at": {
+   "x": 211,
+   "y": 360
+  },
+  "expanded": "true",
+  "card": {
+   "y": 377,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-1-citation-5",
+  "at": {
+   "x": 286,
+   "y": 490
+  },
+  "expanded": "true",
+  "card": {
+   "y": 507,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-1-citation-9",
+  "at": {
+   "x": 304,
+   "y": 513
+  },
+  "expanded": "true",
+  "card": {
+   "y": 530,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-3-citation-23",
+  "at": {
+   "x": 113,
+   "y": 631
+  },
+  "expanded": "true",
+  "card": {
+   "y": 648,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-5-0-citation-1",
+  "at": {
+   "x": 202,
+   "y": 833
+  },
+  "expanded": "false",
+  "card": null
+ },
+ {
+  "id": "saved-answer-5-1-citation-2",
+  "at": {
+   "x": 345,
+   "y": 481
+  },
+  "expanded": "true",
+  "card": {
+   "y": 498,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-5-2-citation-3",
+  "at": {
+   "x": 266,
+   "y": 545
+  },
+  "expanded": "true",
+  "card": {
+   "y": 562,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-5-3-citation-4",
+  "at": {
+   "x": 322,
+   "y": 609
+  },
+  "expanded": "true",
+  "card": {
+   "y": 626,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-7-0-citation-5",
+  "at": {
+   "x": 80,
+   "y": 730
+  },
+  "expanded": "true",
+  "card": {
+   "y": 747,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-7-0-citation-9",
+  "at": {
+   "x": 94,
+   "y": 730
+  },
+  "expanded": "true",
+  "card": {
+   "y": 747,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-9-0-citation-6",
+  "at": {
+   "x": 184,
+   "y": 416
+  },
+  "expanded": "true",
+  "card": {
+   "y": 433,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-9-1-citation-11",
+  "at": {
+   "x": 104,
+   "y": 502
+  },
+  "expanded": "true",
+  "card": {
+   "y": 519,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-9-2-citation-14",
+  "at": {
+   "x": 252,
+   "y": 588
+  },
+  "expanded": "true",
+  "card": {
+   "y": 605,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-9-3-citation-17",
+  "at": {
+   "x": 272,
+   "y": 674
+  },
+  "expanded": "true",
+  "card": {
+   "y": 691,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-9-4-citation-20",
+  "at": {
+   "x": 197,
+   "y": 782
+  },
+  "expanded": "true",
+  "card": {
+   "y": 799,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-11-0-citation-7",
+  "at": {
+   "x": 35,
+   "y": 416
+  },
+  "expanded": "true",
+  "card": {
+   "y": 433,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-11-1-citation-12",
+  "at": {
+   "x": 116,
+   "y": 502
+  },
+  "expanded": "true",
+  "card": {
+   "y": 519,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-11-2-citation-15",
+  "at": {
+   "x": 307,
+   "y": 588
+  },
+  "expanded": "true",
+  "card": {
+   "y": 605,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-11-3-citation-18",
+  "at": {
+   "x": 114,
+   "y": 674
+  },
+  "expanded": "true",
+  "card": {
+   "y": 691,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-11-4-citation-21",
+  "at": {
+   "x": 115,
+   "y": 761
+  },
+  "expanded": "true",
+  "card": {
+   "y": 778,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-13-0-citation-8",
+  "at": {
+   "x": 80,
+   "y": 417
+  },
+  "expanded": "true",
+  "card": {
+   "y": 434,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-15-0-citation-10",
+  "at": {
+   "x": 322,
+   "y": 559
+  },
+  "expanded": "true",
+  "card": {
+   "y": 576,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-15-1-citation-13",
+  "at": {
+   "x": 110,
+   "y": 667
+  },
+  "expanded": "true",
+  "card": {
+   "y": 684,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-15-2-citation-16",
+  "at": {
+   "x": 254,
+   "y": 796
+  },
+  "expanded": "false",
+  "card": null
+ },
+ {
+  "id": "saved-answer-15-3-citation-19",
+  "at": {
+   "x": 148,
+   "y": 546
+  },
+  "expanded": "true",
+  "card": {
+   "y": 563,
+   "h": 92
+  }
+ },
+ {
+  "id": "saved-answer-15-4-citation-22",
+  "at": {
+   "x": 244,
+   "y": 676
+  },
+  "expanded": "true",
+  "card": {
+   "y": 693,
+   "h": 92
+  }
+ }
+]

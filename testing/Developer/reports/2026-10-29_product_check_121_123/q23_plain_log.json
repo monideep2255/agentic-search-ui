@@ -1,0 +1,70 @@
+{
+  "question": "What is rs334 and what condition is it associated with?",
+  "mode": "Plain language",
+  "tag": "q23_plain",
+  "firstWidth": 1280,
+  "info": [
+    {
+      "width": 1280,
+      "name": "About Mendel",
+      "box": {
+        "x": 907,
+        "y": 56.796875,
+        "width": 280,
+        "height": 159.90625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 1280,
+      "name": "About Trust signals",
+      "box": {
+        "x": 574.765625,
+        "y": 691.859375,
+        "width": 280,
+        "height": 326.140625
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    },
+    {
+      "width": 390,
+      "name": "About Trust signals",
+      "box": {
+        "x": 16,
+        "y": 439.59375,
+        "width": 358,
+        "height": 267.453125
+      },
+      "overflow": {
+        "sw_minus_iw": 0,
+        "sw_minus_cw": 0
+      },
+      "within": true
+    }
+  ],
+  "shots": [],
+  "modePressed": "true",
+  "seconds": 7.508,
+  "headings": [
+    {
+      "text": "Note: no written summary could be checked against the records, so this answer lists the records found with their sources",
+      "shown": "none"
+    }
+  ],
+  "overflow_1280": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  },
+  "overflow_390": {
+    "sw_minus_iw": 0,
+    "sw_minus_cw": 0
+  }
+}

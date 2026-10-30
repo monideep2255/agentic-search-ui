@@ -20,7 +20,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-10-29.
+Last updated: 2026-10-30.
 
 ## Table of contents
 
@@ -68,7 +68,7 @@ Last updated: 2026-10-29.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-29 that begins "The local branch `chore/replan-vespa-first`", the last row at the checkpoint of 2026-10-29. None of the rows read since the checkpoint of 2026-10-25 changes a registered document's shape or a process this skill runs: they record the branches of the closed pull requests, the filelock plan, the Vespa trial and its closing, the accepted filelock advisories in gate 6, and the deleted replan branch.
+Guarded through the DECISIONS.md row dated 2026-10-30 that begins "Card 149 (#320) merges with its fix-round status note reverted", the last row at the checkpoint of the overnight run of 2026-10-29 to 30. None of the rows read since the checkpoint of 2026-10-29 changes a registered document's shape or a process this skill runs: they record the owner's calls for the overnight run, the cards held for the owner, card 119's ten papers, card 135's source names, and the parked and reverted work.
 
 ## Why the registry lives here
 

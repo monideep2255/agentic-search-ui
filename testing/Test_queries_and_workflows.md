@@ -529,6 +529,7 @@ What you should see:
 - A gene question shows the right gene's OMIM entry, and never another gene's.
 - OMIM 138079, glucokinase, is among the sources.
 - No other gene's OMIM record, such as MAP4K2, appears.
+- No source is another species' gene record cited as GCK: never "Gck" linked to NCBI Gene 24385, the rat gene (card 149). The same holds for `What does KRAS do?`: never NCBI Gene 24525, the rat KRAS.
 - Why it matters: a clinician looking up one gene and getting a citation for a different gene is a wrong record dressed up as a right one, which is the worst kind of mistake this product can make.
 
 ### 22. CFTR variants still answer
@@ -718,7 +719,7 @@ What you should see:
 
 - The count line reads "Found 2 variant records for rs334 and rs6025: rs334 [1] and rs6025 [2]."
 - For query 108 the count line counts papers ("Found 5 papers for BRCA1.") and does not paste titles with doubled full stops.
-- Known, card 121: the table headings still read "PUBMED RECORDS FOUND" and "VARIANT RECORD RECORDS FOUND".
+- The variant table's heading reads "VARIANT RECORDS FOUND", with "record" once (card 121). The papers table's heading reads "PUBMED RECORDS FOUND".
 - Known, card 131, part 2: a paper's marker can sit after the subject ("for BRCA1 [2]: BRCA1 [1]").
 - Why it matters: the count line is the one number a person checks, so it must say what was found, once, in words they use.
 
@@ -1750,6 +1751,7 @@ Queries to try:
 What you should see:
 
 - `recent papers on statins` asks "How far back should I search?" with the last 12 months, the last 5 years and the last 10 years. Picking 5 years returns only papers from those years.
+- A picked window lists up to 10 papers from it, each with its title, and the count line counts them. The written summary draws on the best-matching papers that have an abstract (card 119). `recent papers on cystic fibrosis` with the last 5 years has a written summary, about the disease.
 - `papers on statins since 2022` is not asked back.
 - `recent-onset diabetes treatment` is not asked back: "recent" there describes the disease, not the papers.
 - Known: after develop restarts or redeploys, a choice clicked on an earlier question searches without the year limit.

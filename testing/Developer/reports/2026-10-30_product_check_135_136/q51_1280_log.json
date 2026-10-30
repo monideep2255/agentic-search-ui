@@ -1,0 +1,32 @@
+{
+  "had_to_sign_in": true,
+  "signed_in_on_load": true,
+  "rail_visible_on_load": true,
+  "rail_items": [
+    "+ New search",
+    "",
+    "What does GCK do? 18 sources cited · Oct 30",
+    "Which diseases are associated with GCK? 22 sources cited · Oct 29"
+  ],
+  "saved_answer_shown": true,
+  "saved_header": [
+    "SAVED ANSWER · ASKED OCT 29, 2026, 11:59 PM",
+    "Which diseases are associated with GCK?",
+    "Run again",
+    "",
+    "GCK is associated with four diseases: Type 2 diabetes mellitus [1], Maturity-onset diabetes of the young type 2 [2], Hyperinsulinemic hypoglycemia, familial, 3 [3], and Permanent neonatal diabetes mellitus 1 [4]. Found 4 disease records for GCK: Type 2 diabetes mellitus [1], Maturity-onset diabetes of the young type 2 [2], Hyperinsulinemic hypoglycemia, familial, 3 [3] and Permanent neonatal diabetes mellitus 1 [4].",
+    ""
+  ],
+  "run_again_button": 0,
+  "rail_visible_after_pick": true,
+  "collapsed_strip_visible": true,
+  "rail_hidden": true,
+  "rail_back": true,
+  "signed_in_after_reload": true,
+  "items_after_reload": [
+    "+ New search",
+    "",
+    "What does GCK do? 18 sources cited · Oct 30",
+    "Which diseases are associated with GCK? 22 sources cited · Oct 29"
+  ]
+}

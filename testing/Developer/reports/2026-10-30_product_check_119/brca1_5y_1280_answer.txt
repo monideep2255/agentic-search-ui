@@ -1,0 +1,74 @@
+QUESTION: recent papers on BRCA1
+MODE: Researcher
+CHOICE: last 5 years
+
+▶
+recent papers on BRCA1
+0 tool calls · 0 sources cited
+Researcher
+Show answer
+Recent papers on BRCA1 from the last 5 years?
+New search
+
+✓ Answered16.4s · 13 tool calls · 22 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 9 papers for BRCA1.⁠1–9
+
+Pre-cancer-associated fibroblasts producing protumorigenic factors such as MMP3 contribute to BRCA1-driven tumorigenesis in vivo.⁠24
+
+MALE CARRIERS AND CLINICAL MANAGEMENT
+
+Half of all carriers of inherited BRCA1/2 pathogenic variants are male, yet their cancer risks remain underrecognized despite convincing evidence of increased risk for prostate, pancreatic, and breast cancers in males.⁠25 From the gene record "BRCA1": Mutations in BRCA1 are responsible for approximately 40% of inherited breast cancers and more than 80% of inherited breast and ovarian cancers.⁠26
+
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+BRCA1: An Endocrine and Metabolic Regulator.	PMID:35432218	⁠1
+BRCA1 protects against its own fragility.	PMID:36270245	⁠2
+Preneoplastic stromal cells promote BRCA1-mediated breast tumorigenesis.	PMID:36914836	⁠3
+The Tumor Suppressor BRCA1/2, Cancer Susceptibility and Genome Instability in Gynecological and Mammary Cancers.	PMID:37774066	⁠4
+EXO1 protects BRCA1-deficient cells against toxic DNA lesions.	PMID:38266640	⁠5
+BRCA1, BRCA2, and Associated Cancer Risks and Management for Male Patients: A Review.	PMID:39052257	⁠6
+Promotion of DNA end resection by BRCA1-BARD1 in homologous recombination.	PMID:39261729	⁠7
+BRCA1 and BRCA2: from cancer susceptibility to synthetic lethality.	PMID:39510841	⁠8
+BRCA1 & BRCA2 methylation as a prognostic and predictive biomarker in cancer: Implementation in liquid biopsy in the era of precision medicine.	PMID:39643918	⁠9
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+BRCA1	NCBIGene:672	⁠10, 13
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_007294.4(BRCA1):c.5243_5277+2788del	VCV000267740	⁠11
+NM_007294.4(BRCA1):c.5277+2916_5277+2946delinsGG	VCV000267741	⁠16
+NG_005905.2:g.(147057_150288)_(160933_166866)del	VCV000373892	⁠18
+NM_007294.4(BRCA1):c.2145C>G (p.Thr715=)	VCV004848411	⁠20
+NM_007294.4(BRCA1):c.2130del (p.Lys711fs)	VCV004851359	⁠22
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+BRCA1 DNA REPAIR-ASSOCIATED PROTEIN; BRCA1	omim 113705	⁠12
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Germline BRCA1 and BRCA2 Mutations in Jewish Women Affected by Breast Cancer	NCT00590109	COMPLETED	⁠14
+BRCA1 Haploinsufficiency and Gene Expression	NCT00597987	COMPLETED	⁠17
+Study to Evaluate Treatment Customized According to RAP80 and BRCA1 in Patients With Advanced Lung Carcinoma	NCT00617656	TERMINATED	⁠19
+Letrozole in Preventing Breast Cancer in Postmenopausal Women With a BRCA1 or BRCA2 Mutation	NCT00673335	COMPLETED	⁠21
+Recombinant Human Chorionic Gonadotropin in Preventing Breast Cancer in Premenopausal Women With BRCA1 Mutations	NCT00700778	TERMINATED	⁠23
+PUBLICATION RECORDS FOUND
+PAPER	IDENTIFIER	
+BRCA1- and BRCA2-Associated Hereditary Breast and Ovarian Cancer	PMID:20301425	⁠15
+▶
+SOURCES
+22
+Based on 22 sources cited from PubMed, ClinicalTrials.gov, ClinVar and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
