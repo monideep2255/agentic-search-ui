@@ -420,6 +420,82 @@ def test_card149_plan_carries_expected_gene_id_only_for_a_gene() -> None:
     assert all(c.expected_gene_id == "" for c in stray)
 
 
+async def _gck_run(monkeypatch: pytest.MonkeyPatch, resolved: str) -> list[Any]:
+    """The compiled graph for a GCK question, PubTator3 answering only with
+    the rat record (24385), the gene resolving to `resolved`."""
+    _ModelSpy(monkeypatch, [{"text": "GCK", "entity_type": "gene"}])
+    asked = _install_lookup(monkeypatch)
+    _KNOWN_OVERRIDE = {"GCK": resolved}
+
+    async def _resolve(symbol: str, **kwargs: Any) -> str | None:
+        asked.append(symbol.strip().upper())
+        return _KNOWN_OVERRIDE.get(symbol.strip().upper())
+
+    monkeypatch.setattr(graph_module, "resolve_symbol_to_curie", _resolve)
+    rat = PubtatorAnnotateOutput(
+        status="ok", mode="entity_lookup", entities=[_gene_entity("Gck", "24385", "@GENE_GCK")]
+    )
+    _install_tools(monkeypatch, pubtator=rat)
+    events = await _events(_GCK_QUESTION)
+    assert any(e.type == "plan" for e in events), "populate-check: the run planned nothing"
+    return events
+
+
+_RAT_URL = "https://www.ncbi.nlm.nih.gov/gene/24385"
+
+
+def _cited_urls(events: list[Any]) -> list[str]:
+    return [e.payload["source_url"] for e in events if e.type == "citation"]
+
+
+def _pubtator_summaries(events: list[Any]) -> list[str]:
+    summaries = [
+        e.payload["summary"] for e in events
+        if e.type == "tool_result" and e.payload["tool"] == "pubtator_annotate"
+    ]
+    assert summaries, "populate-check: PubTator3 was not called"
+    return summaries
+
+
+@pytest.mark.asyncio
+async def test_card149_end_to_end_the_rat_record_is_not_cited_for_a_resolved_gene(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Guards the plan_node hop (id read from the resolved CURIE) and the Act
+    hop (the planned id handed to the shaper): cutting either brings 24385 back."""
+    events = await _gck_run(monkeypatch, "NCBIGene:2645")
+    assert _RAT_URL not in _cited_urls(events)
+
+
+@pytest.mark.asyncio
+async def test_card149_a_non_numeric_resolved_id_behaves_as_before(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no numeric id to compare, the old name rule runs and the rat
+    record is kept, exactly as on develop (populate-check for the test above)."""
+    events = await _gck_run(monkeypatch, "NCBIGene:abc")
+    assert _RAT_URL in _cited_urls(events)
+    assert not any("set aside" in text for text in _pubtator_summaries(events))
+
+
+@pytest.mark.asyncio
+async def test_card149_set_aside_entities_are_said_not_reported_as_nothing_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events = await _gck_run(monkeypatch, "NCBIGene:2645")
+    assert "empty: 0 record(s); 1 record(s) set aside: not the gene asked about" in (
+        _pubtator_summaries(events)
+    )
+
+
+def test_card149_no_set_aside_note_when_nothing_was_set_aside() -> None:
+    assert "set_aside" not in _shape_pubtator([], "GCK", "2645")
+    human = _gene_entity("GCK", "2645", "@GENE_GCK")
+    assert "set_aside" not in _shape_pubtator([human], "GCK", "2645")
+    shaped = _shape_pubtator([_gene_entity("Gck", "24385", "@GENE_GCK"), human], "GCK", "2645")
+    assert shaped["set_aside"] == 1
+
+
 # ---------------------------------------------------------------------------
 # Concurrency and graceful degradation, driven through act_node directly.
 # ---------------------------------------------------------------------------

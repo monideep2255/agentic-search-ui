@@ -43,3 +43,20 @@ Results:
 
 - When a gene was resolved and PubTator3 holds no entity with that id, the call reports `empty`, the same state as an unknown symbol.
 - The existing frog test (no expected id) passes unchanged.
+
+## Fix round
+
+Fix round for the judge and adversary reports of 2026-10-30 (`judge.md`, `adversary.md`). Files: `src/system_03_search_agent/core/graph.py` and `tests/system_03_search_agent/core/test_layer_handoff.py`.
+
+| Id | Status | What changed |
+|---|---|---|
+| J-149-01 | Fixed | End-to-end test through the compiled graph (GCK question, PubTator3 stub returns only the rat record 24385): the rat record is not cited. Mutation M1 (`gene_id = ""`) turns it red; M2 (shaper call without `planned.expected_gene_id`) turns it red. Both restored. |
+| J-149-02 | Fixed | End-to-end test with a non-numeric resolved id (`NCBIGene:abc`): behaves as develop (rat record kept, no "set aside" note). Mutation M7 (`gene_id = tail`) turns it red. Restored. |
+| J-149-03 | Fixed | When PubTator3 returned entities and every one was set aside because none is the asked gene, the step summary reads `empty: 0 record(s); N record(s) set aside: not the gene asked about`, not only "0 record(s)". The shaper adds a `set_aside` count; Act appends it to the summary. Nothing set aside is cited. Tests: the exact summary through the compiled graph, and the count in the shaper (none when nothing was set aside). A mutation that drops the note turns both red. |
+
+Results: `test_layer_handoff.py` 35 passed; with `test_pubtator_act_cap.py` and `test_graph.py` 291 passed; `ruff check .` clean; isort per gate02 clean.
+
+Fix round, left:
+
+- Every A-149 finding (all on other paths, filed as cards 155 and 156) is left untouched.
+- Show work still prints `${tool} — ${result_count} results` (`frontend/src/hooks/useRunView.ts`), so the trace line itself reads "0 results"; the honest wording is in the tool_result summary only. The frontend is outside this round's file fence.
