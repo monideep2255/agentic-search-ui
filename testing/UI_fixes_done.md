@@ -225,6 +225,7 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 139, part: notes 1 and 2 | Notes sit under the records on every surface and never say "listed below"; "this answer shows N" counts what the answer shows, and never "shows 0" | Live, awaiting your retest | 104 |
 | card 134 | Papers from the enrichment layer show their PubMed title instead of "28340353 PMID:28340353"; a paper with no usable title shows "PMID:n" | Live, awaiting your retest | 117, 1 |
 | card 133 and card 137, part 1 | A gene two sources both found is one row naming both, so no gene shows twice and the list total, sources count, Found and Based on lines agree | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-22_product_check_card133/report.md`) | 24, 118 |
+| card 148 | A Vespa search index for FIND and DISCOVER | Not pursued for now, your call of 2026-10-29; closed unbuilt, its notes local in `docs/retrieval-engine-discussion/` |  |
 
 ## What is done, in summary
 
@@ -605,6 +606,13 @@ Moved word for word to the To do section of `testing/UI_fix_plan.md` on 2026-09-
 | 12.17 | A good question sometimes fails at the think step and shows a refusal | RAISED 2026-09-24 from the live runs. NOT STARTED, nobody on it | Seen twice in about forty live runs over 2026-09-23 and 2026-09-24: `Does coffee help make exercise more effective?` and `is there a trial recruiting for melanoma`, both at researcher depth, each failing with "the plan tier's response did not match the think classification schema". Neither question reaches 12.3's ask-back, which only reads one to three words, so tonight's work did not cause it. The reader sees a refusal for a question the product answers on every other run. Evidence: `testing/Developer/reports/2026-09-24_no_hardcoding/live_runs/` |
 
 ## Session history
+
+### 2026-10-29, in one table
+
+| Item | What happened | Where it stands |
+|---|---|---|
+| Card 148, a Vespa search index for FIND and DISCOVER | Not pursued for now, by your call of the day; nothing was built, bought or pushed | Closed unbuilt. The review notes and the parked plan stay local in `docs/retrieval-engine-discussion/` (gitignored) |
+| Cards 56, 129, 145, 116, 48, 122, 37 | The fold into card 148 was only on an unpushed branch, now dropped | Each stays its own card in To do, as before |
 
 ### 2026-10-25, in one table
 

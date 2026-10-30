@@ -185,3 +185,6 @@ token.json
 .netrc
 .pypirc
 .claude/settings.local.json
+
+# Local notes for the Vespa idea (card 148, not pursued, 2026-10-29): kept on disk, never committed.
+docs/retrieval-engine-discussion/

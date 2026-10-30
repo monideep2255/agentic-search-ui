@@ -2,7 +2,7 @@
 
 The current state a fresh session needs, and nothing else. `/phase-checkpoint` rewrites it in place at every session end and keeps it to about 4 KB. Earlier versions, and the setup steps for a new laptop, are in `docs/build/Handoff_history.md`.
 
-Last updated: 2026-10-25.
+Last updated: 2026-10-29.
 
 ## Table of contents
 
@@ -18,6 +18,7 @@ Last updated: 2026-10-25.
 - CI: the frontend and Python audit gates are red on every pull request, from new advisories for `fast-uri`, `undici` and `filelock`. The owner approved one dependency pull request on 2026-10-25 (fast-uri 3.1.9 and undici 7.30.1 in the frontend lockfile, filelock 4.2.1 pinned after a check that huggingface_hub accepts it); it is not built yet.
 - Pull requests: card 139's note 3 (#301, draft) stays open for rework. The five other overnight drafts were closed on 2026-10-25 and their branches removed; each is restorable from its closed pull request.
 - Locally only `develop` and #301's branch, with its worktree in `~/s3-worktrees/card139b`. On GitHub `develop`, `production` and #301's branch.
+- Vespa is not pursued for now (owner, 2026-10-29): card 148 closed unbuilt, and its notes and parked plan stay local in `docs/retrieval-engine-discussion/` (gitignored).
 - Nothing is being built.
 
 ## What awaits the product owner
