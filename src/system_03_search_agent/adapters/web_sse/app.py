@@ -89,7 +89,7 @@ from system_03_search_agent.feedback.history import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     get_saved_answer,
-    list_history,
+    list_history_page,
 )
 from system_03_search_agent.harness.cost_control import (
     anon_daily_run_cap,
@@ -945,17 +945,17 @@ class HistoryResponse(BaseModel):
     with the query that produced it, not a second enforcement point.
 
     `count` is `len(items)`, the size of THIS page, never a total across
-    every row the caller has (F-4.13-A-09). There is no cursor
-    (`## Coverage`, `tracker/phase_4.13.md`), so a caller holding more rows
-    than `limit` cannot tell "you have exactly `count` searches" from "here
-    are `count` of your searches" from this response alone, and `count`'s
-    own NAME invites the first, wrong reading. Stated here rather than
-    fixed by adding a second query for a true total, which A-09's own
-    finding offers as the alternative remedy and this fix does not take:
-    doing so is a real product improvement (pagination or a running total)
-    outside the shape of a same-session security and correctness fix, so
-    the honest floor taken here is naming what `count` actually is rather
-    than leaving the field to keep inviting the wrong reading silently.
+    every row the caller has (F-4.13-A-09). Card 136.1 closed the gap this
+    paragraph used to record ("there is no cursor"): `has_more` below says
+    whether an older page exists, and `?before=<trace_id>` fetches it. Still
+    no running total, and `count` still names the page, not the account.
+
+    `has_more` (card 136.1) is True when at least one of this caller's own
+    rows is older than the last row the server read for this page. It is
+    computed from the rows the database returned, before the per-row guard
+    below, so a withheld row never hides an older page. Additive per
+    `.claude/rules/system-design-patterns.md` pattern 10: it defaults to
+    False, so a client that never reads it sees the response it always did.
 
     `omitted_count` (F-4.13-A-02's fix) is how many of this caller's own
     rows were left OUT of `items`, for either of two reasons. The first is
@@ -982,11 +982,18 @@ class HistoryResponse(BaseModel):
     items: list[HistoryItem] = Field(default_factory=list, max_length=MAX_LIMIT)
     count: int = Field(..., ge=0)
     omitted_count: int = Field(0, ge=0)
+    has_more: bool = False
+
+
+#: The query parameters `GET /v1/history` refuses to see twice. `before`
+#: joined `limit` with card 136.1, for the same reason A-08 gives below.
+_SINGLE_OCCURRENCE_HISTORY_PARAMS = ("limit", "before")
 
 
 def _reject_duplicate_limit(request: Request) -> None:
     """F-4.13-A-08's fix: refuse `?limit=...&limit=...` rather than
-    silently resolving it to one occurrence's value.
+    silently resolving it to one occurrence's value. Card 136.1 applies the
+    same refusal to `?before=...&before=...`.
 
     Measured before this fix: FastAPI's scalar `Query(...)` coercion reads
     only the LAST `limit` occurrence in the query string and validates that
@@ -1006,15 +1013,16 @@ def _reject_duplicate_limit(request: Request) -> None:
     only place that can see all of them is the raw `Request` before
     FastAPI's own binding, which is exactly what this function reads.
     """
-    occurrences = request.query_params.getlist("limit")
-    if len(occurrences) > 1:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=(
-                f"send exactly one `limit` query parameter, got "
-                f"{len(occurrences)}: {occurrences}"
-            ),
-        )
+    for name in _SINGLE_OCCURRENCE_HISTORY_PARAMS:
+        occurrences = request.query_params.getlist(name)
+        if len(occurrences) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    f"send exactly one `{name}` query parameter, got "
+                    f"{len(occurrences)}: {[value[:80] for value in occurrences]}"
+                ),
+            )
 
 
 # T-4.13-02: the read path over build phase 4.6's `interactions` substrate.
@@ -1038,14 +1046,44 @@ def _reject_duplicate_limit(request: Request) -> None:
 # `_reject_duplicate_limit` (F-4.13-A-08) runs first, against the raw
 # request, because by the time `limit` above is bound every occurrence but
 # the last is already gone.
+#
+# Card 136.1: `before`, the `trace_id` of the last row the caller already
+# holds, asks for the next older page. It comes from the caller, so it is
+# treated as untrusted input:
+#
+# - Its length is bounded HERE, `min_length=1, max_length=64` (the write
+#   path's own `trace_id` bound), so an empty or over-long value is a 422
+#   that names the bound and never reaches a query.
+# - A control character (a NUL byte above all, which PostgreSQL text cannot
+#   hold and the driver would raise on as a 500) is refused by
+#   `list_history_page`'s own `ValueError`, turned into the same 422 below.
+#   The message says what to send and nothing about whether any row exists.
+# - A well-formed value that is not one of THIS caller's own searches, a
+#   stranger's `trace_id` or one that never existed, is not an error: it is
+#   an empty page with `has_more` False, identical for both causes, so the
+#   response never confirms that someone else's search exists. The owner
+#   filter is inside `list_history_page`'s cursor lookup, not here.
 @app.get("/v1/history", response_model=HistoryResponse)
 def get_v1_history(
     request: Request,
     limit: int = FastAPIQuery(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    before: str | None = FastAPIQuery(None, min_length=1, max_length=64),
     caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
 ) -> HistoryResponse:
     _reject_duplicate_limit(request)
-    entries = list_history(owner_id=caller.owner_id, limit=limit)
+    try:
+        page = list_history_page(owner_id=caller.owner_id, limit=limit, before=before)
+    except ValueError as error:
+        if before is None:
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "`before` must be the `trace_id` of one of your own searches, "
+                "as returned in `items`"
+            ),
+        ) from error
+    entries = page.entries
     # F-4.13-A-02's fix. `HistoryItem(...)` used to be constructed eagerly
     # inside the `HistoryResponse(...)` call below, so ONE row that no
     # longer fit this response model's own bounds raised `ValidationError`
@@ -1092,7 +1130,9 @@ def get_v1_history(
             )
         except ValidationError:
             omitted_count += 1
-    return HistoryResponse(items=items, count=len(items), omitted_count=omitted_count)
+    return HistoryResponse(
+        items=items, count=len(items), omitted_count=omitted_count, has_more=page.has_more
+    )
 
 
 #: The four stored `audience_depth` values folded onto the two this wire

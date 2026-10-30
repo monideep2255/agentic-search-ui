@@ -271,6 +271,15 @@ function nextLocalHistoryId(): string {
  * `feedback/history.py`; `fetchHistory` sends no limit). A re-ask keeps the
  * in-tab list to it, dropping the oldest, so the list before a reload has
  * the rows the list after one will.
+ *
+ * Card 136.1: only while the person has not loaded an older page. A row
+ * this trim drops is still reachable, because the trim also turns "Show
+ * older searches" on, and that page starts just below the new last row.
+ * Once they have loaded an older page, a new ask prepends and drops
+ * nothing: they asked to see those rows. The list is then bounded by what
+ * they chose to load, twenty rows per press, plus the searches asked in
+ * this tab, which the daily allowance bounds (100 a day for an account).
+ * Sign-out empties it.
  */
 const HISTORY_LIST_LIMIT = 20;
 
@@ -463,6 +472,22 @@ export function App() {
   const [runId, setRunId] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(hasAcceptedDisclaimer);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  /**
+   * Card 136.1. Whether the server holds searches older than the rail's
+   * last row, from the latest page's `has_more`; true as well after a
+   * re-ask's trim drops a row. Drives "Show older searches".
+   */
+  const [historyHasOlder, setHistoryHasOlder] = useState(false);
+  const [olderHistoryStatus, setOlderHistoryStatus] = useState<"idle" | "loading" | "failed">("idle");
+  /** True once an older page has been merged in; a re-ask then trims nothing. */
+  const historyPagedOlder = useRef(false);
+  /** The in-flight older-page fetch, aborted on sign-out or a token change. */
+  const olderHistoryAbort = useRef<AbortController | null>(null);
+  /** The rail as last rendered, read by `ask` and the older-page cursor. */
+  const historyRef = useRef<HistoryEntry[]>([]);
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
   /**
    * Item 10.2. The row `savedAnswer` view is currently showing, and whether
    * its fetch is still in flight. `savedAnswerRequestId` guards against a
@@ -716,9 +741,56 @@ export function App() {
     fetchHistory(token, { signal: controller.signal })
       .then((response) => {
         setHistory((current) => mergeServerHistory(current, response.items));
+        // Card 136.1. The newest page says whether an older one exists. Once
+        // the person has paged older, the latest older page is the one that
+        // knows, so a token rotation's refetch of the newest page must not
+        // bring the control back after they reached the end.
+        if (!historyPagedOlder.current) setHistoryHasOlder(response.has_more === true);
       })
       .catch(() => undefined);
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      // An older page fetched under the previous token belongs to it.
+      olderHistoryAbort.current?.abort();
+    };
+  }, [token]);
+
+  /**
+   * Card 136.1: "Show older searches". Fetches the page older than the
+   * rail's last row the server knows, by that row's `trace_id`, and appends
+   * it through `mergeServerHistory`, which skips any row already shown.
+   *
+   * The cursor is the last row restored from the server (its `id` IS its
+   * `trace_id`), falling back to the last row carrying a run id. The server
+   * scopes the cursor to this caller, so the only thing a wrong cursor can
+   * cost is an empty page, never another person's rows.
+   *
+   * Aborted, and never merged, if the person signs out or the token changes
+   * while it is in flight, the same rule the seeding effect keeps, so a
+   * second identity can never inherit the first one's older page.
+   */
+  const showOlderSearches = useCallback(() => {
+    if (token === null) return;
+    const rows = historyRef.current;
+    const lastRestored = [...rows].reverse().find((row) => row.traceId !== undefined && row.id === row.traceId);
+    const cursor = lastRestored?.traceId ?? [...rows].reverse().find((row) => row.traceId)?.traceId;
+    if (cursor === undefined) return;
+    olderHistoryAbort.current?.abort();
+    const controller = new AbortController();
+    olderHistoryAbort.current = controller;
+    setOlderHistoryStatus("loading");
+    fetchHistory(token, { signal: controller.signal, before: cursor })
+      .then((response) => {
+        if (controller.signal.aborted) return;
+        historyPagedOlder.current = true;
+        setHistory((current) => mergeServerHistory(current, response.items));
+        setHistoryHasOlder(response.has_more === true);
+        setOlderHistoryStatus("idle");
+      })
+      .catch(() => {
+        if (olderHistoryAbort.current !== controller) return;
+        setOlderHistoryStatus(controller.signal.aborted ? "idle" : "failed");
+      });
   }, [token]);
 
   /**
@@ -857,6 +929,13 @@ export function App() {
     setStopPress(null);
     setThread([]);
     setHistory([]);
+    // Card 136.1: the older pages, and any still loading, were the previous
+    // account's.
+    olderHistoryAbort.current?.abort();
+    olderHistoryAbort.current = null;
+    historyPagedOlder.current = false;
+    setHistoryHasOlder(false);
+    setOlderHistoryStatus("idle");
     setFlagged([]);
     setDispatchError(null);
     // T-4.10-08: the allowance belonged to the account that just
@@ -1444,7 +1523,16 @@ export function App() {
       // them back (11 rows fell to 5). Each search is its own row on the
       // server (`mergeServerHistory` keys on `traceId`, never on text), so
       // the list before a reload now matches the list after one.
-      setHistory((current) => [{ id: entryId, question }, ...current].slice(0, HISTORY_LIST_LIMIT));
+      //
+      // Card 136.1: the trim applies only while no older page is loaded, and
+      // a row it drops turns "Show older searches" on so it stays reachable.
+      // Once older pages are loaded, nothing is dropped.
+      if (historyPagedOlder.current) {
+        setHistory((current) => [{ id: entryId, question }, ...current]);
+      } else {
+        if (historyRef.current.length >= HISTORY_LIST_LIMIT) setHistoryHasOlder(true);
+        setHistory((current) => [{ id: entryId, question }, ...current].slice(0, HISTORY_LIST_LIMIT));
+      }
       const seq = ++askSeq.current;
       /*
        * T-4.16-02. Archive the turn now on screen BEFORE anything resets,
@@ -2284,6 +2372,10 @@ export function App() {
             }}
               accountEmail={accountEmail ?? undefined}
               searchLimitLabel={capitalizeFirst(dailyLimitLine)}
+              hasOlder={historyHasOlder}
+              onShowOlder={showOlderSearches}
+              olderLoading={olderHistoryStatus === "loading"}
+              olderFailed={olderHistoryStatus === "failed"}
             />
             )}
             {/*

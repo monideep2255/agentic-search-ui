@@ -411,6 +411,13 @@ export interface HistoryItem {
 export interface HistoryResponse {
   items: HistoryItem[];
   count: number;
+  /**
+   * Card 136.1: true when the caller has at least one search older than the
+   * last row of `items`, fetched by passing that row's `trace_id` as
+   * `before`. Optional because a backend built before the field reads as
+   * "no older page", which is what it could offer.
+   */
+  has_more?: boolean;
 }
 
 /** The minimum shape a history item must carry to be usable at all. */
@@ -485,10 +492,17 @@ function withValidatedOptionalFields(item: HistoryItem): HistoryItem {
  */
 export async function fetchHistory(
   token: string,
-  options: ApiCallOptions & { limit?: number } = {},
+  options: ApiCallOptions & { limit?: number; before?: string } = {},
 ): Promise<HistoryResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
-  const query = options.limit != null ? `?limit=${encodeURIComponent(String(options.limit))}` : "";
+  // Card 136.1: `before` asks for the page older than that `trace_id`. Only
+  // ever a `trace_id` the server itself returned, and the server scopes it
+  // to the caller anyway, so this only has to encode it.
+  const params = new URLSearchParams();
+  if (options.limit != null) params.set("limit", String(options.limit));
+  if (options.before != null) params.set("before", options.before);
+  const queryString = params.toString();
+  const query = queryString ? `?${queryString}` : "";
   const response = await fetch(`${baseUrl}/v1/history${query}`, {
     method: "GET",
     headers: authHeaders(token),
@@ -502,6 +516,9 @@ export async function fetchHistory(
   return {
     items: body.items.filter(isHistoryItem).map(withValidatedOptionalFields),
     count: body.count,
+    // Only a real `true` means an older page exists; absent (an older
+    // backend), `false` or any other type reads as none.
+    has_more: body.has_more === true,
   };
 }
 

@@ -59,7 +59,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import select, tuple_, update
 
 from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.data.models import Interaction
@@ -70,10 +70,12 @@ __all__ = [
     "DEFAULT_LIMIT",
     "MAX_LIMIT",
     "HistoryEntry",
+    "HistoryPage",
     "SavedAnswer",
     "forget_saved_answers_for_account",
     "get_saved_answer",
     "list_history",
+    "list_history_page",
 ]
 
 #: T-4.13-02's contract: `limit` defaults to 20. Restated here, not
@@ -238,7 +240,51 @@ def _stored_page_key(element: object) -> str:
     return source_page_key(url) if isinstance(url, str) else ""
 
 
+@dataclass(frozen=True)
+class HistoryPage:
+    """One page of a caller's own history, and whether an older page exists.
+
+    Card 136.1. `has_more` is True when at least one of this caller's own
+    rows is strictly older than the last row of `entries`. It is computed by
+    fetching one row past `limit` in the same query, never by a second
+    count, so it cannot disagree with the page it describes.
+    """
+
+    entries: list[HistoryEntry]
+    has_more: bool = False
+
+
+def _check_cursor(before: str) -> None:
+    """Refuse a `before` cursor that cannot be a stored `trace_id`.
+
+    Raises `ValueError`, never queries. Empty, over-long (wider than the
+    write path's own `trace_id` bound) and any control character are
+    refused. The control-character rule is not cosmetic: PostgreSQL text
+    cannot hold a NUL byte, and the driver raises on one before the query
+    runs, which would surface as a 500 rather than an empty page.
+    """
+    if not before:
+        raise ValueError("before must not be empty")
+    if len(before) > _MAX_TRACE_ID_LENGTH:
+        raise ValueError(
+            f"before is capped at {_MAX_TRACE_ID_LENGTH} characters, got {len(before)}"
+        )
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in before):
+        raise ValueError("before must not contain control characters")
+
+
 def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry]:
+    """The caller's own newest page of past questions. See `list_history_page`.
+
+    Kept with its original two-argument shape for the MCP tool
+    (`adapters/mcp/server.py`), which pages nothing.
+    """
+    return list_history_page(owner_id=owner_id, limit=limit).entries
+
+
+def list_history_page(
+    owner_id: str, limit: int = DEFAULT_LIMIT, before: str | None = None
+) -> HistoryPage:
     """The caller's own past questions, newest first, in a total order.
 
     Refuses, by raising `ValueError`, rather than issuing a query, when
@@ -277,7 +323,29 @@ def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry
     `.limit(limit)` call below, verified by reading this function and by
     `ruff`, not a claim any black-box call through `list_history` can
     prove at runtime; `tests/system_03_search_agent/feedback/
-    test_history.py`'s own coverage statement says the same.
+    test_history.py`'s own coverage statement says the same. Card 136.1
+    fetches `limit + 1` rows in that same clause, to learn `has_more`, and
+    returns only the first `limit`.
+
+    ## Card 136.1: the `before` cursor, and why it cannot reach another owner
+
+    `before` is the `trace_id` of the last row of the previous page. It is
+    keyset paging rather than an offset, so a search asked between two
+    clicks never shifts a row onto two pages or off both.
+
+    The cursor is resolved to its `(created_at, id)` by a lookup that
+    carries the SAME `owner_id` filter as the page query. A `trace_id` that
+    does not exist and one that exists under another owner both resolve to
+    nothing, and nothing returns an empty page with `has_more` False, the
+    same single answer `get_saved_answer` gives for its three causes. No
+    field of another owner's row is ever read into this function, so none
+    can be compared against, ordered by or returned.
+
+    Rows strictly older than the cursor are `(created_at, id) < (c, i)`, a
+    row comparison over the same two columns, in the same order, as the
+    `ORDER BY` and the `(owner_id, created_at DESC, id DESC)` index from
+    alembic 0009, so two searches sharing a timestamp fall on exactly one
+    page each. `id` is unique, so the comparison is a strict total order.
     """
     if not owner_id:
         raise ValueError("owner_id must not be empty")
@@ -289,36 +357,55 @@ def list_history(owner_id: str, limit: int = DEFAULT_LIMIT) -> list[HistoryEntry
         raise ValueError("limit must be at least 1")
     if limit > MAX_LIMIT:
         raise ValueError(f"limit is capped at {MAX_LIMIT}, got {limit}")
+    if before is not None:
+        _check_cursor(before)
 
     with session_scope() as session:
-        rows = session.execute(
-            select(
-                Interaction.trace_id,
-                Interaction.query_text,
-                Interaction.created_at,
-                Interaction.trust_signal,
-                Interaction.citations,
-                # A boolean computed by the database, never the text itself:
-                # a page of twenty rows must not drag twenty saved answers
-                # across the wire to answer a yes/no question about each.
-                Interaction.answer_markdown.isnot(None).label("has_saved_answer"),
+        query = select(
+            Interaction.trace_id,
+            Interaction.query_text,
+            Interaction.created_at,
+            Interaction.trust_signal,
+            Interaction.citations,
+            # A boolean computed by the database, never the text itself:
+            # a page of twenty rows must not drag twenty saved answers
+            # across the wire to answer a yes/no question about each.
+            Interaction.answer_markdown.isnot(None).label("has_saved_answer"),
+        ).where(Interaction.owner_id == owner_id)
+        if before is not None:
+            # The owner filter is applied to the cursor lookup itself, not
+            # only to the page: a cursor this caller does not own resolves
+            # to no row at all.
+            anchor = session.execute(
+                select(Interaction.created_at, Interaction.id).where(
+                    Interaction.owner_id == owner_id,
+                    Interaction.trace_id == before,
+                )
+            ).first()
+            if anchor is None:
+                return HistoryPage(entries=[], has_more=False)
+            query = query.where(
+                tuple_(Interaction.created_at, Interaction.id)
+                < tuple_(anchor.created_at, anchor.id)
             )
-            .where(Interaction.owner_id == owner_id)
-            .order_by(Interaction.created_at.desc(), Interaction.id.desc())
-            .limit(limit)
+        rows = session.execute(
+            query.order_by(Interaction.created_at.desc(), Interaction.id.desc()).limit(limit + 1)
         ).all()
 
-    return [
-        HistoryEntry(
-            trace_id=row.trace_id,
-            question=row.query_text,
-            asked_at=row.created_at,
-            trust_signal=row.trust_signal,
-            citation_count=_citation_count(row.citations),
-            has_saved_answer=bool(row.has_saved_answer),
-        )
-        for row in rows
-    ]
+    return HistoryPage(
+        entries=[
+            HistoryEntry(
+                trace_id=row.trace_id,
+                question=row.query_text,
+                asked_at=row.created_at,
+                trust_signal=row.trust_signal,
+                citation_count=_citation_count(row.citations),
+                has_saved_answer=bool(row.has_saved_answer),
+            )
+            for row in rows[:limit]
+        ],
+        has_more=len(rows) > limit,
+    )
 
 
 @dataclass(frozen=True)

@@ -48,6 +48,17 @@ Exercised, at the `list_history` function level rather than through HTTP:
   query. `owner_id` exactly at the 128-character boundary is accepted, the
   boundary case a strictly-greater-than check could get backwards.
 
+- Card 136.1, the `before` cursor of `list_history_page`: paging at the
+  boundaries (20, 21, 40 and 41 rows, and 45 rows into 20, 20 and 5), every
+  row exactly once and in order, `has_more` false on the last page; ties on
+  one timestamp split across page boundaries; another owner's `trace_id`, a
+  `trace_id` that never existed, and this owner's cursor beside a
+  stranger's interleaved rows; an empty, over-long or control-character
+  cursor refused with `ValueError` before any query. One clause goes
+  through `GET /v1/history` itself, against this real database, to pin that
+  a stranger's cursor and a cursor that never existed return byte-identical
+  responses.
+
 NOT exercised, deliberately:
 
 - The HTTP surface (`GET /v1/history`'s status codes, its 401, its 422
@@ -610,3 +621,242 @@ def test_limit_above_the_maximum_is_refused() -> None:
 
     with pytest.raises(ValueError, match="capped at"):
         list_history(owner_id=_unique_owner(), limit=MAX_LIMIT + 1)
+
+
+
+# ---------------------------------------------------------------------------
+# Card 136.1: older pages through the `before` cursor.
+# ---------------------------------------------------------------------------
+
+
+def _seed_many(owner_id: str, created_ats: list[datetime], tag: str) -> list[str]:
+    """Write one row per timestamp for `owner_id`, in one transaction.
+
+    Direct parameterised INSERT for the same reason `_seed_with_created_at`
+    gives: the timestamps, and so the page boundaries and the ties, are the
+    thing under test. One engine and one transaction for the lot, so a
+    41-row seed costs one round of connection setup, not 41.
+    """
+    trace_ids = [f"histpage-{tag}-{n}-{uuid.uuid4().hex[:12]}" for n in range(len(created_ats))]
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO interactions "
+                    "(trace_id, owner_id, user_id, created_at, query_text, query_class, "
+                    " route, trust_signal, rubric_outcome) "
+                    "VALUES (:trace_id, :owner_id, NULL, :created_at, :query_text, 'lookup', "
+                    " '{}'::jsonb, 'answer', 'pass')"
+                ),
+                [
+                    {
+                        "trace_id": trace_id,
+                        "owner_id": owner_id,
+                        "created_at": created_at,
+                        "query_text": f"Question {trace_id}",
+                    }
+                    for trace_id, created_at in zip(trace_ids, created_ats, strict=True)
+                ],
+            )
+    finally:
+        engine.dispose()
+    return trace_ids
+
+
+def _expected_order(trace_ids: list[str]) -> list[str]:
+    """The newest-first total order, read back from the stored columns."""
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                sa.text(
+                    "SELECT trace_id FROM interactions WHERE trace_id = ANY(:ids) "
+                    "ORDER BY created_at DESC, id DESC"
+                ),
+                {"ids": trace_ids},
+            ).all()
+    finally:
+        engine.dispose()
+    assert len(rows) == len(trace_ids), "populate-check: a seeded row never landed"
+    return [row[0] for row in rows]
+
+
+def _walk(owner_id: str, limit: int) -> tuple[list[list[str]], list[bool]]:
+    """Follow `before` from the newest page to the end, the way the rail does."""
+    from system_03_search_agent.feedback.history import list_history_page
+
+    pages: list[list[str]] = []
+    flags: list[bool] = []
+    before: str | None = None
+    for _ in range(100):
+        page = list_history_page(owner_id=owner_id, limit=limit, before=before)
+        pages.append([entry.trace_id for entry in page.entries])
+        flags.append(page.has_more)
+        if not page.has_more:
+            return pages, flags
+        before = page.entries[-1].trace_id
+    raise AssertionError("paging never ended: has_more stayed true for 100 pages")
+
+
+def _distinct_times(count: int) -> list[datetime]:
+    base = datetime(2026, 10, 1, 12, 0, 0, tzinfo=UTC)
+    return [base.replace(minute=n % 60, hour=12 + n // 60) for n in range(count)]
+
+
+@pytest.mark.parametrize(
+    ("row_count", "expected_sizes", "expected_flags"),
+    [
+        (20, [20], [False]),
+        (21, [20, 1], [True, False]),
+        (40, [20, 20], [True, False]),
+        (41, [20, 20, 1], [True, True, False]),
+        (45, [20, 20, 5], [True, True, False]),
+    ],
+)
+def test_older_pages_reach_every_row_once_and_has_more_ends_at_the_last(
+    row_count: int, expected_sizes: list[int], expected_flags: list[bool]
+) -> None:
+    from system_03_search_agent.feedback.history import DEFAULT_LIMIT
+
+    owner = _unique_owner()
+    trace_ids = _seed_many(owner, _distinct_times(row_count), tag=f"n{row_count}")
+    expected = _expected_order(trace_ids)
+
+    pages, flags = _walk(owner, DEFAULT_LIMIT)
+
+    assert [len(page) for page in pages] == expected_sizes
+    assert flags == expected_flags
+    walked = [trace_id for page in pages for trace_id in page]
+    assert walked == expected, "a row was lost, repeated or put out of order across pages"
+
+
+def test_ties_on_one_timestamp_split_cleanly_across_page_boundaries() -> None:
+    """45 rows on five timestamps, nine rows each, paged seven at a time:
+    every page boundary but one falls inside a tie. Without the `id` half
+    of the keyset, a boundary inside a tie loses or repeats rows."""
+    owner = _unique_owner()
+    base = datetime(2026, 10, 2, 9, 0, 0, tzinfo=UTC)
+    created_ats = [base.replace(minute=n // 9) for n in range(45)]
+    trace_ids = _seed_many(owner, created_ats, tag="tie")
+    expected = _expected_order(trace_ids)
+
+    pages, flags = _walk(owner, 7)
+
+    assert [len(page) for page in pages] == [7, 7, 7, 7, 7, 7, 3]
+    assert flags == [True] * 6 + [False]
+    walked = [trace_id for page in pages for trace_id in page]
+    assert len(set(walked)) == 45, "a row was repeated across pages"
+    assert walked == expected
+
+
+def test_another_owners_cursor_returns_nothing_of_theirs_or_ours() -> None:
+    from system_03_search_agent.feedback.history import HistoryPage, list_history_page
+
+    owner = _unique_owner()
+    stranger = _unique_owner()
+    # The stranger's rows sit at the same instants as the owner's, so any
+    # leak of their (created_at, id) into the owner's page would show.
+    times = _distinct_times(6)
+    mine = _seed_many(owner, times, tag="mine")
+    theirs = _seed_many(stranger, times, tag="theirs")
+
+    # Control: each owner's own cursor does page through their own rows.
+    own_page = list_history_page(owner_id=owner, limit=20, before=_expected_order(mine)[0])
+    assert [e.trace_id for e in own_page.entries] == _expected_order(mine)[1:]
+    their_page = list_history_page(
+        owner_id=stranger, limit=20, before=_expected_order(theirs)[0]
+    )
+    assert [e.trace_id for e in their_page.entries] == _expected_order(theirs)[1:]
+
+    for cursor in theirs:
+        page = list_history_page(owner_id=owner, limit=20, before=cursor)
+        assert page == HistoryPage(entries=[], has_more=False), (
+            f"a stranger's cursor {cursor} returned {page}"
+        )
+    never_existed = list_history_page(
+        owner_id=owner, limit=20, before=f"histpage-none-{uuid.uuid4().hex}"
+    )
+    assert never_existed == HistoryPage(entries=[], has_more=False)
+
+
+def test_an_own_cursor_never_returns_a_strangers_interleaved_rows() -> None:
+    from system_03_search_agent.feedback.history import list_history_page
+
+    owner = _unique_owner()
+    stranger = _unique_owner()
+    times = _distinct_times(10)
+    mine = _seed_many(owner, times[::2], tag="mine-il")
+    theirs = _seed_many(stranger, times[1::2], tag="theirs-il")
+
+    page = list_history_page(owner_id=owner, limit=20, before=_expected_order(mine)[0])
+
+    returned = [entry.trace_id for entry in page.entries]
+    assert returned == _expected_order(mine)[1:]
+    assert not set(returned) & set(theirs)
+
+
+def test_a_strangers_cursor_and_an_unknown_one_answer_identically_over_http() -> None:
+    """Through `GET /v1/history` and the REAL owner filter: the two bodies
+    are byte-identical, so the response never confirms that another
+    person's search exists."""
+    import asyncio
+
+    from httpx import ASGITransport, AsyncClient
+
+    from system_03_search_agent.adapters.web_sse.app import app
+    from system_03_search_agent.auth.dependencies import Principal, get_caller
+
+    owner = _unique_owner()
+    stranger = _unique_owner()
+    _seed_many(owner, _distinct_times(3), tag="http-mine")
+    theirs = _seed_many(stranger, _distinct_times(3), tag="http-theirs")
+
+    async def fetch(before: str) -> tuple[int, bytes]:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/v1/history", params={"before": before})
+        return response.status_code, response.content
+
+    app.dependency_overrides[get_caller] = lambda: Principal(
+        owner_id=owner, user_id=None, kind="guest"
+    )
+    try:
+        stranger_result = asyncio.run(fetch(theirs[0]))
+        unknown_result = asyncio.run(fetch(f"histpage-none-{uuid.uuid4().hex}"))
+    finally:
+        app.dependency_overrides.pop(get_caller, None)
+
+    assert stranger_result[0] == 200
+    assert stranger_result == unknown_result
+    assert b'"items":[]' in stranger_result[1]
+
+
+@pytest.mark.parametrize(
+    "cursor",
+    ["", "t" * 65, "abc\x00def", "line\nbreak", "del\x7f"],
+    ids=["empty", "over-long", "nul", "newline", "delete"],
+)
+def test_a_malformed_cursor_is_refused_before_any_query(cursor: str) -> None:
+    from system_03_search_agent.feedback.history import list_history_page
+
+    with pytest.raises(ValueError):
+        list_history_page(owner_id=_unique_owner(), before=cursor)
+
+
+def test_a_cursor_exactly_at_the_bound_is_accepted() -> None:
+    from system_03_search_agent.feedback.history import HistoryPage, list_history_page
+
+    assert list_history_page(owner_id=_unique_owner(), before="t" * 64) == HistoryPage(
+        entries=[], has_more=False
+    )
+
+
+def test_list_history_keeps_its_shape_for_the_mcp_tool() -> None:
+    """The MCP tool calls `list_history(owner_id, limit)` and reads a list."""
+    from system_03_search_agent.feedback.history import list_history
+
+    owner = _unique_owner()
+    trace_ids = _seed_many(owner, _distinct_times(3), tag="mcp")
+    entries = list_history(owner_id=owner, limit=2)
+    assert isinstance(entries, list)
+    assert [entry.trace_id for entry in entries] == _expected_order(trace_ids)[:2]

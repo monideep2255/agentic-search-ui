@@ -65,7 +65,40 @@ describe("fetchHistory", () => {
     expect(result).toEqual({
       items: [{ trace_id: "t-1", question: "What is BRCA1?" }],
       count: 1,
+      has_more: false,
     });
+  });
+
+  it("sends before as an encoded query parameter beside limit", async () => {
+    // Card 136.1. Mutation: dropping the `before` option, or not encoding
+    // it, turns this red.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [], count: 0, has_more: false }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchHistory("token-1", { baseUrl: "https://api.test", limit: 20, before: "t 1&x=2" });
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new URL(url).searchParams.getAll("before")).toEqual(["t 1&x=2"]);
+    expect(new URL(url).searchParams.get("limit")).toBe("20");
+    expect(new URL(url).searchParams.has("x")).toBe(false);
+  });
+
+  it("reads has_more only when it is a real true", async () => {
+    // Card 136.1. Mutation: `Boolean(body.has_more)` turns the string
+    // "false" into an older page that does not exist.
+    const results = [];
+    for (const hasMore of [true, false, "false", 1, undefined]) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ items: [], count: 0, has_more: hasMore }), { status: 200 }),
+        ),
+      );
+      results.push((await fetchHistory("token-1", { baseUrl: "https://api.test" })).has_more);
+    }
+    expect(results).toEqual([true, false, false, false, false]);
   });
 
   it("appends limit as an encoded query parameter when given", async () => {
