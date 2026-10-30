@@ -1,0 +1,54 @@
+What does KRAS do?
+New search
+
+? Answered12.4s · 13 tool calls · 17 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 1 gene record for KRAS: KRAS proto-oncogene, GTPase.⁠1
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+KRAS proto-oncogene, GTPase (KRAS)	NCBIGene:3845	⁠1, 2
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+KRAS mutation: from undruggable to druggable in cancer.	PMID:34776511	⁠3
+Targeting KRAS mutant cancers: from druggable therapy to drug resistance.	PMID:35922812	⁠7
+Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression.	PMID:37768068	⁠10
+Targeting KRAS in pancreatic cancer.	PMID:38686056	⁠13
+Targeting cancer with small-molecule pan-KRAS degraders.	PMID:39298590	⁠16
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_004985.5(KRAS):c.337C>T (p.Leu113=)	VCV004859021	⁠4
+NM_033360.4(KRAS):c.524A>G (p.Glu175Gly)	VCV004859022	⁠8
+NM_004985.5(KRAS):c.417T>A (p.Ile139=)	VCV004859024	⁠11
+NM_004985.5(KRAS):c.490C>A (p.Arg164=)	VCV004859025	⁠14
+NM_004985.5(KRAS):c.168C>G (p.Leu56=)	VCV004859026	⁠17
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+KRAS PROTOONCOGENE, GTPase; KRAS	omim 190070	⁠5
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors	NCT01715441	COMPLETED	⁠6
+PREMIUM, Observational Study	NCT01756625	UNKNOWN	⁠9
+A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers	NCT02613650	COMPLETED	⁠12
+Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients	NCT03171636	COMPLETED	⁠15
+A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100)	NCT03600883	COMPLETED	⁠18
+NOTES
+Note: no written summary could be checked against the records, so this answer lists the records found with their sources
+▶
+SOURCES
+17
+Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

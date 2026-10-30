@@ -1,0 +1,355 @@
+What does TP53 do?
+New search
+
+✓ Answered12.3s · 13 tool calls · 17 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 1 gene record for TP53, of 125 available: tumor protein p53.⁠1
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+tumor protein p53 (TP53)	NCBIGene:7157	⁠1, 2
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+TP53 mutations in human cancer: database reassessment and prospects for the next decade.	PMID:24665023	⁠3
+TP53 Variations in Human Cancers: New Lessons from the IARC TP53 Database and Genomics Data.	PMID:27328919	⁠7
+Specifications of the ACMG/AMP variant interpretation guidelines for germline TP53 variants.	PMID:33300245	⁠10
+The Role of TP53 in Adaptation and Evolution.	PMID:36766853	⁠13
+A clinical guide to TP53 mutations in myeloid neoplasms.	PMID:40729726	⁠16
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000546.6(TP53):c.247G>T (p.Ala83Ser)	VCV003898631	⁠4
+NC_000017.11:g.7666193C>T	VCV003905024	⁠8
+NM_000546.6(TP53):c.816_864del (p.Arg273fs)	VCV004055875	⁠11
+NM_000546.6(TP53):c.1101-73G>C	VCV004083530	⁠14
+NM_000546.6(TP53):c.-28-3132T>C	VCV004083687	⁠17
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+TUMOR PROTEIN p53; TP53	omim 191170	⁠5
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Biomarker Monitoring in TP53 Mutation Carriers	NCT02289326	COMPLETED	⁠6
+Study of SNX-5422 in TP53 Null Cancers	NCT02612285	TERMINATED	⁠9
+The p53 Colorectal Cancer Trial	NCT03149679	TERMINATED	⁠12
+The Role of Hypoxia as a Selective Pressure for TP53 Mutations	NCT03466034	TERMINATED	⁠15
+Treatment of Carrying TP53 Harmful Mutations	NCT03645200	UNKNOWN	⁠18
+NOTES
+Note: this answer was truncated because only 60 of the 125 records that matched this question in the graph were retrieved
+▶
+SOURCES
+17
+▶
+KNOWLEDGE GRAPH
+1
+▶
+[1][2]
+
+NCBIGene 7157
+
+L1 · graph, L2 · live
+Flag: does not support
+TOOL
+name, symbol
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/7157
+▶
+LIVE NCBI APIS
+12
+
+[2]NCBIGene 7157: one card for this page, listed under Knowledge graph
+
+▶
+[3]
+
+pubmed 24665023
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/24665023/
+▶
+[4]
+
+clinvar 3898631
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/3898631/
+▶
+[5]
+
+omim 191170
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/191170
+▶
+[7]
+
+pubmed 27328919
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/27328919/
+▶
+[8]
+
+clinvar 3905024
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/3905024/
+▶
+[10]
+
+pubmed 33300245
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/33300245/
+▶
+[11]
+
+clinvar 4055875
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4055875/
+▶
+[13]
+
+pubmed 36766853
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36766853/
+▶
+[14]
+
+clinvar 4083530
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4083530/
+▶
+[16]
+
+pubmed 40729726
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/40729726/
+▶
+[17]
+
+clinvar 4083687
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4083687/
+▶
+ENRICHMENT
+5
+▶
+[6]
+
+ClinicalTrials.gov NCT02289326
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT02289326
+▶
+[9]
+
+ClinicalTrials.gov NCT02612285
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT02612285
+▶
+[12]
+
+ClinicalTrials.gov NCT03149679
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT03149679
+▶
+[15]
+
+ClinicalTrials.gov NCT03466034
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT03466034
+▶
+[18]
+
+ClinicalTrials.gov NCT03645200
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT03645200
+Sources disagree on at least one claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

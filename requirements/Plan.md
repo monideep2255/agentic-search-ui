@@ -2,7 +2,7 @@
 
 From background research to working product. This document defines every step between where we are now (raw research collected) and where we need to be (a running search agent + UI backed by a solid PRD and technical specification).
 
-Kick-off: 2026-05-06. Last updated: 2026-10-17.
+Kick-off: 2026-05-06. Last updated: 2026-10-30.
 
 ## Status at a glance
 
@@ -1049,6 +1049,14 @@ This keeps the build stable while allowing continuous learning. Parked does not 
 ---
 
 ## Revision history
+
+2026-10-30, THE UI FIX LOOP OVERNIGHT, 29 TO 30 OCTOBER: NINE PULL REQUESTS MERGED, TWO PARKED, NO RELEASE. The owner's calls before sleep and every call the lead made for them: `DECISIONS.md`, rows dated 2026-10-29 and 2026-10-30. The session table: `testing/UI_fixes_done.md`, Session history. What awaits the owner and the next action: `HANDOFF.md`.
+
+- Merged, each behind green CI and a fresh verifier, and checked on deployed develop: cards 121 (#310), 123 (#311), 136 part 3 (#313), 135 part 1 (#314), 135 parts 2 and 3 (#317), 119 (#312), 136 part 1 (#316), 142 (#315) and 149 (#320). Answer and behaviour changes also had a judge, an adversary and one fix round; card 149's fix-round status note was reverted after its verifier found it changed correct genes' status.
+- Parked as open drafts: card 146 (#318), the judge's J-146-01 and two owner calls; card 152 (#319), the space join let PubMed read word pairs as authors.
+- Diagnosed and held for the owner: cards 147, 122, 124, 136 part 2. Card 84's log reading recommends not building step 3b.
+- Filed from the reviews: cards 149 to 156.
+- Next: the owner's retests and the held calls; then the board's To do column in order.
 
 2026-10-29, THE UI FIX LOOP: CI REPAIRED AND VESPA SET ASIDE, NOTHING CHANGED IN THE PRODUCT, NO RELEASE. The decisions: `DECISIONS.md`, rows dated 2026-10-29. The session table: `testing/UI_fixes_done.md`, Session history. What awaits the owner and the next action: `HANDOFF.md`.
 

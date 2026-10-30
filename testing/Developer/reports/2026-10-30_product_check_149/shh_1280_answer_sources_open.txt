@@ -1,0 +1,355 @@
+What does SHH do?
+New search
+
+✓ Answered12.9s · 13 tool calls · 17 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+This cholesterol modification restricts the signalling molecule to the cell surface and prevents free diffusion throughout the developing embryo.⁠19 Found 1 gene record for SHH, of 126 available: sonic hedgehog signaling molecule.⁠1
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+sonic hedgehog signaling molecule (SHH)	NCBIGene:6469	⁠1, 2
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Hh pathway expression in human gut tissues and in inflammatory gut diseases.	PMID:15502857	⁠3
+Sonic Hedgehog Signaling and Hippocampal Neuroplasticity.	PMID:27865563	⁠7
+STAT3 is required for Smo-dependent signaling and mediates Smo-targeted treatment resistance and tumorigenesis in Shh medulloblastoma.	PMID:34482626	⁠10
+Genome-wide CRISPR-Cas9 knockout screens identify DNMT1 as a druggable dependency in sonic hedgehog medulloblastoma.	PMID:39107797	⁠13
+The patterning and proliferation roles of Shh are partitioned on distinct exosomes.	PMID:41005522	⁠16
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000193.4(SHH):c.757T>C (p.Tyr253His)	VCV004690046	⁠4
+NM_000193.4(SHH):c.323C>T (p.Ala108Val)	VCV004755846	⁠8
+NM_000193.4(SHH):c.1015G>A (p.Glu339Lys)	VCV004822560	⁠11
+NM_000193.4(SHH):c.917C>A (p.Ala306Asp)	VCV004823430	⁠14
+NM_000193.4(SHH):c.850G>A (p.Glu284Lys)	VCV004849004	⁠17
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+SONIC HEDGEHOG SIGNALING MOLECULE; SHH	omim 600725	⁠5
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Suberoylanilide Hydroxamic Acid in Treating Patients With Advanced Cancer	NCT00045006	COMPLETED	⁠6
+Oral SAHA (Suberoylanilide Hydroxamic Acid) in Advanced Cutaneous T-cell Lymphoma (0683-001)	NCT00091559	COMPLETED	⁠9
+Suberoylanilide Hydroxamic Acid in Advanced Solid Tumors	NCT00106626	COMPLETED	⁠12
+A Clinical Trial of Oral Suberoylanilide Hydroxamic Acid (SAHA) in Patients With Advanced Multiple Myeloma (0683-004)	NCT00109109	TERMINATED	⁠15
+An Investigational Study of a Histone Deacetylase (HDAC) Inhibitor Plus Targretin in Cutaneous T-Cell Lymphoma Patients (0683-016)(TERMINATED)	NCT00127101	TERMINATED	⁠18
+NOTES
+Note: this answer was truncated because only 68 of the 126 records that matched this question in the graph were retrieved
+▶
+SOURCES
+17
+▶
+KNOWLEDGE GRAPH
+1
+▶
+[1][2][19]
+
+NCBIGene 6469
+
+L1 · graph, L2 · live
+Flag: does not support
+TOOL
+name, symbol, summary
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/6469
+▶
+LIVE NCBI APIS
+12
+
+[2][19]NCBIGene 6469: one card for this page, listed under Knowledge graph
+
+▶
+[3]
+
+pubmed 15502857
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/15502857/
+▶
+[4]
+
+clinvar 4690046
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4690046/
+▶
+[5]
+
+omim 600725
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/600725
+▶
+[7]
+
+pubmed 27865563
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/27865563/
+▶
+[8]
+
+clinvar 4755846
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4755846/
+▶
+[10]
+
+pubmed 34482626
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/34482626/
+▶
+[11]
+
+clinvar 4822560
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4822560/
+▶
+[13]
+
+pubmed 39107797
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39107797/
+▶
+[14]
+
+clinvar 4823430
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4823430/
+▶
+[16]
+
+pubmed 41005522
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/41005522/
+▶
+[17]
+
+clinvar 4849004
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4849004/
+▶
+ENRICHMENT
+5
+▶
+[6]
+
+ClinicalTrials.gov NCT00045006
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00045006
+▶
+[9]
+
+ClinicalTrials.gov NCT00091559
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00091559
+▶
+[12]
+
+ClinicalTrials.gov NCT00106626
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00106626
+▶
+[15]
+
+ClinicalTrials.gov NCT00109109
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00109109
+▶
+[18]
+
+ClinicalTrials.gov NCT00127101
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT00127101
+Sources disagree on at least one claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

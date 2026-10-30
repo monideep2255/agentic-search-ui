@@ -1,0 +1,425 @@
+Which diseases are associated with GCK?
+New search
+
+? Answered13.4s · 13 tool calls · 21 sources cited from 2 layers
+
+Plain language
+Researcher
+Show work ▾
+
+GCK is associated with four diseases: Type 2 diabetes mellitus, Maturity-onset diabetes of the young type 2, Hyperinsulinemic hypoglycemia, familial, 3, and Permanent neonatal diabetes mellitus 1.⁠1–4 Found 4 disease records for GCK: Type 2 diabetes mellitus, Maturity-onset diabetes of the young type 2, Hyperinsulinemic hypoglycemia, familial, 3 and Permanent neonatal diabetes mellitus 1.⁠1–4
+
+The gene symbol GCK and its corresponding gene name GCK.⁠5, 9
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER	
+Type 2 diabetes mellitus	MedGen:C0011860	⁠1
+Maturity-onset diabetes of the young type 2	MedGen:C0342277	⁠2
+Hyperinsulinemic hypoglycemia, familial, 3	MedGen:C1865290	⁠3
+Permanent neonatal diabetes mellitus 1	MedGen:C5393570	⁠4
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+GCK	NCBIGene:2645	⁠5, 9
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Update on mutations in glucokinase (GCK), which cause maturity-onset diabetes of the young, permanent neonatal diabetes, and hyperinsulinemic hypoglycemia.	PMID:19790256	⁠6
+Genotype and phenotype correlations in 417 children with congenital hyperinsulinism.	PMID:23275527	⁠11
+Reduced penetrance of MODY-associated HNF1A/HNF4A variants but not GCK variants in clinically unselected cohorts.	PMID:36257325	⁠14
+Inhibition of Hmbox1 Promotes Cardiomyocyte Survival and Glucose Metabolism Through Gck Activation in Ischemia/Reperfusion Injury.	PMID:38708602	⁠17
+Glucokinase (GCK) in diabetes: from molecular mechanisms to disease pathogenesis.	PMID:39245718	⁠20
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000162.5(GCK):c.700T>G (p.Tyr234Asp)	VCV004881360	⁠7
+NM_000162.5(GCK):c.1020-339G>C	VCV004884999	⁠12
+NM_000162.5(GCK):c.460G>T (p.Val154Leu)	VCV004885023	⁠15
+NM_000162.5(GCK):c.1135_1150delinsCTCAT (p.Ala379fs)	VCV004886373	⁠18
+NM_000162.5(GCK):c.510C>T (p.Gly170=)	VCV004887379	⁠21
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+GLUCOKINASE; GCK	omim 138079	⁠8
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus	NCT01029795	TERMINATED	⁠10
+Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes	NCT01238380	COMPLETED	⁠13
+A Study of LY2608204 in Patients With Type 2 Diabetes	NCT01247363	COMPLETED	⁠16
+A Clinical Study to Evaluate Safety, Tolerability and Pharmacokinetics of Oral ZYGK1 in Healthy Volunteers	NCT01472809	SUSPENDED	⁠19
+The Effect of ß-cell Specific Glucokinase Mutation on Glucose Homeostasis and Insulin Secretion in a MODY-2 Family	NCT01960231	UNKNOWN	⁠22
+▶
+SOURCES
+21
+▶
+LIVE NCBI APIS
+16
+▶
+[1]
+
+MedGen C0011860
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C0011860
+▶
+[2]
+
+MedGen C0342277
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C0342277
+▶
+[3]
+
+MedGen C1865290
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C1865290
+▶
+[4]
+
+MedGen C5393570
+
+L2 · live
+Flag: does not support
+TOOL
+name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/medgen/C5393570
+▶
+[5][9]
+
+gene 2645
+
+L2 · live
+Flag: does not support
+TOOL
+symbol, name
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/gene/2645/
+▶
+[6]
+
+pubmed 19790256
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/19790256/
+▶
+[7]
+
+clinvar 4881360
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4881360/
+▶
+[8]
+
+omim 138079
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://omim.org/entry/138079
+▶
+[11]
+
+pubmed 23275527
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/23275527/
+▶
+[12]
+
+clinvar 4884999
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4884999/
+▶
+[14]
+
+pubmed 36257325
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/36257325/
+▶
+[15]
+
+clinvar 4885023
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4885023/
+▶
+[17]
+
+pubmed 38708602
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/38708602/
+▶
+[18]
+
+clinvar 4886373
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4886373/
+▶
+[20]
+
+pubmed 39245718
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://pubmed.ncbi.nlm.nih.gov/39245718/
+▶
+[21]
+
+clinvar 4887379
+
+L2 · live
+Flag: does not support
+TOOL
+title
+EVIDENCE
+primary_assertion
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4887379/
+▶
+ENRICHMENT
+5
+▶
+[10]
+
+ClinicalTrials.gov NCT01029795
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01029795
+▶
+[13]
+
+ClinicalTrials.gov NCT01238380
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01238380
+▶
+[16]
+
+ClinicalTrials.gov NCT01247363
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01247363
+▶
+[19]
+
+ClinicalTrials.gov NCT01472809
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01472809
+▶
+[22]
+
+ClinicalTrials.gov NCT01960231
+
+L3 · literature
+Flag: does not support
+TOOL
+name
+EVIDENCE
+external_annotation
+CONFIDENCE
+asserted
+LICENSE
+public_domain_us_gov
+RECORD
+https://clinicaltrials.gov/study/NCT01960231
+Based on 21 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared
+·
+High-risk claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

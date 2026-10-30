@@ -1,0 +1,175 @@
+{
+  "id": "ar",
+  "width": 1280,
+  "question": "What does the AR gene do?",
+  "started": "2026-10-30T06:58:17.607Z",
+  "health": "{\"status\":\"ok\",\"app_env\":\"develop\"}",
+  "researcher_pressed": "true",
+  "submitted": "2026-10-30T06:58:20.037Z",
+  "seconds_to_answer": 23.941,
+  "meta": "✓ Answered23.2s · 13 tool calls · 17 sources cited from 3 layers",
+  "sources": [
+    {
+      "testid": "source-1",
+      "layer": "1",
+      "summary": "▶ [1][2][19] NCBIGene 367 L1 · graph, L2 · live",
+      "hrefs": [
+        "https://www.ncbi.nlm.nih.gov/gene/367"
+      ]
+    },
+    {
+      "testid": "source-3",
+      "layer": "2",
+      "summary": "▶ [3] pubmed 33321757 L2 · live",
+      "hrefs": [
+        "https://pubmed.ncbi.nlm.nih.gov/33321757/"
+      ]
+    },
+    {
+      "testid": "source-4",
+      "layer": "2",
+      "summary": "▶ [4] clinvar 4084039 L2 · live",
+      "hrefs": [
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/4084039/"
+      ]
+    },
+    {
+      "testid": "source-5",
+      "layer": "2",
+      "summary": "▶ [5] omim 313700 L2 · live",
+      "hrefs": [
+        "https://omim.org/entry/313700"
+      ]
+    },
+    {
+      "testid": "source-7",
+      "layer": "2",
+      "summary": "▶ [7] pubmed 37869877 L2 · live",
+      "hrefs": [
+        "https://pubmed.ncbi.nlm.nih.gov/37869877/"
+      ]
+    },
+    {
+      "testid": "source-8",
+      "layer": "2",
+      "summary": "▶ [8] clinvar 4085261 L2 · live",
+      "hrefs": [
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/4085261/"
+      ]
+    },
+    {
+      "testid": "source-10",
+      "layer": "2",
+      "summary": "▶ [10] pubmed 39251788 L2 · live",
+      "hrefs": [
+        "https://pubmed.ncbi.nlm.nih.gov/39251788/"
+      ]
+    },
+    {
+      "testid": "source-11",
+      "layer": "2",
+      "summary": "▶ [11] clinvar 4281900 L2 · live",
+      "hrefs": [
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/4281900/"
+      ]
+    },
+    {
+      "testid": "source-13",
+      "layer": "2",
+      "summary": "▶ [13] pubmed 39531508 L2 · live",
+      "hrefs": [
+        "https://pubmed.ncbi.nlm.nih.gov/39531508/"
+      ]
+    },
+    {
+      "testid": "source-14",
+      "layer": "2",
+      "summary": "▶ [14] clinvar 4536014 L2 · live",
+      "hrefs": [
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/4536014/"
+      ]
+    },
+    {
+      "testid": "source-16",
+      "layer": "2",
+      "summary": "▶ [16] pubmed 41193657 L2 · live",
+      "hrefs": [
+        "https://pubmed.ncbi.nlm.nih.gov/41193657/"
+      ]
+    },
+    {
+      "testid": "source-17",
+      "layer": "2",
+      "summary": "▶ [17] clinvar 4755689 L2 · live",
+      "hrefs": [
+        "https://www.ncbi.nlm.nih.gov/clinvar/variation/4755689/"
+      ]
+    },
+    {
+      "testid": "source-6",
+      "layer": "3",
+      "summary": "▶ [6] ClinicalTrials.gov NCT00029627 L3 · literature",
+      "hrefs": [
+        "https://clinicaltrials.gov/study/NCT00029627"
+      ]
+    },
+    {
+      "testid": "source-9",
+      "layer": "3",
+      "summary": "▶ [9] ClinicalTrials.gov NCT01371786 L3 · literature",
+      "hrefs": [
+        "https://clinicaltrials.gov/study/NCT01371786"
+      ]
+    },
+    {
+      "testid": "source-12",
+      "layer": "3",
+      "summary": "▶ [12] ClinicalTrials.gov NCT01974765 L3 · literature",
+      "hrefs": [
+        "https://clinicaltrials.gov/study/NCT01974765"
+      ]
+    },
+    {
+      "testid": "source-15",
+      "layer": "3",
+      "summary": "▶ [15] ClinicalTrials.gov NCT02000375 L3 · literature",
+      "hrefs": [
+        "https://clinicaltrials.gov/study/NCT02000375"
+      ]
+    },
+    {
+      "testid": "source-18",
+      "layer": "3",
+      "summary": "▶ [18] ClinicalTrials.gov NCT02353988 L3 · literature",
+      "hrefs": [
+        "https://clinicaltrials.gov/study/NCT02353988"
+      ]
+    }
+  ],
+  "sources_count_badge": "17",
+  "all_page_hrefs": [
+    "https://www.ncbi.nlm.nih.gov/gene/367",
+    "https://pubmed.ncbi.nlm.nih.gov/33321757/",
+    "https://www.ncbi.nlm.nih.gov/clinvar/variation/4084039/",
+    "https://omim.org/entry/313700",
+    "https://pubmed.ncbi.nlm.nih.gov/37869877/",
+    "https://www.ncbi.nlm.nih.gov/clinvar/variation/4085261/",
+    "https://pubmed.ncbi.nlm.nih.gov/39251788/",
+    "https://www.ncbi.nlm.nih.gov/clinvar/variation/4281900/",
+    "https://pubmed.ncbi.nlm.nih.gov/39531508/",
+    "https://www.ncbi.nlm.nih.gov/clinvar/variation/4536014/",
+    "https://pubmed.ncbi.nlm.nih.gov/41193657/",
+    "https://www.ncbi.nlm.nih.gov/clinvar/variation/4755689/",
+    "https://clinicaltrials.gov/study/NCT00029627",
+    "https://clinicaltrials.gov/study/NCT01371786",
+    "https://clinicaltrials.gov/study/NCT01974765",
+    "https://clinicaltrials.gov/study/NCT02000375",
+    "https://clinicaltrials.gov/study/NCT02353988"
+  ],
+  "overflow": {
+    "sw": 1280,
+    "cw": 1280,
+    "sw_minus_cw": 0
+  },
+  "finished": "2026-10-30T06:58:49.244Z"
+}

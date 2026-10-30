@@ -1,0 +1,71 @@
+What does KRAS do?
+New search
+
+? Answered13.3s · 13 tool calls · 17 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Found 1 gene record for KRAS: KRAS proto-oncogene, GTPase.⁠1
+
+GENE RECORDS FOUND
+KRAS proto-oncogene, GTPase (KRAS)⁠1, 2
+NCBIGene:3845
+PUBMED RECORDS FOUND
+KRAS mutation: from undruggable to druggable in cancer.⁠3
+PMID:34776511
+Targeting KRAS mutant cancers: from druggable therapy to drug resistance.⁠7
+PMID:35922812
+Oncogenic KRAS Drives Lipofibrogenesis to Promote Angiogenesis and Colon Cancer Progression.⁠10
+PMID:37768068
+Targeting KRAS in pancreatic cancer.⁠13
+PMID:38686056
+Targeting cancer with small-molecule pan-KRAS degraders.⁠16
+PMID:39298590
+CLINVAR RECORDS FOUND
+NM_004985.5(KRAS):c.337C>T (p.Leu113=)⁠4
+VCV004859021
+NM_033360.4(KRAS):c.524A>G (p.Glu175Gly)⁠8
+VCV004859022
+NM_004985.5(KRAS):c.417T>A (p.Ile139=)⁠11
+VCV004859024
+NM_004985.5(KRAS):c.490C>A (p.Arg164=)⁠14
+VCV004859025
+NM_004985.5(KRAS):c.168C>G (p.Leu56=)⁠17
+VCV004859026
+OMIM RECORDS FOUND
+KRAS PROTOONCOGENE, GTPase; KRAS⁠5
+omim 190070
+CLINICAL TRIAL RECORDS FOUND
+Sorafenib in Combination With Irinotecan in Metastatic Colorectal Cancer Patients With KRAS Mutated Tumors⁠6
+NCT01715441
+COMPLETED
+PREMIUM, Observational Study⁠9
+NCT01756625
+UNKNOWN
+A Trial of mFOLFIRI With MEK162 in Patients With Advanced RAS (HRAS, NRAS, or KRAS) Positive Metastatic Colorectal Cancers⁠12
+NCT02613650
+COMPLETED
+Frequency of EGFR and KRAS Mutations and Clinical-prognostic Correlation in Brazilian Lung Cancer Patients⁠15
+NCT03171636
+COMPLETED
+A Phase 1/2, Study Evaluating the Safety, Tolerability, PK, and Efficacy of Sotorasib (AMG 510) in Subjects With Solid Tumors With a Specific KRAS Mutation (CodeBreaK 100)⁠18
+NCT03600883
+COMPLETED
+NOTES
+Note: no written summary could be checked against the records, so this answer lists the records found with their sources
+▶
+SOURCES
+17
+Based on 17 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 2 other databases
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

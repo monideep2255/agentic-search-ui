@@ -1,0 +1,60 @@
+What does the AR gene do?
+New search
+
+✓ Answered23.2s · 13 tool calls · 17 sources cited from 3 layers
+
+Plain language
+Researcher
+Show work ▾
+
+Upon binding its hormone ligand, the receptor dissociates from accessory proteins, translocates into the nucleus, dimerizes, and stimulates transcription of androgen-responsive genes.⁠19 Found 1 gene record for AR: androgen receptor.⁠1
+
+GENE STRUCTURE AND FUNCTION
+
+The androgen receptor gene is more than 90 kb long and codes for a protein with three major functional domains: the N-terminal domain, DNA-binding domain, and androgen-binding domain.⁠19 The gene contains polymorphic trinucleotide repeat segments encoding polyglutamine and polyglycine tracts in the N-terminal transactivation domain.⁠19
+
+DISEASE ASSOCIATIONS
+
+Expansion of the polyglutamine tract from the normal 9–34 repeats to the pathogenic 38–62 repeats causes spinal bulbar muscular atrophy, also known as Kennedy's disease.⁠19 Mutations in this gene are also associated with complete androgen insensitivity.⁠19
+
+GENE RECORDS FOUND
+GENE	IDENTIFIER	
+androgen receptor (AR)	NCBIGene:367	⁠1, 2
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER	
+Androgen Receptor Signaling Pathway in Prostate Cancer: From Genetics to Clinical Applications.	PMID:33321757	⁠3
+Microtubule-Mediated Regulation of β2AR Translation and Function in Failing Hearts.	PMID:37869877	⁠7
+NSD2 is a requisite subunit of the AR/FOXA1 neo-enhanceosome in promoting prostate tumorigenesis.	PMID:39251788	⁠10
+An Autophagy-Targeting Chimera Induces Degradation of Androgen Receptor Mutants and AR-v7 in Castration-Resistant Prostate Cancer.	PMID:39531508	⁠13
+Genome-scale CRISPR screens identify PTGES3 as a direct modulator of androgen receptor function in advanced prostate cancer.	PMID:41193657	⁠16
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER	
+NM_000044.6(AR):c.1370_1371insTGGCGG (p.Gly473_Glu474insGlyGly)	VCV004084039	⁠4
+NM_000044.6(AR):c.2370C>A (p.His790Gln)	VCV004085261	⁠8
+NM_000044.6(AR):c.508A>G (p.Thr170Ala)	VCV004281900	⁠11
+NM_000044.6(AR):c.1885+13del	VCV004536014	⁠14
+NM_000044.6(AR):c.2578C>T (p.Leu860Phe)	VCV004755689	⁠17
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER	
+ANDROGEN RECEPTOR; AR	omim 313700	⁠5
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS	
+Brain Receptors in Sympathetic Nervous System Regulation	NCT00029627	COMPLETED	⁠6
+A Phase 1 Scintigraphy Study to Assess Nasal Deposition of Ciclesonide. Using a Novel Nasal Metered Dose Inhaler	NCT01371786	COMPLETED	⁠9
+Enzalutamide in Patients With Androgen Receptor Positive (AR+) Ovarian, Primary Peritoneal or Fallopian Tube Cancer and One, Two or Three Prior Therapies	NCT01974765	COMPLETED	⁠12
+A Phase II Study Evaluating the Role of Androgen Receptors as Targets for Therapy of Pre-treated Post-menopausal Patients With ER/PgR-negative/AR-positive or ER and/or PgRpositive/ AR-positive Metastatic Breast Cancer (ARTT)	NCT02000375	TERMINATED	⁠15
+AR-inhibitor Bicalutamide in Treating Patients With TNBC	NCT02353988	UNKNOWN	⁠18
+▶
+SOURCES
+17
+Sources disagree on at least one claim
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?
