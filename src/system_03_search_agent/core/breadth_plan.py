@@ -119,6 +119,13 @@ from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnot
 # 1,000 to 1,300 characters each); ten ClinVar and ten OMIM records match
 # the audit's own probe sizes.
 PUBMED_RESULT_CAP: Final[int] = 5
+
+#: Card 119 (2026-10-29): what a PubMed search asks for ONLY when the person
+#: picked a "How far back" window. Ten papers are listed, each with its
+#: title; the writer still reads five abstracts (the lead quota in
+#: `core/graph.py` is raised by the difference). A question with no window
+#: keeps `PUBMED_RESULT_CAP`.
+PUBMED_WINDOW_RESULT_CAP: Final[int] = 10
 CLINVAR_RESULT_CAP: Final[int] = 10
 OMIM_RESULT_CAP: Final[int] = 10
 GDS_RESULT_CAP: Final[int] = 5
@@ -700,7 +707,8 @@ def plan_topic_search(
         return ()
     if window is not None:
         term = f"{term} AND {window.clause()}"
-    return (_search_call("pubmed_search", "pubmed", term, TOPIC_RESULT_CAP),)
+    retmax = TOPIC_RESULT_CAP if window is None else PUBMED_WINDOW_RESULT_CAP
+    return (_search_call("pubmed_search", "pubmed", term, retmax),)
 
 
 def _search_call(purpose: str, db: str, term: str, retmax: int) -> PlannedCall:
@@ -750,7 +758,8 @@ def plan_first_stage(
     if term:
         if window is not None:
             term = f"{term} AND {window.clause()}"
-        calls.append(_search_call("pubmed_search", "pubmed", term, PUBMED_RESULT_CAP))
+        retmax = PUBMED_RESULT_CAP if window is None else PUBMED_WINDOW_RESULT_CAP
+        calls.append(_search_call("pubmed_search", "pubmed", term, retmax))
     if symbol:
         calls.append(
             _search_call("clinvar_search", "clinvar", f"{symbol}[gene]", CLINVAR_RESULT_CAP)
@@ -836,14 +845,19 @@ def select_ids(ids: Iterable[Any], cap: int) -> list[str]:
     return ordered[:cap]
 
 
-def plan_literature_follow_up(pmids: Iterable[Any]) -> tuple[PlannedCall, ...]:
+def plan_literature_follow_up(
+    pmids: Iterable[Any], cap: int = PUBMED_RESULT_CAP
+) -> tuple[PlannedCall, ...]:
     """Abstract fetch plus PubTator3 annotation on the same sorted, capped PMIDs.
+
+    `cap` is the source search's own `retmax` (card 119): five by default,
+    ten for a search limited to a picked window.
 
     Both calls carry the identical id list, so the relations PubTator3
     returns are for exactly the papers that were fetched. An empty tuple
     when no valid PMID was given.
     """
-    selected = select_ids(pmids, PUBMED_RESULT_CAP)
+    selected = select_ids(pmids, cap)
     if not selected:
         return ()
     fetch = PlannedCall(

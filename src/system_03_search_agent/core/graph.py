@@ -4822,6 +4822,11 @@ class _PlannedNcbiEfetchToolCall:
     #: result, which is that filter's documented behaviour: with no symbol
     #: to check against, no OMIM title can be stood behind.
     gene_symbol: str | None = None
+    #: Card 119 (2026-10-29): how many title rows a breadth result keeps.
+    #: Five unless the follow-up came from a PubMed search limited to a
+    #: picked window, which carries ten (`breadth_plan.
+    #: PUBMED_WINDOW_RESULT_CAP`).
+    row_cap: int = breadth_plan.PUBMED_RESULT_CAP
 
 
 @dataclass(frozen=True)
@@ -4876,6 +4881,10 @@ class _PlannedFollowUpCall:
     #: the filter runs against the symbol the question resolved rather
     #: than anything read back out of the OMIM response itself.
     gene_symbol: str | None = None
+    #: Card 119 (2026-10-29): the source search's own `retmax`, so the ids
+    #: the follow-up fetches and the rows it keeps match what was asked
+    #: for. Five unless a PubMed search was limited to a picked window.
+    result_cap: int = breadth_plan.PUBMED_RESULT_CAP
 
 
 #: Per-tool Act timeouts for the four tools above, in seconds. Each is the
@@ -5532,6 +5541,7 @@ def _follow_up_calls_for(
     for search_purpose, follow_ups in _BREADTH_FOLLOW_UPS.items():
         if not any(getattr(c, "purpose", "") == search_purpose for c in calls):
             continue
+        result_cap = _pubmed_search_retmax(calls) if search_purpose == "pubmed_search" else None
         for tool, layer, prefix, purpose in follow_ups:
             follow_up_calls.append(
                 _PlannedFollowUpCall(
@@ -5543,9 +5553,40 @@ def _follow_up_calls_for(
                     purpose=purpose,
                     source_purpose=search_purpose,
                     gene_symbol=gene_symbol,
+                    **({} if result_cap is None else {"result_cap": result_cap}),
                 )
             )
     return follow_up_calls
+
+
+def _pubmed_search_retmax(calls: list[Any]) -> int:
+    """Card 119: the `retmax` the planned PubMed search itself carries, five
+    unless the person picked a window. Read from the planned call, never
+    recomputed, so the follow-up asks for exactly the ids that were searched."""
+    for call in calls:
+        if getattr(call, "purpose", "") != "pubmed_search":
+            continue
+        search_input = getattr(call, "ncbi_efetch_input", None)
+        retmax = getattr(getattr(search_input, "root", search_input), "retmax", None)
+        if isinstance(retmax, int) and retmax > 0:
+            return retmax
+    return breadth_plan.PUBMED_RESULT_CAP
+
+
+def _lead_findings_quota(planned_calls: list[Any]) -> int:
+    """Card 119: the lead quota, ten as before, plus the extra title rows a
+    windowed paper search lists. Ten titles and five abstracts take fifteen,
+    so the five abstracts stay inside the model's 30-finding slice instead
+    of queueing behind the context rows."""
+    extra = 0
+    for planned in planned_calls:
+        if getattr(planned, "purpose", "") != _PUBMED_ABSTRACTS_PURPOSE:
+            continue
+        if getattr(planned, "source_purpose", "") != "pubmed_search":
+            continue
+        cap = getattr(planned, "result_cap", breadth_plan.PUBMED_RESULT_CAP)
+        extra = max(extra, cap - breadth_plan.PUBMED_RESULT_CAP)
+    return _LEAD_FINDINGS_QUOTA + max(0, extra)
 
 
 def _build_planned_go_terms_call(gene_curie: str, query_class: QueryClass) -> _PlannedToolCall:
@@ -7911,7 +7952,7 @@ _PUBMED_ABSTRACT_FIELD: Final[str] = "abstract"
 
 
 def _pubmed_abstract_rows(
-    records: list[Any], title_rows: list[dict[str, Any]]
+    records: list[Any], title_rows: list[dict[str, Any]], limit: int | None = None
 ) -> list[dict[str, Any]]:
     """UI fix 11.22: one additional citeable row per admitted title row,
     carrying that record's own retrieved abstract text verbatim.
@@ -7943,8 +7984,27 @@ def _pubmed_abstract_rows(
     never widen the paper set itself.
     """
     by_url = {record.source_url: record for record in records if record.source_url}
+    # Card 119: with more title rows than `limit` (a picked window lists
+    # ten), only the `limit` NEWEST papers, the highest PMIDs, get an
+    # abstract row, so the writer reads five abstracts beside ten titles.
+    # The abstract rows keep the title rows' own order. `limit=None` (every
+    # unwindowed question) changes nothing.
+    abstract_urls: set[str] | None = None
+    if limit is not None and len(title_rows) > limit:
+
+        def _pmid(url: str) -> int:
+            record = by_url.get(url)
+            try:
+                return int(str(getattr(record, "id", "")))
+            except ValueError:
+                return 0
+
+        newest = sorted((str(r["source_url"]) for r in title_rows), key=_pmid, reverse=True)
+        abstract_urls = set(newest[:limit])
     abstract_rows: list[dict[str, Any]] = []
     for row in title_rows:
+        if abstract_urls is not None and row["source_url"] not in abstract_urls:
+            continue
         record = by_url.get(row["source_url"])
         if record is None:
             continue
@@ -8236,7 +8296,10 @@ def _sra_run_accessions(runs: str) -> str:
 
 
 def _ncbi_efetch_output_to_structured_fields(
-    output: NcbiEfetchOutput, purpose: str = "", gene_symbol: str | None = None
+    output: NcbiEfetchOutput,
+    purpose: str = "",
+    gene_symbol: str | None = None,
+    row_cap: int = _BREADTH_ROW_CAP,
 ) -> dict[str, Any]:
     """Shape an `ncbi_efetch` result into the same generic pseudo-row shape
     `_cypher_output_to_structured_fields` already produces for
@@ -8308,9 +8371,13 @@ def _ncbi_efetch_output_to_structured_fields(
         # the same discipline as `_layer_tool_output_to_structured_fields`.
         rows = [row for row in rows if row["source_url"]]
         rows.sort(key=lambda row: str(row["source_url"]))
-        rows = rows[:_BREADTH_ROW_CAP]
+        rows = rows[:row_cap]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
-            rows = rows + _pubmed_abstract_rows(output.records, rows)
+            rows = rows + _pubmed_abstract_rows(
+                output.records,
+                rows,
+                breadth_plan.PUBMED_RESULT_CAP if row_cap > breadth_plan.PUBMED_RESULT_CAP else None,
+            )
         if purpose == _MEDGEN_SUMMARY_PURPOSE:
             # T-8.1-06b, rebuilt in the fix-and-verify round (F-8.1-A11):
             # one row per clinical feature behind its record's title row,
@@ -8528,7 +8595,7 @@ async def _execute_planned_call(
                 ),
             )
         shaped_fields = _ncbi_efetch_output_to_structured_fields(
-            ncbi_efetch_output, purpose, planned.gene_symbol
+            ncbi_efetch_output, purpose, planned.gene_symbol, planned.row_cap
         )
         # Card 63: the same for a record fetch, a summary or a link.
         fetch_failed = ncbi_efetch_output.status == "error"
@@ -8788,7 +8855,7 @@ def _follow_up_planned_call(
     if link_target is not None:
         planned = paper_links.plan_summary_follow_up(link_target, ids)
     elif follow_up.source_purpose == "pubmed_search":
-        planned = breadth_plan.plan_literature_follow_up(ids)
+        planned = breadth_plan.plan_literature_follow_up(ids, follow_up.result_cap)
     elif follow_up.source_purpose == "clinvar_search":
         planned = breadth_plan.plan_clinvar_follow_up(ids)
     elif follow_up.source_purpose == "omim_search":
@@ -8812,6 +8879,7 @@ def _follow_up_planned_call(
                 ncbi_efetch_input=call.tool_input,
                 purpose=call.purpose,
                 gene_symbol=follow_up.gene_symbol,
+                row_cap=follow_up.result_cap if call.purpose == _PUBMED_ABSTRACTS_PURPOSE else _BREADTH_ROW_CAP,
             )
         return _PlannedLayerToolCall(
             tool_call=follow_up.tool_call, tool_input=call.tool_input, purpose=call.purpose
@@ -8921,7 +8989,7 @@ async def _prefetch_answer_names(
             max_findings=_MAX_FINDINGS_FOR_DISPLAY,
             defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
             lead_call_ids=_answer_call_ids(state.get("tool_calls", []), query.text),
-            lead_quota=_LEAD_FINDINGS_QUOTA,
+            lead_quota=_lead_findings_quota(state.get("tool_calls", [])),
         )
         curie_fallback_curies = [f.curie for f in synth_findings if f.curie_fallback and f.curie]
         fold_condition_ids: list[str] = []
@@ -14301,7 +14369,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30), so
         # the answer's own shape always lands inside the model's prompt
         # slice too, regardless of how large the display cap grows.
-        lead_quota=_LEAD_FINDINGS_QUOTA,
+        lead_quota=_lead_findings_quota(state.get("tool_calls", [])),
     )
 
     # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
