@@ -7,6 +7,7 @@ Five pairs of live runs of the windowed BRCA1 question, develop's code (`b5690f9
 - [Results](#results)
 - [What a person sees](#what-a-person-sees)
 - [Verdict](#verdict)
+- [After the fix round](#after-the-fix-round)
 
 ## Results
 
@@ -31,3 +32,17 @@ Five pairs of live runs of the windowed BRCA1 question, develop's code (`b5690f9
 ## Verdict
 
 Nothing worse than develop: twice the papers from the window, the same speed, the same cost, and a written summary every time. The run files stay in the session scratchpad and are not committed.
+
+## After the fix round
+
+The judge and the adversary found that the first build read the five newest papers, which could have no abstract or be poor matches (`judge.md`, `adversary.md` on #312's branch). The fix round (`8f4de3e8`) reads the five best-ranked papers that have an abstract. Five live runs of the fixed code, the same night, on the questions that had failed:
+
+| Question, window | Seconds | PubMed records | Count line | Summary |
+|---|---|---|---|---|
+| Recent papers on cystic fibrosis, 5 years | 16.4 | 10 | Found 10 papers for cystic fibrosis | Yes, 4 paragraphs, on CFTR modulators (the first build wrote none) |
+| Recent papers on caffeine and exercise performance, 5 years | 15.6 | 10 | Found 10 papers | Yes, 4 paragraphs, on caffeine (the first build summarised creatine) |
+| Recent papers on Marfan syndrome, 10 years | 20.0 | 10 | Found 10 papers for Marfan syndrome | Yes, 7 paragraphs, on Marfan syndrome and FBN1 |
+| Recent papers on BRCA1, 5 years | 22.3 | 10 | Found 9 papers for BRCA1 | Yes, 8 paragraphs |
+| Recent papers on BRCA1, 5 years | 22.6 | 10 | Found 9 papers for BRCA1 | Yes, 7 paragraphs |
+
+No errors. Times are local, with other agents' tests running.
