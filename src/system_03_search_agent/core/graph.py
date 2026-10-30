@@ -4822,11 +4822,17 @@ class _PlannedNcbiEfetchToolCall:
     #: result, which is that filter's documented behaviour: with no symbol
     #: to check against, no OMIM title can be stood behind.
     gene_symbol: str | None = None
-    #: Card 119 (2026-10-29): how many title rows a breadth result keeps.
-    #: Five unless the follow-up came from a PubMed search limited to a
-    #: picked window, which carries ten (`breadth_plan.
-    #: PUBMED_WINDOW_RESULT_CAP`).
-    row_cap: int = breadth_plan.PUBMED_RESULT_CAP
+    #: Card 119 (2026-10-29): how many title rows a PubMed abstracts
+    #: follow-up keeps when its search was limited to a picked window, the
+    #: search's own `retmax` (`breadth_plan.PUBMED_WINDOW_RESULT_CAP`).
+    #: None on every other call, an unwindowed abstracts call included,
+    #: which keeps `_BREADTH_ROW_CAP` as on develop (J-119-08).
+    row_cap: int | None = None
+    #: Card 119, fix round: the PubMed search's own result order (its
+    #: `sort`, relevance), carried only on a windowed abstracts follow-up,
+    #: so its five abstracts go to the best-ranked papers that have one
+    #: rather than to whichever the fetch's PMID order put first.
+    search_rank: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -5569,24 +5575,9 @@ def _pubmed_search_retmax(calls: list[Any]) -> int:
         search_input = getattr(call, "ncbi_efetch_input", None)
         retmax = getattr(getattr(search_input, "root", search_input), "retmax", None)
         if isinstance(retmax, int) and retmax > 0:
-            return retmax
+            # J-119-07: never more than the follow-up's schemas accept.
+            return min(retmax, breadth_plan.LITERATURE_FOLLOW_UP_MAX_IDS)
     return breadth_plan.PUBMED_RESULT_CAP
-
-
-def _lead_findings_quota(planned_calls: list[Any]) -> int:
-    """Card 119: the lead quota, ten as before, plus the extra title rows a
-    windowed paper search lists. Ten titles and five abstracts take fifteen,
-    so the five abstracts stay inside the model's 30-finding slice instead
-    of queueing behind the context rows."""
-    extra = 0
-    for planned in planned_calls:
-        if getattr(planned, "purpose", "") != _PUBMED_ABSTRACTS_PURPOSE:
-            continue
-        if getattr(planned, "source_purpose", "") != "pubmed_search":
-            continue
-        cap = getattr(planned, "result_cap", breadth_plan.PUBMED_RESULT_CAP)
-        extra = max(extra, cap - breadth_plan.PUBMED_RESULT_CAP)
-    return _LEAD_FINDINGS_QUOTA + max(0, extra)
 
 
 def _build_planned_go_terms_call(gene_curie: str, query_class: QueryClass) -> _PlannedToolCall:
@@ -7952,7 +7943,10 @@ _PUBMED_ABSTRACT_FIELD: Final[str] = "abstract"
 
 
 def _pubmed_abstract_rows(
-    records: list[Any], title_rows: list[dict[str, Any]], limit: int | None = None
+    records: list[Any],
+    title_rows: list[dict[str, Any]],
+    limit: int | None = None,
+    search_rank: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
     """UI fix 11.22: one additional citeable row per admitted title row,
     carrying that record's own retrieved abstract text verbatim.
@@ -7984,23 +7978,14 @@ def _pubmed_abstract_rows(
     never widen the paper set itself.
     """
     by_url = {record.source_url: record for record in records if record.source_url}
-    # Card 119: with more title rows than `limit` (a picked window lists
-    # ten), only the `limit` NEWEST papers, the highest PMIDs, get an
-    # abstract row, so the writer reads five abstracts beside ten titles.
-    # The abstract rows keep the title rows' own order. `limit=None` (every
-    # unwindowed question) changes nothing.
+    # Card 119, fix round: a picked window lists ten papers, and `limit`
+    # (five) says how many abstracts the writer reads. They go to the
+    # papers the search ranked best that HAVE an abstract, as an
+    # unwindowed question's five do, never to the highest PMIDs (A-119-01,
+    # A-119-02). `limit=None` (every unwindowed question) changes nothing.
     abstract_urls: set[str] | None = None
-    if limit is not None and len(title_rows) > limit:
-
-        def _pmid(url: str) -> int:
-            record = by_url.get(url)
-            try:
-                return int(str(getattr(record, "id", "")))
-            except ValueError:
-                return 0
-
-        newest = sorted((str(r["source_url"]) for r in title_rows), key=_pmid, reverse=True)
-        abstract_urls = set(newest[:limit])
+    if limit is not None:
+        abstract_urls = _best_ranked_abstract_urls(by_url, title_rows, limit, search_rank)
     abstract_rows: list[dict[str, Any]] = []
     for row in title_rows:
         if abstract_urls is not None and row["source_url"] not in abstract_urls:
@@ -8008,8 +7993,8 @@ def _pubmed_abstract_rows(
         record = by_url.get(row["source_url"])
         if record is None:
             continue
-        abstract = record.fields.get(_PUBMED_ABSTRACT_FIELD)
-        if not isinstance(abstract, str) or not abstract.strip():
+        abstract = _record_abstract(record)
+        if abstract is None:
             continue
         abstract_rows.append(
             {
@@ -8020,6 +8005,47 @@ def _pubmed_abstract_rows(
             }
         )
     return abstract_rows
+
+
+def _record_abstract(record: Any) -> str | None:
+    """A PubMed record's own abstract text, or None when it has none."""
+    abstract = record.fields.get(_PUBMED_ABSTRACT_FIELD)
+    if not isinstance(abstract, str) or not abstract.strip():
+        return None
+    return abstract
+
+
+def _best_ranked_abstract_urls(
+    by_url: dict[str, Any],
+    title_rows: list[dict[str, Any]],
+    limit: int,
+    search_rank: tuple[str, ...],
+) -> set[str]:
+    """Card 119, fix round: the title rows whose abstracts the writer reads
+    on a windowed answer, the first `limit` papers WITH an abstract, walked
+    in the PubMed search's own order (relevance).
+
+    A paper missing from `search_rank` walks after every ranked one, in
+    title-row order, so the choice stays deterministic if the search and
+    the fetch ever disagree. Fewer than `limit` papers with an abstract
+    means all of them.
+    """
+    rank = {pmid: position for position, pmid in reversed(list(enumerate(search_rank)))}
+
+    def _order(item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
+        position, row = item
+        record = by_url.get(row["source_url"])
+        pmid = breadth_plan.normalise_uid(str(getattr(record, "id", "") or ""))
+        return (rank.get(pmid or "", len(rank)), position)
+
+    chosen: set[str] = set()
+    for _, row in sorted(enumerate(title_rows), key=_order):
+        if len(chosen) >= limit:
+            break
+        record = by_url.get(row["source_url"])
+        if record is not None and _record_abstract(record) is not None:
+            chosen.add(row["source_url"])
+    return chosen
 
 
 #: Fix-plan item 12.1 (2026-09-23). The `medgen_summary` fields NCBI
@@ -8300,6 +8326,7 @@ def _ncbi_efetch_output_to_structured_fields(
     purpose: str = "",
     gene_symbol: str | None = None,
     row_cap: int = _BREADTH_ROW_CAP,
+    search_rank: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Shape an `ncbi_efetch` result into the same generic pseudo-row shape
     `_cypher_output_to_structured_fields` already produces for
@@ -8373,10 +8400,15 @@ def _ncbi_efetch_output_to_structured_fields(
         rows.sort(key=lambda row: str(row["source_url"]))
         rows = rows[:row_cap]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
+            # Card 119: a windowed answer lists more titles than the
+            # writer reads abstracts; the five abstracts go to the
+            # best-ranked papers that have one. Unwindowed: unchanged.
+            windowed = row_cap > breadth_plan.PUBMED_RESULT_CAP
             rows = rows + _pubmed_abstract_rows(
                 output.records,
                 rows,
-                breadth_plan.PUBMED_RESULT_CAP if row_cap > breadth_plan.PUBMED_RESULT_CAP else None,
+                breadth_plan.PUBMED_RESULT_CAP if windowed else None,
+                search_rank if windowed else (),
             )
         if purpose == _MEDGEN_SUMMARY_PURPOSE:
             # T-8.1-06b, rebuilt in the fix-and-verify round (F-8.1-A11):
@@ -8595,7 +8627,11 @@ async def _execute_planned_call(
                 ),
             )
         shaped_fields = _ncbi_efetch_output_to_structured_fields(
-            ncbi_efetch_output, purpose, planned.gene_symbol, planned.row_cap
+            ncbi_efetch_output,
+            purpose,
+            planned.gene_symbol,
+            _BREADTH_ROW_CAP if planned.row_cap is None else planned.row_cap,
+            planned.search_rank,
         )
         # Card 63: the same for a record fetch, a summary or a link.
         fetch_failed = ncbi_efetch_output.status == "error"
@@ -8874,12 +8910,21 @@ def _follow_up_planned_call(
         if call.purpose != follow_up.purpose:
             continue
         if call.tool == "ncbi_efetch":
+            # Card 119: only a windowed search's PubMed abstracts call
+            # takes the search's own cap and order; every other call,
+            # an unwindowed abstracts call included, keeps
+            # `_BREADTH_ROW_CAP` as on develop (J-119-08).
+            windowed = (
+                call.purpose == _PUBMED_ABSTRACTS_PURPOSE
+                and follow_up.result_cap > breadth_plan.PUBMED_RESULT_CAP
+            )
             return _PlannedNcbiEfetchToolCall(
                 tool_call=follow_up.tool_call,
                 ncbi_efetch_input=call.tool_input,
                 purpose=call.purpose,
                 gene_symbol=follow_up.gene_symbol,
-                row_cap=follow_up.result_cap if call.purpose == _PUBMED_ABSTRACTS_PURPOSE else _BREADTH_ROW_CAP,
+                row_cap=follow_up.result_cap if windowed else None,
+                search_rank=breadth_plan.search_rank(ids) if windowed else (),
             )
         return _PlannedLayerToolCall(
             tool_call=follow_up.tool_call, tool_input=call.tool_input, purpose=call.purpose
@@ -8989,7 +9034,7 @@ async def _prefetch_answer_names(
             max_findings=_MAX_FINDINGS_FOR_DISPLAY,
             defer_source_urls=frozenset(state.get("deferred_record_ids") or []),
             lead_call_ids=_answer_call_ids(state.get("tool_calls", []), query.text),
-            lead_quota=_lead_findings_quota(state.get("tool_calls", [])),
+            lead_quota=_LEAD_FINDINGS_QUOTA,
         )
         curie_fallback_curies = [f.curie for f in synth_findings if f.curie_fallback and f.curie]
         fold_condition_ids: list[str] = []
@@ -14369,7 +14414,7 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
         # Ten is comfortably under `_MAX_FINDINGS_FOR_MODEL_PROMPT` (30), so
         # the answer's own shape always lands inside the model's prompt
         # slice too, regardless of how large the display cap grows.
-        lead_quota=_lead_findings_quota(state.get("tool_calls", [])),
+        lead_quota=_LEAD_FINDINGS_QUOTA,
     )
 
     # Build phase 6.2, T-6.2-02. A `curie_fallback` finding is one whose own
