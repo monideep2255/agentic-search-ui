@@ -1158,66 +1158,81 @@ async def _run_ask(
         renderer = Renderer(stdout, stderr, operator=False, persona_name=persona_name)
     stream_iter = client.stream_events(run_id).__aiter__()
 
-    with sigint_scope or contextlib.nullcontext():
-        outcome = await _consume_stream_with_interrupt(
-            stream_iter,
-            renderer,
-            client=client,
-            run_id=run_id,
-            interrupt_signals=interrupt_signals,
-            stderr=report,
-        )
-    if outcome is not None:
-        if outcome != EXIT_INTERRUPTED and as_json:
-            # The stream could not be opened or broke off (F-8.10-J08): the
-            # one JSON object still goes out, carrying whatever arrived and
-            # the reason, which no event will give.
-            renderer.record_failure(  # type: ignore[union-attr]
-                "stream_failed", kept.take() or "s3: the event stream ended unexpectedly"
+    ctrl_c = _CtrlC()
+    try:
+        with sigint_scope or contextlib.nullcontext():
+            outcome = await _consume_stream_with_interrupt(
+                stream_iter,
+                renderer,
+                client=client,
+                run_id=run_id,
+                interrupt_signals=interrupt_signals,
+                stderr=report,
+                ctrl_c=ctrl_c,
             )
-            renderer.finish()
-            return outcome
-        if outcome == EXIT_INTERRUPTED:
-            if as_json:
+        if outcome is not None:
+            if outcome != EXIT_INTERRUPTED and as_json:
+                # The stream could not be opened or broke off (F-8.10-J08): the
+                # one JSON object still goes out, carrying whatever arrived and
+                # the reason, which no event will give.
                 renderer.record_failure(  # type: ignore[union-attr]
-                    "interrupted",
-                    "s3: you stopped this search. Start a new search if you still need an answer.",
+                    "stream_failed", kept.take() or "s3: the event stream ended unexpectedly"
                 )
-            # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
-            # state with no `done`/fatal `error`/guard event ever
-            # delivered to `renderer`, the exact undetermined-state shape
-            # `Renderer.finish()`'s own docstring (J-4.2-04) already
-            # anticipates and names this call site by number. `finish()`
-            # still has to run here, for its SIDE EFFECTS: it prints the
-            # references block for whatever citations were actually
-            # delivered before the interrupt (idempotent via
-            # `_printed_references`, so this is always this renderer's
-            # first and only call to it on this path, never a
-            # double-print), and its own "the run ended before a final
-            # answer was received" stderr notice, exactly like a dropped
-            # connection would already get. Its RETURN VALUE is discarded
-            # on purpose: `_handle_interrupt_during_stream` already
-            # proved exit code 130 is the right, conventional signal for
-            # an interrupted run, and `finish()` has no way to know this
-            # run was interrupted rather than merely truncated, so left
-            # alone it would return EXIT_FAILURE (1) instead.
-            renderer.finish()
-            return EXIT_INTERRUPTED
-        return outcome
-    exit_code = renderer.finish()
-    if getattr(renderer, "offered_options", False):
-        # T-8.10-03: the numbered options are only useful if the person
-        # knows how to pick one. The session id keeps the pick in the same
-        # conversation. It may be the person's own `--session-id` text, so
-        # it is sanitized before it reaches the terminal.
-        from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
+                renderer.finish()
+                return outcome
+            if outcome == EXIT_INTERRUPTED:
+                if as_json:
+                    renderer.record_failure(  # type: ignore[union-attr]
+                        "interrupted", _JSON_STOP_MESSAGES[ctrl_c.outcome or "unconfirmed"]
+                    )
+                # F-4.2-V4-02, MAJOR: an interrupted run reaches a terminal
+                # state with no `done`/fatal `error`/guard event ever
+                # delivered to `renderer`, the exact undetermined-state shape
+                # `Renderer.finish()`'s own docstring (J-4.2-04) already
+                # anticipates and names this call site by number. `finish()`
+                # still has to run here, for its SIDE EFFECTS: it prints the
+                # references block for whatever citations were actually
+                # delivered before the interrupt (idempotent via
+                # `_printed_references`, so this is always this renderer's
+                # first and only call to it on this path, never a
+                # double-print) and the "did not finish" notice. Card 142:
+                # `stopped_by_person=True` keeps it from also writing "error:
+                # the run ended before a final answer was received", since a
+                # stop the person asked for is not an error; the stop lines
+                # `_consume_stream_with_interrupt` wrote already say the
+                # answer above is incomplete. Its RETURN VALUE is discarded
+                # on purpose: exit code 130 is the conventional signal for an
+                # interrupted run, and left alone `finish()` would return
+                # EXIT_FAILURE (1) instead.
+                renderer.finish(stopped_by_person=True)
+                return EXIT_INTERRUPTED
+            return outcome
+        exit_code = renderer.finish()
+        if getattr(renderer, "offered_options", False):
+            # T-8.10-03: the numbered options are only useful if the person
+            # knows how to pick one. The session id keeps the pick in the same
+            # conversation. It may be the person's own `--session-id` text, so
+            # it is sanitized before it reaches the terminal.
+            from system_03_search_agent.adapters.cli.render import _sanitize_untrusted
 
-        stderr.write(
-            "s3: to ask one of these, run: s3 ask --session-id "
-            f"{shlex.quote(_sanitize_untrusted(session_id))} \"<the question you pick>\"\n"
-        )
-        stderr.flush()
-    return exit_code
+            stderr.write(
+                "s3: to ask one of these, run: s3 ask --session-id "
+                f"{shlex.quote(_sanitize_untrusted(session_id))} \"<the question you pick>\"\n"
+            )
+            stderr.flush()
+        return exit_code
+    except BrokenPipeError:
+        # Card 142, A-142-04: Ctrl-C reaches every process in a pipeline, so
+        # `s3 ask ... | head` or `| tee` loses its reader in the same instant.
+        # Only after the person pressed Ctrl-C is a broken pipe theirs to
+        # expect: exit 130 quietly. Any other broken pipe is reported as
+        # before. BrokenPipeError only, never ValueError (V-142-06): an
+        # encoding error on a live stdout is a real fault and still says so.
+        if not ctrl_c.pressed:
+            raise
+        _quiet_a_broken_pipe(stdout)
+        _quiet_a_broken_pipe(stderr)
+        return EXIT_INTERRUPTED
 
 
 # ---------------------------------------------------------------------------
@@ -1228,56 +1243,118 @@ async def _run_ask(
 def _swallow_task_exception(task: asyncio.Task[object]) -> None:
     """Prevents an "exception was never retrieved" warning from a
     best-effort background stop call that nobody waits on after a second
-    Ctrl-C.
+    Ctrl-C or past the confirmation bound.
     """
     if not task.cancelled():
         task.exception()
 
 
-async def _handle_interrupt_during_stream(
-    pending_next: asyncio.Task[object],
-    *,
-    client: CliClient,
-    run_id: str,
-    interrupt_signals: asyncio.Queue[None] | None,
-    stderr: TextIO,
-) -> int:
-    """Ctrl-C sends `POST /v1/query/{run_id}/stop` before the process
-    exits, so an interrupted session halts the server-side loop instead
-    of leaving it running unseen. A second Ctrl-C arriving while that
-    stop call is still in flight exits immediately rather than waiting
-    for its response: a user who interrupts twice wants out, and the
-    stop call is best-effort at that point, not something worth blocking
-    exit on.
+def _quiet_a_broken_pipe(stream: TextIO) -> None:
+    """Card 142, A-142-04 and V-142-09: when `stream`'s reader is gone
+    (`| head` or `| tee` ended with the same Ctrl-C), points its file
+    descriptor at the null device, so the interpreter's own flush at exit
+    cannot fail again with "Exception ignored ... BrokenPipeError" and exit
+    120. A stream whose flush succeeds is left alone, so nothing still
+    buffered for a live terminal is lost. A stream with no file descriptor
+    (a test buffer) has nothing to redirect.
     """
-    stderr.write("s3: interrupted, stopping the run...\n")
-    if not pending_next.done():
-        pending_next.cancel()
+    try:
+        stream.flush()
+    except BrokenPipeError:
+        try:
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull, stream.fileno())
+            os.close(devnull)
+        except OSError:  # includes io.UnsupportedOperation: no descriptor to redirect
+            pass
 
-    stop_task: asyncio.Task[bool] = asyncio.ensure_future(client.stop(run_id))
-    stop_task.add_done_callback(_swallow_task_exception)
 
-    second_interrupt_task: asyncio.Task[None] | None = None
-    if interrupt_signals is not None:
-        second_interrupt_task = asyncio.ensure_future(interrupt_signals.get())
+# Card 142: how long after the first Ctrl-C the command line waits for the
+# server to confirm the stop, and, when the server says the run had already
+# finished, for the rest of its answer. The stop call runs in the background
+# and is never awaited past this bound, so a slow or unreachable server
+# cannot hold the person at the terminal (V-142-03, V-142-05). The stop
+# call's own HTTP timeout, `_REST_CALL_TIMEOUT_S`, is 15 seconds.
+_STOP_CONFIRM_BOUND_S: float = 3.0
 
-    wait_for: set[asyncio.Future[object]] = {stop_task}
-    if second_interrupt_task is not None:
-        wait_for.add(second_interrupt_task)
+# What the person sees on stderr. None calls their own stop an error.
+# Printed at once on the first Ctrl-C, before the stop call is sent. It says
+# what is being done, never that it is done. Develop's own words, kept.
+_STOPPING_LINE = "s3: interrupted, stopping the run...\n"
+# The server answered that it stopped the run.
+_STOPPED_LINE = "s3: the run was stopped at your request; the answer above is incomplete.\n"
+# The stop call failed or did not answer within the bound: no stop is claimed.
+_STOP_UNCONFIRMED_LINE = (
+    "s3: the server did not confirm the stop, so the run may still be going; "
+    "the answer above is incomplete.\n"
+)
+# The server answered that the run had already finished (A-142-01): the rest
+# of its answer is read and shown as a normal run.
+_ALREADY_FINISHED_LINE = "s3: the run had already finished, so there was nothing to stop.\n"
+# The run had already finished, but the rest of its answer did not arrive
+# within the bound (V-142-05): the program exits rather than wait.
+_REST_DID_NOT_ARRIVE_LINE = (
+    "s3: the rest of the answer did not arrive in time; the answer above is incomplete.\n"
+)
+# A second Ctrl-C always exits at once (V-142-04).
+_SECOND_PRESS_UNCONFIRMED_LINE = (
+    "s3: interrupted again, exiting immediately; the stop was not confirmed, "
+    "and the answer above is incomplete.\n"
+)
+_SECOND_PRESS_LINE = (
+    "s3: interrupted again, exiting immediately; the answer above is incomplete.\n"
+)
 
-    done, _pending = await asyncio.wait(wait_for, return_when=asyncio.FIRST_COMPLETED)
+# `s3 ask --json`: the `error.message` for each way a Ctrl-C can end a run.
+_JSON_STOP_MESSAGES = {
+    "stopped": "s3: you stopped this search. Start a new search if you still need an answer.",
+    "unconfirmed": (
+        "s3: you stopped this search, but the server did not confirm the stop, so the "
+        "run may still be going. Start a new search if you still need an answer."
+    ),
+    "cut_off": (
+        "s3: you stopped this search after the run had finished, but the rest of its "
+        "answer did not arrive. Start a new search if you still need an answer."
+    ),
+}
 
-    if second_interrupt_task is not None and second_interrupt_task in done:
-        # The stop call is left running in the background, best-effort:
-        # not awaited further, not cancelled, since cancelling an
-        # in-flight HTTP request here would abandon it mid-write with no
-        # cleaner outcome either way. We simply stop waiting on it.
-        stderr.write("s3: interrupted again, exiting immediately\n")
-        return EXIT_INTERRUPTED
 
-    if second_interrupt_task is not None and not second_interrupt_task.done():
-        second_interrupt_task.cancel()
-    return EXIT_INTERRUPTED
+class _CtrlC:
+    """What happened to Ctrl-C during one `s3 ask` stream, read by `_run_ask`.
+
+    `pressed` turns True on the first press. `outcome`, set when the press
+    ends the run with exit 130, is one of `_JSON_STOP_MESSAGES`' keys:
+    "stopped" (the server confirmed), "unconfirmed" (the stop call failed,
+    did not answer within `_STOP_CONFIRM_BOUND_S`, or a second press came
+    first) or "cut_off" (the server said the run had already finished, but
+    the rest of its answer did not arrive in time).
+    """
+
+    def __init__(self) -> None:
+        self.pressed = False
+        self.outcome: str | None = None
+
+
+# A `stop` call that failed in transport: the stop is then not confirmed.
+# Typed client errors are added at the call site; `CliClient.stop` raises
+# one for any reply without a JSON `true` or `false` `stopped` field. A
+# programming fault (TypeError, KeyError and the like) is never caught here,
+# so it is reported as one (J-142B-14, A-142B-05).
+_STOP_REPLY_FAILURES: tuple[type[Exception], ...] = (httpx.HTTPError,)
+
+
+def _is_terminal(event: object) -> bool:
+    """True for the events after which the server ends a run's stream: `done`,
+    or a fatal `error` (`run_registry.py`). Reads the payload's `fatal` flag,
+    the one payload field this module reads, only to know whether a Ctrl-C
+    still has a run to stop."""
+    event_type = getattr(event, "type", None)
+    if event_type == "done":
+        return True
+    if event_type == "error":
+        payload = getattr(event, "payload", None)
+        return isinstance(payload, dict) and payload.get("fatal") is True
+    return False
 
 
 async def _consume_stream_with_interrupt(
@@ -1288,6 +1365,7 @@ async def _consume_stream_with_interrupt(
     run_id: str,
     interrupt_signals: asyncio.Queue[None] | None,
     stderr: TextIO,
+    ctrl_c: _CtrlC | None = None,
 ) -> int | None:
     """Feeds every event to `renderer.handle` until the stream ends on
     its own, which happens when the server closes the SSE response after
@@ -1296,8 +1374,36 @@ async def _consume_stream_with_interrupt(
     exit logic must never key only on `done`). Returns None in that
     case, meaning the caller should finish normally via
     `renderer.finish()`. Returns an exit code directly if Ctrl-C
-    interrupted the run first, in which case no further event is
-    rendered and the caller must not also call `renderer.finish()`.
+    interrupted the run first.
+
+    Ctrl-C, card 142 (the owner's redesign of 2026-10-25: the stop line
+    prints at once, the stop is confirmed with the server in the background
+    under a short bound, and a second Ctrl-C stays the hard exit):
+
+    1. A press after the run's terminal event already arrived stops
+       nothing: the stream is left and the run finishes as it stands, with
+       its own exit code and no stop line (A-142-01). When an event and a
+       press are both ready at once, the event is taken first, so a `done`
+       still being written wins the tie.
+    2. Otherwise `_STOPPING_LINE` is written at once (V-142-03) and
+       `POST /v1/query/{run_id}/stop` is sent as a background task. Events
+       that arrive while it is in flight are held, not shown.
+    3. The server confirms: `_STOPPED_LINE`, exit 130, held events dropped.
+    4. The stop call fails, or `_STOP_CONFIRM_BOUND_S` passes first:
+       `_STOP_UNCONFIRMED_LINE`, exit 130. The stop call is left running,
+       never awaited past the bound. When a `done` or a fatal error other
+       than `cancelled` is already held, the run ended: the held events
+       are shown instead, after `_ALREADY_FINISHED_LINE` for a `done`, and
+       as any fatal error is for an error (J-142B-02, A-142B-01).
+    5. The server says the run had already finished (`stopped: false`):
+       `_ALREADY_FINISHED_LINE`, then the held events and the rest of the
+       stream are shown as a normal run, until its terminal event. If the
+       stream ends without one, or none comes by the same bound, the
+       program exits 130 with `_REST_DID_NOT_ARRIVE_LINE` rather than wait
+       on an open stream (V-142-05, A-142B-06).
+    6. A second press at any point after the first exits 130 at once,
+       saying the answer above is incomplete (V-142-04).
+    7. After a press the stream is closed before returning (J-142B-05).
 
     F-4.2-A-16/F-4.2-A-15/F-4.2-A-28: three genuinely different things can
     go wrong on the way to a normal-looking stream end, and this function
@@ -1326,9 +1432,8 @@ async def _consume_stream_with_interrupt(
        fail (F-4.2-A-15's "state the emptiness" option, since this module
        does not own `render.py`'s exit-code policy to instead make that
        case exit nonzero). This function tracks the type of the last
-       event it forwards to `renderer.handle` (`event.type`, the one
-       field this module reads off an `Event` rather than treating it as
-       fully opaque) purely to detect this third case.
+       event it forwards to `renderer.handle` (`event.type`) purely to
+       detect this third case.
 
     A non-zero skip count is not equivalent to a truncated stream, and
     neither is equivalent to a fatal `error` (already reported by
@@ -1336,107 +1441,233 @@ async def _consume_stream_with_interrupt(
     collapsing any two of these into one sentence would be honest-looking
     and wrong.
     """
+    if ctrl_c is None:
+        ctrl_c = _CtrlC()
+    loop = asyncio.get_running_loop()
+    more = object()  # `take` rendered an event and the stream goes on
     pending_next: asyncio.Task[object] | None = None
     pending_interrupt: asyncio.Task[None] | None = None
+    stop_task: asyncio.Task[bool] | None = None
+    stop_answered = False
+    held: list[asyncio.Task[object]] = []
+    stream_over = False
+    deadline: float | None = None
     last_event_type: str | None = None
+    terminal_seen = False
     saw_token = False
     saw_citation = False
+
+    def disclose_stream_end() -> None:
+        # Three independent disclosures (F-4.2-A-16/F-4.2-A-15/
+        # F-4.2-A-28, this function's own docstring): a skipped-frame
+        # count, genuine mid-frame truncation, and an empty `done`. None
+        # of the three implies any of the others, and more than one CAN
+        # be true at once (e.g. a skipped frame followed by a genuinely
+        # truncated connection), so each gets its own unconditional check
+        # and its own sentence rather than an elif chain that would
+        # silently drop one.
+        skipped_frames = getattr(client, "stream_skipped_frame_count", 0)
+        if skipped_frames:
+            frame_word = "frame" if skipped_frames == 1 else "frames"
+            stderr.write(
+                f"s3: {skipped_frames} {frame_word} in the event stream "
+                "could not be decoded and were skipped; the answer "
+                "above may be missing content from them.\n"
+            )
+        if getattr(client, "stream_truncated", False):
+            stderr.write(
+                "s3: the event stream stopped early, before a final "
+                "answer or error was received; the connection may "
+                "have been interrupted. Any answer text above may be "
+                "incomplete.\n"
+            )
+        if last_event_type == "done" and not saw_token and not saw_citation:
+            stderr.write(
+                "s3: the run finished with no answer text and no "
+                "citations; nothing was actually delivered even "
+                "though the run did not fail.\n"
+            )
+
+    def take(task: asyncio.Task[object]) -> object:
+        """Handles one finished read of the stream: renders an event and
+        returns `more`, or returns None at the stream's end, or 1 when the
+        stream failed."""
+        nonlocal last_event_type, terminal_seen, saw_token, saw_citation
+        try:
+            event = task.result()
+        except StopAsyncIteration:
+            disclose_stream_end()
+            return None
+        except _client_typed_errors() as exc:
+            # Opening the stream (the first __anext__) is a REST
+            # call too, and can raise the same typed errors
+            # create_run and stop do (client.py, T-4.2-03); render
+            # it the same way. A 401 here is not retried: the
+            # token was valid moments ago for create_run, so a
+            # second refresh mid-stream is not worth the added
+            # complexity for a case this phase's gate does not
+            # exercise (tracker/phase_4.2.md's stated coverage).
+            _render_client_error(stderr, exc)
+            return 1
+        except Exception as exc:  # noqa: BLE001 - any other stream-level failure
+            # ends the run cleanly with a message, rather than an
+            # unhandled traceback; genuine network flakiness
+            # mid-stream is explicitly out of this phase's gate
+            # coverage (tracker/phase_4.2.md), but a real CLI
+            # still needs to fail cleanly rather than crash.
+            # type(exc).__name__ only, never str(exc): this is
+            # the same no-raw-exception-text constraint as every
+            # other user-facing message in this module.
+            stderr.write(f"s3: the event stream ended unexpectedly ({type(exc).__name__})\n")
+            return 1
+        if event.type == "token":
+            saw_token = True
+        elif event.type == "citation":
+            saw_citation = True
+        last_event_type = event.type
+        if _is_terminal(event):
+            terminal_seen = True
+        renderer.handle(event)
+        return more
+
+    def say(line: str) -> None:
+        stderr.write(line)
+        stderr.flush()
+
+    def exit_interrupted(line: str, outcome: str) -> int:
+        say(line)
+        ctrl_c.outcome = outcome
+        return EXIT_INTERRUPTED
+
+    def ended(result: object) -> int | None:
+        """The stream ended or failed after the server said the run had
+        already finished. With no terminal event, the person's own stop
+        still ends it with 130, never an "error:" line (A-142B-06)."""
+        if result is None and not terminal_seen:
+            return exit_interrupted(_REST_DID_NOT_ARRIVE_LINE, "cut_off")
+        return cast("int | None", result)
+
+    def show_held() -> object:
+        """Shows the held events in order; stops at the terminal event."""
+        for task in held:
+            result = take(task)
+            if result is not more or terminal_seen:
+                return result
+        held.clear()
+        return more
+
+    def unconfirmed() -> int | None:
+        """The stop was not confirmed. A `done` or a fatal error other than
+        the stop's own `cancelled` already held means the run ended, so it
+        is shown, not thrown away (J-142B-02, A-142B-01)."""
+        for task in held:
+            event = task.result() if task.exception() is None else None
+            if not _is_terminal(event):
+                continue
+            if getattr(event, "type", None) == "done":
+                say(_ALREADY_FINISHED_LINE)
+            elif getattr(event, "payload", {}).get("error_class") == "cancelled":
+                break
+            result = show_held()
+            return None if result is more else cast("int | None", result)
+        return exit_interrupted(_STOP_UNCONFIRMED_LINE, "unconfirmed")
+
     try:
         while True:
-            if pending_next is None:
+            if pending_next is None and not stream_over:
                 pending_next = asyncio.ensure_future(stream_iter.__anext__())
-            wait_for: set[asyncio.Future[object]] = {pending_next}
+            wait_for: set[asyncio.Future[object]] = set()
+            if pending_next is not None:
+                wait_for.add(pending_next)
             if interrupt_signals is not None:
                 if pending_interrupt is None:
                     pending_interrupt = asyncio.ensure_future(interrupt_signals.get())
                 wait_for.add(pending_interrupt)
+            if stop_task is not None and not stop_answered:
+                wait_for.add(stop_task)
+            timeout = None if deadline is None else max(0.0, deadline - loop.time())
 
-            done, _pending = await asyncio.wait(wait_for, return_when=asyncio.FIRST_COMPLETED)
+            done, _pending = await asyncio.wait(
+                wait_for, timeout=timeout, return_when=asyncio.FIRST_COMPLETED
+            )
+
+            # The stream first: a terminal event ready in the same instant as
+            # a press wins the tie (A-142-01).
+            if pending_next is not None and pending_next in done:
+                task, pending_next = pending_next, None
+                if stop_task is not None and not stop_answered:
+                    # Held until the server answers the stop. `exception()`
+                    # also marks a failure as retrieved (A-142-02).
+                    held.append(task)
+                    if task.exception() is not None:
+                        stream_over = True
+                else:
+                    result = take(task)
+                    if result is not more:
+                        return ended(result) if ctrl_c.pressed else cast("int | None", result)
+                    if ctrl_c.pressed and terminal_seen:
+                        # The run had already finished (point 5): done.
+                        return None
 
             if pending_interrupt is not None and pending_interrupt in done:
-                interrupted_pending_next = pending_next
-                pending_next = None
                 pending_interrupt = None
-                return await _handle_interrupt_during_stream(
-                    interrupted_pending_next,
-                    client=client,
-                    run_id=run_id,
-                    interrupt_signals=interrupt_signals,
-                    stderr=stderr,
-                )
-
-            if pending_next in done:
-                task = pending_next
-                pending_next = None
-                try:
-                    event = task.result()
-                except StopAsyncIteration:
-                    # Three independent disclosures (F-4.2-A-16/F-4.2-A-15/
-                    # F-4.2-A-28, this function's own docstring): a
-                    # skipped-frame count, genuine mid-frame truncation,
-                    # and an empty `done`. None of the three implies any
-                    # of the others, and more than one CAN be true at
-                    # once (e.g. a skipped frame followed by a genuinely
-                    # truncated connection), so each gets its own
-                    # unconditional check and its own sentence rather
-                    # than an elif chain that would silently drop one.
-                    skipped_frames = getattr(client, "stream_skipped_frame_count", 0)
-                    if skipped_frames:
-                        frame_word = "frame" if skipped_frames == 1 else "frames"
-                        stderr.write(
-                            f"s3: {skipped_frames} {frame_word} in the event stream "
-                            "could not be decoded and were skipped; the answer "
-                            "above may be missing content from them.\n"
-                        )
-                    if getattr(client, "stream_truncated", False):
-                        stderr.write(
-                            "s3: the event stream stopped early, before a final "
-                            "answer or error was received; the connection may "
-                            "have been interrupted. Any answer text above may be "
-                            "incomplete.\n"
-                        )
-                    if last_event_type == "done" and not saw_token and not saw_citation:
-                        stderr.write(
-                            "s3: the run finished with no answer text and no "
-                            "citations; nothing was actually delivered even "
-                            "though the run did not fail.\n"
-                        )
+                if ctrl_c.pressed:
+                    if stop_answered:
+                        return exit_interrupted(_SECOND_PRESS_LINE, "cut_off")
+                    return exit_interrupted(_SECOND_PRESS_UNCONFIRMED_LINE, "unconfirmed")
+                ctrl_c.pressed = True
+                if terminal_seen:
+                    # Point 1: the run already finished, nothing to stop.
+                    disclose_stream_end()
                     return None
-                except _client_typed_errors() as exc:
-                    # Opening the stream (the first __anext__) is a REST
-                    # call too, and can raise the same typed errors
-                    # create_run and stop do (client.py, T-4.2-03); render
-                    # it the same way. A 401 here is not retried: the
-                    # token was valid moments ago for create_run, so a
-                    # second refresh mid-stream is not worth the added
-                    # complexity for a case this phase's gate does not
-                    # exercise (tracker/phase_4.2.md's stated coverage).
-                    _render_client_error(stderr, exc)
-                    return 1
-                except Exception as exc:  # noqa: BLE001 - any other stream-level failure
-                    # ends the run cleanly with a message, rather than an
-                    # unhandled traceback; genuine network flakiness
-                    # mid-stream is explicitly out of this phase's gate
-                    # coverage (tracker/phase_4.2.md), but a real CLI
-                    # still needs to fail cleanly rather than crash.
-                    # type(exc).__name__ only, never str(exc): this is
-                    # the same no-raw-exception-text constraint as every
-                    # other user-facing message in this module.
-                    stderr.write(
-                        f"s3: the event stream ended unexpectedly ({type(exc).__name__})\n"
-                    )
-                    return 1
-                if event.type == "token":
-                    saw_token = True
-                elif event.type == "citation":
-                    saw_citation = True
-                last_event_type = event.type
-                renderer.handle(event)
+                say(_STOPPING_LINE)
+                stop_task = asyncio.ensure_future(client.stop(run_id))
+                stop_task.add_done_callback(_swallow_task_exception)
+                deadline = loop.time() + _STOP_CONFIRM_BOUND_S
+                continue
+
+            if stop_task is not None and not stop_answered and stop_task.done():
+                stop_answered = True
+                try:
+                    stopped = bool(stop_task.result())
+                except (*_client_typed_errors(), *_STOP_REPLY_FAILURES):
+                    return unconfirmed()
+                if stopped:
+                    return exit_interrupted(_STOPPED_LINE, "stopped")
+                # Point 5: the server says the run had already finished.
+                say(_ALREADY_FINISHED_LINE)
+                result = show_held()
+                if result is not more:
+                    return ended(result)
+                if terminal_seen:
+                    return None
+                continue
+
+            if deadline is not None and loop.time() >= deadline:
+                if stop_answered:
+                    return exit_interrupted(_REST_DID_NOT_ARRIVE_LINE, "cut_off")
+                return unconfirmed()
     finally:
-        if pending_next is not None and not pending_next.done():
-            pending_next.cancel()
+        if pending_next is not None:
+            if not pending_next.done():
+                pending_next.cancel()
+            elif not pending_next.cancelled():
+                pending_next.exception()  # retrieved, so asyncio prints no warning
         if pending_interrupt is not None and not pending_interrupt.done():
             pending_interrupt.cancel()
+        if ctrl_c.pressed:
+            # J-142B-05: after a press the stream is closed here, not left
+            # suspended for the interpreter to finalize at exit, where a
+            # second press turned it into a RuntimeError traceback. The
+            # cancelled read is awaited first, so the close does not find
+            # the stream still running.
+            if pending_next is not None and not pending_next.done():
+                await asyncio.wait({pending_next})
+                if not pending_next.cancelled():
+                    pending_next.exception()
+            aclose = getattr(stream_iter, "aclose", None)
+            if aclose is not None:
+                await aclose()
 
 
 # ---------------------------------------------------------------------------
