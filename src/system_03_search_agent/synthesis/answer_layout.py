@@ -931,6 +931,34 @@ def clip_to_word(value: str, limit: int = MAX_LABEL_CHARS) -> str:
     return head[:cut].rstrip(" ,;:") + "\u2026"
 
 
+#: Card 146 (owner, 2026-10-25): the tag a retracted paper's row shows
+#: beside its title, "Mark it "Retracted"". `RETRACTED_TEXT_PREFIX` opens the
+#: row's text, which the command line, MCP and GraphQL print in place of its
+#: cells. Both are added in code to a row whose finding carries
+#: `SynthFinding.retracted`, and to no other row.
+RETRACTED_TAG = "Retracted"
+RETRACTED_LABEL_SUFFIX = f" ({RETRACTED_TAG})"
+RETRACTED_TEXT_PREFIX = f"{RETRACTED_TAG}: "
+#: `contracts.events.TokenPayload`'s own bound on a row's text.
+_MAX_ROW_TEXT_CHARS = 1000
+
+
+def retracted_row_label(label: str) -> str:
+    """A retracted paper's first cell: its label, then "(Retracted)".
+
+    The label is clipped at a word first when the two would pass the cell's
+    500-character bound, so the tag itself is never cut.
+    """
+    head = clip_to_word(label, MAX_LABEL_CHARS - len(RETRACTED_LABEL_SUFFIX))
+    return f"{head}{RETRACTED_LABEL_SUFFIX}"
+
+
+def retracted_row_text(text: str) -> str:
+    """A retracted paper's row text: "Retracted: " then the grounded
+    sentence, unchanged, within the token's 1000-character bound."""
+    return f"{RETRACTED_TEXT_PREFIX}{text}"[:_MAX_ROW_TEXT_CHARS]
+
+
 _LABEL_FIELDS = ("name", "title", "symbol", "preferred_name")
 #: The public name of the same list, for code outside this module that asks
 #: whether a finding's field is the one a listing row shows as its label.
