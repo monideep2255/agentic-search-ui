@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SavedAnswerScreen } from "./SavedAnswerScreen";
 import type { HistoryAnswerResponse } from "../../lib/api";
 import { designTokens } from "../../theme";
+import { sourceLabel } from "../../hooks/useRunView";
 
 const ANSWER: HistoryAnswerResponse = {
   trace_id: "t-1",
@@ -63,11 +64,38 @@ describe("SavedAnswerScreen", () => {
     expect(
       screen.getByText("BRCA1 is a gene associated with hereditary breast cancer."),
     ).toBeInTheDocument();
-    // Card 135: the row names its source as the live Sources list does,
-    // `sourceLabel(source, source_id, url)`, never the stored `entity_name`,
-    // which the live screen does not show.
-    expect(within(screen.getByRole("list")).getByText(/1\.\s*Gene/)).toBeInTheDocument();
+    // Card 135: a source with an entity name keeps it, as on develop.
+    expect(within(screen.getByRole("list")).getByText(/1\.\s*BRCA1/)).toBeInTheDocument();
     expect(screen.getByTestId("saved-answer-trust-line")).toHaveTextContent(NO_CHECK);
+  });
+
+  it("names a source with no entity name by database and record, not a tool name", () => {
+    // Mutation: always entity_name ?? source turns this red.
+    renderSaved({
+      ...ANSWER,
+      citations: [
+        {
+          display_index: 1,
+          source: "pathogen_detection",
+          source_id: "SAMN00715300",
+          source_url: "https://www.ncbi.nlm.nih.gov/pathogens/isolates/#SAMN00715300",
+          layer: 2,
+        },
+      ],
+    });
+    expect(within(screen.getByRole("list")).getByText(/1\.\s*Pathogen Detection SAMN00715300/)).toBeInTheDocument();
+    expect(screen.queryByText(/pathogen_detection/)).toBeNull();
+  });
+
+  it("names a source with no entity name and a database name as the live list does", () => {
+    // Mutation: always entity_name ?? source loses the record id, red.
+    renderSaved({
+      ...ANSWER,
+      citations: [
+        { display_index: 1, source: "Gene", source_id: "672", source_url: "https://www.ncbi.nlm.nih.gov/gene/672", layer: 1 },
+      ],
+    });
+    expect(within(screen.getByRole("list")).getByText(new RegExp(`1\\.\\s*${sourceLabel("Gene", "672", "https://www.ncbi.nlm.nih.gov/gene/672")}$`))).toBeInTheDocument();
   });
 
   it("links a citation whose host is on the allowed NCBI list", () => {

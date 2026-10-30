@@ -62,7 +62,7 @@ Because this is a visible change to the live answer screen as well, the product 
 ## Saved-screen labels that change
 
 - A row is now named as the live list names it: "Pathogen Detection SAMN00715300" where it read "pathogen_detection", "NCBIGene 672" where it read "NCBIGene".
-- A row whose stored `entity_name` was set (for example "BRCA1") now shows the source and id instead, matching the live list.
+- A row whose stored `entity_name` is set (for example "BRCA1") keeps that name, as on develop (changed in the fix round below).
 - The summary's "[1][2]...[20]" is one range marker reading 1 to 20; a table row's "C236-11 [1]" and a list item's "Escherichia coli[21]" carry a marker each.
 
 ## Tests
@@ -96,3 +96,12 @@ Mutations, each restored after:
 
 - The saved marker card's mono tool row is empty. The live card shows the citation's `field` there, and the saved-answer parser in `frontend/src/lib/api.ts` (outside this slice's files) does not keep `field`. It is left empty rather than filled with a tool's string.
 - A mixed run such as "[1][99]" keeps a space before "[99]" on the saved screen; the live screen would print "Another[99]". Neither producer emits this shape today.
+
+## Fix round
+
+Judge finding J-135S2-01, decided by the lead from the reader's chair: a reopened answer still names a source by what it is, such as BRCA1, and where it used to show an internal tool name it now names the database and the record.
+
+- `SavedAnswerScreen.tsx`: the saved Sources row label is the record's `entity_name` when present and non-empty, exactly as develop; otherwise `sourceLabel(source, source_id, source_url)`. The live Sources list and marker card are unchanged and never show `entity_name`.
+- `SavedAnswerScreen.test.tsx`: the first test is back to develop's "1. BRCA1". New: no entity name with source `pathogen_detection` on a pathogens host reads "Pathogen Detection SAMN00715300" and no tool name; no entity name with source "Gene" reads the live label.
+- Mutations: always `sourceLabel` turns 1 test red (BRCA1); always `entity_name || source` turns 2 red (the two new cases). Both restored.
+- Run from `frontend/`: `npx vitest run src/components/screens/ src/hooks/ src/components/answer/ src/lib/` and `npx tsc --noEmit -p .`.

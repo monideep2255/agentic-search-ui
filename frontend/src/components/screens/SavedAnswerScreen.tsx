@@ -139,11 +139,13 @@ function CitationRow({ row }: { row: SavedSourceRow }) {
   // An unrecognised layer draws `layerColour(null)`, the neutral gap colour.
   const colour = layerColour(citation.layer ?? row.layers[0] ?? null);
   const linkable = isLinkableCitationUrl(citation.source_url);
-  // Card 135: named exactly as the live Sources list names the same
-  // citation, database then record id. This used to print `entity_name`, or
-  // failing that the raw `source`, so a reopened answer read "ncbi_efetch"
-  // or twenty rows of "pathogen_detection" and dropped every record id.
-  const label = sourceLabel(citation.source, citation.source_id ?? "", citation.source_url);
+  // Card 135: a record's own name ("BRCA1") wins, as it always did. Without
+  // one, the row names the database and record id as the live list does,
+  // never a raw tool name such as "pathogen_detection".
+  const entityName = citation.entity_name?.trim();
+  const label = entityName
+    ? entityName
+    : sourceLabel(citation.source, citation.source_id ?? "", citation.source_url);
   return (
     <Box
       component="li"
