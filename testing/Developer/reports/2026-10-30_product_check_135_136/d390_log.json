@@ -1,0 +1,71 @@
+{
+  "after_sign_in": {
+    "drawer_open": false,
+    "toggle_expanded": "false",
+    "saved_screen": false,
+    "question_box": true,
+    "overflow": 0
+  },
+  "drawer_items": [
+    "+ New search",
+    "",
+    "What does GCK do? 18 sources cited · Oct 30",
+    "Which diseases are associated with GCK? 22 sources cited · Oct 29"
+  ],
+  "after_pick_older": {
+    "drawer_open": false,
+    "toggle_expanded": "false",
+    "saved_screen": true,
+    "question_box": false,
+    "overflow": 0
+  },
+  "saved_390": {
+    "omimLinks": [
+      {
+        "href": "https://omim.org/entry/138079",
+        "text": "https://omim.org/entry/138079",
+        "visible": true
+      }
+    ],
+    "omimTexts": [
+      "Omim records found",
+      "omim 138079",
+      "omim",
+      "https://omim.org/entry/138079"
+    ],
+    "notLinked": []
+  },
+  "after_new_search": {
+    "drawer_open": false,
+    "toggle_expanded": "false",
+    "saved_screen": false,
+    "question_box": true,
+    "overflow": 0
+  },
+  "q21_390_seconds_to_answer": 12.492,
+  "q21_390_refused": false,
+  "q21_390_meta": "? Answered12.1s · 13 tool calls · 22 sources cited from 2 layers",
+  "live_390_state": {
+    "drawer_open": false,
+    "toggle_expanded": "false",
+    "saved_screen": false,
+    "question_box": true,
+    "overflow": 0
+  },
+  "live_390": {
+    "omimLinks": [
+      {
+        "href": "https://omim.org/entry/138079",
+        "text": "https://omim.org/entry/138079",
+        "visible": true
+      }
+    ],
+    "omimTexts": [
+      "Omim records found",
+      "omim 138079",
+      "omim 138079",
+      "https://omim.org/entry/138079"
+    ],
+    "notLinked": []
+  }
+}

@@ -227,6 +227,8 @@ Done here means closed: built and live on develop, or answered, superseded, run 
 | card 133 and card 137, part 1 | A gene two sources both found is one row naming both, so no gene shows twice and the list total, sources count, Found and Based on lines agree | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-22_product_check_card133/report.md`) | 24, 118 |
 | card 121 | The variant table's heading reads "Variant records found", with "record" once | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-29_product_check_121_123/report.md`) | 119, 23 |
 | card 123 | On a phone, an info card beside the line under an answer, the persona card and the answer-mode card stay fully on screen, and the page never scrolls sideways | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-29_product_check_121_123/report.md`) | 5 |
+| card 135, part 1 | An OMIM source links to its omim.org page on the live answer and on a reopened saved answer | Live, awaiting your retest; product check passed at 1280 and 390 (`testing/Developer/reports/2026-10-30_product_check_135_136/report.md`) | 21 |
+| card 136, part 3 | On a phone, picking a past search or "+ New search" closes the searches drawer | Live, awaiting your retest; product check passed at 390 and 1280 (`testing/Developer/reports/2026-10-30_product_check_135_136/report.md`) | 51 |
 | card 148 | A Vespa search index for FIND and DISCOVER | Not pursued for now, your call of 2026-10-29; closed unbuilt, its notes local in `docs/retrieval-engine-discussion/` |  |
 
 ## What is done, in summary
