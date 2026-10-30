@@ -20,7 +20,7 @@ Nothing here requires a document to carry today's date:
 - Build harness review item D2 removed the column and the gate, delegated by the product owner on 2026-09-25 (DECISIONS.md, the lead implements both harness reviews' takeaways).
 - Now `HANDOFF.md` is rewritten at every session end, and every other document is edited when its fact changes.
 
-Last updated: 2026-10-25.
+Last updated: 2026-10-29.
 
 ## Table of contents
 
@@ -68,7 +68,7 @@ Last updated: 2026-10-25.
 
 It is never a line number or a row number. A line number moves whenever anything above it changes, and a row number is easily written as one. Until 2026-09-25 this section said "row 716", which was the line number of the last guarded row: the file then held 716 lines but 687 dated rows, so counting rows finds no row 716 (build harness review item S4, delegated by the product owner on 2026-09-25).
 
-Guarded through the DECISIONS.md row dated 2026-10-25 that begins "Git history is not rewritten for the items of 2026-10-17", the last row at the checkpoint of the owner's decisions of 2026-10-25. None of the rows read since the overnight checkpoint of 2026-10-22 changes a registered document's shape or a process this skill runs: they record the owner's calls on the six parked pull requests, a dependency bump, card designs, no production release, develop's tracing, card 84 and git history.
+Guarded through the DECISIONS.md row dated 2026-10-29 that begins "The local branch `chore/replan-vespa-first`", the last row at the checkpoint of 2026-10-29. None of the rows read since the checkpoint of 2026-10-25 changes a registered document's shape or a process this skill runs: they record the branches of the closed pull requests, the filelock plan, the Vespa trial and its closing, the accepted filelock advisories in gate 6, and the deleted replan branch.
 
 ## Why the registry lives here
 

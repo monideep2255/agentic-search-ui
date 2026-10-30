@@ -13,24 +13,34 @@ Last updated: 2026-10-29.
 
 ## What is live
 
-- Production: release `v0.3.2`'s code (merge `0e277d61`) on the keys rotated on 2026-10-21. By the owner's call of 2026-10-25 there is no release of the overnight work: it stays on develop only.
-- Develop: the overnight merges of 2026-10-22 (#287 to #300) and the documents since. Deployed and healthy. Develop has no tracing, by design.
-- CI: the dependency pull request of 2026-10-29 makes the audit gates pass. fast-uri 3.1.9 and undici 7.30.1 are in the frontend lockfile. Gate 6 accepts the 13 filelock advisories by the owner's yes, until litellm accepts filelock 4; that day filelock is pinned and the list deleted (`.github/gates/gate06_python_audit.sh`).
-- Pull requests: card 139's note 3 (#301, draft) stays open for rework. The five other overnight drafts were closed on 2026-10-25 and their branches removed; each is restorable from its closed pull request.
-- Locally only `develop` and #301's branch, with its worktree in `~/s3-worktrees/card139b`. On GitHub `develop`, `production` and #301's branch.
-- Vespa is not pursued for now (owner, 2026-10-29): card 148 closed unbuilt, and its notes and parked plan stay local in `docs/retrieval-engine-discussion/` (gitignored).
+- Production: release `v0.3.2`'s code (merge `0e277d61`). By the owner's call of 2026-10-25 there's no release of the overnight work of 2026-10-22: it stays on develop only.
+- Develop: merge `049240d0` (#307) and the documents since. Develop has no tracing, by design.
+- CI: every gate passes again since #308:
+  - fast-uri 3.1.9 and undici 7.30.1 are in the frontend lockfile.
+  - Gate 6 accepts the 13 filelock advisories by ID, by the owner's yes of 2026-10-29, until litellm accepts filelock 4. That day filelock is pinned and the list deleted (`.github/gates/gate06_python_audit.sh`).
+- Vespa isn't pursued (owner, 2026-10-29). Card 148 closed unbuilt. Its notes and the parked plan stay local in `docs/retrieval-engine-discussion/`, which is gitignored.
+- Pull requests: only #301, card 139's note 3, a draft kept for rework.
+- Branches:
+  - Locally: `develop` and #301's branch, with its worktree in `~/s3-worktrees/card139b`.
+  - On GitHub: `develop`, `production` and #301's branch.
 - Nothing is being built.
 
 ## What awaits the product owner
 
 - Retests: the newest rows of `testing/Retest_product_owner.md`, one per card merged on 2026-10-22.
-- Nothing else is waiting on a decision: the owner's calls of 2026-10-25 are rows in `DECISIONS.md`, and the board's To do column carries each card's next move.
+- No decision is waiting: the owner's calls are rows in `DECISIONS.md`, and the board's To do column carries each card's next move.
 
 ## The one next action
 
-Diagnose card 147 (summaries that open mid-thought) and read card 84's guard lag lines, both by the owner's calls of 2026-10-25, then the board's To do column in order.
+Diagnose card 147 (summaries that open mid-thought), then read card 84's guard lag lines. Both are the owner's calls of 2026-10-25. Then work the board's To do column in order. Card 84 needs Railway logs: the Railway connector needs the owner to sign in, or use the `railway` command-line tool.
 
-How to start a session: read this file, then `git status --short` and `git worktree list`, then `testing/Retest_product_owner.md` and the board's To do column. Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
+How to start a session:
+
+1. Read this file.
+2. Run `git status --short` and `git worktree list`.
+3. Read `testing/Retest_product_owner.md` and the board's To do column.
+
+Overnight, follow `.claude/skills/overnight-development/SKILL.md`. At the end, run `/phase-checkpoint`, then `/ship`.
 
 ## Where the facts live
 

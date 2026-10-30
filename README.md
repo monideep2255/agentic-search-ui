@@ -174,7 +174,7 @@ The same checks CI runs on every pull request (build phase 4.14), so a failure s
 | Import order | `isort --check-only --diff src tests services tracker alembic .claude .github` |
 | Lint | `ruff check` (no path argument: the whole repository) |
 | Unit test suite | `pytest -m "not integration"` |
-| Python dependency audit | `pip-audit -r requirements.txt` |
+| Python dependency audit | `bash .github/gates/gate06_python_audit.sh` (runs `pip-audit -r requirements.txt` and accepts the filelock advisories listed in the script) |
 
 In [`.github/gates/README.md`](.github/gates/README.md):
 
