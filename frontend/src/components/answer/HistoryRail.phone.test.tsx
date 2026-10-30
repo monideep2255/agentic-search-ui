@@ -76,6 +76,28 @@ describe("the history rail on a phone", () => {
       expect(onCollapse).toHaveBeenCalledTimes(1);
     });
 
+    it("closes the drawer and opens that search when a row is picked", async () => {
+      const user = userEvent.setup();
+      const onCollapse = vi.fn();
+      const onOpen = vi.fn();
+      render(<HistoryRail items={ITEMS} onOpen={onOpen} onCollapse={onCollapse} />);
+
+      await user.click(screen.getByText(/diseases are associated with BRCA1/i));
+      expect(onOpen).toHaveBeenCalledWith("q-1");
+      expect(onCollapse).toHaveBeenCalledTimes(1);
+    });
+
+    it("closes the drawer when + New search is tapped", async () => {
+      const user = userEvent.setup();
+      const onCollapse = vi.fn();
+      const onNewSearch = vi.fn();
+      render(<HistoryRail items={ITEMS} onNewSearch={onNewSearch} onCollapse={onCollapse} />);
+
+      await user.click(screen.getByRole("button", { name: /\+ new search/i }));
+      expect(onNewSearch).toHaveBeenCalledTimes(1);
+      expect(onCollapse).toHaveBeenCalledTimes(1);
+    });
+
     it("renders nothing for the collapsed strip", () => {
       render(<CollapsedRail count={3} />);
       expect(screen.queryByTestId("collapsed-rail")).not.toBeInTheDocument();
@@ -93,6 +115,22 @@ describe("the history rail on a phone", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       const rail = screen.getByTestId("history-rail");
       expect(within(rail).getByText(/diseases are associated with BRCA1/i)).toBeInTheDocument();
+    });
+
+    it("leaves the rail open when a row or + New search is picked", async () => {
+      const user = userEvent.setup();
+      const onCollapse = vi.fn();
+      const onOpen = vi.fn();
+      const onNewSearch = vi.fn();
+      render(
+        <HistoryRail items={ITEMS} onOpen={onOpen} onNewSearch={onNewSearch} onCollapse={onCollapse} />,
+      );
+
+      await user.click(screen.getByText(/diseases are associated with BRCA1/i));
+      await user.click(screen.getByRole("button", { name: /\+ new search/i }));
+      expect(onOpen).toHaveBeenCalledTimes(1);
+      expect(onNewSearch).toHaveBeenCalledTimes(1);
+      expect(onCollapse).not.toHaveBeenCalled();
     });
 
     it("renders the collapsed strip", () => {

@@ -531,6 +531,12 @@ export function HistoryRail({
   // (U9) was a panel that slides in and closes, which is what a MUI
   // `Drawer` gives the same rail content without restyling it.
   const isNarrow = useMediaQuery(theme.breakpoints.down("md"));
+  // Card 136.3: at phone width the rail is a temporary drawer, so picking a
+  // search or "+ New search" also closes it through the same `onCollapse` the
+  // backdrop and Escape use. On a computer the rail stays as it is.
+  const closeAfterPick = () => {
+    if (isNarrow) onCollapse?.();
+  };
 
   const rail = (
     <Box
@@ -589,7 +595,10 @@ export function HistoryRail({
         <Box
           component="button"
           type="button"
-          onClick={onNewSearch}
+          onClick={() => {
+            onNewSearch?.();
+            closeAfterPick();
+          }}
           sx={{
             display: "flex",
             alignItems: "center",
@@ -688,7 +697,10 @@ export function HistoryRail({
             key={item.id}
             component="button"
             type="button"
-            onClick={() => onOpen?.(item.id)}
+            onClick={() => {
+              onOpen?.(item.id);
+              closeAfterPick();
+            }}
             sx={{
               display: "block",
               width: "100%",
