@@ -43,7 +43,7 @@
  * is byte-identical to the pre-2026-09-13 shape.
  */
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Box, Typography } from "@mui/material";
 
@@ -143,6 +143,34 @@ export function PersonaInfo({ name, about, wikipedia, variant, align }: PersonaI
   const [open, setOpen] = useState(false);
   const dialogId = useId();
   const wrapRef = useRef<HTMLSpanElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  /*
+   * Card 123. On a phone the card is as wide as the screen less a 16px gutter
+   * each side, but it hangs from the icon, so any icon right of the left
+   * gutter pushed it past the right edge and the page scrolled sideways.
+   * After the card lays out, measure it and slide it sideways (a transform
+   * adds no scroll width of its own) until it sits inside both gutters,
+   * whatever the icon position or containing block. At 720px and wider the
+   * card is left exactly as it was.
+   */
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (!open || !card) return;
+    const fit = () => {
+      card.style.transform = "";
+      if (window.innerWidth > 720) return;
+      const viewWidth = document.documentElement.clientWidth || window.innerWidth;
+      const rect = card.getBoundingClientRect();
+      let shift = 0;
+      if (rect.right > viewWidth - 16) shift = viewWidth - 16 - rect.right;
+      if (rect.left + shift < 16) shift = 16 - rect.left;
+      if (shift !== 0) card.style.transform = `translateX(${shift}px)`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -198,6 +226,7 @@ export function PersonaInfo({ name, about, wikipedia, variant, align }: PersonaI
 
       {open ? (
         <Box
+          ref={cardRef}
           id={dialogId}
           role="dialog"
           aria-labelledby={`${dialogId}-heading`}
@@ -209,6 +238,9 @@ export function PersonaInfo({ name, about, wikipedia, variant, align }: PersonaI
             maxWidth: "calc(100vw - 32px)",
             "@media (max-width: 720px)": {
               width: "calc(100vw - 32px)",
+              // Padding and border sit inside the 32px gutter rather than
+              // adding 30px to it (card 123).
+              boxSizing: "border-box",
             },
             bgcolor: designTokens.surface,
             border: `1px solid ${designTokens.line}`,
