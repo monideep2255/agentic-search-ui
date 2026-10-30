@@ -18,6 +18,7 @@ Last updated: 2026-10-29.
 - CI: the dependency pull request of 2026-10-29 makes the audit gates pass. fast-uri 3.1.9 and undici 7.30.1 are in the frontend lockfile. Gate 6 accepts the 13 filelock advisories by the owner's yes, until litellm accepts filelock 4; that day filelock is pinned and the list deleted (`.github/gates/gate06_python_audit.sh`).
 - Pull requests: card 139's note 3 (#301, draft) stays open for rework. The five other overnight drafts were closed on 2026-10-25 and their branches removed; each is restorable from its closed pull request.
 - Locally only `develop` and #301's branch, with its worktree in `~/s3-worktrees/card139b`. On GitHub `develop`, `production` and #301's branch.
+- Vespa is not pursued for now (owner, 2026-10-29): card 148 closed unbuilt, and its notes and parked plan stay local in `docs/retrieval-engine-discussion/` (gitignored).
 - Nothing is being built.
 
 ## What awaits the product owner
