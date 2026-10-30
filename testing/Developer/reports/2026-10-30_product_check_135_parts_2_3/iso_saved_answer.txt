@@ -1,0 +1,79 @@
+SAVED ANSWER · ASKED OCT 30, 2026, 12:39 AM
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+Run again
+
+Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli.⁠1–20
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED
+C236-11⁠1	SAMN00715300	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-3677⁠2	SAMN00715303	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4404⁠3	SAMN00715305	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4522⁠4	SAMN00715306	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4623⁠5	SAMN00715307	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C1⁠6	SAMN00715308	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C2⁠7	SAMN00715309	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C3⁠8	SAMN00715310	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C4⁠9	SAMN00715311	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+11-4632 C5⁠10	SAMN00715312	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+TAXONOMY RECORDS FOUND
+RECORD	IDENTIFIER
+Escherichia coli⁠21	NCBITaxon:562
+
+Pathogen Detection lists 142,255 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+
+Searching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not searched: most are not ESBLs and the name alone cannot tell an ESBL allele from a narrow-spectrum one, so listing them would show isolates that do not carry an ESBL.
+
+Note: no written summary could be checked against the records, so this answer lists the records found with their sources
+
+Based on 21 sources cited from Pathogen Detection and Taxonomy
+
+SOURCES
+
+1. Pathogen Detection SAMN00715300LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715300
+2. Pathogen Detection SAMN00715303LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715303
+3. Pathogen Detection SAMN00715305LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715305
+4. Pathogen Detection SAMN00715306LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715306
+5. Pathogen Detection SAMN00715307LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715307
+6. Pathogen Detection SAMN00715308LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715308
+7. Pathogen Detection SAMN00715309LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715309
+8. Pathogen Detection SAMN00715310LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715310
+9. Pathogen Detection SAMN00715311LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715311
+10. Pathogen Detection SAMN00715312LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715312
+11. Pathogen Detection SAMN00715316LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00715316
+12. Pathogen Detection SAMN00778958LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778958
+13. Pathogen Detection SAMN00778959LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778959
+14. Pathogen Detection SAMN00778960LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN00778960
+15. Pathogen Detection SAMN01141737LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141737
+16. Pathogen Detection SAMN01141738LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141738
+17. Pathogen Detection SAMN01141739LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141739
+18. Pathogen Detection SAMN01141740LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01141740
+19. Pathogen Detection SAMN01831188LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN01831188
+20. Pathogen Detection SAMN02603711LIVE
+https://www.ncbi.nlm.nih.gov/pathogens/isolates#/search/biosample_acc:SAMN02603711
+21. taxonomy 562LIVE
+https://www.ncbi.nlm.nih.gov/taxonomy/562
++ New search

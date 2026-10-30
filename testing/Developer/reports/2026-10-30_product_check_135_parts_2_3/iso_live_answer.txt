@@ -1,0 +1,64 @@
++ New search
+
+YOUR SEARCHES
+
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+2 tool calls · 21 sources cited from 1 layer
+Which diseases are associated with GCK?
+22 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 30
+What does GCK do?
+18 sources cited · Oct 30
+Which diseases are associated with GCK?
+22 sources cited · Oct 29
+<throwaway account>
+No search limit in effect yet
+What Escherichia coli isolates in Pathogen Detection carry extended-spectrum beta-lactamase genes?
+New search
+
+? Answered15.5s · 2 tool calls · 21 sources cited from 1 layer
+
+Plain language
+Researcher
+Show work ▾
+
+Found 20 pathogen detection isolate records and 1 taxonomy record for Escherichia coli.⁠1–20
+
+ISOLATES AND THEIR AMR GENES
+ISOLATE	IDENTIFIER	AMR GENES	COLLECTED	
+C236-11	SAMN00715300	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠1
+11-3677	SAMN00715303	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠2
+11-4404	SAMN00715305	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠3
+11-4522	SAMN00715306	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠4
+11-4623	SAMN00715307	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠5
+11-4632 C1	SAMN00715308	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠6
+11-4632 C2	SAMN00715309	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠7
+11-4632 C3	SAMN00715310	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠8
+11-4632 C4	SAMN00715311	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠9
+11-4632 C5	SAMN00715312	acrF, aph(3'')-Ib, aph(6)-Id, blaCTX-M-15, blaEC, blaTEM-1, dfrA7, gyrA_S83A=POINT, mdtM, sul1, sul2, tet(A)	Not recorded	⁠10
+Showing 1–10 of 20
+‹ Previous
+Page 1 of 2
+Next ›
+TAXONOMY RECORDS FOUND
+RECORD	IDENTIFIER	
+Escherichia coli	NCBITaxon:562	⁠21
+NOTES
+Pathogen Detection lists 142,255 Escherichia coli isolates with these genes; the first 20 in the snapshot are shown.
+Searching Escherichia coli isolates in Pathogen Detection for AMR genotypes starting blaCTX-M; blaTEM and blaSHV alleles were not searched: most are not ESBLs and the name alone cannot tell an ESBL allele from a narrow-spectrum one, so listing them would show isolates that do not carry an ESBL.
+Note: no written summary could be checked against the records, so this answer lists the records found with their sources
+▶
+SOURCES
+21
+Based on 21 sources cited from Pathogen Detection and Taxonomy
+
+CONTINUE THIS CONVERSATION
+
+Ask
+What variants cause it?
+Which trials are recruiting?
+What does the literature add?
+A follow-up runs a full search. Earlier context guides what gets looked up, never what gets asserted, so every claim is cited from scratch.
+
+Was this answer helpful?

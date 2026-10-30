@@ -1,0 +1,101 @@
+SAVED ANSWER · ASKED OCT 30, 2026, 12:36 AM
+Which diseases are associated with GCK?
+Run again
+
+GCK is associated with four diseases: Type 2 diabetes mellitus,⁠1 Maturity-onset diabetes of the young type 2,⁠2 Hyperinsulinemic hypoglycemia, familial, 3,⁠3 and Permanent neonatal diabetes mellitus 1.⁠4 Found 4 disease records for GCK: Type 2 diabetes mellitus,⁠1 Maturity-onset diabetes of the young type 2,⁠2 Hyperinsulinemic hypoglycemia, familial, 3⁠3 and Permanent neonatal diabetes mellitus 1.⁠4
+
+From another gene record titled "GCK": Unlike other hexokinases, this enzyme is not inhibited by its product and remains active while glucose is abundant.⁠24
+
+VARIANT AND DISEASE ASSOCIATIONS
+
+Mutations altering GCK enzyme activity have been linked to multiple forms of diabetes and hyperinsulinemic hypoglycemia.⁠24
+
+DISEASE RECORDS FOUND
+DISEASE	IDENTIFIER
+Type 2 diabetes mellitus⁠1
+[1] L2 · live
+MedGen C0011860
+Open the record
+	MedGen:C0011860
+Maturity-onset diabetes of the young type 2⁠2	MedGen:C0342277
+Hyperinsulinemic hypoglycemia, familial, 3⁠3	MedGen:C1865290
+Permanent neonatal diabetes mellitus 1⁠4	MedGen:C5393570
+GENE RECORDS FOUND
+GENE	IDENTIFIER
+GCK⁠5, 9	NCBIGene:2645
+PUBMED RECORDS FOUND
+PAPER	IDENTIFIER
+Update on mutations in glucokinase (GCK), which cause maturity-onset diabetes of the young, permanent neonatal diabetes, and hyperinsulinemic hypoglycemia.⁠6	PMID:19790256
+Genotype and phenotype correlations in 417 children with congenital hyperinsulinism.⁠12	PMID:23275527
+Reduced penetrance of MODY-associated HNF1A/HNF4A variants but not GCK variants in clinically unselected cohorts.⁠15	PMID:36257325
+Inhibition of Hmbox1 Promotes Cardiomyocyte Survival and Glucose Metabolism Through Gck Activation in Ischemia/Reperfusion Injury.⁠18	PMID:38708602
+Glucokinase (GCK) in diabetes: from molecular mechanisms to disease pathogenesis.⁠21	PMID:39245718
+CLINVAR RECORDS FOUND
+VARIANT	IDENTIFIER
+NM_000162.5(GCK):c.700T>G (p.Tyr234Asp)⁠7	VCV004881360
+NM_000162.5(GCK):c.1020-339G>C⁠13	VCV004884999
+NM_000162.5(GCK):c.460G>T (p.Val154Leu)⁠16	VCV004885023
+NM_000162.5(GCK):c.1135_1150delinsCTCAT (p.Ala379fs)⁠19	VCV004886373
+NM_000162.5(GCK):c.510C>T (p.Gly170=)⁠22	VCV004887379
+OMIM RECORDS FOUND
+RECORD	IDENTIFIER
+GLUCOKINASE; GCK⁠8	omim 138079
+LITERATURE ENTITY RECORDS FOUND
+RECORD	IDENTIFIER
+Gck⁠10	@GENE_GCK
+CLINICAL TRIAL RECORDS FOUND
+TRIAL	IDENTIFIER	STATUS
+A Study of LY2599506 (Oral Agent Medication: Glucokinase Activator 1) in Type 2 Diabetes Mellitus⁠11	NCT01029795	TERMINATED
+Using Pharmacogenetics to Improve Treatment in Early-onset Diabetes⁠14	NCT01238380	COMPLETED
+A Study of LY2608204 in Patients With Type 2 Diabetes⁠17	NCT01247363	COMPLETED
+A Clinical Study to Evaluate Safety, Tolerability and Pharmacokinetics of Oral ZYGK1 in Healthy Volunteers⁠20	NCT01472809	SUSPENDED
+The Effect of ß-cell Specific Glucokinase Mutation on Glucose Homeostasis and Insulin Secretion in a MODY-2 Family⁠23	NCT01960231	UNKNOWN
+Based on 22 sources cited from ClinicalTrials.gov, ClinVar, PubMed and 3 other databases; their values could not be compared·High-risk claim
+
+SOURCES
+
+1. MedGen C0011860LIVE
+https://www.ncbi.nlm.nih.gov/medgen/C0011860
+2. MedGen C0342277LIVE
+https://www.ncbi.nlm.nih.gov/medgen/C0342277
+3. MedGen C1865290LIVE
+https://www.ncbi.nlm.nih.gov/medgen/C1865290
+4. MedGen C5393570LIVE
+https://www.ncbi.nlm.nih.gov/medgen/C5393570
+5, 9, 24. gene 2645LIVE
+https://www.ncbi.nlm.nih.gov/gene/2645/
+6. pubmed 19790256LIVE
+https://pubmed.ncbi.nlm.nih.gov/19790256/
+7. clinvar 4881360LIVE
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4881360/
+8. omim 138079LIVE
+https://omim.org/entry/138079
+10. NCBI Gene @GENE_GCKLITERATURE
+https://www.ncbi.nlm.nih.gov/gene/24385
+11. ClinicalTrials.gov NCT01029795LITERATURE
+https://clinicaltrials.gov/study/NCT01029795
+12. pubmed 23275527LIVE
+https://pubmed.ncbi.nlm.nih.gov/23275527/
+13. clinvar 4884999LIVE
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4884999/
+14. ClinicalTrials.gov NCT01238380LITERATURE
+https://clinicaltrials.gov/study/NCT01238380
+15. pubmed 36257325LIVE
+https://pubmed.ncbi.nlm.nih.gov/36257325/
+16. clinvar 4885023LIVE
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4885023/
+17. ClinicalTrials.gov NCT01247363LITERATURE
+https://clinicaltrials.gov/study/NCT01247363
+18. pubmed 38708602LIVE
+https://pubmed.ncbi.nlm.nih.gov/38708602/
+19. clinvar 4886373LIVE
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4886373/
+20. ClinicalTrials.gov NCT01472809LITERATURE
+https://clinicaltrials.gov/study/NCT01472809
+21. pubmed 39245718LIVE
+https://pubmed.ncbi.nlm.nih.gov/39245718/
+22. clinvar 4887379LIVE
+https://www.ncbi.nlm.nih.gov/clinvar/variation/4887379/
+23. ClinicalTrials.gov NCT01960231LITERATURE
+https://clinicaltrials.gov/study/NCT01960231
++ New search
