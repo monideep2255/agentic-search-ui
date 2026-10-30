@@ -254,7 +254,7 @@ def _state() -> dict[str, object]:
         "findings": [finding],
         "findings_count": 1,
         "layer2_raw_outputs": {"ne-card17": output},
-        "topic_search_term": "valleys AND lakes",
+        "topic_search_term": "valleys lakes",
     }
 
 

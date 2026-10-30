@@ -96,12 +96,10 @@ def topic_not_found_message(topic_term: str) -> str:
     """The refusal for a topic search that ran and matched nothing.
 
     `topic_term` is `breadth_plan.build_topic_term`'s output, the content
-    words joined with ` AND `. It is shown to the reader with the operators
-    turned back into plain words, since "coffee AND exercise AND effective"
-    is machinery and "coffee, exercise, effective" is what they typed.
+    words joined with a space. It is shown as it was searched, the person's
+    own words in their order ("cystic fibrosis"), with no operators in it.
     """
-    words = [part.strip() for part in topic_term.split(" AND ") if part.strip()]
-    shown = ", ".join(words)[:MAX_TOPIC_TERM_CHARS].strip().rstrip(",")
+    shown = " ".join(topic_term.split())[:MAX_TOPIC_TERM_CHARS].strip()
     if not shown:
         return REFUSE_MESSAGE
     return f"{TOPIC_NOT_FOUND_PREFIX}{shown}{TOPIC_NOT_FOUND_SUFFIX}"

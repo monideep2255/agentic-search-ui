@@ -7308,9 +7308,7 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         ):
             published += f"; {window_lost_note}"
         plan_payload = PlanPayload(
-            narrative=(
-                f"{why} for: " + ", ".join(topic_term.split(" AND ")) + published
-            )[:500],
+            narrative=f"{why} for: {topic_term}{published}"[:500],
             tool_calls=[p.tool_call for p in planned_tool_calls],
         )
     else:
