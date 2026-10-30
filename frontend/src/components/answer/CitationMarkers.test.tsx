@@ -26,6 +26,7 @@ import { describe, expect, it } from "vitest";
 import {
   CitationMarkers,
   collapseCitations,
+  isLinkableCitationUrl,
   markerLabel,
   markerSpokenName,
   type CitationSource,
@@ -215,5 +216,23 @@ describe("the answer screen uses markers, not boxed chips", () => {
     // The old chip printed the source name inline; the marker does not.
     expect(screen.getByTestId("claim-text-0")).not.toHaveTextContent(/MedGen C001/);
     expect(screen.getByTestId("claim-text-1")).toHaveTextContent("This sentence has no source.");
+  });
+});
+
+describe("isLinkableCitationUrl, OMIM hosts (card 135.1)", () => {
+  it.each(["https://omim.org/entry/113705", "https://www.omim.org/entry/113705"])(
+    "links %s",
+    (url) => {
+      expect(isLinkableCitationUrl(url)).toBe(true);
+    },
+  );
+
+  it.each([
+    "https://omim.org.evil.example/entry/113705",
+    "https://evilomim.org/entry/113705",
+    "https://sub.omim.org/entry/113705",
+    "http://omim.org/entry/113705",
+  ])("does not link %s", (url) => {
+    expect(isLinkableCitationUrl(url)).toBe(false);
   });
 });
