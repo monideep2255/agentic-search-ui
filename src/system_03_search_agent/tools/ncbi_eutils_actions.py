@@ -1229,12 +1229,44 @@ async def summary(params: NcbiEfetchSummaryInput) -> NcbiEfetchOutput:
 # ---------------------------------------------------------------------------
 
 
+#: Card 146 (owner, 2026-10-25): the publication type PubMed gives a paper
+#: that was retracted, as both EFetch (`PublicationType`) and ESummary
+#: (`pubtype`) write it, read live for PMID 9500320 on 2026-10-30. The notice
+#: of a retraction is typed "Retraction Notice" instead: it is not itself a
+#: retracted paper, so it is never matched.
+RETRACTED_PUBLICATION_TYPE: Final[str] = "Retracted Publication"
+
+#: The key a PubMed record carries, set to True only when PubMed types it a
+#: retracted publication. Absent on every other record, so a paper that was
+#: not retracted reads exactly as it did before card 146.
+RETRACTED_FIELD: Final[str] = "retracted"
+
+
+def record_is_retracted(fields: Any) -> bool:
+    """Whether a PubMed record's own fields say PubMed marks it retracted.
+
+    Reads the EFetch record's `retracted` flag (set by
+    `_extract_pubmed_articles` from `PublicationType`) or the ESummary
+    record's `pubtype` list. Exact match on PubMed's own wording, never a
+    word in the title: "Retraction--..." titles a notice, not a retracted
+    paper.
+    """
+    if not isinstance(fields, dict):
+        return False
+    if fields.get(RETRACTED_FIELD) is True:
+        return True
+    pubtype = fields.get("pubtype")
+    return isinstance(pubtype, list) and RETRACTED_PUBLICATION_TYPE in pubtype
+
+
 def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord]:
     """Extract one record per <PubmedArticle> from a live-verified PubmedArticleSet.
 
     Only field extracted with any confidence: title and abstract text, both
     capped per `_cap_text` since they are untrusted free text pulled
-    straight from a source publication (ai-security-standards.md). A
+    straight from a source publication (ai-security-standards.md). Card 146
+    adds one flag, `retracted: True`, only on a record whose
+    `PublicationType` list holds "Retracted Publication". A
     PubmedArticle with no <PMID> is skipped rather than emitted with
     `id: None`, since an uncitable record with no identifier at all is
     worse than one fewer record.
@@ -1267,6 +1299,17 @@ def _extract_pubmed_articles(root: ElementTree.Element) -> list[NcbiEfetchRecord
             fields["title"] = _cap_text(title)
         if abstract:
             fields["abstract"] = _cap_text(abstract)
+        # Card 146: PubMed's own publication type, the only place the record
+        # says it was retracted. Set only when it was, so every other
+        # record's fields are exactly what they were.
+        publication_types = {
+            "".join(node.itertext()).strip()
+            for node in article_el.findall(
+                "MedlineCitation/Article/PublicationTypeList/PublicationType"
+            )
+        }
+        if RETRACTED_PUBLICATION_TYPE in publication_types:
+            fields[RETRACTED_FIELD] = True
 
         records.append(
             NcbiEfetchRecord(

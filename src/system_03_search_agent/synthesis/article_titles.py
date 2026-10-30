@@ -39,6 +39,17 @@ title the fetch cut or one over the cap is withheld rather than clipped.
 - It never turns the abstract into anything. EFetch returns it and this
   module discards it.
 
+## Retracted papers (card 146)
+
+The same EFetch carries PubMed's own publication type. A record PubMed
+types "Retracted Publication" (`ncbi_eutils_actions.record_is_retracted`)
+is remembered as retracted beside its title, at no extra request.
+`publication_curies_to_check` adds the PubTator3 papers whose PubMed record
+this question did not read to the same lookup, and `mark_retracted_papers`
+sets `SynthFinding.retracted` on every paper finding on a retracted paper's
+page. A paper whose record could not be read is never marked: its status is
+unknown, and unknown is not retracted.
+
 ## Calls, timing and budget
 
 At most two requests of at most 50 PMIDs run concurrently, covering the
@@ -73,17 +84,22 @@ import time
 from collections.abc import Sequence
 from dataclasses import replace
 
+from system_03_search_agent.contracts.events import source_page_key
 from system_03_search_agent.synthesis.findings import SynthFinding
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "ARTICLE_CURIE",
+    "PAPER_ENTITY_TYPES",
     "apply_resolved_article_titles",
     "article_curies_to_name",
     "clean_article_title",
+    "mark_retracted_papers",
+    "publication_curies_to_check",
     "reset_cache_for_tests",
     "resolve_article_titles",
+    "retracted_article_curies",
 ]
 
 # `PMID:` then ASCII digits, the exact shape the graph's Article CURIE has.
@@ -92,6 +108,17 @@ __all__ = [
 ARTICLE_CURIE = re.compile(r"^PMID:(\d{1,10})$", re.ASCII)
 
 _ARTICLE_ENTITY_TYPE = "Article"
+#: Card 146: a PubTator3 paper row (`core.graph`, card 134) and the field
+#: holding its PMID.
+_PUBLICATION_ENTITY_TYPE = "Publication"
+_PUBLICATION_PMID_FIELD = "pmid"
+#: Card 146: the record types that ARE a paper: a graph `Article`, a
+#: PubTator3 `Publication` and a live PubMed record (`pubmed`). Only these
+#: are marked retracted; an edge or gene row citing the same page is not.
+PAPER_ENTITY_TYPES: frozenset[str] = frozenset(
+    {_ARTICLE_ENTITY_TYPE, _PUBLICATION_ENTITY_TYPE, "pubmed"}
+)
+_PMID_DIGITS = re.compile(r"^\d{1,10}$", re.ASCII)
 _GRAPH_LAYER = "layer_1_graph"
 
 # The layer, tool and field a named paper carries, the same pair a resolved
@@ -135,11 +162,16 @@ _MAX_CACHE_ENTRIES = 4096
 
 # pmid -> (title or None, monotonic expiry).
 _cache: dict[str, tuple[str | None, float]] = {}
+# Card 146: pmid -> monotonic expiry, for a record that was read and that
+# PubMed types a retracted publication, and no other. It expires with the
+# title entry read in the same request.
+_retracted: dict[str, float] = {}
 
 
 def reset_cache_for_tests() -> None:
     """Clear the cache. Test-only; production never calls this."""
     _cache.clear()
+    _retracted.clear()
 
 
 def _cache_get(pmid: str) -> tuple[bool, str | None]:
@@ -153,11 +185,17 @@ def _cache_get(pmid: str) -> tuple[bool, str | None]:
     return True, title
 
 
-def _cache_put(pmid: str, title: str | None, ttl_s: float) -> None:
+def _cache_put(pmid: str, title: str | None, ttl_s: float, retracted: bool = False) -> None:
     if len(_cache) >= _MAX_CACHE_ENTRIES:
         oldest = min(_cache, key=lambda key: _cache[key][1])
         _cache.pop(oldest, None)
-    _cache[pmid] = (title, time.monotonic() + ttl_s)
+        _retracted.pop(oldest, None)
+    expires_at = time.monotonic() + ttl_s
+    _cache[pmid] = (title, expires_at)
+    if retracted:
+        _retracted[pmid] = expires_at
+    else:
+        _retracted.pop(pmid, None)
 
 
 def clean_article_title(raw: object) -> str | None:
@@ -230,14 +268,16 @@ def _requests_allowed() -> int:
     return max(0, min(_MAX_REQUESTS, MAX_LAYER_2_3_CALLS_PER_QUERY - made))
 
 
-async def _fetch_titles(pmids: list[str]) -> dict[str, str | None] | None:
+async def _fetch_titles(pmids: list[str]) -> dict[str, tuple[str | None, bool]] | None:
     """One EFetch request for up to 50 PMIDs, keyed by the record's own PMID.
 
-    None when the request failed, so the caller can tell a failure from a
-    PMID PubMed did not return. Never raises.
+    Each PMID maps to its title (or None) and whether PubMed types the
+    record a retracted publication (card 146). None when the request
+    failed, so the caller can tell a failure from a PMID PubMed did not
+    return. Never raises.
     """
     from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchFetchInput
-    from system_03_search_agent.tools.ncbi_eutils_actions import fetch
+    from system_03_search_agent.tools.ncbi_eutils_actions import fetch, record_is_retracted
 
     try:
         result = await fetch(
@@ -264,6 +304,7 @@ async def _fetch_titles(pmids: list[str]) -> dict[str, str | None] | None:
 
     wanted = set(pmids)
     seen: dict[str, str | None] = {}
+    retracted: set[str] = set()
     conflicted: set[str] = set()
     for record in result.records:
         pmid = (record.id or "").strip()
@@ -273,9 +314,11 @@ async def _fetch_titles(pmids: list[str]) -> dict[str, str | None] | None:
         if pmid in seen and seen[pmid] != title:
             conflicted.add(pmid)
         seen.setdefault(pmid, title)
+        if record_is_retracted(record.fields):
+            retracted.add(pmid)
     for pmid in conflicted:
         seen[pmid] = None
-    return seen
+    return {pmid: (title, pmid in retracted) for pmid, title in seen.items()}
 
 
 async def resolve_article_titles(curies: Sequence[str]) -> dict[str, str | None]:
@@ -319,7 +362,7 @@ async def resolve_article_titles(curies: Sequence[str]) -> dict[str, str | None]
         logger.info("PubMed title lookup skipped: no Layer 2 call remains")
         return resolved
 
-    async def _one(batch: list[str]) -> dict[str, str | None] | None:
+    async def _one(batch: list[str]) -> dict[str, tuple[str | None, bool]] | None:
         ids = [ARTICLE_CURIE.match(curie).group(1) for curie in batch]  # type: ignore[union-attr]
         try:
             return await asyncio.wait_for(_fetch_titles(ids), timeout=_LOOKUP_TIMEOUT_S)
@@ -335,10 +378,104 @@ async def resolve_article_titles(curies: Sequence[str]) -> dict[str, str | None]
                 resolved[curie] = None
                 _cache_put(pmid, None, _FAILURE_TTL_S)
                 continue
-            title = outcome.get(pmid)
+            title, retracted = outcome.get(pmid, (None, False))
             resolved[curie] = title
-            _cache_put(pmid, title, _ONE_WEEK_S if title else _FAILURE_TTL_S)
+            _cache_put(pmid, title, _ONE_WEEK_S if title else _FAILURE_TTL_S, retracted)
     return resolved
+
+
+def publication_curies_to_check(
+    synth_findings: Sequence[SynthFinding], pages_read: frozenset[str] | set[str]
+) -> list[str]:
+    """Card 146: `PMID:<n>` for each PubTator3 paper whose PubMed record this
+    question did not read, so `resolve_article_titles` reads its publication
+    type in the lookup it already makes.
+
+    PubTator3's response carries no publication type. A paper's PubMed record
+    is normally read beside it (`breadth_plan.plan_literature_follow_up`
+    plans both on one id list), so a page in `pages_read` (keyed by
+    `source_page_key`) needs no lookup. In `ref_index` order, deduplicated.
+    """
+    curies: list[str] = []
+    for finding in sorted(synth_findings, key=lambda f: f.ref_index):
+        if (
+            finding.entity_type != _PUBLICATION_ENTITY_TYPE
+            or finding.field != _PUBLICATION_PMID_FIELD
+            or not _PMID_DIGITS.match(finding.field_value.strip())
+            or source_page_key(finding.source_url) in pages_read
+        ):
+            continue
+        curie = f"PMID:{finding.field_value.strip()}"
+        if curie not in curies:
+            curies.append(curie)
+    return curies
+
+
+def retracted_article_curies(curies: Sequence[str]) -> frozenset[str]:
+    """Card 146: of `curies`, the ones whose PubMed record, as this module last
+    read it, PubMed types a retracted publication. Reads the cache only and
+    makes no request: call it after `resolve_article_titles` on the same
+    CURIEs. A record never read, or whose read failed, is not in the result.
+    """
+    retracted: set[str] = set()
+    for curie in curies:
+        match = ARTICLE_CURIE.match(str(curie))
+        if match is None:
+            continue
+        expires_at = _retracted.get(match.group(1))
+        if expires_at is not None and time.monotonic() < expires_at:
+            retracted.add(curie)
+    return frozenset(retracted)
+
+
+def _paper_curie(finding: SynthFinding) -> str:
+    """The `PMID:<n>` a paper finding names, or "" for any other finding."""
+    if finding.entity_type == _ARTICLE_ENTITY_TYPE and ARTICLE_CURIE.match(finding.curie):
+        return finding.curie
+    if (
+        finding.entity_type == _PUBLICATION_ENTITY_TYPE
+        and finding.field == _PUBLICATION_PMID_FIELD
+        and _PMID_DIGITS.match(finding.field_value.strip())
+    ):
+        return f"PMID:{finding.field_value.strip()}"
+    return ""
+
+
+def mark_retracted_papers(
+    synth_findings: list[SynthFinding],
+    retracted_pages: frozenset[str] | set[str],
+    retracted_curies: frozenset[str] | set[str],
+) -> list[SynthFinding]:
+    """Card 146: mark every paper finding on a retracted paper's page.
+
+    A page is retracted when it is in `retracted_pages` (the live PubMed
+    records this question read, keyed by `source_page_key`), when a finding
+    on it already carries the flag, or when a paper finding on it names a
+    CURIE in `retracted_curies` (the lookup's own read). Every finding of a
+    `PAPER_ENTITY_TYPES` type on such a page is marked, so a paper the graph,
+    PubTator3 and PubMed each found shows the tag however its row folds.
+    Every other finding, and every finding when nothing is retracted, is
+    returned unchanged.
+    """
+    pages = set(retracted_pages)
+    for finding in synth_findings:
+        if finding.entity_type not in PAPER_ENTITY_TYPES:
+            continue
+        if finding.retracted or (_paper_curie(finding) in retracted_curies):
+            pages.add(source_page_key(finding.source_url))
+    pages.discard("")
+    if not pages:
+        return synth_findings
+    return [
+        replace(finding, retracted=True)
+        if (
+            not finding.retracted
+            and finding.entity_type in PAPER_ENTITY_TYPES
+            and source_page_key(finding.source_url) in pages
+        )
+        else finding
+        for finding in synth_findings
+    ]
 
 
 def apply_resolved_article_titles(

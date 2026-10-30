@@ -575,6 +575,8 @@ from system_03_search_agent.synthesis.answer_layout import (
     record_identifier,
     record_label,
     record_status_or_year,
+    retracted_row_label,
+    retracted_row_text,
     table_second_cell,
     variant_classification_note,
     variant_to_disease_source_note,
@@ -583,7 +585,10 @@ from system_03_search_agent.synthesis.article_titles import (
     apply_resolved_article_titles,
     article_curies_to_name,
     clean_article_title,
+    mark_retracted_papers,
+    publication_curies_to_check,
     resolve_article_titles,
+    retracted_article_curies,
 )
 from system_03_search_agent.synthesis.conflict_detection import detect_conflict
 from system_03_search_agent.synthesis.disease_names import (
@@ -677,8 +682,10 @@ from system_03_search_agent.tools.ncbi_efetch import build_layer2_citation, ncbi
 from system_03_search_agent.tools.ncbi_efetch_schemas import NcbiEfetchInput, NcbiEfetchOutput
 from system_03_search_agent.tools.ncbi_eutils_actions import (
     MAX_CLINICAL_FEATURES,
+    RETRACTED_FIELD,
     clean_clinical_feature_name,
     is_hpo_id,
+    record_is_retracted,
 )
 from system_03_search_agent.tools.pathogen_detection import (
     build_citation as pathogen_build_citation,
@@ -7996,14 +8003,17 @@ def _pubmed_abstract_rows(
         abstract = _record_abstract(record)
         if abstract is None:
             continue
-        abstract_rows.append(
-            {
-                "curie": "",
-                "node_or_edge_type": row["node_or_edge_type"],
-                "fields": {_PUBMED_ABSTRACT_FIELD: abstract},
-                "source_url": row["source_url"],
-            }
-        )
+        abstract_row: dict[str, Any] = {
+            "curie": "",
+            "node_or_edge_type": row["node_or_edge_type"],
+            "fields": {_PUBMED_ABSTRACT_FIELD: abstract},
+            "source_url": row["source_url"],
+        }
+        # Card 146: the abstract of a retracted paper is the text a writer
+        # would state as the paper's finding, so it carries the mark too.
+        if row.get(RETRACTED_FIELD) is True:
+            abstract_row[RETRACTED_FIELD] = True
+        abstract_rows.append(abstract_row)
     return abstract_rows
 
 
@@ -8382,13 +8392,21 @@ def _ncbi_efetch_output_to_structured_fields(
                 else {
                     key: value
                     for key, value in record.fields.items()
-                    if key not in _NCBI_EFETCH_ROW_IDENTITY_FIELDS
+                    if key not in _NCBI_EFETCH_ROW_IDENTITY_FIELDS and key != RETRACTED_FIELD
                 }
             ),
             "source_url": record.source_url,
         }
         for record in records
     ]
+    # Card 146 (owner, 2026-10-25): a paper PubMed types "Retracted
+    # Publication" keeps its row and carries `retracted: True` BESIDE its
+    # fields, never inside them, so the cited fact, the representative-field
+    # pick and the per-page fold are exactly as before. A row that was not
+    # retracted gets no key at all.
+    for row, record in zip(rows, records, strict=True):
+        if record.db == "pubmed" and record_is_retracted(record.fields):
+            row[RETRACTED_FIELD] = True
     if purpose == _MEDGEN_SUMMARY_PURPOSE:
         for row in rows:
             row["fields"] = _unwrap_medgen_fields(row["fields"])
@@ -9057,7 +9075,9 @@ async def _prefetch_answer_names(
         # last, as in Write. It bounds its own size (two requests of 50) so
         # it needs no `_one_lookup_holds`; the results land in the
         # resolver's cache, so Write finds them and makes no request.
-        article_curies = article_curies_to_name(synth_findings)
+        # Card 146: with the PubTator3 papers whose publication type Write
+        # will read, so Write's one lookup is answered from the cache.
+        article_curies = _paper_lookup_curies(synth_findings, structured)
         if article_curies:
             await resolve_article_titles(article_curies)
     except asyncio.CancelledError:
@@ -13027,6 +13047,51 @@ def _clinical_feature_row(finding: SynthFinding, findings: list[Finding]) -> dic
     return {}
 
 
+def _pubmed_pages_read(findings: list[Any]) -> tuple[frozenset[str], frozenset[str]]:
+    """Card 146: the paper pages whose PubMed record this question read live,
+    and the ones among them PubMed types a retracted publication.
+
+    Read from every `ncbi_efetch` row of a `pubmed` record, before any
+    display cap, keyed by `source_page_key`, so a PubTator3 paper whose
+    record was read beside it needs no lookup of its own
+    (`publication_curies_to_check`). The flag is the row's own `retracted`
+    key, set from the record's publication type in
+    `_ncbi_efetch_output_to_structured_fields`.
+    """
+    read: set[str] = set()
+    retracted: set[str] = set()
+    for finding in findings:
+        if getattr(finding, "tool", "") != "ncbi_efetch":
+            continue
+        structured = getattr(finding, "structured_fields", None)
+        rows = structured.get("rows") if isinstance(structured, dict) else None
+        for row in rows or []:
+            if not isinstance(row, dict) or row.get("node_or_edge_type") != "pubmed":
+                continue
+            page = source_page_key(row.get("source_url"))
+            if not page:
+                continue
+            read.add(page)
+            if row.get(RETRACTED_FIELD) is True:
+                retracted.add(page)
+    return frozenset(read), frozenset(retracted)
+
+
+def _paper_lookup_curies(
+    synth_findings: list[SynthFinding], findings: list[Any]
+) -> list[str]:
+    """Card 38 slice C's graph papers to name, then card 146's PubTator3
+    papers whose PubMed record this question did not read: one list for one
+    PubMed lookup, the graph papers first so they keep their place under the
+    lookup's two-request bound."""
+    curies = article_curies_to_name(synth_findings)
+    pages_read, _ = _pubmed_pages_read(findings)
+    for curie in publication_curies_to_check(synth_findings, pages_read):
+        if curie not in curies:
+            curies.append(curie)
+    return curies
+
+
 def _row_fields_for(finding: SynthFinding, findings: list[Finding]) -> dict[str, Any] | None:
     """The raw row's `fields` for a prepared finding, matched by source URL."""
     row = _row_for(finding, findings)
@@ -13449,6 +13514,10 @@ def _answer_parts(
     sentence), its own marker, which records are listed, or `citations`:
     those were fixed by the grounding pass before this function runs, and
     this function only decides how each already-cited record is shown.
+    One code-built exception, the same in every depth (card 146): the row
+    of a paper PubMed marks retracted (`SynthFinding.retracted`) shows
+    "(Retracted)" after its first cell and opens its text with
+    "Retracted: ", the grounded sentence after it unchanged.
 
     Bold terms (`emphasis`) are set on the lead summary sentence in every
     depth, and on other Researcher prose sentences only, from the run's
@@ -14180,6 +14249,23 @@ def _answer_parts(
             for sentence in tail_sentences:
                 sentence_token(sentence)
 
+    # Card 146 (owner, 2026-10-25): a retracted paper keeps its row, with
+    # the tag beside its title in its first cell (the web and the saved
+    # answer show cells) and at the head of its text (the command line, MCP
+    # and GraphQL print text). After every row is built and merged, so the
+    # tag is added once whatever names a merged row shows. A row is tagged
+    # only when one of its own markers cites a finding carrying the flag.
+    for token in tokens[listing_at:]:
+        if token.kind not in ("list_item", "table_row") or not token.cells:
+            continue
+        if not any(
+            (cited := finding_by_citation_id.get(marker)) is not None and cited.retracted
+            for marker in token.marker_ids
+        ):
+            continue
+        token.cells = [retracted_row_label(token.cells[0]), *token.cells[1:]]
+        token.text = retracted_row_text(token.text)
+
     # THE NOTES, after the listing in reading order.
     notes_at = len(tokens)
     # Card 30: skipped when card 23's line already says the classification is
@@ -14508,11 +14594,22 @@ async def _write_answer(state: GraphState) -> dict[str, Any]:
     # a paper titled "Not provided" is never taken for a placeholder
     # condition; before `row_types` and the prompt slice, which read the
     # numbering. A failure leaves every paper on its PMID.
-    article_curies = article_curies_to_name(synth_findings)
+    #
+    # Card 146 (owner, 2026-10-25): the same lookup reads each paper's
+    # publication type, and also covers a PubTator3 paper whose PubMed
+    # record this question did not read. Then every paper finding on the
+    # page of a paper PubMed marks retracted carries the flag, from that
+    # lookup or from the live PubMed rows, so its row shows the tag and the
+    # writer is told. Unknown is never taken for retracted.
+    article_curies = _paper_lookup_curies(synth_findings, findings)
     if article_curies:
         synth_findings = apply_resolved_article_titles(
             synth_findings, await resolve_article_titles(article_curies)
         )
+    _, retracted_live_pages = _pubmed_pages_read(findings)
+    synth_findings = mark_retracted_papers(
+        synth_findings, retracted_live_pages, retracted_article_curies(article_curies)
+    )
 
     # Build phase 8.6, T-8.6-06: what is said about a condition's clinical
     # features follows the `think.asks_features` decision, never the
