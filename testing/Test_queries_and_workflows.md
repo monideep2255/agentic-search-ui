@@ -529,6 +529,7 @@ What you should see:
 - A gene question shows the right gene's OMIM entry, and never another gene's.
 - OMIM 138079, glucokinase, is among the sources.
 - No other gene's OMIM record, such as MAP4K2, appears.
+- No source is another species' gene record cited as GCK: never "Gck" linked to NCBI Gene 24385, the rat gene (card 149). The same holds for `What does KRAS do?`: never NCBI Gene 24525, the rat KRAS.
 - Why it matters: a clinician looking up one gene and getting a citation for a different gene is a wrong record dressed up as a right one, which is the worst kind of mistake this product can make.
 
 ### 22. CFTR variants still answer
