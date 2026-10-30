@@ -4822,6 +4822,17 @@ class _PlannedNcbiEfetchToolCall:
     #: result, which is that filter's documented behaviour: with no symbol
     #: to check against, no OMIM title can be stood behind.
     gene_symbol: str | None = None
+    #: Card 119 (2026-10-29): how many title rows a PubMed abstracts
+    #: follow-up keeps when its search was limited to a picked window, the
+    #: search's own `retmax` (`breadth_plan.PUBMED_WINDOW_RESULT_CAP`).
+    #: None on every other call, an unwindowed abstracts call included,
+    #: which keeps `_BREADTH_ROW_CAP` as on develop (J-119-08).
+    row_cap: int | None = None
+    #: Card 119, fix round: the PubMed search's own result order (its
+    #: `sort`, relevance), carried only on a windowed abstracts follow-up,
+    #: so its five abstracts go to the best-ranked papers that have one
+    #: rather than to whichever the fetch's PMID order put first.
+    search_rank: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -4876,6 +4887,10 @@ class _PlannedFollowUpCall:
     #: the filter runs against the symbol the question resolved rather
     #: than anything read back out of the OMIM response itself.
     gene_symbol: str | None = None
+    #: Card 119 (2026-10-29): the source search's own `retmax`, so the ids
+    #: the follow-up fetches and the rows it keeps match what was asked
+    #: for. Five unless a PubMed search was limited to a picked window.
+    result_cap: int = breadth_plan.PUBMED_RESULT_CAP
 
 
 #: Per-tool Act timeouts for the four tools above, in seconds. Each is the
@@ -5532,6 +5547,7 @@ def _follow_up_calls_for(
     for search_purpose, follow_ups in _BREADTH_FOLLOW_UPS.items():
         if not any(getattr(c, "purpose", "") == search_purpose for c in calls):
             continue
+        result_cap = _pubmed_search_retmax(calls) if search_purpose == "pubmed_search" else None
         for tool, layer, prefix, purpose in follow_ups:
             follow_up_calls.append(
                 _PlannedFollowUpCall(
@@ -5543,9 +5559,25 @@ def _follow_up_calls_for(
                     purpose=purpose,
                     source_purpose=search_purpose,
                     gene_symbol=gene_symbol,
+                    **({} if result_cap is None else {"result_cap": result_cap}),
                 )
             )
     return follow_up_calls
+
+
+def _pubmed_search_retmax(calls: list[Any]) -> int:
+    """Card 119: the `retmax` the planned PubMed search itself carries, five
+    unless the person picked a window. Read from the planned call, never
+    recomputed, so the follow-up asks for exactly the ids that were searched."""
+    for call in calls:
+        if getattr(call, "purpose", "") != "pubmed_search":
+            continue
+        search_input = getattr(call, "ncbi_efetch_input", None)
+        retmax = getattr(getattr(search_input, "root", search_input), "retmax", None)
+        if isinstance(retmax, int) and retmax > 0:
+            # J-119-07: never more than the follow-up's schemas accept.
+            return min(retmax, breadth_plan.LITERATURE_FOLLOW_UP_MAX_IDS)
+    return breadth_plan.PUBMED_RESULT_CAP
 
 
 def _build_planned_go_terms_call(gene_curie: str, query_class: QueryClass) -> _PlannedToolCall:
@@ -7911,7 +7943,10 @@ _PUBMED_ABSTRACT_FIELD: Final[str] = "abstract"
 
 
 def _pubmed_abstract_rows(
-    records: list[Any], title_rows: list[dict[str, Any]]
+    records: list[Any],
+    title_rows: list[dict[str, Any]],
+    limit: int | None = None,
+    search_rank: tuple[str, ...] = (),
 ) -> list[dict[str, Any]]:
     """UI fix 11.22: one additional citeable row per admitted title row,
     carrying that record's own retrieved abstract text verbatim.
@@ -7943,13 +7978,23 @@ def _pubmed_abstract_rows(
     never widen the paper set itself.
     """
     by_url = {record.source_url: record for record in records if record.source_url}
+    # Card 119, fix round: a picked window lists ten papers, and `limit`
+    # (five) says how many abstracts the writer reads. They go to the
+    # papers the search ranked best that HAVE an abstract, as an
+    # unwindowed question's five do, never to the highest PMIDs (A-119-01,
+    # A-119-02). `limit=None` (every unwindowed question) changes nothing.
+    abstract_urls: set[str] | None = None
+    if limit is not None:
+        abstract_urls = _best_ranked_abstract_urls(by_url, title_rows, limit, search_rank)
     abstract_rows: list[dict[str, Any]] = []
     for row in title_rows:
+        if abstract_urls is not None and row["source_url"] not in abstract_urls:
+            continue
         record = by_url.get(row["source_url"])
         if record is None:
             continue
-        abstract = record.fields.get(_PUBMED_ABSTRACT_FIELD)
-        if not isinstance(abstract, str) or not abstract.strip():
+        abstract = _record_abstract(record)
+        if abstract is None:
             continue
         abstract_rows.append(
             {
@@ -7960,6 +8005,47 @@ def _pubmed_abstract_rows(
             }
         )
     return abstract_rows
+
+
+def _record_abstract(record: Any) -> str | None:
+    """A PubMed record's own abstract text, or None when it has none."""
+    abstract = record.fields.get(_PUBMED_ABSTRACT_FIELD)
+    if not isinstance(abstract, str) or not abstract.strip():
+        return None
+    return abstract
+
+
+def _best_ranked_abstract_urls(
+    by_url: dict[str, Any],
+    title_rows: list[dict[str, Any]],
+    limit: int,
+    search_rank: tuple[str, ...],
+) -> set[str]:
+    """Card 119, fix round: the title rows whose abstracts the writer reads
+    on a windowed answer, the first `limit` papers WITH an abstract, walked
+    in the PubMed search's own order (relevance).
+
+    A paper missing from `search_rank` walks after every ranked one, in
+    title-row order, so the choice stays deterministic if the search and
+    the fetch ever disagree. Fewer than `limit` papers with an abstract
+    means all of them.
+    """
+    rank = {pmid: position for position, pmid in reversed(list(enumerate(search_rank)))}
+
+    def _order(item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
+        position, row = item
+        record = by_url.get(row["source_url"])
+        pmid = breadth_plan.normalise_uid(str(getattr(record, "id", "") or ""))
+        return (rank.get(pmid or "", len(rank)), position)
+
+    chosen: set[str] = set()
+    for _, row in sorted(enumerate(title_rows), key=_order):
+        if len(chosen) >= limit:
+            break
+        record = by_url.get(row["source_url"])
+        if record is not None and _record_abstract(record) is not None:
+            chosen.add(row["source_url"])
+    return chosen
 
 
 #: Fix-plan item 12.1 (2026-09-23). The `medgen_summary` fields NCBI
@@ -8236,7 +8322,11 @@ def _sra_run_accessions(runs: str) -> str:
 
 
 def _ncbi_efetch_output_to_structured_fields(
-    output: NcbiEfetchOutput, purpose: str = "", gene_symbol: str | None = None
+    output: NcbiEfetchOutput,
+    purpose: str = "",
+    gene_symbol: str | None = None,
+    row_cap: int = _BREADTH_ROW_CAP,
+    search_rank: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Shape an `ncbi_efetch` result into the same generic pseudo-row shape
     `_cypher_output_to_structured_fields` already produces for
@@ -8308,9 +8398,18 @@ def _ncbi_efetch_output_to_structured_fields(
         # the same discipline as `_layer_tool_output_to_structured_fields`.
         rows = [row for row in rows if row["source_url"]]
         rows.sort(key=lambda row: str(row["source_url"]))
-        rows = rows[:_BREADTH_ROW_CAP]
+        rows = rows[:row_cap]
         if purpose == _PUBMED_ABSTRACTS_PURPOSE:
-            rows = rows + _pubmed_abstract_rows(output.records, rows)
+            # Card 119: a windowed answer lists more titles than the
+            # writer reads abstracts; the five abstracts go to the
+            # best-ranked papers that have one. Unwindowed: unchanged.
+            windowed = row_cap > breadth_plan.PUBMED_RESULT_CAP
+            rows = rows + _pubmed_abstract_rows(
+                output.records,
+                rows,
+                breadth_plan.PUBMED_RESULT_CAP if windowed else None,
+                search_rank if windowed else (),
+            )
         if purpose == _MEDGEN_SUMMARY_PURPOSE:
             # T-8.1-06b, rebuilt in the fix-and-verify round (F-8.1-A11):
             # one row per clinical feature behind its record's title row,
@@ -8528,7 +8627,11 @@ async def _execute_planned_call(
                 ),
             )
         shaped_fields = _ncbi_efetch_output_to_structured_fields(
-            ncbi_efetch_output, purpose, planned.gene_symbol
+            ncbi_efetch_output,
+            purpose,
+            planned.gene_symbol,
+            _BREADTH_ROW_CAP if planned.row_cap is None else planned.row_cap,
+            planned.search_rank,
         )
         # Card 63: the same for a record fetch, a summary or a link.
         fetch_failed = ncbi_efetch_output.status == "error"
@@ -8788,7 +8891,7 @@ def _follow_up_planned_call(
     if link_target is not None:
         planned = paper_links.plan_summary_follow_up(link_target, ids)
     elif follow_up.source_purpose == "pubmed_search":
-        planned = breadth_plan.plan_literature_follow_up(ids)
+        planned = breadth_plan.plan_literature_follow_up(ids, follow_up.result_cap)
     elif follow_up.source_purpose == "clinvar_search":
         planned = breadth_plan.plan_clinvar_follow_up(ids)
     elif follow_up.source_purpose == "omim_search":
@@ -8807,11 +8910,21 @@ def _follow_up_planned_call(
         if call.purpose != follow_up.purpose:
             continue
         if call.tool == "ncbi_efetch":
+            # Card 119: only a windowed search's PubMed abstracts call
+            # takes the search's own cap and order; every other call,
+            # an unwindowed abstracts call included, keeps
+            # `_BREADTH_ROW_CAP` as on develop (J-119-08).
+            windowed = (
+                call.purpose == _PUBMED_ABSTRACTS_PURPOSE
+                and follow_up.result_cap > breadth_plan.PUBMED_RESULT_CAP
+            )
             return _PlannedNcbiEfetchToolCall(
                 tool_call=follow_up.tool_call,
                 ncbi_efetch_input=call.tool_input,
                 purpose=call.purpose,
                 gene_symbol=follow_up.gene_symbol,
+                row_cap=follow_up.result_cap if windowed else None,
+                search_rank=breadth_plan.search_rank(ids) if windowed else (),
             )
         return _PlannedLayerToolCall(
             tool_call=follow_up.tool_call, tool_input=call.tool_input, purpose=call.purpose
