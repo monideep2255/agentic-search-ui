@@ -718,7 +718,7 @@ What you should see:
 
 - The count line reads "Found 2 variant records for rs334 and rs6025: rs334 [1] and rs6025 [2]."
 - For query 108 the count line counts papers ("Found 5 papers for BRCA1.") and does not paste titles with doubled full stops.
-- Known, card 121: the table headings still read "PUBMED RECORDS FOUND" and "VARIANT RECORD RECORDS FOUND".
+- The variant table's heading reads "VARIANT RECORDS FOUND", with "record" once (card 121). The papers table's heading reads "PUBMED RECORDS FOUND".
 - Known, card 131, part 2: a paper's marker can sit after the subject ("for BRCA1 [2]: BRCA1 [1]").
 - Why it matters: the count line is the one number a person checks, so it must say what was found, once, in words they use.
 
