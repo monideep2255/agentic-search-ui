@@ -412,12 +412,21 @@ export interface HistoryResponse {
   items: HistoryItem[];
   count: number;
   /**
-   * Card 136.1: true when the caller has at least one search older than the
-   * last row of `items`, fetched by passing that row's `trace_id` as
-   * `before`. Optional because a backend built before the field reads as
+   * Card 136.1: true when the caller has at least one search older than
+   * this page. Optional because a backend built before the field reads as
    * "no older page", which is what it could offer.
    */
   has_more?: boolean;
+  /**
+   * Card 136 S4 fix round (J-136S4-01): the server's own cursor for the next
+   * older page, sent back as `before`, or `null` when there is none. The
+   * app never derives a cursor from the rows it holds: a row merged in from
+   * another tab, or one the server withheld, would then stall paging.
+   * `null` whenever `has_more` is not a real `true`, so the two agree.
+   * `fetchHistory` always sets it; optional so an absent value reads as
+   * `null`, "no older page".
+   */
+  next_before?: string | null;
 }
 
 /** The minimum shape a history item must carry to be usable at all. */
@@ -496,8 +505,8 @@ export async function fetchHistory(
 ): Promise<HistoryResponse> {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
   // Card 136.1: `before` asks for the page older than that `trace_id`. Only
-  // ever a `trace_id` the server itself returned, and the server scopes it
-  // to the caller anyway, so this only has to encode it.
+  // ever a `next_before` the server itself returned, and the server scopes
+  // it to the caller anyway, so this only has to encode it.
   const params = new URLSearchParams();
   if (options.limit != null) params.set("limit", String(options.limit));
   if (options.before != null) params.set("before", options.before);
@@ -513,12 +522,19 @@ export async function fetchHistory(
   if (!isRecord(body) || !Array.isArray(body.items) || typeof body.count !== "number") {
     throw new Error("fetchHistory: response body was not the documented {items, count} shape");
   }
+  // Only a real `true` with a usable cursor means an older page exists;
+  // absent (an older backend), `false`, any other type, or a `true` with no
+  // cursor to reach it reads as none, so the control never offers a page it
+  // cannot fetch.
+  const nextBefore =
+    body.has_more === true && typeof body.next_before === "string" && body.next_before !== ""
+      ? body.next_before
+      : null;
   return {
     items: body.items.filter(isHistoryItem).map(withValidatedOptionalFields),
     count: body.count,
-    // Only a real `true` means an older page exists; absent (an older
-    // backend), `false` or any other type reads as none.
-    has_more: body.has_more === true,
+    has_more: nextBefore !== null,
+    next_before: nextBefore,
   };
 }
 

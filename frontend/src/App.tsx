@@ -209,6 +209,12 @@ type HistoryEntry = {
   meta?: string;
   traceId?: string;
   hasSavedAnswer?: boolean;
+  /**
+   * Card 136 S4 fix round: the server's `asked_at` on a restored row, in
+   * milliseconds, so a row merged in later lands by date. Absent on a row
+   * this tab asked, which always sits above restored history.
+   */
+  askedAt?: number;
 };
 
 /**
@@ -272,11 +278,13 @@ function nextLocalHistoryId(): string {
  * in-tab list to it, dropping the oldest, so the list before a reload has
  * the rows the list after one will.
  *
- * Card 136.1: only while the person has not loaded an older page. A row
- * this trim drops is still reachable, because the trim also turns "Show
- * older searches" on, and that page starts just below the new last row.
- * Once they have loaded an older page, a new ask prepends and drops
- * nothing: they asked to see those rows. The list is then bounded by what
+ * Card 136.1: only while the person has not started loading an older page.
+ * A row this trim drops is still reachable: it is held back, the trim turns
+ * "Show older searches" on, and the next press puts it back before the
+ * server's next page (card 136 S4 fix round, so the cursor stays the
+ * server's own). Once they have started loading an older page, a new ask
+ * prepends and drops nothing (J-136S4-02): they asked to see those rows,
+ * including the ones still on their way. The list is then bounded by what
  * they chose to load, twenty rows per press, plus the searches asked in
  * this tab, which the daily allowance bounds (100 a day for an account).
  * Sign-out empties it.
@@ -327,28 +335,59 @@ function formatHistoryMeta(item: HistoryItem): string | undefined {
  * there is no duplicate to resolve, only a real item that must not be
  * dropped.
  *
- * Server items already carry no local counterpart are appended AFTER the
- * current list, so this tab's own live activity (and its richer `meta`,
- * computed from the actual event stream rather than absent) stays above
- * older restored history, and a caller reloading with no local items yet
- * sees exactly the server's own newest-first order.
+ * Server items with no local counterpart go in by date (card 136 S4 fix
+ * round, J-136S4-01): each lands just above the first restored row that is
+ * strictly older than it, and at the foot when none is. So a search asked
+ * in another tab or on another device, picked up by the token rotation's
+ * refetch, sits above the older restored history instead of below the
+ * oldest loaded row, an older page goes at the foot, and rows sharing a
+ * date keep the server's own order. Rows this tab asked carry no date and
+ * stay where they are, above restored history, with their richer `meta`
+ * computed from the actual event stream. A caller reloading with no local
+ * items yet sees exactly the server's own newest-first order.
  */
 function mergeServerHistory(current: HistoryEntry[], serverItems: HistoryItem[]): HistoryEntry[] {
-  const localTraceIds = new Set(
+  const shownTraceIds = new Set(
     current
       .map((item) => item.traceId)
       .filter((traceId): traceId is string => traceId !== undefined),
   );
-  const restored: HistoryEntry[] = serverItems
-    .filter((item) => !localTraceIds.has(item.trace_id))
-    .map((item) => ({
+  const merged = [...current];
+  for (const item of serverItems) {
+    if (shownTraceIds.has(item.trace_id)) continue;
+    shownTraceIds.add(item.trace_id);
+    const parsed = item.asked_at === undefined ? Number.NaN : Date.parse(item.asked_at);
+    const askedAt = Number.isNaN(parsed) ? undefined : parsed;
+    const entry: HistoryEntry = {
       id: item.trace_id,
       question: item.question,
       traceId: item.trace_id,
       meta: formatHistoryMeta(item),
       hasSavedAnswer: item.has_saved_answer === true,
-    }));
-  return [...current, ...restored];
+      askedAt,
+    };
+    const firstOlder =
+      askedAt === undefined
+        ? -1
+        : merged.findIndex((row) => row.askedAt !== undefined && row.askedAt < askedAt);
+    merged.splice(firstOlder === -1 ? merged.length : firstOlder, 0, entry);
+  }
+  return merged;
+}
+
+/**
+ * Card 136 S4 fix round. Puts back, at the foot of the rail, the rows a
+ * re-ask's trim held back, skipping any a refetch already brought back.
+ */
+function restoreHeldBackHistory(current: HistoryEntry[], heldBack: HistoryEntry[]): HistoryEntry[] {
+  const shownIds = new Set(current.map((item) => item.id));
+  const shownTraceIds = new Set(current.map((item) => item.traceId).filter((id) => id !== undefined));
+  return [
+    ...current,
+    ...heldBack.filter(
+      (item) => !shownIds.has(item.id) && !(item.traceId !== undefined && shownTraceIds.has(item.traceId)),
+    ),
+  ];
 }
 
 /**
@@ -474,16 +513,29 @@ export function App() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   /**
    * Card 136.1. Whether the server holds searches older than the rail's
-   * last row, from the latest page's `has_more`; true as well after a
-   * re-ask's trim drops a row. Drives "Show older searches".
+   * last row, from the latest page's cursor; true as well after a re-ask's
+   * trim holds a row back. Drives "Show older searches".
    */
   const [historyHasOlder, setHistoryHasOlder] = useState(false);
   const [olderHistoryStatus, setOlderHistoryStatus] = useState<"idle" | "loading" | "failed">("idle");
-  /** True once an older page has been merged in; a re-ask then trims nothing. */
+  /**
+   * True once the person has pressed "Show older searches"; a re-ask then
+   * trims nothing, even while that page is still loading (J-136S4-02).
+   */
   const historyPagedOlder = useRef(false);
+  /**
+   * Card 136 S4 fix round (J-136S4-01). The server's own `next_before` for
+   * the next older page: `undefined` until this session's newest page has
+   * landed, then a `trace_id`, or `null` when nothing older exists. Set by
+   * the newest page once and by each older page after; never derived from
+   * the rail, and never moved by the token rotation's refetch.
+   */
+  const historyCursor = useRef<string | null | undefined>(undefined);
+  /** Rows a re-ask's trim dropped, newest first; the next press puts them back. */
+  const historyHeldBack = useRef<HistoryEntry[]>([]);
   /** The in-flight older-page fetch, aborted on sign-out or a token change. */
   const olderHistoryAbort = useRef<AbortController | null>(null);
-  /** The rail as last rendered, read by `ask` and the older-page cursor. */
+  /** The rail as last rendered, read by `ask`. */
   const historyRef = useRef<HistoryEntry[]>([]);
   useEffect(() => {
     historyRef.current = history;
@@ -740,12 +792,18 @@ export function App() {
     const controller = new AbortController();
     fetchHistory(token, { signal: controller.signal })
       .then((response) => {
+        if (controller.signal.aborted) return;
         setHistory((current) => mergeServerHistory(current, response.items));
-        // Card 136.1. The newest page says whether an older one exists. Once
-        // the person has paged older, the latest older page is the one that
-        // knows, so a token rotation's refetch of the newest page must not
-        // bring the control back after they reached the end.
-        if (!historyPagedOlder.current) setHistoryHasOlder(response.has_more === true);
+        // Card 136.1, S4 fix round. This session's first newest page names
+        // where older searches start. Every later refetch (the token
+        // rotation's, every 12 minutes) leaves the cursor and the control
+        // alone: its newest page does not reach the rail's oldest rows, so
+        // its cursor would point at rows already shown, and after the person
+        // reached the end it would bring the control back (J-136S4-06, F13).
+        if (historyCursor.current === undefined) {
+          historyCursor.current = response.next_before ?? null;
+          setHistoryHasOlder(historyCursor.current !== null || historyHeldBack.current.length > 0);
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -756,14 +814,20 @@ export function App() {
   }, [token]);
 
   /**
-   * Card 136.1: "Show older searches". Fetches the page older than the
-   * rail's last row the server knows, by that row's `trace_id`, and appends
-   * it through `mergeServerHistory`, which skips any row already shown.
+   * Card 136.1: "Show older searches". Puts back any rows a re-ask's trim
+   * held back, then fetches the page older than the server's own cursor
+   * and merges it through `mergeServerHistory`, which skips any row already
+   * shown.
    *
-   * The cursor is the last row restored from the server (its `id` IS its
-   * `trace_id`), falling back to the last row carrying a run id. The server
-   * scopes the cursor to this caller, so the only thing a wrong cursor can
-   * cost is an empty page, never another person's rows.
+   * Card 136 S4 fix round (J-136S4-01, A-136S4-01, A-136S4-05): the cursor
+   * is the `next_before` the server named on the last page it sent, never
+   * a row of the rail. A row merged in from another tab, a row the server
+   * withheld, or a row this tab asked that never reached the server can
+   * then never stall paging. The server scopes the cursor to this caller
+   * anyway, so a wrong one could only cost an empty page.
+   *
+   * The press itself turns the re-ask trim off (J-136S4-02): a search asked
+   * while this page loads must not drop a row the person is looking at.
    *
    * Aborted, and never merged, if the person signs out or the token changes
    * while it is in flight, the same rule the seeding effect keeps, so a
@@ -771,20 +835,30 @@ export function App() {
    */
   const showOlderSearches = useCallback(() => {
     if (token === null) return;
-    const rows = historyRef.current;
-    const lastRestored = [...rows].reverse().find((row) => row.traceId !== undefined && row.id === row.traceId);
-    const cursor = lastRestored?.traceId ?? [...rows].reverse().find((row) => row.traceId)?.traceId;
-    if (cursor === undefined) return;
+    historyPagedOlder.current = true;
+    const heldBack = historyHeldBack.current;
+    historyHeldBack.current = [];
+    if (heldBack.length > 0) setHistory((current) => restoreHeldBackHistory(current, heldBack));
+    const cursor = historyCursor.current;
+    if (typeof cursor !== "string") {
+      setHistoryHasOlder(false);
+      return;
+    }
     olderHistoryAbort.current?.abort();
     const controller = new AbortController();
     olderHistoryAbort.current = controller;
     setOlderHistoryStatus("loading");
     fetchHistory(token, { signal: controller.signal, before: cursor })
       .then((response) => {
-        if (controller.signal.aborted) return;
-        historyPagedOlder.current = true;
+        if (controller.signal.aborted) {
+          // Answered although aborted: never merged. After a token change
+          // the control goes back to "Show older searches" for the next press.
+          if (olderHistoryAbort.current === controller) setOlderHistoryStatus("idle");
+          return;
+        }
+        historyCursor.current = response.next_before ?? null;
         setHistory((current) => mergeServerHistory(current, response.items));
-        setHistoryHasOlder(response.has_more === true);
+        setHistoryHasOlder(historyCursor.current !== null);
         setOlderHistoryStatus("idle");
       })
       .catch(() => {
@@ -934,6 +1008,8 @@ export function App() {
     olderHistoryAbort.current?.abort();
     olderHistoryAbort.current = null;
     historyPagedOlder.current = false;
+    historyCursor.current = undefined;
+    historyHeldBack.current = [];
     setHistoryHasOlder(false);
     setOlderHistoryStatus("idle");
     setFlagged([]);
@@ -1524,14 +1600,30 @@ export function App() {
       // server (`mergeServerHistory` keys on `traceId`, never on text), so
       // the list before a reload now matches the list after one.
       //
-      // Card 136.1: the trim applies only while no older page is loaded, and
-      // a row it drops turns "Show older searches" on so it stays reachable.
-      // Once older pages are loaded, nothing is dropped.
+      // Card 136.1: the trim applies only until the person first presses
+      // "Show older searches" (J-136S4-02: from the press, not from the
+      // page landing). A row it drops is held back and turns the control
+      // on, and the next press puts it back, so it stays reachable without
+      // the cursor ever being read off the rail. The held-back list is
+      // written inside the updater so it always matches the rows this
+      // update dropped; de-duplicated by id, so React running the updater
+      // twice under StrictMode writes the same list.
       if (historyPagedOlder.current) {
         setHistory((current) => [{ id: entryId, question }, ...current]);
       } else {
         if (historyRef.current.length >= HISTORY_LIST_LIMIT) setHistoryHasOlder(true);
-        setHistory((current) => [{ id: entryId, question }, ...current].slice(0, HISTORY_LIST_LIMIT));
+        setHistory((current) => {
+          const next = [{ id: entryId, question }, ...current];
+          const dropped = next.slice(HISTORY_LIST_LIMIT);
+          if (dropped.length > 0) {
+            const droppedIds = new Set(dropped.map((row) => row.id));
+            historyHeldBack.current = [
+              ...dropped,
+              ...historyHeldBack.current.filter((row) => !droppedIds.has(row.id)),
+            ];
+          }
+          return next.slice(0, HISTORY_LIST_LIMIT);
+        });
       }
       const seq = ++askSeq.current;
       /*

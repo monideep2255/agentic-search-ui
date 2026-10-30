@@ -430,7 +430,10 @@ class _FakeHistoryStore:
         self, *, owner_id: str, limit: int = DEFAULT_LIMIT, before: str | None = None
     ) -> HistoryPage:
         rows = self.rows.get(owner_id, [])
-        return HistoryPage(entries=rows[:limit], has_more=len(rows) > limit)
+        return HistoryPage(
+            entries=rows[:limit],
+            next_before=rows[limit - 1].trace_id if len(rows) > limit else None,
+        )
 
 
 @pytest.mark.asyncio

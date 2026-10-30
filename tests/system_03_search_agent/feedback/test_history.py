@@ -693,9 +693,13 @@ def _walk(owner_id: str, limit: int) -> tuple[list[list[str]], list[bool]]:
         page = list_history_page(owner_id=owner_id, limit=limit, before=before)
         pages.append([entry.trace_id for entry in page.entries])
         flags.append(page.has_more)
+        # J-136S4-01: the cursor is the one the server names, the oldest
+        # row this page read; it agrees with `has_more` by construction.
+        assert (page.next_before is not None) == page.has_more
         if not page.has_more:
             return pages, flags
-        before = page.entries[-1].trace_id
+        assert page.next_before == page.entries[-1].trace_id
+        before = page.next_before
     raise AssertionError("paging never ended: has_more stayed true for 100 pages")
 
 
@@ -771,13 +775,13 @@ def test_another_owners_cursor_returns_nothing_of_theirs_or_ours() -> None:
 
     for cursor in theirs:
         page = list_history_page(owner_id=owner, limit=20, before=cursor)
-        assert page == HistoryPage(entries=[], has_more=False), (
+        assert page == HistoryPage(entries=[], next_before=None), (
             f"a stranger's cursor {cursor} returned {page}"
         )
     never_existed = list_history_page(
         owner_id=owner, limit=20, before=f"histpage-none-{uuid.uuid4().hex}"
     )
-    assert never_existed == HistoryPage(entries=[], has_more=False)
+    assert never_existed == HistoryPage(entries=[], next_before=None)
 
 
 def test_an_own_cursor_never_returns_a_strangers_interleaved_rows() -> None:
@@ -812,10 +816,10 @@ def test_a_strangers_cursor_and_an_unknown_one_answer_identically_over_http() ->
     _seed_many(owner, _distinct_times(3), tag="http-mine")
     theirs = _seed_many(stranger, _distinct_times(3), tag="http-theirs")
 
-    async def fetch(before: str) -> tuple[int, bytes]:
+    async def fetch(before: str) -> tuple[int, bytes, dict[str, str]]:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/v1/history", params={"before": before})
-        return response.status_code, response.content
+        return response.status_code, response.content, dict(response.headers)
 
     app.dependency_overrides[get_caller] = lambda: Principal(
         owner_id=owner, user_id=None, kind="guest"
@@ -829,6 +833,65 @@ def test_a_strangers_cursor_and_an_unknown_one_answer_identically_over_http() ->
     assert stranger_result[0] == 200
     assert stranger_result == unknown_result
     assert b'"items":[]' in stranger_result[1]
+    assert b'"has_more":false,"next_before":null' in stranger_result[1]
+
+
+def test_a_page_of_only_withheld_rows_never_stops_the_walk_over_http() -> None:
+    """A-136S4-01, A-136S4-02 and J-136S4-03 against the real database and
+    the real per-row guard: 45 rows, the middle 20 with a `citations` value
+    that is not a list, so the second page withholds every row. Following
+    the server's `next_before` still reaches the five oldest, each
+    withheld row is counted once, and the last page ends the walk."""
+    import asyncio
+
+    from httpx import ASGITransport, AsyncClient
+
+    from system_03_search_agent.adapters.web_sse.app import app
+    from system_03_search_agent.auth.dependencies import Principal, get_caller
+
+    owner = _unique_owner()
+    expected = _expected_order(_seed_many(owner, _distinct_times(45), tag="withheld"))
+    engine = sa.create_engine(USER_DB_URL)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "UPDATE interactions SET citations = '\"x\"'::jsonb "
+                    "WHERE trace_id = ANY(:ids)"
+                ),
+                {"ids": expected[20:40]},
+            )
+    finally:
+        engine.dispose()
+
+    async def walk() -> list[dict]:
+        bodies: list[dict] = []
+        params: dict[str, str] = {}
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            for _ in range(10):
+                response = await client.get("/v1/history", params=params)
+                assert response.status_code == 200, response.text
+                bodies.append(response.json())
+                if bodies[-1]["next_before"] is None:
+                    return bodies
+                params = {"before": bodies[-1]["next_before"]}
+        raise AssertionError("paging never ended")
+
+    app.dependency_overrides[get_caller] = lambda: Principal(
+        owner_id=owner, user_id=None, kind="guest"
+    )
+    try:
+        bodies = asyncio.run(walk())
+    finally:
+        app.dependency_overrides.pop(get_caller, None)
+
+    assert [(b["count"], b["omitted_count"], b["has_more"]) for b in bodies] == [
+        (20, 0, True),
+        (0, 20, True),
+        (5, 0, False),
+    ]
+    shown = [item["trace_id"] for body in bodies for item in body["items"]]
+    assert shown == expected[:20] + expected[40:], "the oldest searches were never reached"
 
 
 @pytest.mark.parametrize(
@@ -847,7 +910,7 @@ def test_a_cursor_exactly_at_the_bound_is_accepted() -> None:
     from system_03_search_agent.feedback.history import HistoryPage, list_history_page
 
     assert list_history_page(owner_id=_unique_owner(), before="t" * 64) == HistoryPage(
-        entries=[], has_more=False
+        entries=[], next_before=None
     )
 
 

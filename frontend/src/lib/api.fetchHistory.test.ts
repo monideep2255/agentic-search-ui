@@ -66,6 +66,7 @@ describe("fetchHistory", () => {
       items: [{ trace_id: "t-1", question: "What is BRCA1?" }],
       count: 1,
       has_more: false,
+      next_before: null,
     });
   });
 
@@ -85,20 +86,47 @@ describe("fetchHistory", () => {
     expect(new URL(url).searchParams.has("x")).toBe(false);
   });
 
-  it("reads has_more only when it is a real true", async () => {
+  it("reads has_more only when it is a real true with the server's cursor beside it", async () => {
     // Card 136.1. Mutation: `Boolean(body.has_more)` turns the string
-    // "false" into an older page that does not exist.
+    // "false" into an older page that does not exist. Card 136 S4 fix round
+    // (J-136S4-01): the cursor is the server's `next_before`, kept only
+    // beside a real `true`; a `true` with no cursor offers nothing, since
+    // the app never invents one from its own list.
     const results = [];
-    for (const hasMore of [true, false, "false", 1, undefined]) {
+    for (const [hasMore, nextBefore] of [
+      [true, "t-19"],
+      [false, "t-19"],
+      ["false", "t-19"],
+      [1, "t-19"],
+      [undefined, "t-19"],
+      [true, undefined],
+      [true, ""],
+      [true, 7],
+      [false, null],
+    ] as const) {
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValue(
-          new Response(JSON.stringify({ items: [], count: 0, has_more: hasMore }), { status: 200 }),
+          new Response(
+            JSON.stringify({ items: [], count: 0, has_more: hasMore, next_before: nextBefore }),
+            { status: 200 },
+          ),
         ),
       );
-      results.push((await fetchHistory("token-1", { baseUrl: "https://api.test" })).has_more);
+      const page = await fetchHistory("token-1", { baseUrl: "https://api.test" });
+      results.push([page.has_more, page.next_before]);
     }
-    expect(results).toEqual([true, false, false, false, false]);
+    expect(results).toEqual([
+      [true, "t-19"],
+      [false, null],
+      [false, null],
+      [false, null],
+      [false, null],
+      [false, null],
+      [false, null],
+      [false, null],
+      [false, null],
+    ]);
   });
 
   it("appends limit as an encoded query parameter when given", async () => {

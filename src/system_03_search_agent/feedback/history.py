@@ -242,16 +242,28 @@ def _stored_page_key(element: object) -> str:
 
 @dataclass(frozen=True)
 class HistoryPage:
-    """One page of a caller's own history, and whether an older page exists.
+    """One page of a caller's own history, and where the next older one starts.
 
-    Card 136.1. `has_more` is True when at least one of this caller's own
-    rows is strictly older than the last row of `entries`. It is computed by
-    fetching one row past `limit` in the same query, never by a second
-    count, so it cannot disagree with the page it describes.
+    Card 136.1. `next_before` is the `trace_id` of the oldest row this
+    page's query read, or None when no older row of this caller's exists.
+    It is learned by fetching one row past `limit` in the same query, never
+    by a second count, so it cannot disagree with the page it describes.
+
+    Card 136 S4 fix round (J-136S4-01, A-136S4-01, A-136S4-02, A-136S4-05):
+    the cursor comes from the server, not from whatever list a client
+    holds. It is read from the database rows BEFORE the endpoint's per-row
+    guard, so a page whose rows are all withheld still names where the next
+    page starts, and a withheld row is never read twice. `has_more` is
+    derived from it, so the two can never disagree.
     """
 
     entries: list[HistoryEntry]
-    has_more: bool = False
+    next_before: str | None = None
+
+    @property
+    def has_more(self) -> bool:
+        """True exactly when `next_before` names a row with an older one past it."""
+        return self.next_before is not None
 
 
 def _check_cursor(before: str) -> None:
@@ -324,19 +336,20 @@ def list_history_page(
     `ruff`, not a claim any black-box call through `list_history` can
     prove at runtime; `tests/system_03_search_agent/feedback/
     test_history.py`'s own coverage statement says the same. Card 136.1
-    fetches `limit + 1` rows in that same clause, to learn `has_more`, and
+    fetches `limit + 1` rows in that same clause, to learn `next_before`, and
     returns only the first `limit`.
 
     ## Card 136.1: the `before` cursor, and why it cannot reach another owner
 
-    `before` is the `trace_id` of the last row of the previous page. It is
-    keyset paging rather than an offset, so a search asked between two
-    clicks never shifts a row onto two pages or off both.
+    `before` is the previous page's `next_before`: the `trace_id` of the
+    oldest row that page read. It is keyset paging rather than an offset,
+    so a search asked between two clicks never shifts a row onto two pages
+    or off both.
 
     The cursor is resolved to its `(created_at, id)` by a lookup that
     carries the SAME `owner_id` filter as the page query. A `trace_id` that
     does not exist and one that exists under another owner both resolve to
-    nothing, and nothing returns an empty page with `has_more` False, the
+    nothing, and nothing returns an empty page with `next_before` None, the
     same single answer `get_saved_answer` gives for its three causes. No
     field of another owner's row is ever read into this function, so none
     can be compared against, ordered by or returned.
@@ -383,7 +396,7 @@ def list_history_page(
                 )
             ).first()
             if anchor is None:
-                return HistoryPage(entries=[], has_more=False)
+                return HistoryPage(entries=[], next_before=None)
             query = query.where(
                 tuple_(Interaction.created_at, Interaction.id)
                 < tuple_(anchor.created_at, anchor.id)
@@ -404,7 +417,9 @@ def list_history_page(
             )
             for row in rows[:limit]
         ],
-        has_more=len(rows) > limit,
+        # The oldest row this page read, withheld or not, and only when a
+        # row older than it exists (the `limit + 1`th row above).
+        next_before=rows[limit - 1].trace_id if len(rows) > limit else None,
     )
 
 

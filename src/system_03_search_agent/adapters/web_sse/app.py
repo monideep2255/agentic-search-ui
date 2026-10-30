@@ -950,12 +950,18 @@ class HistoryResponse(BaseModel):
     whether an older page exists, and `?before=<trace_id>` fetches it. Still
     no running total, and `count` still names the page, not the account.
 
-    `has_more` (card 136.1) is True when at least one of this caller's own
-    rows is older than the last row the server read for this page. It is
-    computed from the rows the database returned, before the per-row guard
-    below, so a withheld row never hides an older page. Additive per
-    `.claude/rules/system-design-patterns.md` pattern 10: it defaults to
-    False, so a client that never reads it sees the response it always did.
+    `next_before` (card 136 S4 fix round) is the cursor for the next older
+    page: the `trace_id` of the oldest row the server read for this page,
+    withheld rows included, or null when none of this caller's rows is
+    older. A client sends it back as `?before=` and never derives a cursor
+    from the rows it holds (J-136S4-01): a row merged in from another tab,
+    or a withheld row, can then never stall paging. `has_more` (card 136.1)
+    is True exactly when `next_before` is not null. Both are read from the
+    rows the database returned, before the per-row guard below, so a page
+    whose rows are all withheld still says where the next one starts
+    (A-136S4-01). Both additive per `.claude/rules/system-design-patterns.md`
+    pattern 10: they default to False and null, so a client that never
+    reads them sees the response it always did.
 
     `omitted_count` (F-4.13-A-02's fix) is how many of this caller's own
     rows were left OUT of `items`, for either of two reasons. The first is
@@ -983,6 +989,7 @@ class HistoryResponse(BaseModel):
     count: int = Field(..., ge=0)
     omitted_count: int = Field(0, ge=0)
     has_more: bool = False
+    next_before: str | None = Field(None, max_length=64)
 
 
 #: The query parameters `GET /v1/history` refuses to see twice. `before`
@@ -1047,7 +1054,7 @@ def _reject_duplicate_limit(request: Request) -> None:
 # request, because by the time `limit` above is bound every occurrence but
 # the last is already gone.
 #
-# Card 136.1: `before`, the `trace_id` of the last row the caller already
+# Card 136.1: `before`, the `next_before` of the page the caller already
 # holds, asks for the next older page. It comes from the caller, so it is
 # treated as untrusted input:
 #
@@ -1060,12 +1067,14 @@ def _reject_duplicate_limit(request: Request) -> None:
 #   The message says what to send and nothing about whether any row exists.
 # - A well-formed value that is not one of THIS caller's own searches, a
 #   stranger's `trace_id` or one that never existed, is not an error: it is
-#   an empty page with `has_more` False, identical for both causes, so the
-#   response never confirms that someone else's search exists. The owner
+#   an empty page with `has_more` False and `next_before` null, identical
+#   for both causes, so the response never confirms that someone else's
+#   search exists. The owner
 #   filter is inside `list_history_page`'s cursor lookup, not here.
 @app.get("/v1/history", response_model=HistoryResponse)
 def get_v1_history(
     request: Request,
+    response: Response,
     limit: int = FastAPIQuery(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
     before: str | None = FastAPIQuery(None, min_length=1, max_length=64),
     caller: Principal = Depends(get_caller),  # noqa: B008 - idiomatic FastAPI dependency injection
@@ -1080,9 +1089,12 @@ def get_v1_history(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "`before` must be the `trace_id` of one of your own searches, "
-                "as returned in `items`"
+                "as returned in `next_before`"
             ),
         ) from error
+    # A-136S4-03: a list of a person's own questions is not for a browser's
+    # disk cache or a shared proxy, the same rule `/auth/login` keeps.
+    response.headers["Cache-Control"] = "no-store"
     entries = page.entries
     # F-4.13-A-02's fix. `HistoryItem(...)` used to be constructed eagerly
     # inside the `HistoryResponse(...)` call below, so ONE row that no
@@ -1131,7 +1143,11 @@ def get_v1_history(
         except ValidationError:
             omitted_count += 1
     return HistoryResponse(
-        items=items, count=len(items), omitted_count=omitted_count, has_more=page.has_more
+        items=items,
+        count=len(items),
+        omitted_count=omitted_count,
+        has_more=page.has_more,
+        next_before=page.next_before,
     )
 
 

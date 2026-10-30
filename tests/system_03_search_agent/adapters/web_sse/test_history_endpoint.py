@@ -99,9 +99,12 @@ class _FakeHistoryStore:
             # a cursor not among THIS owner's rows is an empty page.
             positions = [n for n, row in enumerate(rows) if row.trace_id == before]
             if not positions:
-                return HistoryPage(entries=[], has_more=False)
+                return HistoryPage(entries=[], next_before=None)
             rows = rows[positions[0] + 1 :]
-        return HistoryPage(entries=rows[:limit], has_more=len(rows) > limit)
+        return HistoryPage(
+            entries=rows[:limit],
+            next_before=rows[limit - 1].trace_id if len(rows) > limit else None,
+        )
 
 
 @pytest.fixture
@@ -657,6 +660,8 @@ class TestOlderPages:
         body = response.json()
         assert body["count"] == DEFAULT_LIMIT
         assert body["has_more"] is True
+        # J-136S4-01: the server names the cursor, the oldest row it read.
+        assert body["next_before"] == f"t-{DEFAULT_LIMIT - 1}"
 
     @pytest.mark.asyncio
     async def test_has_more_is_false_at_exactly_one_page(
@@ -671,6 +676,7 @@ class TestOlderPages:
 
         assert response.status_code == 200, response.text
         assert response.json()["has_more"] is False
+        assert response.json()["next_before"] is None
 
     @pytest.mark.asyncio
     async def test_before_reaches_the_read_function_with_the_callers_own_owner_id(
@@ -690,6 +696,7 @@ class TestOlderPages:
         body = response.json()
         assert [item["trace_id"] for item in body["items"]] == [f"t-{n}" for n in range(20, 25)]
         assert body["has_more"] is False
+        assert body["next_before"] is None
 
     @pytest.mark.asyncio
     async def test_has_more_survives_a_withheld_last_row(
@@ -717,6 +724,58 @@ class TestOlderPages:
         assert body["omitted_count"] == 1
         assert body["count"] == DEFAULT_LIMIT - 1
         assert body["has_more"] is True
+        # The cursor is the withheld row itself, so the next page starts
+        # below it and never reads, or counts, it again (J-136S4-03's cause).
+        assert body["next_before"] == "t-unreadable"
+
+    @pytest.mark.asyncio
+    async def test_a_page_of_only_withheld_rows_still_names_the_next_cursor(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """A-136S4-01: every row of the page fails the per-row guard. The
+        response must still say where the next page starts, or paging
+        stops for good at an empty page that claims more."""
+        guest = _guest_principal()
+        rows = [
+            HistoryEntry(
+                trace_id=f"w-{n}",
+                question="Unreadable row",
+                asked_at=datetime.now(UTC),
+                trust_signal="answer",
+                citation_count=None,
+            )
+            for n in range(DEFAULT_LIMIT)
+        ] + _entries(5, prefix="old")
+        fake_history.seed(guest.owner_id, rows)
+        _set_caller(guest)
+
+        async with _client() as client:
+            first = (await client.get(_HISTORY_PATH)).json()
+            second = (
+                await client.get(_HISTORY_PATH, params={"before": first["next_before"]})
+            ).json()
+
+        assert (first["count"], first["omitted_count"], first["has_more"]) == (0, 20, True)
+        assert first["next_before"] == f"w-{DEFAULT_LIMIT - 1}"
+        assert [item["trace_id"] for item in second["items"]] == [f"old-{n}" for n in range(5)]
+        assert (second["has_more"], second["next_before"]) == (False, None)
+
+    @pytest.mark.asyncio
+    async def test_the_history_response_is_never_stored_by_a_cache(
+        self, fake_history: _FakeHistoryStore
+    ) -> None:
+        """A-136S4-03: the same `no-store` `/auth/login` sends, on the first
+        page and on an older one."""
+        guest = _guest_principal()
+        fake_history.seed(guest.owner_id, _entries(25))
+        _set_caller(guest)
+
+        async with _client() as client:
+            first = await client.get(_HISTORY_PATH)
+            older = await client.get(_HISTORY_PATH, params={"before": "t-19"})
+
+        assert first.headers.get("cache-control") == "no-store"
+        assert older.headers.get("cache-control") == "no-store"
 
     @pytest.mark.asyncio
     async def test_a_cursor_from_another_owner_returns_an_empty_page(
@@ -735,7 +794,13 @@ class TestOlderPages:
             response = await client.get(_HISTORY_PATH, params={"before": "theirs-0"})
 
         assert response.status_code == 200, response.text
-        assert response.json() == {"items": [], "count": 0, "omitted_count": 0, "has_more": False}
+        assert response.json() == {
+            "items": [],
+            "count": 0,
+            "omitted_count": 0,
+            "has_more": False,
+            "next_before": None,
+        }
         assert fake_history.calls == [
             {"owner_id": owner.owner_id, "limit": DEFAULT_LIMIT, "before": "theirs-0"}
         ]
@@ -806,4 +871,11 @@ class TestTheCursorIsValidated:
             response = await client.get(_HISTORY_PATH, params={"before": cursor})
 
         assert response.status_code == 422, response.text
-        assert "your own searches" in response.text
+        # J-136S4-04: pinned whole, so internal text or anything about
+        # whether a row exists can never be added to it unnoticed.
+        assert response.json() == {
+            "detail": (
+                "`before` must be the `trace_id` of one of your own searches, "
+                "as returned in `next_before`"
+            )
+        }
