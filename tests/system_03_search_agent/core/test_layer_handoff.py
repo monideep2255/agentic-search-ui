@@ -366,6 +366,60 @@ def test_shaping_sorts_by_a_stable_key_and_caps_and_drops_uncitable_rows() -> No
     )["status"] == "empty"
 
 
+def _gene_entity(name: str, db_id: str, tag: str) -> PubtatorEntity:
+    return PubtatorEntity(
+        pubtator_id=tag, biotype="gene", db="ncbi_gene", db_id=db_id, name=name,
+        source_url=f"https://www.ncbi.nlm.nih.gov/gene/{db_id}",
+    )
+
+
+def _shape_pubtator(entities: list[PubtatorEntity], symbol: str, expected: str = "") -> dict[str, Any]:
+    from system_03_search_agent.tools.pubtator_annotate_schemas import PubtatorAnnotateInput
+
+    tool_input = PubtatorAnnotateInput.model_validate(
+        {"mode": "entity_lookup", "query": symbol, "limit": 5}
+    )
+    output = PubtatorAnnotateOutput(status="ok", mode="entity_lookup", entities=entities)
+    return graph_module._layer_tool_output_to_structured_fields(
+        "pubtator_annotate", output, tool_input, expected
+    )
+
+
+def test_card149_rat_gene_record_dropped_for_resolved_human_gene() -> None:
+    rat = _gene_entity("Gck", "24385", "@GENE_GCK")
+    shaped = _shape_pubtator([rat], "GCK", "2645")
+    assert shaped["rows"] == []
+    assert shaped["status"] == "empty"
+    # With no resolved gene the rat row is kept, exactly as before.
+    assert len(_shape_pubtator([rat], "GCK")["rows"]) == 1
+
+
+def test_card149_human_record_kept_and_other_gene_dropped() -> None:
+    human = _gene_entity("TP53", "7157", "@GENE_TP53")
+    shaped = _shape_pubtator([human], "TP53", "7157")
+    assert [r["fields"]["pubtator_id"] for r in shaped["rows"]] == ["@GENE_TP53"]
+    assert shaped["rows"][0]["source_url"] == "https://www.ncbi.nlm.nih.gov/gene/7157"
+    gckr = _gene_entity("GCKR", "2646", "@GENE_GCKR")
+    assert _shape_pubtator([gckr], "GCK", "2645")["rows"] == []
+    # A name-less or non-gene entity never matches an id.
+    mesh = PubtatorEntity(
+        pubtator_id="@DISEASE_x", db="ncbi_mesh", db_id="2645", name="GCK",
+        source_url="https://www.ncbi.nlm.nih.gov/mesh/2645",
+    )
+    assert _shape_pubtator([mesh], "GCK", "2645")["rows"] == []
+
+
+def test_card149_plan_carries_expected_gene_id_only_for_a_gene() -> None:
+    gene_calls = graph_module._build_layer_tool_calls(_GENE_QUESTION, "GCK", [], None, "2645")
+    pubtator = [c for c in gene_calls if c.tool_call.tool == "pubtator_annotate"]
+    assert [c.expected_gene_id for c in pubtator] == ["2645"]
+    disease_calls = graph_module._build_layer_tool_calls("Any trials for GERD?", None, [], "gerd")
+    assert all(c.expected_gene_id == "" for c in disease_calls)
+    # A gene id with no symbol (disease-text search) is never carried.
+    stray = graph_module._build_layer_tool_calls("q", None, [], "gerd", "2645")
+    assert all(c.expected_gene_id == "" for c in stray)
+
+
 # ---------------------------------------------------------------------------
 # Concurrency and graceful degradation, driven through act_node directly.
 # ---------------------------------------------------------------------------

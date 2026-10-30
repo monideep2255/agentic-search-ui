@@ -4863,6 +4863,11 @@ class _PlannedLayerToolCall:
     #: UI fix 11.21 wiring (2026-09-20): see `_PlannedNcbiEfetchToolCall.
     #: purpose`. Empty for every set 8 call.
     purpose: str = ""
+    #: Card 149: the NCBI Gene id the question resolved (`2645` for
+    #: `NCBIGene:2645`), set only on a `pubtator_annotate` call searched by
+    #: the gene symbol. Empty on every other call, and then the shaping step
+    #: behaves as it did before.
+    expected_gene_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -5024,7 +5029,7 @@ def _shaped(status: str, rows: list[dict[str, Any]], error: str | None) -> dict[
 
 
 def _layer_tool_output_to_structured_fields(
-    tool: str, output: Any, tool_input: Any = None
+    tool: str, output: Any, tool_input: Any = None, expected_gene_id: str = ""
 ) -> dict[str, Any]:
     """Shape one of the four tools' typed outputs into pseudo-rows.
 
@@ -5074,6 +5079,14 @@ def _layer_tool_output_to_structured_fields(
         # citeable entity is. A deterministic string comparison, never a
         # judgement of relevance, and stated as the rule so a reader can
         # predict which rows a symbol yields.
+        #
+        # Card 149: when the question resolved a gene, a name match is not
+        # enough, because the index answers `GCK` with one cross-species
+        # entry whose record is the rat gene (24385), not human GCK (2645).
+        # Then an entity is kept only if it is a `ncbi_gene` entity whose
+        # `db_id` equals the resolved Gene id. Comparing two record ids is
+        # verification, not a judgement, and needs no list of symbols or
+        # species. With no resolved gene the name rule above applies.
         queried = ""
         if tool_input is not None and getattr(tool_input, "root", None) is not None:
             queried = str(getattr(tool_input.root, "query", "") or "").strip().casefold()
@@ -5083,7 +5096,15 @@ def _layer_tool_output_to_structured_fields(
             for entity in citeable
             if entity.name and entity.name.strip().casefold() == queried
         ]
-        for entity in exact or citeable:
+        kept_entities = exact or citeable
+        if expected_gene_id:
+            kept_entities = [
+                entity
+                for entity in citeable
+                if entity.db == "ncbi_gene"
+                and str(entity.db_id or "").strip() == expected_gene_id
+            ]
+        for entity in kept_entities:
             rows.append(
                 _pseudo_row(
                     "Literature entity",
@@ -5235,10 +5256,13 @@ def _layer_tool_output_to_structured_fields(
     raise ValueError(f"no Layer 2/3 shaping exists for tool {tool!r}")
 
 
-def _layer_call(tool: str, layer: str, prefix: str, tool_input: Any) -> _PlannedLayerToolCall:
+def _layer_call(
+    tool: str, layer: str, prefix: str, tool_input: Any, expected_gene_id: str = ""
+) -> _PlannedLayerToolCall:
     return _PlannedLayerToolCall(
         tool_call=ToolCall(tool=tool, call_id=f"{prefix}-{uuid.uuid4().hex[:12]}", layer=layer),  # type: ignore[arg-type]
         tool_input=tool_input,
+        expected_gene_id=expected_gene_id,
     )
 
 
@@ -5247,6 +5271,7 @@ def _build_layer_tool_calls(
     gene_symbol: str | None,
     rsids: list[str],
     disease_text: str | None = None,
+    gene_id: str = "",
 ) -> list[_PlannedLayerToolCall]:
     """The Layer 2 and Layer 3 calls a question earns, each with an input
     that is a pure function of `(query_text, gene_symbol, rsids,
@@ -5271,7 +5296,9 @@ def _build_layer_tool_calls(
       pre-pass already recognises; a question that names no variant plans
       neither.
 
-    `gene_symbol` is uppercased by the caller.
+    `gene_symbol` is uppercased by the caller. `gene_id` (card 149) is the
+    numeric NCBI Gene id of the resolved gene; it travels on the
+    `pubtator_annotate` call only when that call is searched by the symbol.
 
     FIX-PLAN ITEM 12.1 (2026-09-23): a question anchored on a DISEASE and
     resolving no gene now earns the same two calls, on `disease_text`
@@ -5302,6 +5329,7 @@ def _build_layer_tool_calls(
                 PubtatorAnnotateInput.model_validate(
                     {"mode": "entity_lookup", "query": search_text[:200], "limit": _LAYER_TOOL_ROW_CAP}
                 ),
+                expected_gene_id=gene_id if gene_symbol else "",
             )
         )
         trials_input: dict[str, Any] = {
@@ -7377,8 +7405,14 @@ async def plan_node(state: GraphState) -> dict[str, Any]:
         # so the literature and trials searches were never planned. Say so.
         disease_lookup_failed = disease_curie is not None and not disease_text
 
+        # Card 149: the resolved gene's numeric NCBI Gene id, so the
+        # literature entity row can be checked against the record itself.
+        gene_id = ""
+        if gene_curie is not None and ":" in gene_curie:
+            tail = gene_curie.split(":", 1)[1].strip()
+            gene_id = tail if tail.isdigit() else ""
         layer_calls = _build_layer_tool_calls(
-            query.text, gene_symbol, _rsids_in_text(query.text), disease_text
+            query.text, gene_symbol, _rsids_in_text(query.text), disease_text, gene_id
         )
         planned_tool_calls.extend(layer_calls)
 
@@ -8709,7 +8743,9 @@ async def _execute_planned_call(
                 "call failed unexpectedly",
                 f"{call.tool} call failed unexpectedly; the other layers' results stand",
             )
-        shaped = _layer_tool_output_to_structured_fields(call.tool, output, planned.tool_input)
+        shaped = _layer_tool_output_to_structured_fields(
+            call.tool, output, planned.tool_input, planned.expected_gene_id
+        )
         return _CallOutcome(
             status=str(shaped["status"]),
             summary=f"{shaped['status']}: {shaped['row_count']} record(s)",
